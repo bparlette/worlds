@@ -169,5 +169,14 @@
     "filename": "019_blaster_master_area_1_underworld.html",
     "verified_working": true,
     "generated_at": "2026-11-01 02:39:32"
+  },
+  "20": {
+    "id": 20,
+    "game": "Bionic Commando",
+    "target": "Neutral Area Military Base",
+    "platform": "NES",
+    "filename": "020_bionic_commando_neutral_area_military_base.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 02:52:06"
   }
 }
