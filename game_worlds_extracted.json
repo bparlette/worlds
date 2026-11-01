@@ -1962,17 +1962,17 @@
  {
   "id": 99,
   "platform": "NES",
-  "game": "Donkey Kong Country 4",
-  "target": "Stage 3-2",
-  "url": "https://vgmaps.com/Atlas/NES/index.htm#DonkeyKongCountry4",
-  "description": "Stage 3-2, Donkey Kong Country 4 (NES).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 3-2' from Donkey Kong Country 4 (NES). World brief: Stage 3-2, Donkey Kong Country 4 (NES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 3-2, Donkey Kong Country 4 (NES).",
-  "page_title": "Donkey Kong Country 4",
-  "image_url": "https://vgmaps.com/Atlas/NES/DonkeyKongCountry4(Unlicensed)-Stage3-2.png",
+  "game": "Contra",
+  "target": "Stage 1: Jungle",
+  "url": "https://vgmaps.com/Atlas/NES/index.htm#Contra",
+  "description": "Stage 1: Jungle, Contra (NES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 1: Jungle' from Contra (NES). World brief: Stage 1: Jungle, Contra (NES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Stage 1: Jungle, Contra (NES).",
+  "page_title": "Contra",
+  "image_url": "https://vgmaps.com/Atlas/NES/Contra-Stage1-Jungle(Unmarked).png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/NES/DonkeyKongCountry4(Unlicensed)-Stage3-2.png"
+   "https://vgmaps.com/Atlas/NES/Contra-Stage1-Jungle(Unmarked).png"
   ],
   "image_kinds": [
    "map"
@@ -9183,121 +9183,121 @@
   "id": 460,
   "platform": "Genesis",
   "game": "Sonic The Hedgehog",
-  "target": "Special Stage 1 (SonED 2 Dump)",
+  "target": "Green Hill Zone Act 1",
   "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog",
-  "description": "Special Stage 1 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Special Stage 1 (SonED 2 Dump)' from Sonic The Hedgehog (Genesis). World brief: Special Stage 1 (SonED 2 Dump), Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Special Stage 1 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
+  "description": "Green Hill Zone Act 1, Sonic The Hedgehog (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Green Hill Zone Act 1' from Sonic The Hedgehog (Genesis). World brief: Green Hill Zone Act 1, Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Green Hill Zone Act 1, Sonic The Hedgehog (Genesis).",
   "page_title": "Sonic The Hedgehog",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage1(SonED2Dump).png",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-GreenHillZone-Act1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage1(SonED2Dump).png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-GreenHillZone-Act1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 461,
   "platform": "Genesis",
   "game": "Sonic The Hedgehog",
-  "target": "Special Stage 2 (SonED 2 Dump)",
+  "target": "Green Hill Zone Act 2",
   "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog",
-  "description": "Special Stage 2 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Special Stage 2 (SonED 2 Dump)' from Sonic The Hedgehog (Genesis). World brief: Special Stage 2 (SonED 2 Dump), Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Special Stage 2 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
+  "description": "Green Hill Zone Act 2, Sonic The Hedgehog (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Green Hill Zone Act 2' from Sonic The Hedgehog (Genesis). World brief: Green Hill Zone Act 2, Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Green Hill Zone Act 2, Sonic The Hedgehog (Genesis).",
   "page_title": "Sonic The Hedgehog",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage2(SonED2Dump).png",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-GreenHillZone-Act2.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage2(SonED2Dump).png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-GreenHillZone-Act2.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 462,
   "platform": "Genesis",
   "game": "Sonic The Hedgehog",
-  "target": "Special Stage 3 (SonED 2 Dump)",
+  "target": "Green Hill Zone Act 3",
   "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog",
-  "description": "Special Stage 3 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Special Stage 3 (SonED 2 Dump)' from Sonic The Hedgehog (Genesis). World brief: Special Stage 3 (SonED 2 Dump), Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Special Stage 3 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
+  "description": "Green Hill Zone Act 3, Sonic The Hedgehog (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Green Hill Zone Act 3' from Sonic The Hedgehog (Genesis). World brief: Green Hill Zone Act 3, Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Green Hill Zone Act 3, Sonic The Hedgehog (Genesis).",
   "page_title": "Sonic The Hedgehog",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage3(SonED2Dump).png",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-GreenHillZone-Act3.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage3(SonED2Dump).png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-GreenHillZone-Act3.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 463,
   "platform": "Genesis",
   "game": "Sonic The Hedgehog",
-  "target": "Special Stage 4 (SonED 2 Dump)",
+  "target": "Marble Zone Act 1",
   "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog",
-  "description": "Special Stage 4 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Special Stage 4 (SonED 2 Dump)' from Sonic The Hedgehog (Genesis). World brief: Special Stage 4 (SonED 2 Dump), Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Special Stage 4 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
+  "description": "Marble Zone Act 1, Sonic The Hedgehog (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Marble Zone Act 1' from Sonic The Hedgehog (Genesis). World brief: Marble Zone Act 1, Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Marble Zone Act 1, Sonic The Hedgehog (Genesis).",
   "page_title": "Sonic The Hedgehog",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage4(SonED2Dump).png",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-MarbleZone-Act1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage4(SonED2Dump).png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-MarbleZone-Act1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 464,
   "platform": "Genesis",
   "game": "Sonic The Hedgehog",
-  "target": "Special Stage 5 (SonED 2 Dump)",
+  "target": "Spring Yard Zone Act 1",
   "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog",
-  "description": "Special Stage 5 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Special Stage 5 (SonED 2 Dump)' from Sonic The Hedgehog (Genesis). World brief: Special Stage 5 (SonED 2 Dump), Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Special Stage 5 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
+  "description": "Spring Yard Zone Act 1, Sonic The Hedgehog (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Spring Yard Zone Act 1' from Sonic The Hedgehog (Genesis). World brief: Spring Yard Zone Act 1, Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Spring Yard Zone Act 1, Sonic The Hedgehog (Genesis).",
   "page_title": "Sonic The Hedgehog",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage5(SonED2Dump).png",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpringYardZone-Act1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage5(SonED2Dump).png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpringYardZone-Act1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 465,
   "platform": "Genesis",
   "game": "Sonic The Hedgehog",
-  "target": "Special Stage 6 (SonED 2 Dump)",
+  "target": "Final Zone",
   "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog",
-  "description": "Special Stage 6 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Special Stage 6 (SonED 2 Dump)' from Sonic The Hedgehog (Genesis). World brief: Special Stage 6 (SonED 2 Dump), Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Special Stage 6 (SonED 2 Dump), Sonic The Hedgehog (Genesis).",
+  "description": "Final Zone, Sonic The Hedgehog (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Final Zone' from Sonic The Hedgehog (Genesis). World brief: Final Zone, Sonic The Hedgehog (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Final Zone, Sonic The Hedgehog (Genesis).",
   "page_title": "Sonic The Hedgehog",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage6(SonED2Dump).png",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-FinalZone.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-SpecialStage6(SonED2Dump).png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog-FinalZone.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 466,
@@ -9682,322 +9682,322 @@
  {
   "id": 485,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 1",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 1, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 1' from Sonic & Knuckles (Genesis). World brief: Stage 1, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 1, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage1.png",
+  "game": "Sonic The Hedgehog 2",
+  "target": "Emerald Hill Zone Act 1",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog2",
+  "description": "Emerald Hill Zone Act 1, Sonic The Hedgehog 2 (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Emerald Hill Zone Act 1' from Sonic The Hedgehog 2 (Genesis). World brief: Emerald Hill Zone Act 1, Sonic The Hedgehog 2 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Emerald Hill Zone Act 1, Sonic The Hedgehog 2 (Genesis).",
+  "page_title": "Sonic The Hedgehog 2",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog2-EmeraldHillZone-1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage1.png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog2-EmeraldHillZone-1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 486,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 2",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 2, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 2' from Sonic & Knuckles (Genesis). World brief: Stage 2, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 2, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage2.png",
+  "game": "Sonic The Hedgehog 2",
+  "target": "Emerald Hill Zone Act 2",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog2",
+  "description": "Emerald Hill Zone Act 2, Sonic The Hedgehog 2 (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Emerald Hill Zone Act 2' from Sonic The Hedgehog 2 (Genesis). World brief: Emerald Hill Zone Act 2, Sonic The Hedgehog 2 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Emerald Hill Zone Act 2, Sonic The Hedgehog 2 (Genesis).",
+  "page_title": "Sonic The Hedgehog 2",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog2-EmeraldHillZone-2.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage2.png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog2-EmeraldHillZone-2.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 487,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 3",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 3, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 3' from Sonic & Knuckles (Genesis). World brief: Stage 3, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 3, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage3.png",
+  "game": "Sonic The Hedgehog 3",
+  "target": "Angel Island Zone Act 1",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
+  "description": "Angel Island Zone Act 1, Sonic The Hedgehog 3 (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Angel Island Zone Act 1' from Sonic The Hedgehog 3 (Genesis). World brief: Angel Island Zone Act 1, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Angel Island Zone Act 1, Sonic The Hedgehog 3 (Genesis).",
+  "page_title": "Sonic The Hedgehog 3",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-AngelIslandZone-Act1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage3.png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-AngelIslandZone-Act1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 488,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 4",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 4, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 4' from Sonic & Knuckles (Genesis). World brief: Stage 4, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 4, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage4.png",
+  "game": "Aladdin",
+  "target": "Agrabah Market",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#Aladdin",
+  "description": "Agrabah Market, Aladdin (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Agrabah Market' from Aladdin (Genesis). World brief: Agrabah Market, Aladdin (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Agrabah Market, Aladdin (Genesis).",
+  "page_title": "Aladdin",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/Aladdin-AgrabahMarket.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage4.png"
+   "https://vgmaps.com/Atlas/Genesis/Aladdin-AgrabahMarket.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 489,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 5",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 5, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 5' from Sonic & Knuckles (Genesis). World brief: Stage 5, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 5, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage5.png",
+  "game": "Streets Of Rage 2",
+  "target": "Stage 1",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#StreetsOfRage2",
+  "description": "Stage 1, Streets Of Rage 2 (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 1' from Streets Of Rage 2 (Genesis). World brief: Stage 1, Streets Of Rage 2 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Stage 1, Streets Of Rage 2 (Genesis).",
+  "page_title": "Streets Of Rage 2",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/StreetsOfRage2-Stage1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage5.png"
+   "https://vgmaps.com/Atlas/Genesis/StreetsOfRage2-Stage1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 490,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 6",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 6, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 6' from Sonic & Knuckles (Genesis). World brief: Stage 6, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 6, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage6.png",
+  "game": "Streets Of Rage",
+  "target": "Round 1",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#StreetsOfRage",
+  "description": "Round 1, Streets Of Rage (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Round 1' from Streets Of Rage (Genesis). World brief: Round 1, Streets Of Rage (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Round 1, Streets Of Rage (Genesis).",
+  "page_title": "Streets Of Rage",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/StreetsOfRage-Round1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage6.png"
+   "https://vgmaps.com/Atlas/Genesis/StreetsOfRage-Round1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 491,
   "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 7",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 7, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 7' from Sonic & Knuckles (Genesis). World brief: Stage 7, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 7, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage7.png",
+  "game": "The Revenge Of Shinobi",
+  "target": "Round 1-1",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#RevengeOfShinobi",
+  "description": "Round 1-1, The Revenge Of Shinobi (Genesis).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Round 1-1' from The Revenge Of Shinobi (Genesis). World brief: Round 1-1, The Revenge Of Shinobi (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Round 1-1, The Revenge Of Shinobi (Genesis).",
+  "page_title": "The Revenge Of Shinobi",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/RevengeOfShinobi-Round1-1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage7.png"
+   "https://vgmaps.com/Atlas/Genesis/RevengeOfShinobi-Round1-1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 492,
-  "platform": "Genesis",
-  "game": "Sonic & Knuckles",
-  "target": "Stage 8",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicKnuckles",
-  "description": "Stage 8, Sonic & Knuckles (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 8' from Sonic & Knuckles (Genesis). World brief: Stage 8, Sonic & Knuckles (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Stage 8, Sonic & Knuckles (Genesis).",
-  "page_title": "Sonic & Knuckles",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage8.png",
+  "platform": "Sega CD",
+  "game": "Sonic The Hedgehog CD",
+  "target": "Palmtree Panic Zone 3 (Bad Future)",
+  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehogCD",
+  "description": "Palmtree Panic Zone 3 (Bad Future), Sonic The Hedgehog CD (Sega CD).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Palmtree Panic Zone 3 (Bad Future)' from Sonic The Hedgehog CD (Sega CD). World brief: Palmtree Panic Zone 3 (Bad Future), Sonic The Hedgehog CD (Sega CD). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Palmtree Panic Zone 3 (Bad Future), Sonic The Hedgehog CD (Sega CD).",
+  "page_title": "Sonic The Hedgehog CD",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehogCD-PalmtreePanic-Zone3-BadFuture.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/Sonic&Knuckles-SpecialStages-SpecialStage8.png"
+   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehogCD-PalmtreePanic-Zone3-BadFuture.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 493,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 1",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 1, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 1' from Sonic The Hedgehog 3 (Genesis). World brief: Act 1, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 1, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act1.png",
+  "platform": "SNES",
+  "game": "Super Mario World",
+  "target": "Yoshi's Island 1",
+  "url": "https://vgmaps.com/Atlas/SuperNES/index.htm#SuperMarioWorld",
+  "description": "Yoshi's Island 1, Super Mario World (SNES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Yoshi's Island 1' from Super Mario World (SNES). World brief: Yoshi's Island 1, Super Mario World (SNES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Yoshi's Island 1, Super Mario World (SNES).",
+  "page_title": "Super Mario World",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperMarioWorld-Yoshi'sIsland-Yoshi'sIsland1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act1.png"
+   "https://vgmaps.com/Atlas/SuperNES/SuperMarioWorld-Yoshi'sIsland-Yoshi'sIsland1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 494,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 2",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 2, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 2' from Sonic The Hedgehog 3 (Genesis). World brief: Act 2, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 2, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act2.png",
+  "platform": "SNES",
+  "game": "Donkey Kong Country",
+  "target": "Jungle Hijinxs",
+  "url": "https://vgmaps.com/Atlas/SuperNES/index.htm#DonkeyKongCountry",
+  "description": "Jungle Hijinxs, Donkey Kong Country (SNES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Jungle Hijinxs' from Donkey Kong Country (SNES). World brief: Jungle Hijinxs, Donkey Kong Country (SNES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Jungle Hijinxs, Donkey Kong Country (SNES).",
+  "page_title": "Donkey Kong Country",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/DonkeyKongCountry-KongoJungle-JungleHijinxs.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act2.png"
+   "https://vgmaps.com/Atlas/SuperNES/DonkeyKongCountry-KongoJungle-JungleHijinxs.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 495,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 3",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 3, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 3' from Sonic The Hedgehog 3 (Genesis). World brief: Act 3, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 3, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act3.png",
+  "platform": "SNES",
+  "game": "Mega Man X",
+  "target": "Highway",
+  "url": "https://vgmaps.com/Atlas/SuperNES/index.htm#MegaManX",
+  "description": "Highway, Mega Man X (SNES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Highway' from Mega Man X (SNES). World brief: Highway, Mega Man X (SNES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Highway, Mega Man X (SNES).",
+  "page_title": "Mega Man X",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/MegaManX-Highway.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act3.png"
+   "https://vgmaps.com/Atlas/SuperNES/MegaManX-Highway.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 496,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 4",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 4, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 4' from Sonic The Hedgehog 3 (Genesis). World brief: Act 4, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 4, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act4.png",
+  "platform": "SNES",
+  "game": "Super Castlevania IV",
+  "target": "Stage 1",
+  "url": "https://vgmaps.com/Atlas/SuperNES/index.htm#SuperCastlevaniaIV",
+  "description": "Stage 1, Super Castlevania IV (SNES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 1' from Super Castlevania IV (SNES). World brief: Stage 1, Super Castlevania IV (SNES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Stage 1, Super Castlevania IV (SNES).",
+  "page_title": "Super Castlevania IV",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperCastlevaniaIV-Stage1.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act4.png"
+   "https://vgmaps.com/Atlas/SuperNES/SuperCastlevaniaIV-Stage1.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 497,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 5",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 5, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 5' from Sonic The Hedgehog 3 (Genesis). World brief: Act 5, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 5, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act5.png",
+  "platform": "SNES",
+  "game": "The Lion King",
+  "target": "Level 01 - The Pridelands",
+  "url": "https://vgmaps.com/Atlas/SuperNES/index.htm#LionKing",
+  "description": "Level 01 - The Pridelands, The Lion King (SNES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Level 01 - The Pridelands' from The Lion King (SNES). World brief: Level 01 - The Pridelands, The Lion King (SNES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Level 01 - The Pridelands, The Lion King (SNES).",
+  "page_title": "The Lion King",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/LionKing-Level01-ThePridelands.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act5.png"
+   "https://vgmaps.com/Atlas/SuperNES/LionKing-Level01-ThePridelands.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 498,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 6",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 6, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 6' from Sonic The Hedgehog 3 (Genesis). World brief: Act 6, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 6, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act6.png",
+  "platform": "NES",
+  "game": "Mega Man 2",
+  "target": "Metal Man",
+  "url": "https://vgmaps.com/Atlas/NES/index.htm#MegaManII",
+  "description": "Metal Man, Mega Man 2 (NES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Metal Man' from Mega Man 2 (NES). World brief: Metal Man, Mega Man 2 (NES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Metal Man, Mega Man 2 (NES).",
+  "page_title": "Mega Man 2",
+  "image_url": "https://vgmaps.com/Atlas/NES/MegaManII-MetalMan.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act6.png"
+   "https://vgmaps.com/Atlas/NES/MegaManII-MetalMan.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 499,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 7",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 7, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 7' from Sonic The Hedgehog 3 (Genesis). World brief: Act 7, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 7, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act7.png",
+  "platform": "NES",
+  "game": "Mega Man 2",
+  "target": "Air Man",
+  "url": "https://vgmaps.com/Atlas/NES/index.htm#MegaManII",
+  "description": "Air Man, Mega Man 2 (NES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Air Man' from Mega Man 2 (NES). World brief: Air Man, Mega Man 2 (NES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Air Man, Mega Man 2 (NES).",
+  "page_title": "Mega Man 2",
+  "image_url": "https://vgmaps.com/Atlas/NES/MegaManII-AirMan.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act7.png"
+   "https://vgmaps.com/Atlas/NES/MegaManII-AirMan.png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 500,
-  "platform": "Genesis",
-  "game": "Sonic The Hedgehog 3",
-  "target": "Act 8",
-  "url": "https://vgmaps.com/Atlas/Genesis/index.htm#SonicTheHedgehog3",
-  "description": "Act 8, Sonic The Hedgehog 3 (Genesis).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Act 8' from Sonic The Hedgehog 3 (Genesis). World brief: Act 8, Sonic The Hedgehog 3 (Genesis). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Act 8, Sonic The Hedgehog 3 (Genesis).",
-  "page_title": "Sonic The Hedgehog 3",
-  "image_url": "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act8.png",
+  "platform": "NES",
+  "game": "Ghosts 'N Goblins",
+  "target": "Stage 1: The Graveyard & Dark Forest",
+  "url": "https://vgmaps.com/Atlas/NES/index.htm#GhostsNGoblins",
+  "description": "Stage 1: The Graveyard & Dark Forest, Ghosts 'N Goblins (NES).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stage 1: The Graveyard & Dark Forest' from Ghosts 'N Goblins (NES). World brief: Stage 1: The Graveyard & Dark Forest, Ghosts 'N Goblins (NES). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Stage 1: The Graveyard & Dark Forest, Ghosts 'N Goblins (NES).",
+  "page_title": "Ghosts 'N Goblins",
+  "image_url": "https://vgmaps.com/Atlas/NES/Ghosts'NGoblins-Stage1-Graveyard&DarkForest(Unmarked).png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/Genesis/SonicTheHedgehog3-SpecialStage-Act8.png"
+   "https://vgmaps.com/Atlas/NES/Ghosts'NGoblins-Stage1-Graveyard&DarkForest(Unmarked).png"
   ],
   "image_kinds": [
    "map"
   ],
-  "view": "other"
+  "view": "side"
  },
  {
   "id": 501,
@@ -13222,17 +13222,17 @@
  {
   "id": 662,
   "platform": "Master System",
-  "game": "Sonic's Edusoft (E)",
-  "target": "World",
-  "url": "https://vgmaps.com/Atlas/MasterSystem/index.htm#SonicsEdusoft",
-  "description": "World, Sonic's Edusoft (E) (Master System).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'World' from Sonic's Edusoft (E) (Master System). World brief: World, Sonic's Edusoft (E) (Master System). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "World, Sonic's Edusoft (E) (Master System).",
-  "page_title": "Sonic's Edusoft (E)",
-  "image_url": "https://vgmaps.com/Atlas/MasterSystem/Sonic'sEdusoft(E)-World.png",
+  "game": "Sonic The Hedgehog",
+  "target": "Green Hill Zone Act 2",
+  "url": "https://vgmaps.com/Atlas/MasterSystem/index.htm#SonicTheHedgehog",
+  "description": "Green Hill Zone Act 2, Sonic The Hedgehog (Master System).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Green Hill Zone Act 2' from Sonic The Hedgehog (Master System). World brief: Green Hill Zone Act 2, Sonic The Hedgehog (Master System). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Green Hill Zone Act 2, Sonic The Hedgehog (Master System).",
+  "page_title": "Sonic The Hedgehog",
+  "image_url": "https://vgmaps.com/Atlas/MasterSystem/SonicTheHedgehog-GreenHillZone-Act2.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/MasterSystem/Sonic'sEdusoft(E)-World.png"
+   "https://vgmaps.com/Atlas/MasterSystem/SonicTheHedgehog-GreenHillZone-Act2.png"
   ],
   "image_kinds": [
    "map"
@@ -14801,18 +14801,18 @@
  },
  {
   "id": 741,
-  "platform": "Game Gear",
-  "game": "Sonic Drift 2",
-  "target": "Racing Courses (In-Game Maps)",
-  "url": "https://vgmaps.com/Atlas/GameGear/index.htm#SonicDrift2",
-  "description": "Racing Courses (In-Game Maps), Sonic Drift 2 (Game Gear).",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Racing Courses (In-Game Maps)' from Sonic Drift 2 (Game Gear). World brief: Racing Courses (In-Game Maps), Sonic Drift 2 (Game Gear). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
-  "brief": "Racing Courses (In-Game Maps), Sonic Drift 2 (Game Gear).",
-  "page_title": "Sonic Drift 2",
-  "image_url": "https://vgmaps.com/Atlas/GameGear/SonicDrift2-RacingCourses(In-GameMaps).png",
+  "platform": "Arcade",
+  "game": "Teenage Mutant Ninja Turtles: Turtles In Time",
+  "target": "Scene 1: Big Apple, 3 AM",
+  "url": "https://vgmaps.com/Atlas/Arcade/index.htm#TeenageMutantNinjaTurtlesTurtlesInTime",
+  "description": "Scene 1: Big Apple, 3 AM, Teenage Mutant Ninja Turtles: Turtles In Time (Arcade).",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Scene 1: Big Apple, 3 AM' from Teenage Mutant Ninja Turtles: Turtles In Time (Arcade). World brief: Scene 1: Big Apple, 3 AM, Teenage Mutant Ninja Turtles: Turtles In Time (Arcade). SECTION RULE: The reference image may show an entire world, region, or multi-area map — far more than one scene. Do NOT compress the whole image into the scene. Choose the single most detailed, recognizable section of it — about one room or one screen's worth of place — and build ONLY that section, as one rich, compact environment within 30x30 units across and 12 units high, at full detail. Preserve that section's layout, landmarks, palette, and mood; use the rest of the map only as context for choosing. If the image already shows a single room or area, build it as shown. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "brief": "Scene 1: Big Apple, 3 AM, Teenage Mutant Ninja Turtles: Turtles In Time (Arcade).",
+  "page_title": "Teenage Mutant Ninja Turtles: Turtles In Time",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/TeenageMutantNinjaTurtles-TurtlesInTime-Scene1-BigApple,3AM.png",
   "image_kind": "map",
   "image_urls": [
-   "https://vgmaps.com/Atlas/GameGear/SonicDrift2-RacingCourses(In-GameMaps).png"
+   "https://vgmaps.com/Atlas/Arcade/TeenageMutantNinjaTurtles-TurtlesInTime-Scene1-BigApple,3AM.png"
   ],
   "image_kinds": [
    "map"
