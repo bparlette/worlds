@@ -1,0 +1,37 @@
+[
+  {
+    "id": "001",
+    "title": "ADVENTURE",
+    "sub": "Castles & Mazes",
+    "system": "Atari 2600",
+    "module": "modules/001.js"
+  },
+  {
+    "id": "002",
+    "title": "PITFALL!",
+    "sub": "Jungle & Underworld",
+    "system": "Atari 2600",
+    "module": "modules/002.js"
+  },
+  {
+    "id": "003",
+    "title": "HAUNTED HOUSE",
+    "sub": "Ghost Mansion",
+    "system": "Atari 2600",
+    "module": "modules/003.js"
+  },
+  {
+    "id": "004",
+    "title": "YARS' REVENGE",
+    "sub": "Neutral Zone & Shield",
+    "system": "Atari 2600",
+    "module": "modules/004.js"
+  },
+  {
+    "id": "005",
+    "title": "RIVER RAID",
+    "sub": "Canyon Riverway",
+    "system": "Atari 2600",
+    "module": "modules/005.js"
+  }
+]

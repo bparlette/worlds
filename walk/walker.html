@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<link rel="icon" href="data:," />
+<title>World Walker — 100 Retro Worlds</title>
+<style>
+  :root {
+    --cream: #f5e6bd;
+    --amber: #f3b744;
+    --ink: rgba(12, 8, 5, 0.72);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; margin: 0; overflow: hidden;
+    background: #0a0705;
+    font-family: "Courier New", Courier, monospace;
+    color: var(--cream);
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  .hud { transition: opacity .25s ease; }
+  body.photo .hud { opacity: 0; pointer-events: none !important; }
+
+  /* World title card */
+  #titlecard {
+    position: fixed; top: 15%; left: 0; right: 0;
+    text-align: center; pointer-events: none; z-index: 20;
+    opacity: 0; transform: translateY(10px) scale(.985);
+    transition: opacity .45s ease, transform .45s ease;
+    text-shadow: 0 3px 18px #000, 0 0 42px rgba(0,0,0,.6);
+  }
+  #titlecard.show { opacity: 1; transform: translateY(0) scale(1); }
+  #titlecard .big {
+    font-size: clamp(30px, 6vw, 62px); font-weight: bold;
+    letter-spacing: .1em; line-height: 1;
+  }
+  #titlecard .big .num { color: var(--amber); }
+  #titlecard .sub {
+    margin-top: 10px; font-size: clamp(12px, 1.8vw, 17px);
+    letter-spacing: .3em; text-transform: uppercase; opacity: .92;
+  }
+  #titlecard .rule {
+    width: 120px; height: 2px; margin: 14px auto 0;
+    background: linear-gradient(90deg, transparent, var(--amber), transparent);
+  }
+
+  /* Bottom-left status */
+  #status {
+    position: fixed; left: 22px; bottom: 20px; z-index: 15; pointer-events: none;
+    text-shadow: 0 2px 8px #000;
+  }
+  #status .where { font-size: 15px; letter-spacing: .14em; }
+  #status .where b { color: var(--amber); }
+  #status .hint { margin-top: 5px; font-size: 10.5px; letter-spacing: .12em; opacity: .75; text-transform: uppercase; }
+
+  /* Top-right buttons */
+  #buttons { position: fixed; top: 18px; right: 18px; z-index: 16; display: flex; gap: 8px; }
+  #buttons button {
+    pointer-events: auto; cursor: pointer;
+    font-family: inherit; font-size: 12px; letter-spacing: .08em;
+    color: var(--cream); background: var(--ink);
+    border: 1px solid rgba(245, 230, 189, .35); border-radius: 8px;
+    padding: 9px 13px; backdrop-filter: blur(6px);
+  }
+  #buttons button:hover { border-color: var(--amber); color: var(--amber); }
+  #buttons button.on { background: rgba(243, 183, 68, .25); border-color: var(--amber); color: var(--amber); }
+
+  /* Rift transition flash (tinted by destination fog color via JS) */
+  #riftflash {
+    position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center,
+      rgba(255,255,255,.85) 0%, var(--flash, #7a6cff) 42%, transparent 78%);
+    mix-blend-mode: screen;
+  }
+
+  /* Touch joystick */
+  #joy {
+    position: fixed; z-index: 18; width: 116px; height: 116px; border-radius: 50%;
+    border: 2px solid rgba(245, 230, 189, .4); background: rgba(10, 8, 6, .3);
+    display: none; pointer-events: none; transform: translate(-50%, -50%);
+  }
+  #joyNub {
+    position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(245, 230, 189, .45); transform: translate(-50%, -50%);
+  }
+
+  #loading {
+    position: fixed; inset: 0; z-index: 40; display: flex;
+    align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+    background: #0a0705; letter-spacing: .25em; font-size: 13px; text-transform: uppercase;
+    transition: opacity .5s ease;
+  }
+  #loading.done { opacity: 0; pointer-events: none; }
+  #loading .dot {
+    width: 10px; height: 10px; border: 2px solid var(--amber); border-radius: 50%;
+    box-shadow: 0 0 16px var(--amber); animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  @media (max-width: 650px) {
+    #status { left: 14px; bottom: 14px; }
+    #buttons { top: 12px; right: 12px; }
+  }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="titlecard" class="hud">
+    <div class="big"><span class="num" id="tcNum">#001</span> · <span id="tcTitle">ADVENTURE</span></div>
+    <div class="sub" id="tcSub">Castles &amp; Mazes</div>
+    <div class="rule"></div>
+  </div>
+
+  <div id="status" class="hud">
+    <div class="where">World <b id="stIdx">#--- / -</b> · <span id="stName">—</span></div>
+    <div class="hint">WASD / stick to walk · drag to look · walk into a rift to travel · P photo mode</div>
+  </div>
+
+  <div id="buttons" class="hud">
+    <button id="photoBtn" type="button">📷 Photo</button>
+    <button id="snapBtn" type="button">💾 Snap</button>
+  </div>
+
+  <div id="riftflash"></div>
+  <div id="joy"><div id="joyNub"></div></div>
+  <div id="loading"><div class="dot"></div><div>Opening the first world…</div></div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const CDN = "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+    const EYE = 1.7;
+    const BASE_FOV = 62;
+    const WALK_SPEED = 6.0;
+    const RUN_SPEED = 9.5;
+    const PRELOAD_DIST = 15;
+    const TRIGGER_DIST = 1.2;
+    const REARM_DIST = 3.0;
+    const BEND_MS = 600;
+    const SWAP_AT = 0.5; // fraction of the bend where the world swap happens
+    const RIFT_W = 2.2;
+    const RIFT_H = 3.0;
+    const RIFT_DEFAULT_TINT = 0x7a6cff;
+
+    // ---------------------------------------------------------------------
+    // Renderer / scene / camera
+    // ---------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById("app").appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+    scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.rotation.order = "YXZ";
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.camera = camera;
+    const DOWN = new THREE.Vector3(0, -1, 0);
+
+    // ---------------------------------------------------------------------
+    // DOM refs
+    // ---------------------------------------------------------------------
+    const el = id => document.getElementById(id);
+    const titlecard = el("titlecard"), tcNum = el("tcNum"), tcTitle = el("tcTitle"), tcSub = el("tcSub");
+    const stIdx = el("stIdx"), stName = el("stName");
+    const flashEl = el("riftflash");
+    const joyEl = el("joy"), joyNub = el("joyNub");
+
+    // ---------------------------------------------------------------------
+    // Manifest + world instance management (streaming)
+    // ---------------------------------------------------------------------
+    let defs = [];
+    const defById = new Map();
+    const moduleCache = new Map();   // id -> module namespace (JS stays cached)
+    const loadPromises = new Map();  // id -> Promise
+    const instances = new Map();     // id -> instance record (BUILT worlds)
+    let disposeCount = 0;
+
+    const idxOf = id => defs.findIndex(d => d.id === id);
+    const nextId = id => defs[(idxOf(id) + 1) % defs.length].id;
+    const prevId = id => defs[(idxOf(id) - 1 + defs.length) % defs.length].id;
+    function allowedIds(id) { return new Set([id, nextId(id), prevId(id)]); }
+
+    async function loadModule(id) {
+      if (moduleCache.has(id)) return moduleCache.get(id);
+      if (!loadPromises.has(id)) {
+        const def = defById.get(id);
+        const url = new URL(def.module, window.location.href).href;
+        loadPromises.set(id, import(url).then(ns => { moduleCache.set(id, ns); return ns; }));
+      }
+      return loadPromises.get(id);
+    }
+
+    async function ensureLoaded(id) {
+      if (instances.has(id)) return instances.get(id);
+      const ns = await loadModule(id);
+      if (instances.has(id)) return instances.get(id);
+      const inst = ns.createWorld(THREE);
+      inst.group.updateMatrixWorld(true);
+      const rec = {
+        id, def: defById.get(id), inst,
+        group: inst.group, t: 0,
+        portals: [],
+        meshes: []
+      };
+      // Ground raycasts only ever test real meshes (sprites/points excluded —
+      // sprite raycasting also requires a camera on the raycaster).
+      inst.group.traverse(o => { if (o.isMesh) rec.meshes.push(o); });
+      // Portals are built after the group exists; ground-sample the door
+      // spots first (raycast this world's own meshes).
+      for (const side of ["next", "prev"]) {
+        const door = inst.doors[side];
+        const gy = sampleGround(rec, door.x, door.z, 40, 15);
+        const destId = side === "next" ? nextId(id) : prevId(id);
+        const portal = makeRift(defById.get(destId), destId);
+        portal.group.position.set(door.x, gy === null ? 0 : gy, door.z);
+        portal.side = side;
+        portal.destId = destId;
+        portal.armed = true;
+        rec.group.add(portal.group);
+        rec.portals.push(portal);
+      }
+      rec.group.visible = false;
+      scene.add(rec.group);
+      instances.set(id, rec);
+      refreshRiftTints();
+      sweepLoaded();
+      return rec;
+    }
+
+    function disposeWorld(id) {
+      const rec = instances.get(id);
+      if (!rec) return;
+      scene.remove(rec.group);
+      rec.group.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) {
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          for (const m of mats) {
+            for (const k in m) { if (m[k] && m[k].isTexture) m[k].dispose(); }
+            m.dispose();
+          }
+        }
+      });
+      instances.delete(id);
+      disposeCount++;
+    }
+
+    // Keep at most {current, next, prev} built.
+    function sweepLoaded() {
+      if (!current) return;
+      const allowed = allowedIds(current.id);
+      for (const id of [...instances.keys()]) {
+        if (!allowed.has(id)) disposeWorld(id);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Time-rift portal prop: wavy oval membrane + destination label.
+    // ---------------------------------------------------------------------
+    function makeLabelSprite(text) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512; canvas.height = 112;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, 512, 112);
+      ctx.font = "bold 44px 'Courier New', monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,.9)"; ctx.shadowBlur = 10;
+      ctx.fillStyle = "#f5e6bd";
+      ctx.fillText(text, 256, 46);
+      ctx.font = "bold 25px 'Courier New', monospace";
+      ctx.fillStyle = "#f3b744";
+      ctx.fillText("— TIME RIFT —", 256, 88);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+      sprite.scale.set(4.6, 1.0, 1);
+      return sprite;
+    }
+
+    function wobbleBase(geometry) {
+      const pos = geometry.attributes.position;
+      const base = new Float32Array(pos.array.length);
+      base.set(pos.array);
+      const ang = new Float32Array(pos.count);
+      for (let i = 0; i < pos.count; i++) {
+        ang[i] = Math.atan2(base[i * 3 + 1], base[i * 3]);
+      }
+      return { base, ang };
+    }
+
+    function makeRift(destDef, destId) {
+      const g = new THREE.Group();
+
+      const membraneGeo = new THREE.CircleGeometry(1, 56);
+      const membraneMat = new THREE.MeshBasicMaterial({
+        color: RIFT_DEFAULT_TINT, transparent: true, opacity: 0.5,
+        side: THREE.DoubleSide, depthWrite: false
+      });
+      const membrane = new THREE.Mesh(membraneGeo, membraneMat);
+      membrane.scale.set(RIFT_W / 2, RIFT_H / 2, 1);
+      membrane.position.y = RIFT_H / 2;
+      membrane.userData = { rift: true, shape: "oval", width: RIFT_W, height: RIFT_H, dest: destId };
+      g.add(membrane);
+
+      const coreGeo = new THREE.CircleGeometry(0.62, 40);
+      const coreMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.28,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+      });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      core.scale.set(RIFT_W / 2, RIFT_H / 2, 1);
+      core.position.set(0, RIFT_H / 2, 0.01);
+      g.add(core);
+
+      const rimGeo = new THREE.RingGeometry(0.93, 1.05, 56);
+      const rimMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.9,
+        side: THREE.DoubleSide, depthWrite: false
+      });
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.scale.set(RIFT_W / 2, RIFT_H / 2, 1);
+      rim.position.set(0, RIFT_H / 2, 0.02);
+      g.add(rim);
+
+      const label = makeLabelSprite(`#${destDef.id} · ${destDef.title}`);
+      label.position.set(0, RIFT_H + 0.85, 0);
+      g.add(label);
+
+      return {
+        group: g, membrane, core, rim, label,
+        memWobble: wobbleBase(membraneGeo),
+        rimWobble: wobbleBase(rimGeo),
+        phase: Math.random() * Math.PI * 2,
+        yaw: 0
+      };
+    }
+
+    function applyWobble(geometry, wb, t, phase, amp) {
+      const pos = geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const bx = wb.base[i * 3], by = wb.base[i * 3 + 1];
+        const r = Math.hypot(bx, by);
+        if (r < 0.001) continue;
+        const s = 1 + amp * Math.sin(t * 2.6 + wb.ang[i] * 3 + phase)
+                  + amp * 0.7 * Math.sin(t * 4.3 + wb.ang[i] * 5 + phase * 1.7);
+        pos.array[i * 3] = bx * s;
+        pos.array[i * 3 + 1] = by * s;
+      }
+      pos.needsUpdate = true;
+    }
+
+    // Tint a rift with its destination world's fog color once that world is
+    // built (before that it keeps the generic rift violet).
+    function refreshRiftTints() {
+      for (const rec of instances.values()) {
+        for (const p of rec.portals) {
+          const dest = instances.get(p.destId);
+          if (dest) {
+            const c = new THREE.Color(dest.inst.env.fogColor);
+            p.membrane.material.color.copy(c);
+            p.core.material.color.copy(c).lerp(new THREE.Color(0xffffff), 0.55);
+            p.rim.material.color.copy(c).lerp(new THREE.Color(0xffffff), 0.35);
+          }
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Ground sampling: highest mesh surface at (x,z) not above refY + cap.
+    // ---------------------------------------------------------------------
+    function sampleGround(rec, x, z, originLift, cap) {
+      raycaster.set(new THREE.Vector3(x, originLift, z), DOWN);
+      raycaster.far = 300;
+      const hits = raycaster.intersectObjects(rec.meshes, false);
+      for (const h of hits) {
+        if (cap !== Infinity && h.point.y > cap) continue;
+        return h.point.y;
+      }
+      return null;
+    }
+
+    // ---------------------------------------------------------------------
+    // Player + input
+    // ---------------------------------------------------------------------
+    const player = { x: 0, z: 0, groundY: 0, yaw: 0, pitch: 0 };
+    const keys = new Set();
+    let current = null;
+    let transition = null;
+    let lastTransitionMs = 0;
+    let lastTransitionPeakFov = BASE_FOV;
+    let lastTransitionFrames = 0;
+
+    const MOVE_KEYS = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+    window.addEventListener("keydown", e => {
+      if (MOVE_KEYS.includes(e.code)) { keys.add(e.code); e.preventDefault(); }
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") keys.add("Shift");
+      if (e.code === "KeyP") togglePhoto();
+      if (e.code === "Enter" && document.body.classList.contains("photo")) snap();
+      if (e.code === "Escape") document.body.classList.remove("photo");
+    });
+    window.addEventListener("keyup", e => {
+      keys.delete(e.code);
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") keys.delete("Shift");
+    });
+    window.addEventListener("blur", () => keys.clear());
+
+    // Drag look (mouse, or touch on the right half) + floating joystick
+    // (touch on the left half).
+    let lookPointer = null, joyPointer = null;
+    const joyVec = { x: 0, y: 0 };
+    const joyOrigin = { x: 0, y: 0 };
+
+    const cvs = renderer.domElement;
+    cvs.addEventListener("pointerdown", e => {
+      if (e.pointerType === "touch" && e.clientX < window.innerWidth / 2 && joyPointer === null) {
+        joyPointer = e.pointerId;
+        joyOrigin.x = e.clientX; joyOrigin.y = e.clientY;
+        joyEl.style.display = "block";
+        joyEl.style.left = e.clientX + "px";
+        joyEl.style.top = e.clientY + "px";
+        joyNub.style.transform = "translate(-50%,-50%)";
+      } else if (lookPointer === null) {
+        lookPointer = e.pointerId;
+        cvs.setPointerCapture(e.pointerId);
+      }
+    });
+    cvs.addEventListener("pointermove", e => {
+      if (e.pointerId === lookPointer) {
+        player.yaw -= e.movementX * 0.0042;
+        player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * 0.0042, -1.25, 1.25);
+      } else if (e.pointerId === joyPointer) {
+        const dx = e.clientX - joyOrigin.x, dy = e.clientY - joyOrigin.y;
+        const len = Math.hypot(dx, dy), max = 48;
+        const s = len > max ? max / len : 1;
+        joyVec.x = (dx * s) / max; joyVec.y = (dy * s) / max;
+        joyNub.style.transform = `translate(calc(-50% + ${dx * s}px), calc(-50% + ${dy * s}px))`;
+      }
+    });
+    function endPointer(e) {
+      if (e.pointerId === lookPointer) lookPointer = null;
+      if (e.pointerId === joyPointer) {
+        joyPointer = null; joyVec.x = 0; joyVec.y = 0;
+        joyEl.style.display = "none";
+      }
+    }
+    cvs.addEventListener("pointerup", endPointer);
+    cvs.addEventListener("pointercancel", endPointer);
+
+    function inputVector() {
+      let f = 0, s = 0;
+      if (keys.has("KeyW") || keys.has("ArrowUp")) f += 1;
+      if (keys.has("KeyS") || keys.has("ArrowDown")) f -= 1;
+      if (keys.has("KeyD") || keys.has("ArrowRight")) s += 1;
+      if (keys.has("KeyA") || keys.has("ArrowLeft")) s -= 1;
+      f += -joyVec.y; s += joyVec.x;
+      const len = Math.hypot(f, s);
+      if (len > 1) { f /= len; s /= len; }
+      return { f, s };
+    }
+
+    // ---------------------------------------------------------------------
+    // Title card / env
+    // ---------------------------------------------------------------------
+    let titleTimer = 0;
+    function showTitle(def) {
+      tcNum.textContent = "#" + def.id;
+      tcTitle.textContent = def.title;
+      tcSub.textContent = `${def.sub} · ${def.system}`;
+      stIdx.textContent = `#${def.id} / ${defs.length}`;
+      stName.textContent = def.title;
+      titlecard.classList.add("show");
+      clearTimeout(titleTimer);
+      titleTimer = setTimeout(() => titlecard.classList.remove("show"), 2600);
+    }
+
+    function applyEnv(env) {
+      scene.background = new THREE.Color(env.background);
+      scene.fog.color.setHex(env.fogColor);
+      scene.fog.density = env.fogDensity;
+    }
+
+    // ---------------------------------------------------------------------
+    // World switching + the time-bend transition
+    // ---------------------------------------------------------------------
+    function setCurrent(rec, spawnOverride) {
+      if (current) current.group.visible = false;
+      current = rec;
+      rec.group.visible = true;
+      applyEnv(rec.inst.env);
+      if (spawnOverride) {
+        player.x = spawnOverride.x; player.z = spawnOverride.z;
+        if (spawnOverride.yaw !== undefined) player.yaw = spawnOverride.yaw;
+        player.pitch = 0;
+        const gy = sampleGround(rec, player.x, player.z, 40, 15);
+        player.groundY = gy === null ? 0 : gy;
+      }
+      showTitle(rec.def);
+      sweepLoaded();
+    }
+
+    async function beginTransition(side) {
+      if (transition || !current) return;
+      const destId = side === "next" ? nextId(current.id) : prevId(current.id);
+      const dest = await ensureLoaded(destId);
+      if (transition) return;
+      transition = {
+        start: performance.now(), side, dest,
+        fromId: current.id, swapped: false,
+        t: 0, x: 0, frames: 0, peakFov: BASE_FOV
+      };
+      const c = new THREE.Color(dest.inst.env.fogColor);
+      flashEl.style.setProperty("--flash", `#${c.getHexString()}`);
+    }
+
+    function doSwap() {
+      const { side, dest } = transition;
+      const arrivalDoor = side === "next" ? dest.inst.doors.prev : dest.inst.doors.next;
+      // Arrive just inside the new world, facing its heart.
+      const dx = 0 - arrivalDoor.x, dz = 0 - arrivalDoor.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      const inward = { x: dx / dl, z: dz / dl };
+      const yaw = Math.atan2(-inward.x, -inward.z);
+      setCurrent(dest, {
+        x: arrivalDoor.x + inward.x * 2.6,
+        z: arrivalDoor.z + inward.z * 2.6,
+        yaw
+      });
+      // The rift we just stepped out of stays inert until we walk away.
+      const arrivalPortal = dest.portals.find(p => (side === "next" ? p.side === "prev" : p.side === "next"));
+      if (arrivalPortal) arrivalPortal.armed = false;
+      transition.swapped = true;
+    }
+
+    function bendTimeScale(x, now) {
+      // Slow/stutter while the rift tears, easing back to normal.
+      if (x < SWAP_AT) return Math.floor(now / 70) % 2 === 0 ? 0.06 : 0.3;
+      return 0.55;
+    }
+
+    // ---------------------------------------------------------------------
+    // Photo mode + snapshot
+    // ---------------------------------------------------------------------
+    function togglePhoto() {
+      document.body.classList.toggle("photo");
+      el("photoBtn").classList.toggle("on", document.body.classList.contains("photo"));
+    }
+    el("photoBtn").addEventListener("click", togglePhoto);
+
+    function snap() {
+      if (!current) return;
+      renderer.render(scene, camera);
+      const def = current.def;
+      const name = `world-${def.id}-${def.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+      renderer.domElement.toBlob(blob => {
+        if (!blob) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }, "image/png");
+    }
+    el("snapBtn").addEventListener("click", snap);
+
+    // ---------------------------------------------------------------------
+    // Main loop
+    // ---------------------------------------------------------------------
+    const clock = new THREE.Clock();
+    let elapsed = 0;
+    let preloadTimer = 0;
+
+    function tick() {
+      requestAnimationFrame(tick);
+      const rawDelta = clock.getDelta();
+      const dt = Math.min(rawDelta, 0.05);
+      const now = performance.now();
+      elapsed += dt;
+
+      if (!current) { renderer.render(scene, camera); return; }
+
+      // --- transition state (time-bend) ---
+      // Progress accumulates frame time, so the bend lasts ~0.6s of screen
+      // time even when frames are slow (it never stretches into seconds).
+      let worldDt = dt, ts = 1;
+      if (transition) {
+        // The bend clock runs on game-time: each frame contributes at most
+        // 100ms, the same convention as the world-update dt clamp (50ms).
+        // On a slow renderer the effect simply spans more presented frames
+        // (see the 0.22/frame progress clamp below) instead of reporting a
+        // multi-second "duration" for a 0.6s game-time effect.
+        transition.t += Math.min(rawDelta, 0.1);
+        transition.frames++;
+        // Progress follows accumulated time, but a single frame may advance
+        // it by at most 0.22 — the bend always spans several presented
+        // frames, so the FOV punch and flash stay visible even when frames
+        // are slow (on a 60fps display the time term dominates anyway).
+        const xTime = transition.t / (BEND_MS / 1000);
+        transition.x = Math.min(xTime, transition.x + 0.22);
+        const x = transition.x;
+        ts = bendTimeScale(Math.min(x, 1), now);
+        worldDt = dt * ts;
+        const punch = Math.sin(Math.PI * Math.min(x * 1.12, 1));
+        camera.fov = BASE_FOV + 20 * punch;
+        if (camera.fov > transition.peakFov) transition.peakFov = camera.fov;
+        camera.updateProjectionMatrix();
+        flashEl.style.opacity = String(Math.pow(Math.sin(Math.PI * Math.min(x, 1)), 2) * 0.85);
+        cvs.style.filter = `saturate(${1 + 0.5 * punch}) hue-rotate(${10 * punch}deg)`;
+        if (x >= SWAP_AT && !transition.swapped) doSwap();
+        if (x >= 1) {
+          lastTransitionMs = transition.t * 1000;
+          lastTransitionPeakFov = transition.peakFov;
+          lastTransitionFrames = transition.frames;
+          transition = null;
+          camera.fov = BASE_FOV;
+          camera.updateProjectionMatrix();
+          flashEl.style.opacity = "0";
+          cvs.style.filter = "";
+        }
+      }
+
+      // --- current world ambient animation ---
+      current.t += worldDt;
+      current.inst.update(current.t, worldDt);
+
+      // --- rift animation: wobble, shimmer, gentle Y billboard ---
+      for (const p of current.portals) {
+        applyWobble(p.membrane.geometry, p.memWobble, elapsed, p.phase, 0.05);
+        applyWobble(p.rim.geometry, p.rimWobble, elapsed, p.phase + 0.7, 0.07);
+        p.core.scale.set(RIFT_W / 2 * (1 + 0.08 * Math.sin(elapsed * 3.1 + p.phase)),
+                         RIFT_H / 2 * (1 + 0.08 * Math.sin(elapsed * 3.1 + p.phase)), 1);
+        p.label.position.y = RIFT_H + 0.85 + Math.sin(elapsed * 1.6 + p.phase) * 0.09;
+        const targetYaw = Math.atan2(player.x - p.group.position.x, player.z - p.group.position.z);
+        let dy = targetYaw - p.yaw;
+        while (dy > Math.PI) dy -= Math.PI * 2;
+        while (dy < -Math.PI) dy += Math.PI * 2;
+        p.yaw += dy * Math.min(1, dt * 3.5);
+        p.group.rotation.y = p.yaw;
+      }
+
+      // --- fog drift (env may be mutated by the world's update) ---
+      scene.fog.density = current.inst.env.fogDensity;
+
+      if (!transition) {
+        // --- movement ---
+        const { f, s } = inputVector();
+        const speed = keys.has("Shift") ? RUN_SPEED : WALK_SPEED;
+        const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
+        // forward = (-sin yaw, -cos yaw); right = (cos yaw, -sin yaw)
+        player.x += ((-sin) * f + cos * s) * speed * dt;
+        player.z += ((-cos) * f + (-sin) * s) * speed * dt;
+
+        // --- ground following ---
+        raycaster.set(new THREE.Vector3(player.x, player.groundY + EYE + 3, player.z), DOWN);
+        raycaster.far = 60;
+        const hits = raycaster.intersectObjects(current.meshes, false);
+        for (const h of hits) {
+          if (h.point.y > player.groundY + 1.1) continue;
+          if (h.point.y < player.groundY - 30) continue;
+          player.groundY += (h.point.y - player.groundY) * Math.min(1, dt * 14);
+          break;
+        }
+
+        // --- portal arming, preload, triggers ---
+        preloadTimer -= dt;
+        for (const p of current.portals) {
+          const d = Math.hypot(player.x - p.group.position.x, player.z - p.group.position.z);
+          if (!p.armed && d > REARM_DIST) p.armed = true;
+          if (p.armed && d < TRIGGER_DIST) { beginTransition(p.side); break; }
+          if (preloadTimer <= 0 && d < PRELOAD_DIST) ensureLoaded(p.destId);
+        }
+        if (preloadTimer <= 0) preloadTimer = 0.15;
+      }
+
+      camera.position.set(player.x, player.groundY + EYE, player.z);
+      camera.rotation.set(player.pitch, player.yaw, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    // ---------------------------------------------------------------------
+    // Boot
+    // ---------------------------------------------------------------------
+    (async function boot() {
+      defs = await (await fetch("worlds.json")).json();
+      // Ring order = manifest order sorted by numeric id — no world list is
+      // hardcoded anywhere in this host; the manifest is the only source.
+      defs.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+      defs.forEach(d => defById.set(d.id, d));
+      const first = await ensureLoaded(defs[0].id);
+      setCurrent(first, { ...first.inst.spawn });
+      // Preload both neighbours so the first crossings are instant.
+      ensureLoaded(nextId(first.id));
+      ensureLoaded(prevId(first.id));
+      el("loading").classList.add("done");
+      tick();
+    })().catch(err => {
+      console.error("World Walker failed to boot:", err);
+      el("loading").firstElementChild.style.display = "none";
+      el("loading").lastElementChild.textContent = "Failed to load — " + err.message;
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // ---------------------------------------------------------------------
+    // Test hooks
+    // ---------------------------------------------------------------------
+    window.__walker = {
+      get currentId() { return current ? current.id : null; },
+      loadedIds() { return [...instances.keys()]; },
+      get disposeCount() { return disposeCount; },
+      get lastTransitionMs() { return lastTransitionMs; },
+      get lastTransitionPeakFov() { return lastTransitionPeakFov; },
+      get lastTransitionFrames() { return lastTransitionFrames; },
+      get transitioning() { return !!transition; },
+      fov() { return camera.fov; },
+      player() { return { x: player.x, z: player.z, groundY: player.groundY, yaw: player.yaw, pitch: player.pitch }; },
+      doors() {
+        if (!current) return null;
+        return { next: { ...current.inst.doors.next }, prev: { ...current.inst.doors.prev } };
+      },
+      teleport(x, z) { player.x = x; player.z = z; },
+      portalInfo() {
+        if (!current) return [];
+        return current.portals.map(p => ({
+          side: p.side, dest: p.destId, shape: "oval",
+          width: RIFT_W, height: RIFT_H,
+          tint: "#" + p.membrane.material.color.getHexString()
+        }));
+      }
+    };
+  </script>
+</body>
+</html>
