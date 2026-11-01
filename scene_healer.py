@@ -95,6 +95,9 @@ def automated_rule_based_patch(content: str) -> str:
             start, body, end = match.group(1), match.group(2), match.group(3)
             # Only wrap if not already wrapped
             if "try {" not in body:
+                # The shield schedules the next frame itself; a second call in the
+                # body doubles the callbacks every frame and freezes the page.
+                body = re.sub(r"\n[ \t]*requestAnimationFrame\(animate\);[ \t]*", "\n", body)
                 safe_animate = (
                     f"{start}\n"
                     f"    /* [SHIELD] */\n"
