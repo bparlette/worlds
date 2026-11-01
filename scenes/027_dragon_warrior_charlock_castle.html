@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Charlock Castle — Dragon Warrior</title>
+  <style>
+    :root {
+      --ink: #f4ead8;
+      --muted: #bca98e;
+      --gold: #d7ad67;
+      --panel: rgba(22, 18, 14, 0.72);
+      --line: rgba(255, 225, 174, 0.22);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #100f0c;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active { cursor: grabbing; }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .title-card {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      max-width: 390px;
+      padding: 17px 20px 16px;
+      border-left: 3px solid var(--gold);
+      background: linear-gradient(90deg, rgba(20, 16, 12, .88), rgba(20, 16, 12, .48));
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .3);
+    }
+
+    .eyebrow {
+      margin-bottom: 6px;
+      color: var(--gold);
+      font: 700 10px/1.2 Arial, sans-serif;
+      letter-spacing: .24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 3vw, 39px);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: .025em;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font: 12px/1.45 Arial, sans-serif;
+    }
+
+    .story-panel {
+      position: absolute;
+      right: 24px;
+      top: 128px;
+      width: 285px;
+      padding: 17px 18px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    }
+
+    .story-title {
+      margin-bottom: 12px;
+      color: var(--gold);
+      font: 700 10px/1.2 Arial, sans-serif;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .chapter {
+      margin-top: 11px;
+    }
+
+    .chapter strong {
+      display: block;
+      color: #f3e4ca;
+      font: 600 13px/1.35 Arial, sans-serif;
+    }
+
+    .chapter span {
+      display: block;
+      margin-top: 3px;
+      color: #b9a88c;
+      font: 11px/1.45 Arial, sans-serif;
+    }
+
+    .controls {
+      position: absolute;
+      left: 28px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #cbb595;
+      font: 11px/1.3 Arial, sans-serif;
+      letter-spacing: .03em;
+    }
+
+    .controls kbd {
+      padding: 3px 6px;
+      border: 1px solid rgba(255, 225, 174, .25);
+      border-radius: 3px;
+      color: #f2dfbd;
+      background: rgba(255, 255, 255, .05);
+      font: 10px Arial, sans-serif;
+    }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: 25px;
+      transform: translateX(-50%);
+      color: rgba(244, 234, 216, .62);
+      font: 10px/1.4 Arial, sans-serif;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      position: absolute;
+      right: 25px;
+      bottom: 25px;
+      color: var(--gold);
+      font: 10px Arial, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 700px) {
+      .title-card {
+        top: 14px;
+        left: 14px;
+        right: 14px;
+        max-width: none;
+        padding: 13px 15px;
+      }
+
+      .story-panel {
+        top: auto;
+        bottom: 72px;
+        right: 14px;
+        width: 230px;
+        padding: 12px 14px;
+      }
+
+      .controls {
+        left: 14px;
+        bottom: 16px;
+      }
+
+      .hint {
+        bottom: 20px;
+        max-width: 180px;
+      }
+
+      .badge { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div class="title-card">
+      <div class="eyebrow">The Legend of Zelda · NES</div>
+      <h1>Charlock Castle</h1>
+      <p class="subtitle">A fog-laden fortress above the mist, where the hero’s path is blocked by treacherous ruins.</p>
+    </div>
+
+    <aside class="story-panel">
+      <div class="story-title">Chapter Walkthrough</div>
+      <div class="chapter">
+        <strong>01 — The Descent</strong>
+        <span>Descend the winding stone stairs. Avoid the boomerang traps and the dark chamber beneath the throne room.</span>
+      </div>
+      <div class="chapter">
+        <strong>02 — The Hall of Mirrors</strong>
+        <span>Navigate the treacherous mirrored corridors. Use the small mirrors to deflect the shadow beasts.</span>
+      </div>
+      <div class="chapter">
+        <strong>03 — The Dragon’s Rest</strong>
+        <span>Defeat the guardian dragon and claim the dragon heart. The final path opens beyond the summit.</span>
+      </div>
+    </aside>
+
+    <div class="controls">
+      <span><kbd>Drag</kbd> orbit</span>
+      <span><kbd>Wheel</kbd> zoom</span>
+      <span><kbd>Click</kbd> interact</span>
+    </div>
+
+    <div class="hint">Drag to explore · Scroll to zoom · Click to investigate</div>
+    <div class="badge">Interactive 3D World</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x171816);
+    scene.fog = new THREE.FogExp2(0x27312f, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 220);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+    const materials = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x656159,
+        roughness: 0.94,
+        metalness: 0.02
+      }),
+      darkStone: new THREE.MeshStandardMaterial({
+        color: 0x303331,
+        roughness: 0.97,
+        metalness: 0.01
+      }),
+      paleStone: new THREE.MeshStandardMaterial({
+        color: 0x8a8170,
+        roughness: 0.9,
+        metalness: 0.02
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xc5974e,
+        roughness: 0.38,
+        metalness: 0.72
+      }),
+      iron: new THREE.MeshStandardMaterial({
+        color: 0x252a2a,
+        roughness: 0.64,
+        metalness: 0.72
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x4d3825,
+        roughness: 0.92
+      }),
+      rope: new THREE.MeshStandardMaterial({
+        color: 0x8c7145,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x364a2b,
+        roughness: 1
+      }),
+      glowing: new THREE.MeshStandardMaterial({
+        color: 0xffc45b,
+        emissive: 0xff8b2f,
+        emissiveIntensity: 2.4,
+        roughness: 0.45
+      }),
+      redGlow: new THREE.MeshStandardMaterial({
+        color: 0xa22525,
+        emissive: 0x4a0707,
+        emissiveIntensity: 1.4,
+        roughness: 0.65
+      }),
+      mirror: new THREE.MeshStandardMaterial({
+        color: 0x9ba4a3,
+        roughness: 0.12,
+        metalness: 0.95
+      }),
+      dragon: new THREE.MeshStandardMaterial({
+        color: 0x30383a,
+        roughness: 0.72,
+        metalness: 0.25
+      }),
+      dragonGold: new THREE.MeshStandardMaterial({
+        color: 0xb58b42,
+        emissive: 0x3b2106,
+        emissiveIntensity: 0.8,
+        roughness: 0.45,
+        metalness: 0.65
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x9aa8a0, 0x21170f, 1.25));
+
+    const moon = new THREE.DirectionalLight(0xb8c6c3, 2.2);
+    moon.position.set(-35, 45, 25);
+    moon.castShadow = true;
+    moon.shadow.mapSize.set(2048, 2048);
+    moon.shadow.camera.left = -55;
+    moon.shadow.camera.right = 55;
+    moon.shadow.camera.top = 55;
+    moon.shadow.camera.bottom = -55;
+    moon.shadow.camera.near = 1;
+    moon.shadow.camera.far = 120;
+    moon.shadow.bias = -0.0004;
+    scene.add(moon);
+
+    const warmFill = new THREE.DirectionalLight(0xd99b55, 0.75);
+    warmFill.position.set(25, 15, -25);
+    scene.add(warmFill);
+
+    const castleLight = new THREE.PointLight(0xffa64d, 26, 48, 2);
+    castleLight.position.set(0, 7, 0);
+    scene.add(castleLight);
+
+    const mirrorLight = new THREE.PointLight(0x789895, 15, 24, 2);
+    mirrorLight.position.set(0, 4, 0);
+    scene.add(mirrorLight);
+
+    // ---------------------------------------------------------------------
+    // Geometry helpers
+    // ---------------------------------------------------------------------
+    function mesh(geometry, material, x = 0, y = 0, z = 0, cast = true, receive = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(x, y, z);
+      object.castShadow = cast;
+      object.receiveShadow = receive;
+      return object;
+    }
+
+    function box(w, h, d, material, x, y, z, cast = true, receive = true) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, x, y, z, cast, receive);
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, segments = 12, cast = true) {
+      return mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material, x, y, z, cast, true);
+    }
+
+    function cone(radius, height, material, x, y, z, segments = 12) {
+      return mesh(new THREE.ConeGeometry(radius, height, segments), material, x, y, z);
+    }
+
+    function torus(radius, tube, material, x, y, z, arc = Math.PI * 2) {
+      const object = mesh(new THREE.TorusGeometry(radius, tube, 8, 40, arc), material, x, y, z);
+      if (arc < Math.PI * 2) object.rotation.z = -arc / 2;
+      return object;
+    }
+
+    function lineBetween(a, b, color, opacity = 1) {
+      const start = new THREE.Vector3(...a);
+      const end = new THREE.Vector3(...b);
+      const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+      const material = new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity });
+      return new THREE.Line(geometry, material);
+    }
+
+    // ---------------------------------------------------------------------
+    // World layout
+    // ---------------------------------------------------------------------
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // The fortress occupies a rocky island, descending toward the viewer.
+    const island = cylinder(24, 31, 9, materials.darkStone, 0, -3.3, 0, 18);
+    island.receiveShadow = true;
+
+    const islandTop = cylinder(22.5, 23.5, 1.2, materials.stone, 0, 1.4, 0, 18);
+    islandTop.receiveShadow = true;
+
+    // Broad central path.
+    box(12, 0.28, 38, materials.paleStone, 0, 1.65, 15, false, true);
+    box(10, 0.26, 25, materials.stone, 0, 1.58, -16, false, true);
+
+    // Side towers and crenellations.
+    const towerPositions = [
+      [-17, 1.6, 11],
+      [17, 1.6, 11],
+      [-17, 1.6, -18],
+      [17, 1.6, -18]
+    ];
+
+    for (const [x, y, z] of towerPositions) {
+      const tower = cylinder(3.1, 3.6, 9, materials.stone, x, y + 4.5, z, 12);
+      tower.castShadow = true;
+      tower.receiveShadow = true;
+
+      const cap = cylinder(3.5, 3.5, 0.55, materials.darkStone, x, y + 9.1, z, 12);
+      const crenels = [];
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const p = mesh(new THREE.BoxGeometry(0.75, 1.05, 0.75), materials.stone,
+          x + Math.cos(a) * 3.35, y + 9.9, z + Math.sin(a) * 3.35);
+        p.rotation.y = -a;
+        crenels.push(p);
+      }
+      world.add(tower, cap, ...crenels);
+    }
+
+    // Central keep and throne room.
+    const keep = cylinder(5.2, 6.2, 12, materials.stone, 0, 8.1, -2, 16);
+    keep.castShadow = true;
+    keep.receiveShadow = true;
+
+    const keepCap = cylinder(6.3, 6.3, 0.7, materials.darkStone, 0, 14.3, -2, 16);
+    const keepGold = cylinder(5.4, 5.4, 0.16, materials.gold, 0, 14.7, -2, 16);
+
+    // Throne arch.
+    const arch = new THREE.Group();
+    const left = box(2.2, 6.2, 1.2, materials.paleStone, -3.1, 8.7, -2, true, true);
+    const right = box(2.2, 6.2, 1.2, materials.paleStone, 3.1, 8.7, -2, true, true);
+    const top = box(6.6, 1.8, 1.2, materials.paleStone, 0, 11.8, -2, true, true);
+    arch.add(left, right, top);
+    world.add(arch);
+
+    const throne = box(3.2, 0.65, 1.7, materials.wood, 0, 12.2, -2, true, true);
+    for (const x of [-1.1, 1.1]) {
+      for (const z of [-2.85, -1.15]) {
+        const leg = box(0.45, 2.2, 0.45, materials.iron, x, 13.55, z, true, true);
+        leg.rotation.z = x < 0 ? -0.08 : 0.08;
+      }
+    }
+    world.add(throne);
+
+    // Crown and helmet on the throne.
+    const crown = torus(1.15, 0.18, materials.gold, 0, 14.25, -2, Math.PI * 1.25);
+    crown.rotation.x = Math.PI / 2;
+    const helmet = cone(0.65, 1.1, materials.gold, 0, 15.1, -2, 10);
+    world.add(crown, helmet);
+
+    // Main gate at the front.
+    const gate = new THREE.Group();
+    const gateLeft = box(2.6, 5.2, 1.4, materials.stone, -3.8, 4.2, 23, true, true);
+    const gateRight = box(2.6, 5.2, 1.4, materials.stone, 3.8, 4.2, 23, true, true);
+    const gateTop = box(10.4, 1.5, 1.4, materials.stone, 0, 6.9, 23, true, true);
+    const gateArch = torus(3.2, 0.35, materials.darkStone, 0, 4.3, 23.7, Math.PI * 1.5);
+    gateArch.rotation.z = -Math.PI / 2;
+    gate.add(gateLeft, gateRight, gateTop, gateArch);
+    world.add(gate);
+
+    const gateGold = box(0.13, 4.8, 0.13, materials.gold, 0, 4.2, 23.8, false, false);
+    const gateCross = box(0.13, 4.8, 0.13, materials.gold, 0, 4.2, 23.8, false, false);
+    world.add(gateGold, gateCross);
+
+    // Wall walkway and parapets.
+    box(30, 0.35, 2.1, materials.stone, 0, 2.05, 28, false, true);
+    for (let x = -14; x <= 14; x += 2.5) {
+      box(1.2, 1.1, 0.8, materials.stone, x, 2.65, 29.4);
+    }
+
+    // Side paths.
+    box(4.2, 0.25, 30, materials.stone, -11.8, 1.65, 4, false, true);
+    box(4.2, 0.25, 30, materials.stone, 11.8, 1.65, 4, false, true);
+
+    // ---------------------------------------------------------------------
+    // Hall of mirrors
+    // ---------------------------------------------------------------------
+    const mirrorHall = new THREE.Group();
+    mirrorHall.position.set(0, 2.0, -9);
+
+    for (const x of [-5.5, 5.5]) {
+      const wall = box(0.35, 8, 15, materials.darkStone, x, 4, 0, true, true);
+      mirrorHall.add(wall);
+    }
+    const mirrorCeiling = box(12, 0.3, 15, materials.darkStone, 0, 8, 0, true, true);
+    mirrorHall.add(mirrorCeiling);
+
+    for (let z = -7; z <= 7; z += 2.4) {
+      const mirror = box(10.5, 6.8, 0.12, materials.mirror, 0, 4.1, z, false, true);
+      mirrorHall.add(mirror);
+    }
+
+    for (const x of [-4.2, 4.2]) {
+      const pillar = box(0.75, 7.5, 0.8, materials.paleStone, x, 3.8, 0, true, true);
+      mirrorHall.add(pillar);
+    }
+
+    // Mirrored floor reflections.
+    for (let z = -6; z <= 6; z += 2.4) {
+      const reflection = box(9.8, 0.05, 0.45, materials.mirror, 0, 0.18, z, false, false);
+      reflection.rotation.x = -0.12;
+      mirrorHall.add(reflection);
+    }
+
+    // ---------------------------------------------------------------------
+    // Dragon's Rest
+    // ---------------------------------------------------------------------
+    const dragonRest = new THREE.Group();
+    dragonRest.position.set(0, 2.0, 3);
+
+    const dragon = new THREE.Group();
+    dragon.position.y = 0.5;
+
+    const body = mesh(new THREE.SphereGeometry(1.45, 20, 14), materials.dragon, 0, 0, 0);
+    body.scale.set(1.25, 0.85, 0.7);
+    dragon.add(body);
+
+    const head = mesh(new THREE.SphereGeometry(0.72, 16, 12), materials.dragon, 2.25, 0.35, 0);
+    head.scale.set(0.8, 1, 0.75);
+    dragon.add(head);
+
+    const snout = mesh(new THREE.ConeGeometry(0.42, 1.05, 10), materials.dragon, 3.25, 0.28, 0);
+    snout.rotation.z = -Math.PI / 2;
+    dragon.add(snout);
+
+    for (const side of [-1, 1]) {
+      const wing = mesh(new THREE.SphereGeometry(1.8, 16, 10), materials.dragon, 0.2, 0.8, side * 1.65);
+      wing.scale.set(0.35, 0.75, 1.2);
+      dragon.add(wing);
+
+      const leg = mesh(new THREE.CylinderGeometry(0.35, 0.5, 1.3, 8), materials.dragon, 0.6, -0.65, side * 0.85);
+      leg.rotation.z = side * 0.25;
+      dragon.add(leg);
+
+      const claw = cone(0.16, 0.65, materials.gold, 1.4, -1.15, side * 0.85, 6);
+      claw.rotation.z = -0.55;
+      dragon.add(claw);
+    }
+
+    const horn = cone(0.16, 0.85, materials.dragonGold, 3.1, 1.05, 0, 7);
+    horn.rotation.z = -0.4;
+    dragon.add(horn);
+
+    const eyes = [
+      mesh(new THREE.SphereGeometry(0.11, 10, 8), materials.gold, 3.05, 0.62, 0.35),
+      mesh(new THREE.SphereGeometry(0.11, 10, 8), materials.gold, 3.05, 0.62, -0.35)
+    ];
+    dragon.add(...eyes);
+
+    const tail = mesh(new THREE.ConeGeometry(0.45, 4.5, 8), materials.dragon, -3, -0.2, 0);
+    tail.rotation.z = Math.PI / 2;
+    tail.scale.z = 0.7;
+    dragon.add(tail);
+
+    dragonRest.add(dragon);
+
+    const dragonHeart = mesh(new THREE.SphereGeometry(0.65, 16, 12), materials.gold, 3.7, 1.25, 0);
+    dragonHeart.scale.set(0.8, 1.25, 0.8);
+    dragonRest.add(dragonHeart);
+
+    for (const side of [-1, 1]) {
+      const eyeGlow = mesh(new THREE.SphereGeometry(0.12, 10, 8), materials.glow, 3.13, 0.63, side * 0.35);
+      dragonRest.add(eyeGlow);
+    }
+
+    // Dragon skull and bones.
+    const skull = cone(0.85, 1.6, materials.darkStone, -3.2, 1.1, 0, 8);
+    skull.rotation.z = Math.PI;
+    const jaw = cone(0.45, 0.75, materials.darkStone, -3.2, 0.65, 0, 8);
+    jaw.rotation.z = Math.PI;
+    dragonRest.add(skull, jaw);
+
+    for (let i = 0; i < 5; i++) {
+      const bone = cylinder(0.07, 0.09, 1.5, materials.paleStone, -1.2 + i * 0.65, 0.45, 0, 7);
+      bone.rotation.z = -0.5;
+      dragonRest.add(bone);
+    }
+
+    // Dragon bones around the rest.
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        const bone = cylinder(0.08, 0.1, 1.3, materials.paleStone, side * (4.2 + i * 0.7), 0.55, 0, 7);
+        bone.rotation.z = side * 0.45;
+        dragonRest.add(bone);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Environmental props
+    // ---------------------------------------------------------------------
+    function createTree(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 2, z);
+      tree.scale.setScalar(scale);
+
+      const trunk = cylinder(0.25, 0.42, 3.6, materials.wood, 0, 1.8, 0, 8);
+      tree.add(trunk);
+
+      const crown = cone(2.1, 3.2, materials.leaf, 0, 4.2, 0, 9);
+      tree.add(crown);
+
+      const crownTop = cone(1.45, 2.2, materials.leaf, 0, 5.7, 0, 9);
+      tree.add(crownTop);
+
+      world.add(tree);
+    }
+
+    createTree(-13, 18, 1.15);
+    createTree(13, 18, 1.05);
+    createTree(-14, -12, 0.9);
+    createTree(14, -12, 1.0);
+    createTree(-7, 34, 0.8);
+    createTree(7, 34, 0.8);
+
+    // Hanging vines.
+    for (let i = 0; i < 22; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = side * (8 + (i % 4) * 1.8);
+      const z = 24 + (i % 3) * 1.5;
+      const length = 1.5 + (i % 3) * 0.45;
+      const vine = mesh(new THREE.CatmullRomCurve3([
+        new THREE.Vector3(x, 2.4, z),
+        new THREE.Vector3(x + 0.12, 1.6, z + 0.1),
+        new THREE.Vector3(x - 0.1, 0.55, z)
+      ]).getPoints(5), materials.leaf);
+      world.add(vine);
+    }
+
+    // Lanterns.
+    const lanterns = [];
+    function createLantern(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      const cap = cone(0.35, 0.35, materials.iron, 0, 0.45, 0, 8);
+      const body = box(0.35, 0.45, 0.35, materials.iron, 0, 0, 0);
+      const glass = box(0.23, 0.3, 0.23, materials.glow, 0, 0, 0);
+      const bottom = cylinder(0.34, 0.34, 0.12, materials.iron, 0, -0.25, 0, 8);
+      group.add(cap, body, glass, bottom);
+
+      lanterns.push(glass);
+      world.add(group);
+    }
+
+    createLantern(-4.2, 4.3, 23.8);
+    createLantern(4.2, 4.3, 23.8);
+    createLantern(-3.8, 10.2, 7);
+    createLantern(3.8, 10.2, 7);
+
+    // Chains and iron details.
+    for (const x of [-3.8, 3.8]) {
+      for (const y of [2.2, 4.2]) {
+        const chain = torus(0.22, 0.035, materials.iron, x, y, 23.9, Math.PI * 1.7);
+        world.add(chain);
+      }
+    }
+
+    // Broken banner.
+    const banner = new THREE.Group();
+    banner.position.set(-10.5, 4, 16);
+    banner.rotation.z = -0.12;
+
+    const cloth = box(3.4, 2.1, 0.12, materials.redGlow, 0, 0, 0, true, false);
+    cloth.geometry = new THREE.PlaneGeometry(3.4, 2.1, 10, 2);
+    const positions = cloth.geometry.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i);
+      const y = positions.getY(i);
+      positions.setZ(i, Math.sin(x * 3.2) * 0.22 + Math.sin(y * 4) * 0.1);
+    }
+    cloth.geometry.computeVertexNormals();
+    banner.add(cloth);
+
+    const staff = cylinder(0.055, 0.075, 5.2, materials.wood, 0, 2.6, 0, 7);
+    banner.add(staff);
+
+    const emblem = torus(0.4, 0.08, materials.gold, 0, 0.7, 0.08, Math.PI * 1.2);
+    emblem.rotation.y = Math.PI / 2;
+    banner.add(emblem);
+    world.add(banner);
+
+    // ---------------------------------------------------------------------
+    // Floating motes
+    // ---------------------------------------------------------------------
+    const moteCount = 180;
+    const motePositions = new Float32Array(moteCount * 3);
+    const moteSpeeds = new Float32Array(moteCount);
+
+    for (let i = 0; i < moteCount; i++) {
+      motePositions[i * 3] = (Math.random() - 0.5) * 42;
+      motePositions[i * 3 + 1] = Math.random() * 18;
+      motePositions[i * 3 + 2] = (Math.random() - 0.5) * 34;
+      moteSpeeds[i] = 0.08 + Math.random() * 0.18;
+    }
+
+    const moteGeometry = new THREE.BufferGeometry();
+    moteGeometry.setAttribute("position", new THREE.BufferAttribute(motePositions, 3));
+
+    const motes = new THREE.Points(
+      moteGeometry,
+      new THREE.PointsMaterial({
+        color: 0xd7b878,
+        size: 0.075,
+        transparent: true,
+        opacity: 0.65,
+        depthWrite: false
+      })
+    );
+    scene.add(motes);
+
+    // ---------------------------------------------------------------------
+    // Interactive flags / story markers
+    // ---------------------------------------------------------------------
+    const interactables = [];
+
+    function makeInteractive(object, label, subtitle) {
+      const data = {
+        object,
+        label,
+        subtitle,
+        position: object.position.clone()
+      };
+      interactables.push(data);
+      return data;
+    }
+
+    const gateInteractive = makeInteractive(gate, "The Iron Gate", "The path is sealed by a massive bronze-bound gate.");
+    const heartInteractive = makeInteractive(dragonHeart, "The Dragon Heart", "The dragon's heart awakens the final route.");
+    const crownInteractive = makeInteractive(crown, "The Royal Crown", "The crown marks the throne of Charlock.");
+
+    // ---------------------------------------------------------------------
+    // Custom orbit controls
+    // ---------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 4, 3),
+      theta: 0.58,
+      phi: 1.18,
+      radius: 31,
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(controls.phi - dy * 0.005, 0.38, 1.48);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(controls.radius + event.deltaY * 0.018, 11, 58);
+      updateCamera();
+    }, { passive: false });
+
+    // Touch pinch zoom.
+    const touches = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("touchstart", (event) => {
+      for (const touch of event.changedTouches) {
+        touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+      }
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()];
+        pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchmove", (event) => {
+      for (const touch of event.changedTouches) {
+        if (!touches.has(touch.identifier)) continue;
+        touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+      }
+
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()];
+        const distance = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(controls.radius + (pinchDistance - distance) * 0.012, 11, 58);
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchend", (event) => {
+      for (const touch of event.changedTouches) touches.delete(touch.identifier);
+      if (touches.size < 2) pinchDistance = 0;
+    }, { passive: true });
+
+    // Click to inspect.
+    renderer.domElement.addEventListener("click", (event) => {
+      if (event.button !== 0) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects(interactables.map(item => item.object), false);
+
+      if (hits.length) {
+        const item = hits[0].object;
+        const index = interactables.findIndex(i => i.object === item);
+        const data = interactables[index];
+        const title = document.createElement("div");
+        title.className = "chapter";
+        title.innerHTML = `<strong>${data.label}</strong><span>${data.subtitle}</span>`;
+        document.querySelector(".story-panel").appendChild(title);
+        document.querySelector(".story-panel").scrollTo({ top: title.offsetTop, behavior: "smooth" });
+      }
+    });
+
+    // ---------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------
+    clock = new THREE.Clock();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      const positions = moteGeometry.attributes.position;
+      for (let i = 0; i < moteCount; i++) {
+        let y = positions.getY(i) + moteSpeeds[i] * 0.016;
+        if (y > 19) y = 1.2;
+        positions.setY(i, y);
+        positions.setX(i, positions.getX(i) + Math.sin(elapsed * 0.5 + i) * 0.0008);
+      }
+      positions.needsUpdate = true;
+
+      lanterns.forEach((lantern, index) => {
+        lantern.material.emissiveIntensity = 2.1 + Math.sin(elapsed * 2.1 + index * 1.7) * 0.35;
+      });
+
+      dragonHeart.material.emissiveIntensity = 1.4 + Math.sin(elapsed * 2.4) * 0.55;
+      dragonHeart.scale.set(0.82 + Math.sin(elapsed * 1.8) * 0.04, 1.2, 0.82);
+
+      banner.rotation.y = Math.sin(elapsed * 0.75) * 0.08;
+      banner.rotation.z = -0.12 + Math.sin(elapsed * 0.8) * 0.025;
+
+      crownInteractive.object.material.emissiveIntensity = 0.8 + Math.sin(elapsed * 1.4) * 0.25;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

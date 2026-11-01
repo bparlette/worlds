@@ -232,5 +232,14 @@
     "filename": "026_final_fantasy_flying_fortress.html",
     "verified_working": true,
     "generated_at": "2026-11-01 04:23:39"
+  },
+  "27": {
+    "id": 27,
+    "game": "Dragon Warrior",
+    "target": "Charlock Castle",
+    "platform": "NES",
+    "filename": "027_dragon_warrior_charlock_castle.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 04:36:50"
   }
 }
