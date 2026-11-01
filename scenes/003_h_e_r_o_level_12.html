@@ -619,7 +619,7 @@
       target: defaultCamera.target.clone(),
       azimuth: defaultCamera.x - defaultCamera.target.x,
       polar: defaultCamera.y - defaultCamera.target.y,
-      distance: defaultCamera.distance()
+      distance: Math.hypot(defaultCamera.x - defaultCamera.target.x, defaultCamera.y - defaultCamera.target.y, defaultCamera.z - defaultCamera.target.z)
     };
 
     function updateCamera() {

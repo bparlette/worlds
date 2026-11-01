@@ -144,6 +144,20 @@ def sanitize_scene_html(html: str) -> str:
     fixed, n = _LABEL_PREFIX.subn(r"\1", html)
     if n:
         print(f"[Sanitizer] Removed {n} bogus label prefix(es) from generated scene")
+    # Gate 1 (2026-11-01): bare `canvas.` used but never declared -> ReferenceError.
+    if (re.search(r"(?<![\w.$-])canvas\.(?:add|set|style|get|remove)", fixed)
+            and not re.search(r"\b(?:const|let|var)\s+canvas\b", fixed)):
+        fixed, c = re.subn(r"(\bconst\s+renderer\s*=\s*new\s+THREE\.WebGLRenderer\([^;]*\);)",
+                           r"\1\nconst canvas = renderer.domElement;", fixed, count=1)
+        if c:
+            print("[Sanitizer] Declared missing `canvas` from renderer.domElement")
+    # Gate 1: defaultCamera is a plain {x,y,z,target} object; .distance() does not exist.
+    fixed, d = re.subn(
+        r"defaultCamera\.distance\(\)",
+        "Math.hypot(defaultCamera.x - defaultCamera.target.x, defaultCamera.y - defaultCamera.target.y, defaultCamera.z - defaultCamera.target.z)",
+        fixed)
+    if d:
+        print("[Sanitizer] Replaced nonexistent defaultCamera.distance()")
     return fixed
 
 
