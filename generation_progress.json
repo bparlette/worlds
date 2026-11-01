@@ -104,7 +104,7 @@
     "target": "Underworld Dungeons",
     "platform": "NES",
     "filename": "012_the_legend_of_zelda_underworld_dungeons.html",
-    "verified_working": false,
+    "verified_working": true,
     "generated_at": "2026-11-01 01:52:02"
   },
   "13": {
@@ -131,7 +131,7 @@
     "target": "Clock Tower",
     "platform": "NES",
     "filename": "015_castlevania_clock_tower.html",
-    "verified_working": false,
+    "verified_working": true,
     "generated_at": "2026-11-01 01:35:27"
   },
   "16": {
@@ -320,7 +320,7 @@
     "target": "Dark World Pyramid",
     "platform": "SNES",
     "filename": "036_a_link_to_the_past_dark_world_pyramid.html",
-    "verified_working": false,
+    "verified_working": true,
     "generated_at": "2026-11-01 07:11:00"
   },
   "37": {

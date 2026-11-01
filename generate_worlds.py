@@ -14,6 +14,7 @@ import urllib.request
 import urllib.error
 import subprocess
 import concurrent.futures
+import base64
 from scene_linter import lint_and_autofix_scene
 
 WORLDS_DIR = "/Users/braidpairlette/worlds"
@@ -58,14 +59,60 @@ def save_progress(progress: dict):
         json.dump(progress, f, indent=2)
 
 
+def _image_data_uri(url: str) -> str:
+    """Download a reference image and inline it as a data URI for llama-server."""
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        data = r.read()
+        ctype = r.headers.get_content_type() or "image/png"
+    return f"data:{ctype};base64," + base64.b64encode(data).decode("ascii")
+
+
+_LABEL_PREFIX = re.compile(
+    r"^(\s*)[A-Za-z_$][\w$]*(?:\.[\w$]+)+:[ \t]+(?=(?:document|renderer|scene|camera|window)\b)",
+    re.M)
+
+
+def sanitize_scene_html(html: str) -> str:
+    """Strip bogus dotted-label prefixes (e.g. 'renderer.domElement: document...')
+    that Qwen sometimes writes before a statement. A JS label cannot contain a
+    dot, so this is always a parse-time SyntaxError that kills the whole module
+    before the first frame (audit 2026-11-01: 9 of 25 flagged scenes)."""
+    fixed, n = _LABEL_PREFIX.subn(r"\1", html)
+    if n:
+        print(f"[Sanitizer] Removed {n} bogus label prefix(es) from generated scene")
+    return fixed
+
+
 def generate_single_world(spec: dict) -> str:
     prompt = spec["qwen_prompt"]
     print(f"\n[AI Dispatch] Sending #{spec['id']:03d} {spec['game']} - {spec['target']} to Qwen3.5-3D-Coder...")
 
+    # Image-led dispatch: reference images (when the catalog has them) go in
+    # as labeled parts ahead of the text prompt; any failure falls back to the
+    # plain text prompt so a bad image URL can never block generation.
+    user_content = prompt
+    img_urls = spec.get("image_urls") or ([spec["image_url"]] if spec.get("image_url") else [])
+    img_kinds = spec.get("image_kinds") or ([spec.get("image_kind", "image")] if spec.get("image_url") else [])
+    if img_urls:
+        try:
+            parts = []
+            for u, k in zip(img_urls[:3], img_kinds[:3]):
+                label = "area map (layout)" if k == "map" else "in-game screenshot (look and palette)"
+                parts.append({"type": "text", "text": f"Reference image - {label}:"})
+                parts.append({"type": "image_url", "image_url": {"url": _image_data_uri(u)}})
+            parts.append({"type": "text", "text": prompt})
+            user_content = parts
+            print(f"[AI Dispatch] Mode: image-led x{len(img_urls[:3])} ({', '.join(img_kinds[:3])})")
+        except Exception as e:
+            print(f"[Image] Reference image fetch failed ({e}); falling back to text-only.")
+            user_content = prompt
+
     payload = {
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": user_content}
         ],
         "max_tokens": 14000,
         "temperature": 0.6,
@@ -121,7 +168,7 @@ def generate_single_world(spec: dict) -> str:
         if "</html>" not in html:
             html += "\n</html>"
 
-    return html
+    return sanitize_scene_html(html)
 
 
 def update_gallery(specs: list, progress: dict):
@@ -157,6 +204,11 @@ def update_gallery(specs: list, progress: dict):
             card_extra_cls = "card-coming-soon"
             footer_html = '<span class="play-btn disabled-btn">⏳ Coming Soon — Queued</span>'
 
+        media_html = (
+            f'<img class="world-img" src="{s["image_url"]}" alt="{s["game"]} - {s["target"]} reference image" loading="lazy">'
+            if s.get("image_url") else ""
+        )
+
         cards_html.append(f"""
         <div class="world-card {card_extra_cls}" data-status="{'ready' if is_done else 'coming-soon'}">
             <div class="card-header">
@@ -169,6 +221,7 @@ def update_gallery(specs: list, progress: dict):
             <div class="card-body">
                 <h3>{s['game']}</h3>
                 <h4>{s['target']}</h4>
+                {media_html}
                 <div class="description-container">
                     <p class="description collapsed" id="desc-{s['id']}">{s['description']}</p>
                     <button class="expand-btn" onclick="toggleDesc('{s['id']}', this)">Read more ▾</button>
@@ -271,6 +324,7 @@ def update_gallery(specs: list, progress: dict):
             border-color: rgba(0, 210, 255, 0.35);
             box-shadow: 0 12px 30px var(--card-glow);
         }}
+        .world-img {{ width: 100%; border-radius: 10px; margin-bottom: 12px; display: block; }}
         .card-header {{
             display: flex;
             justify-content: space-between;
@@ -529,10 +583,21 @@ def main():
     pending_future = None
 
     count = 0
-    for spec in specs:
-        s_id = str(spec["id"])
-        if s_id in progress:
-            continue
+    dispatched = set()
+    while True:
+        # Reload the catalog every iteration: a git pull inside post-processing
+        # (or an enrichment pass) may have updated it since this run started,
+        # and a stale in-memory list once let per-world gallery regenerations
+        # clobber the 1,000-world expansion with a 42-spec gallery (2026-11-01).
+        try:
+            with open(JSON_PATH, "r", encoding="utf-8") as f:
+                specs = json.load(f)
+        except Exception:
+            pass
+        spec = next((sp for sp in specs
+                     if str(sp["id"]) not in progress and str(sp["id"]) not in dispatched), None)
+        if spec is None:
+            break
 
         if count >= max_count:
             print(f"Reached batch limit of {max_count} worlds. Pausing.")
@@ -557,6 +622,7 @@ def main():
         pending_future = bg_executor.submit(
             post_process_and_publish, spec, filename, filepath, specs, progress
         )
+        dispatched.add(str(spec["id"]))
 
         count += 1
 

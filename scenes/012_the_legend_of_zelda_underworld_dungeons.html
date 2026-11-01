@@ -223,7 +223,7 @@
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.domElement: document.body.appendChild(renderer.domElement);
+    document.body.appendChild(renderer.domElement);
 
     const world = new THREE.Group();
     scene.add(world);
