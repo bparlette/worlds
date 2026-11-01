@@ -286,5 +286,14 @@
     "filename": "032_a_boy_and_his_blob_blobolonia.html",
     "verified_working": false,
     "generated_at": "2026-11-01 05:42:01"
+  },
+  "33": {
+    "id": 33,
+    "game": "Little Samson",
+    "target": "Molten Volcanic Caverns",
+    "platform": "NES",
+    "filename": "033_little_samson_molten_volcanic_caverns.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 06:32:16"
   }
 }
