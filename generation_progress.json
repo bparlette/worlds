@@ -1,13 +1,4 @@
 {
-  "1": {
-    "id": 1,
-    "game": "Adventure",
-    "target": "Castles & Mazes",
-    "platform": "Atari 2600",
-    "filename": "001_adventure_castles_mazes.html",
-    "generated_at": "2026-10-31 22:07:21",
-    "verified_working": true
-  },
   "112": {
     "id": 112,
     "game": "Super Mario Bros.",
@@ -133,5 +124,32 @@
     "filename": "039_chrono_trigger_65_000_000_b_c_tyrano_lair.html",
     "verified_working": false,
     "generated_at": "2026-11-01 07:49:20"
+  },
+  "1": {
+    "id": 1,
+    "game": "Adventure",
+    "target": "Castles & Mazes",
+    "platform": "Atari 2600",
+    "filename": "001_adventure_castles_mazes.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 10:49:36"
+  },
+  "2": {
+    "id": 2,
+    "game": "Pitfall II: Lost Caverns",
+    "target": "Vertical Subterranean Labyrinths & Rivers",
+    "platform": "Atari 2600",
+    "filename": "002_pitfall_ii_lost_caverns_vertical_subterranean_labyrinths_rivers.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 10:55:28"
+  },
+  "3": {
+    "id": 3,
+    "game": "H.E.R.O.",
+    "target": "Level 12",
+    "platform": "Atari 2600",
+    "filename": "003_h_e_r_o_level_12.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 10:58:54"
   }
 }

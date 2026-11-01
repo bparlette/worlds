@@ -466,6 +466,11 @@ def bake_thumbnail(module_path: str, formatted_id: str):
             three_src = _vendored_three_path()
             if three_src:
                 shutil.copy(three_src, os.path.join(tmp, "three.module.min.js"))
+                three_dir = os.path.dirname(three_src)
+                for sibling in ("three.core.js", "three.core.min.js"):
+                    sib_path = os.path.join(three_dir, sibling)
+                    if os.path.exists(sib_path):
+                        shutil.copy(sib_path, os.path.join(tmp, sibling))
                 module_js = re.sub(
                     r"import\s+\*\s+as\s+THREE\s+from\s+[^;]+;?",
                     'import * as THREE from "./three.module.min.js";',
