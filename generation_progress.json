@@ -30,5 +30,13 @@
     "platform": "Atari 2600",
     "filename": "004_yars_revenge_neutral_zone_shield.html",
     "generated_at": "2026-10-31 22:37:26"
+  },
+  "5": {
+    "id": 5,
+    "game": "River Raid",
+    "target": "Canyon Riverway",
+    "platform": "Atari 2600",
+    "filename": "005_river_raid_canyon_riverway.html",
+    "generated_at": "2026-10-31 22:47:54"
   }
 }

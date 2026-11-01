@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canyon Riverway — River Raid</title>
+  <style>
+    :root {
+      --amber: #ffbd45;
+      --amber-bright: #ffd96a;
+      --cream: #fff4cf;
+      --ink: #171511;
+      --panel: rgba(22, 18, 14, 0.78);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #15100d;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .title {
+      color: var(--amber-bright);
+      font-size: clamp(22px, 3vw, 38px);
+      line-height: 0.95;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: 0 3px 12px rgba(0,0,0,.65);
+    }
+
+    .title small {
+      color: var(--amber);
+      font-size: 10px;
+      letter-spacing: 0.24em;
+      opacity: .85;
+    }
+
+    .live {
+      color: var(--cream);
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      background: rgba(255,189,69,.08);
+      padding: 8px 10px;
+      border: 1px solid rgba(255,189,69,.35);
+      border-radius: 3px;
+    }
+
+    .live::before {
+      content: "";
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: #79ff9b;
+      box-shadow: 0 0 10px #79ff9b;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .bottom {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 22px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .panel {
+      color: var(--cream);
+      background: var(--panel);
+      border: 1px solid rgba(255,189,69,.35);
+      border-radius: 4px;
+      padding: 12px 15px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.25);
+      backdrop-filter: blur(8px);
+    }
+
+    .panel strong {
+      color: var(--amber-bright);
+      font-weight: 700;
+    }
+
+    .help {
+      color: #c9b98d;
+      font-size: 10px;
+      letter-spacing: .08em;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .retro-grid {
+      position: absolute;
+      inset: 0;
+      opacity: .08;
+      background-image:
+        linear-gradient(rgba(255,189,69,.35) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,189,69,.35) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 24%);
+    }
+
+    @keyframes pulse {
+      50% { opacity: .35; transform: scale(.75); }
+    }
+
+    @media (max-width: 650px) {
+      .topbar { top: 14px; left: 14px; right: 14px; }
+      .bottom { left: 14px; right: 14px; bottom: 14px; }
+      .help { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="retro-grid"></div>
+    <div class="topbar">
+      <div class="title">Canyon <small>Riverway</small></div>
+      <div class="live">Classic 3D Environment</div>
+    </div>
+    <div class="bottom">
+      <div class="panel">
+        <div>Atari 2600 · River Raid</div>
+        <div>Desert canyon river route</div>
+      </div>
+      <div class="panel">
+        <div class="help">Drag to orbit · Scroll to zoom<br>Mouse wheel or pinch to zoom</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.SRGBColorSpace;
+    renderer.toneMappingExposure = 1.15;
+    document.body.prepend(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x9d5c2e);
+    scene.fog = new THREE.FogExp2(0x9d5c2e, 0.016);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 180);
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0xffd7a0, 0x4e392d, 2.0));
+
+    const sun = new THREE.DirectionalLight(0xffe4aa, 3.2);
+    sun.position.set(-22, 32, 18);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -35;
+    sun.shadow.camera.right = 35;
+    sun.shadow.camera.top = 35;
+    sun.shadow.camera.bottom = -35;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 90;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0xff8a42, 1.1);
+    rim.position.set(25, 12, -25);
+    scene.add(rim);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const mat = {
+      ground: new THREE.MeshStandardMaterial({ color: 0x8f5229, roughness: 1 }),
+      groundDark: new THREE.MeshStandardMaterial({ color: 0x5b321d, roughness: 1 }),
+      cliff: new THREE.MeshStandardMaterial({ color: 0xa85f2d, roughness: 0.98 }),
+      cliffLight: new THREE.MeshStandardMaterial({ color: 0xc4783f, roughness: 0.95 }),
+      cliffDark: new THREE.MeshStandardMaterial({ color: 0x63351f, roughness: 1 }),
+      rock: new THREE.MeshStandardMaterial({ color: 0x9b6031, roughness: 1, flatShading: true }),
+      rockLight: new THREE.MeshStandardMaterial({ color: 0xc07b45, roughness: 1, flatShading: true }),
+      river: new THREE.MeshStandardMaterial({ color: 0x287c83, roughness: 0.28, metalness: 0.18 }),
+      riverGlow: new THREE.MeshBasicMaterial({ color: 0x4bc4c1 }),
+      cactus: new THREE.MeshStandardMaterial({ color: 0x3d7843, roughness: .85, flatShading: true }),
+      cactusLight: new THREE.MeshStandardMaterial({ color: 0x568d4d, roughness: .85, flatShading: true }),
+      cactusDark: new THREE.MeshStandardMaterial({ color: 0x28543a, roughness: .9, flatShading: true }),
+      desert: new THREE.MeshStandardMaterial({ color: 0xc58a4c, roughness: 1, flatShading: true }),
+      sky: new THREE.MeshBasicMaterial({ color: 0x9c552c, side: THREE.BackSide }),
+      hot: new THREE.MeshBasicMaterial({ color: 0xff7a35 }),
+      cool: new THREE.MeshBasicMaterial({ color: 0x75e0d0 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xf4e4b6, roughness: .85 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x201a15, roughness: .9 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xa92720, roughness: .7, flatShading: true }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xf3b92f, roughness: .65, flatShading: true }),
+      green: new THREE.MeshStandardMaterial({ color: 0x3d7743, roughness: .75, flatShading: true }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x315b75, roughness: .75, flatShading: true }),
+      purple: new THREE.MeshStandardMaterial({ color: 0x7154a7, roughness: .75, flatShading: true }),
+      orange: new THREE.MeshStandardMaterial({ color: 0xe57c28, roughness: .75, flatShading: true }),
+      pink: new THREE.MeshStandardMaterial({ color: 0xd65b8a, roughness: .75, flatShading: true }),
+      cream: new THREE.MeshStandardMaterial({ color: 0xf0dfb1, roughness: .8, flatShading: true }),
+      black: new THREE.MeshStandardMaterial({ color: 0x201a15, roughness: .9 })
+    };
+
+    // -------------------------------------------------------------------------
+    // Procedural noise textures
+    // -------------------------------------------------------------------------
+    function makeNoiseTexture(base, fleck, count, size = 256) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+
+      for (let i = 0; i < count; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const r = 1 + Math.random() * 5;
+        ctx.fillStyle = fleck;
+        ctx.globalAlpha = 0.08 + Math.random() * 0.25;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return texture;
+    }
+
+    const groundTexture = makeNoiseTexture("#a86838", "#57351f", 1800);
+    groundTexture.repeat.set(18, 18);
+    mat.ground.map = groundTexture;
+
+    const cliffTexture = makeNoiseTexture("#9b582f", "#d08a4b", 1200);
+    cliffTexture.repeat.set(3, 3);
+    mat.cliff.map = cliffTexture;
+
+    // -------------------------------------------------------------------------
+    // Sky dome, distant mesas, and sun disk
+    // -------------------------------------------------------------------------
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 18), mat.sky);
+    scene.add(sky);
+
+    const sunDisk = new THREE.Mesh(
+      new THREE.SphereGeometry(4.2, 24, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffd18a, fog: false })
+    );
+    sunDisk.position.set(-38, 27, -60);
+    scene.add(sunDisk);
+
+    const mesaGroup = new THREE.Group();
+    scene.add(mesaGroup);
+
+    function addMesa(x, z, width, depth, height, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      const layers = [
+        { y: height * .42, h: height * .55, w: width * 1.25, d: depth * 1.15, mat: mat.cliffDark },
+        { y: height * .72, h: height * .34, w: width * .92, d: depth * .92, mat: mat.cliff },
+        { y: height, h: height * .18, w: width * .65, d: depth * .65, mat: mat.cliffLight }
+      ];
+
+      for (const layer of layers) {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(layer.w, layer.w * 1.12, layer.h, 11, 1, false), layer.mat);
+        mesh.position.y = layer.y;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+
+      mesaGroup.add(group);
+    }
+
+    addMesa(-42, -38, 19, 15, 17, .12);
+    addMesa(-18, -55, 15, 12, 13, -.2);
+    addMesa(22, -50, 17, 14, 15, .25);
+    addMesa(48, -40, 13, 10, 11, -.15);
+    addMesa(-62, -20, 11, 9, 9, .4);
+    addMesa(65, 2, 9, 8, 8, -.3);
+
+    // -------------------------------------------------------------------------
+    // Canyon terrain and river
+    // -------------------------------------------------------------------------
+    const terrain = new THREE.Mesh(
+      new THREE.PlaneGeometry(150, 150, 70, 70),
+      mat.ground
+    );
+    terrain.rotation.x = -Math.PI / 2;
+    terrain.receiveShadow = true;
+    scene.add(terrain);
+
+    const river = new THREE.Mesh(new THREE.PlaneGeometry(18, 82, 1, 1), mat.river);
+    river.rotation.x = -Math.PI / 2;
+    river.position.set(0, .08, 2);
+    river.receiveShadow = true;
+    scene.add(river);
+
+    const riverGlow = new THREE.Mesh(new THREE.PlaneGeometry(13, 76, 1, 1), mat.riverGlow);
+    riverGlow.rotation.x = -Math.PI / 2;
+    riverGlow.position.set(0, .1, 2);
+    scene.add(riverGlow);
+
+    // Water shader for animated highlights.
+    const waterMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        deep: { value: new THREE.Color(0x174f55) },
+        shallow: { value: new THREE.Color(0x4bb6ae) }
+      },
+      transparent: true,
+      side: THREE.DoubleSide,
+      uniforms: {
+        time: { value: 0 },
+        deep: { value: new THREE.Color(0x174f55) },
+        shallow: { value: new THREE.Color(0x4bb6ae) }
+      },
+      transparent: true,
+      side: THREE.DoubleSide,
+      vertexShader: `
+        uniform float time;
+        varying vec2 vUv;
+        varying float vWave;
+        void main() {
+          vUv = uv;
+          vec2 p = (uv - .5) * 60.;
+          float wave = sin(p.x * 1.8 + time * 1.4) * .055
+                     + sin(p.y * 2.1 - time * 1.1) * .035;
+          vWave = wave;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
+        }
+      `,
+      fragmentShader: `
+        uniform float time;
+        uniform vec3 deep;
+        uniform vec3 shallow;
+        varying vec2 vUv;
+        varying float vWave;
+        void main() {
+          float shimmer = sin(vUv.y * 18. + time * 1.7) * .5 + .5;
+          float stripe = smoothstep(.88, 1., sin(vUv.x * 12. + vUv.y * 5. + time) * .5 + .5);
+          vec3 color = mix(deep, shallow, clamp(vWave * 2. + .5, 0., 1.));
+          color += stripe * .18;
+          gl_FragColor = vec4(color, .86);
+        }
+      `
+    });
+
+    const animatedRiver = new THREE.Mesh(new THREE.PlaneGeometry(17, 82, 1, 1), waterMaterial);
+    animatedRiver.rotation.x = -Math.PI / 2;
+    animatedRiver.position.set(0, .15, 2);
+    scene.add(animatedRiver);
+
+    // -------------------------------------------------------------------------
+    // Jagged canyon rocks
+    // -------------------------------------------------------------------------
+    function addRock(x, z, scale, rotation = 0, light = false) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
+
+      const geometry = new THREE.DodecahedronGeometry(1, 0);
+      const mesh = new THREE.Mesh(geometry, light ? mat.rockLight : mat.rock);
+      mesh.position.y = .45;
+      mesh.rotation.set(Math.random(), Math.random(), Math.random());
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(.7, .9, 5), mat.rockDark || mat.cliffDark);
+      cap.position.y = 1.2;
+      cap.rotation.y = Math.random();
+      cap.castShadow = true;
+      group.add(cap);
+
+      scene.add(group);
+    }
+
+    for (let i = 0; i < 44; i++) {
+      const side = Math.random() > .5 ? 1 : -1;
+      const x = side * (7 + Math.random() * 29);
+      const z = -35 + Math.random() * 75;
+      addRock(x, z, .5 + Math.random() * 1.8, Math.random() * Math.PI, Math.random() > .65);
+    }
+
+    // -------------------------------------------------------------------------
+    // Cacti
+    // -------------------------------------------------------------------------
+    function addCactus(x, z, scale = 1, color = mat.cactus) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(.22, .3, 1.4, 7), color);
+      stem.position.y = .7;
+      stem.castShadow = true;
+      group.add(stem);
+
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, .85, 6), color);
+      arm.rotation.z = Math.PI / 2;
+      arm.position.set(.28, .85, 0);
+      arm.castShadow = true;
+      group.add(arm);
+
+      const armTip = new THREE.Mesh(new THREE.CylinderGeometry(.12, .16, .85, 6), color);
+      armTip.rotation.z = -Math.PI / 2;
+      armTip.position.set(.56, .85, 0);
+      armTip.castShadow = true;
+      group.add(armTip);
+
+      for (const y of [.35, .72, 1.1]) {
+        const bud = new THREE.Mesh(new THREE.ConeGeometry(.12, .22, 5), mat.cactusLight);
+        bud.position.set(0, y + .1, 0);
+        group.add(bud);
+      }
+
+      scene.add(group);
+    }
+
+    const cactusSpots = [
+      [-10, -8, 1.2], [11, -12, .9], [-13, 4, 1.4], [13, 11, 1.1],
+      [-8, 25, .8], [8, 31, 1.2], [-16, 36, 1.5], [16, 38, 1.0],
+      [-2, -30, .7], [2, -34, 1.1], [-18, -16, 1.3], [18, -18, .8]
+    ];
+
+    cactusSpots.forEach((spot, i) => {
+      addCactus(spot[0], spot[1], spot[2], i % 2 ? mat.cactusLight : mat.cactus);
+    });
+
+    // -------------------------------------------------------------------------
+    // Desert plants
+    // -------------------------------------------------------------------------
+    const plantMaterial = new THREE.MeshStandardMaterial({ color: 0x6b8b45, roughness: 1, flatShading: true });
+    const flowerMaterial = new THREE.MeshBasicMaterial({ color: 0xf1a347 });
+
+    function addPlant(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(.025, .035, .35 + Math.random() * .18, 4), plantMaterial);
+        stem.position.set(Math.cos(angle) * .18, .18, Math.sin(angle) * .18);
+        stem.rotation.z = Math.cos(angle) * .18;
+        stem.rotation.x = Math.sin(angle) * .18;
+        stem.castShadow = true;
+        group.add(stem);
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const petal = new THREE.Mesh(new THREE.ConeGeometry(.055, .11, 4), flowerMaterial);
+        petal.position.set(Math.cos((i/5)*2.4)*.11, .39, Math.sin((i/5)*2.4)*.11);
+        petal.rotation.z = Math.cos((i/5)*2.4)*.45;
+        group.add(petal);
+      }
+
+      scene.add(group);
+    }
+
+    for (let i = 0; i < 45; i++) {
+      addPlant((Math.random() - .5) * 52, (Math.random() - .5) * 65, .45 + Math.random() * .8);
+    }
+
+    // -------------------------------------------------------------------------
+    // Road and route markers
+    // -------------------------------------------------------------------------
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(5, 105), mat.black);
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(-2.5, .05, 1);
+    scene.add(road);
+
+    const routePoints = [
+      { x: -2.5, z: -45 }, { x: -2.5, z: -20 }, { x: -2.5, z: 5 }, { x: -2.5, z: 30 },
+      { x: -2.5, z: 55 }, { x: 8, z: 55 }, { x: 22, z: 55 }, { x: 38, z: 55 }
+    ];
+
+    for (let i = 0; i < routePoints.length - 1; i++) {
+      const a = routePoints[i];
+      const b = routePoints[i + 1];
+      const midpoint = a.clone().add(b).multiplyScalar(.5);
+      const length = a.distanceTo(b);
+      const roadSegment = new THREE.Mesh(new THREE.PlaneGeometry(length, 3.2), mat.black);
+      roadSegment.rotation.x = -Math.PI / 2;
+      roadSegment.position.copy(midpoint);
+      roadSegment.position.y = .055;
+      scene.add(roadSegment);
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const marker = new THREE.Group();
+      marker.position.set(-2.5, 0, -38 + i * 10);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, 1.2, 6), mat.yellow);
+      post.position.y = .6;
+      marker.add(post);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(.85, .45), mat.yellow);
+      sign.position.set(0, 1.18, .01);
+      marker.add(sign);
+      scene.add(marker);
+    }
+
+    // -------------------------------------------------------------------------
+    // Animated birds
+    // -------------------------------------------------------------------------
+    const birds = [];
+    const birdMaterial = new THREE.MeshBasicMaterial({ color: 0x342c27 });
+
+    function addBird(x, y, z, scale = 1) {
+      const bird = new THREE.Group();
+      bird.position.set(x, y, z);
+      bird.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.12, 6, 4), birdMaterial);
+      body.scale.set(.7, 1.25, .45);
+      bird.add(body);
+
+      const wingLeft = new THREE.Mesh(new THREE.ConeGeometry(.1, .24, 3), birdMaterial);
+      wingLeft.rotation.z = Math.PI / 2;
+      wingLeft.position.set(.1, 0, 0);
+      bird.add(wingLeft);
+
+      const wingRight = new THREE.Mesh(new THREE.ConeGeometry(.1, .24, 3), birdMaterial);
+      wingRight.rotation.z = -Math.PI / 2;
+      wingRight.position.set(-.1, 0, 0);
+      bird.add(wingRight);
+
+      scene.add(bird);
+      birds.push({ group: bird, phase: Math.random() * Math.PI * 2, speed: .7 + Math.random() * .5 });
+    }
+
+    addBird(-10, 13, -20, 1.2);
+    addBird(8, 16, -30, .9);
+    addBird(-4, 12, 10, .8);
+    addBird(15, 18, -5, 1.1);
+
+    // -------------------------------------------------------------------------
+    // Animated butterflies / fireflies
+    // -------------------------------------------------------------------------
+    const fireflies = [];
+    const fireflyMaterial = new THREE.MeshBasicMaterial({ color: 0xffd35c });
+
+    for (let i = 0; i < 24; i++) {
+      const firefly = new THREE.Mesh(new THREE.SphereGeometry(.06, 5, 4), fireflyMaterial);
+      const x = (Math.random() - .5) * 38;
+      const z = (Math.random() - .5) * 55;
+      firefly.position.set(x, .4 + Math.random() * 2.4, z);
+      scene.add(firefly);
+      fireflies.push({ mesh: firefly, phase: Math.random() * Math.PI * 2, speed: .4 + Math.random() * .5 });
+    }
+
+    // -------------------------------------------------------------------------
+    // Camera controls: orbit, pan-like drag, wheel/pinch zoom
+    // -------------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 1.2, 0),
+      azimuth: Math.PI / 2,
+      polar: 1.05,
+      radius: 34,
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      pinchStartDistance: 0,
+      pinchStartRadius: 34
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    function pointerDown(event) {
+      controls.dragging = true;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    }
+
+    function pointerMove(event) {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.pointerX;
+      const dy = event.clientY - controls.pointerY;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+
+      controls.azimuth -= dx * .006;
+      controls.polar = THREE.MathUtils.clamp(controls.polar - dy * .004, .28, Math.PI - .28);
+      updateCamera();
+    }
+
+    function pointerUp(event) {
+      controls.dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerdown", pointerDown);
+    renderer.domElement.addEventListener("pointermove", pointerMove);
+    renderer.domElement.addEventListener("pointerup", pointerUp);
+    renderer.domElement.addEventListener("pointercancel", pointerUp);
+
+    function wheelZoom(delta) {
+      controls.radius = THREE.MathUtils.clamp(controls.radius + delta * .025, 13, 78);
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("wheel", wheelZoom, { passive: false });
+
+    const touchPoints = new Map();
+    let pinchDistance = 0;
+
+    function updatePinch() {
+      const points = [...touchPoints.values()];
+      if (points.length < 2) return;
+      const distance = points[0].distanceTo(points[1]);
+      if (pinchDistance > 0) {
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius * (pinchDistance / Math.max(distance, 1)),
+          13,
+          78
+        );
+        updateCamera();
+      }
+      pinchDistance = distance;
+    }
+
+    renderer.domElement.addEventListener("touchstart", event => {
+      touchPoints.set(event.pointerId, new THREE.Vector2(event.clientX, event.clientY));
+      if (touchPoints.size === 2) {
+        const points = [...touchPoints.values()];
+        pinchDistance = points[0].distanceTo(points[1]);
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchmove", event => {
+      touchPoints.set(event.pointerId, new THREE.Vector2(event.clientX, event.clientY));
+      if (touchPoints.size >= 2) updatePinch();
+    }, { passive: true });
+
+    function endTouch(event) {
+      touchPoints.delete(event.pointerId);
+      if (touchPoints.size < 2) pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("touchend", endTouch);
+    renderer.domElement.addEventListener("touchcancel", endTouch);
+
+    updateCamera();
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      waterMaterial.uniforms.time.value = elapsed;
+      animatedRiver.material.uniforms.time.value = elapsed;
+
+      birds.forEach(bird => {
+        bird.group.position.x += Math.sin(elapsed * bird.speed + bird.phase) * .0015;
+        bird.group.position.y += Math.cos(elapsed * bird.speed * .7 + bird.phase) * .0008;
+        bird.group.rotation.y = Math.sin(elapsed * bird.speed + bird.phase) * .7;
+        bird.group.rotation.z = Math.sin(elapsed * bird.speed * 1.4 + bird.phase) * .18;
+      });
+
+      fireflies.forEach(item => {
+        item.mesh.position.x += Math.sin(elapsed * item.speed + item.phase) * .0008;
+        item.mesh.position.y += Math.cos(elapsed * item.speed * .8 + item.phase) * .0006;
+        item.mesh.position.z += Math.sin(elapsed * item.speed * .6 + item.phase) * .0005;
+        item.mesh.scale.setScalar(.7 + Math.sin(elapsed * 2.4 + item.phase) * .35);
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // -------------------------------------------------------------------------
+    // Resize
+    // -------------------------------------------------------------------------
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>
