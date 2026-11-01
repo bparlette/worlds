@@ -340,5 +340,14 @@
     "filename": "038_chrono_trigger_2300_a_d_ruined_domes.html",
     "verified_working": true,
     "generated_at": "2026-11-01 07:35:07"
+  },
+  "39": {
+    "id": 39,
+    "game": "Chrono Trigger",
+    "target": "65,000,000 B.C. Tyrano Lair",
+    "platform": "SNES",
+    "filename": "039_chrono_trigger_65_000_000_b_c_tyrano_lair.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 07:49:20"
   }
 }
