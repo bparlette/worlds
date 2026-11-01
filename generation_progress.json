@@ -52,5 +52,14 @@
     "filename": "006_solaris_stellar_quadrants_canyons.html",
     "verified_working": false,
     "generated_at": "2026-10-31 23:29:46"
+  },
+  "7": {
+    "id": 7,
+    "game": "Mountain King",
+    "target": "Diamond Caverns",
+    "platform": "Atari 2600",
+    "filename": "007_mountain_king_diamond_caverns.html",
+    "verified_working": false,
+    "generated_at": "2026-10-31 23:36:52"
   }
 }
