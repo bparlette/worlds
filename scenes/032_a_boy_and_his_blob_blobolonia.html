@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blobolonia — A Boy and His Blob</title>
+  <style>
+    :root {
+      --ink: #17233f;
+      --paper: #fff3cf;
+      --orange: #ff9d32;
+      --mint: #8ee5a6;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #10182b;
+      color: var(--paper);
+      font-family: "Pixel Sans", "Trebuchet MS", system-ui, sans-serif;
+    }
+
+    #app, #hud, #title, #help, #retro {
+      position: fixed;
+      inset: 0;
+    }
+
+    #app canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #app canvas:active { cursor: grabbing; }
+
+    #hud {
+      pointer-events: none;
+      z-index: 5;
+      padding: 16px;
+      border: 4px solid rgba(255, 243, 207, 0.5);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(255, 243, 207, 0.9), rgba(23, 35, 63, 0.86));
+      box-shadow: 0 14px 45px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+    }
+
+    #title {
+      margin-bottom: 10px;
+      color: #17233f;
+      font-size: clamp(21px, 3vw, 34px);
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #title span {
+      display: block;
+      margin-top: 3px;
+      color: #6b789f;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .05em;
+    }
+
+    #help {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 2px solid rgba(255, 243, 207, .22);
+      color: #f6ead2;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #retro {
+      pointer-events: none;
+      z-index: 6;
+      opacity: .16;
+      mix-blend-mode: overlay;
+      background:
+        repeating-linear-gradient(rgba(255,255,255,.15) 0 .5px, transparent .5px 1px),
+        radial-gradient(circle at 50% 45%, transparent 45%, rgba(0,0,0,.22) 100%);
+    }
+
+    #status {
+      position: fixed;
+      z-index: 8;
+      top: 18px;
+      left: 50%;
+      width: min(520px, calc(100vw - 32px));
+      padding: 14px 18px;
+      border: 2px solid rgba(255, 255, 255, .18);
+      border-radius: 10px;
+      background: rgba(13, 20, 37, .78);
+      box-shadow: 0 12px 35px rgba(0,0,0,.25);
+      transform: translateX(-50%);
+      text-align: center;
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #status strong {
+      color: #ffd18a;
+      font-size: 13px;
+    }
+
+    #reticle {
+      position: fixed;
+      z-index: 7;
+      width: 10px;
+      height: 10px;
+      border: 2px solid #ffca68;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 12px #ff9d32;
+      pointer-events: none;
+    }
+
+    @media (max-width: 620px) {
+      #hud { padding: 12px; }
+      #help { font-size: 11px; }
+      #status { top: 10px; padding: 10px 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="hud">
+    <div id="title">Blobolonia</div><span>A Boy and His Blob</span>
+    <div id="help">
+      Drag to orbit · Scroll to zoom<br />
+      Arrow keys / WASD to move · R to respawn<br />
+      Hold SPACE to jump · F to feed the Orange Jellybean
+    </div>
+  </div>
+  <div id="retro"></div>
+  <div id="reticle"></div>
+  <div id="status"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const app = document.getElementById("app");
+    const status = document.getElementById("status");
+    const reticle = document.getElementById("reticle");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x9fc9df);
+    scene.fog = new THREE.FogExp2(0x9fc9df, 0.0115);
+
+    const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 150);
+    camera.position.set(10, 6.5, 13);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    app.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xdff4ff, 0x6b4a2d, 2.25);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffe1a3, 3.2);
+    sun.position.set(-12, 22, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -30;
+    sun.shadow.camera.right = 30;
+    sun.shadow.camera.top = 30;
+    sun.shadow.camera.bottom = -30;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 70;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8ed9ff, 0.8);
+    fill.position.set(12, 8, -14);
+    scene.add(fill);
+
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({ color: 0x65c85b, roughness: .95 }),
+      grassLight: new THREE.MeshStandardMaterial({ color: 0x8ed867, roughness: .95 }),
+      grassDark: new THREE.MeshStandardMaterial({ color: 0x3f9b49, roughness: 1 }),
+      soil: new THREE.MeshStandardMaterial({ color: 0x6d4534, roughness: 1 }),
+      trunk: new THREE.MeshStandardMaterial({ color: 0x765038, roughness: 1 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x2e8f49, roughness: .9, flatShading: true }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x55b850, roughness: .9, flatShading: true }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x23713d, roughness: 1, flatShading: true }),
+      white: new THREE.MeshStandardMaterial({ color: 0xfff7d8, roughness: .8 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xff465f, roughness: .65 }),
+      orange: new THREE.MeshStandardMaterial({ color: 0xff9a32, roughness: .55 }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xffe66e, roughness: .55 }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x4f91d5, roughness: .55 }),
+      popcorn: new THREE.MeshStandardMaterial({ color: 0xffd35c, roughness: .6 }),
+      jellybean: new THREE.MeshStandardMaterial({ color: 0xff8a2f, roughness: .35, emissive: 0x421000, emissiveIntensity: .25 })
+    };
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const clock = new THREE.Clock();
+    const movingBalls = [];
+    const cherryBombs = [];
+    const popcorn = [];
+    const particles = [];
+    const flags = [];
+    const clouds = [];
+    const trees = [];
+    const bushes = [];
+    const corn = [];
+    const jellybeans = [];
+
+    function box(w, h, d, material, x, y, z, parent = world) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, parent = world, segments = 12) {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function sphere(radius, material, x, y, z, parent = world, segments = 14) {
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, segments), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function makeTree(x, z, scale = 1, dark = false) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      cylinder(.28, .42, 2.8, materials.trunk, 0, 1.4, 0, group, 8);
+      const crown = sphere(1.25, dark ? materials.leafDark : materials.leaf, 0, 3.15, 0, group, 10);
+      crown.scale.set(1, 1.15, .9);
+      sphere(.95, materials.leafLight, .25, 3.8, .15, group, 10);
+      sphere(.85, materials.leafDark, -.35, 3.65, -.15, group, 10);
+      trees.push(group);
+      return group;
+    }
+
+    function makeBush(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+      const a = sphere(.65, materials.leafDark, 0, .42, 0, group, 8);
+      const b = sphere(.55, materials.leaf, .48, .55, .05, group, 8);
+      const c = sphere(.5, materials.leafLight, -.4, .48, -.05, group, 8);
+      bushes.push(group);
+      return group;
+    }
+
+    function makeRock(x, z, scale = 1) {
+      const rock = sphere(.45, materials.soil, x, .18 * scale, z, world, 8);
+      rock.scale.set(1.4 * scale, .65 * scale, 1);
+      return rock;
+    }
+
+    function makeFlag(x, z, color) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+      cylinder(.055, .075, 3.2, materials.trunk, 0, 1.6, 0, group, 7);
+      box(1.25, .18, .08, materials.white, .55, 3.15, 0, group);
+      box(1.25, .18, .08, materials.white, .55, 3.15, 0, group);
+      flags.push(group);
+      return group;
+    }
+
+    function makeCloud(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+      const puffs = [
+        sphere(.75, materials.white, 0, 0, 0, group, 10),
+        sphere(.62, materials.white, -.55, .15, 0, group, 10),
+        sphere(.6, materials.white, .55, .18, 0, group, 10),
+        sphere(.48, materials.white, 0, .55, 0, group, 10)
+      ];
+      clouds.push(group);
+      return group;
+    }
+
+    function makeBouncingBall(x, z, colorMat, radius = .48, speed = 2.1, phase = 0) {
+      const ball = sphere(radius, colorMat, x, 1.2, z, world, 16);
+      const rim = new THREE.Mesh(
+        new THREE.RingGeometry(radius * .79, radius * .815, 20),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+      );
+      rim.rotation.x = Math.PI / 2;
+      ball.add(rim);
+      movingBalls.push({ mesh: ball, radius, speed, phase, y: 1.2, dir: 1 });
+      return ball;
+    }
+
+    function makeCherryBomb(x, z, colorMat = materials.red) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      const body = sphere(.32, colorMat, 0, .32, 0, group, 12);
+      body.scale.y = .75;
+      cylinder(.12, .16, .25, materials.orange, 0, .05, 0, group, 8);
+      sphere(.09, materials.white, 0, .36, 0, group, 8);
+
+      const fuse = cylinder(.018, .018, .35, materials.orange, 0, .52, 0, group, 6);
+      fuse.rotation.z = .08;
+
+      cherryBombs.push({
+        group,
+        body,
+        fuse,
+        timer: 0,
+        state: "active",
+        origin: new THREE.Vector3(x, 0, z)
+      });
+    }
+
+    function makePopcorn(x, z, colorMat = materials.popcorn) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+      const stem = cylinder(.035, .06, .65, materials.leafDark, 0, .32, 0, group, 6);
+      const head = sphere(.26, colorMat, 0, .72, 0, group, 8);
+      head.scale.set(1.2, .65, 1);
+      popcorn.push(group);
+      return group;
+    }
+
+    function makeJellybean(x, z, colorMat = materials.jellybean) {
+      const bean = sphere(.28, colorMat, x, .18, z, world, 12);
+      bean.scale.set(1.25, .55, .75);
+      jellybeans.push(bean);
+      return bean;
+    }
+
+    function makeCornField(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      for (let i = 0; i < 18; i++) {
+        const cx = (i - 8) * .7;
+        const cz = -5.5 + ((i * 1.73) % 11) * .65;
+        makePopcorn(cx, cz, i % 3 === 0 ? materials.yellow : materials.popcorn);
+      }
+
+      for (let i = 0; i < 12; i++) {
+        const cx = -6 + i * 1.1;
+        const cz = 5 + ((i * .8) % 3) * 1.1;
+        makePopcorn(cx, cz, i % 2 === 0 ? materials.popcorn : materials.yellow);
+      }
+
+      return group;
+    }
+
+    function makePath(x1, z1, x2, z2) {
+      const length = Math.hypot(x2-x1, z2-z1);
+      const angle = Math.atan2(x2-x1, z2-z1);
+      const path = box(length, .08, 1.5, materials.soil, (x1+x2)/2, .035, (z1+z2)/2);
+      path.rotation.y = -angle;
+      return path;
+    }
+
+    // ---------------------------------------------------------------------
+    // Screen 1: The entrance clearing
+    // ---------------------------------------------------------------------
+    makePath(0, 22, 0, 8);
+    makeTree(-5, 3);
+    makeTree(-7, -1);
+    makeTree(7, 3);
+    makeTree(9, -2);
+    makeTree(-3, 6);
+    makeTree(4, 7);
+    makeBush(-8, -4, 1.2);
+    makeBush(8, -5, 1.1);
+    makeRock(-1, 10, .8);
+    makeRock(2.5, 11, .65);
+    makeFlag(-4.5, -7, 0x65d4ff);
+    makeFlag(4.8, -6.5, 0xff9d32);
+    makeCloud(-8, 10, -10, 1.3);
+    makeCloud(7, 12, -14, 1.1);
+
+    const ball1 = makeBouncingBall(-2.4, 4.8, materials.orange, .52, 2.25, .2);
+    const ball2 = makeBouncingBall(2.2, 4.3, materials.blue, .47, 2.0, 1.1);
+    const ball3 = makeBouncingBall(-.8, 5.2, materials.yellow, .43, 1.8, 2.2);
+
+    // ---------------------------------------------------------------------
+    // Screen 2: Cherry-bomb forest
+    // ---------------------------------------------------------------------
+    makePath(0, 8, 0, 17);
+    makeTree(-7, 12, 1.15, true);
+    makeTree(-8, 20, .95);
+    makeTree(7, 12, 1.15, true);
+    makeTree(8, 20, .95);
+    makeTree(-3.5, 21, .85);
+    makeTree(3.5, 21, .85);
+    makeBush(-5.5, 16, 1.3);
+    makeBush(5.5, 16, 1.25);
+    makeRock(0, 22, 1.1);
+
+    makeCherryBomb(-3.2, 13.5);
+    makeCherryBomb(3.3, 14.2, materials.red);
+    makeCherryBomb(-2.4, 18.5, materials.blue);
+    makeCherryBomb(2.5, 19.2, materials.orange);
+
+    // A distant tree hides the next screen, but the bombs remain world-wide.
+    makeTree(0, 24, 1.6, true);
+    makeCloud(-3, 14, 18, 1.5);
+    makeCloud(4, 15, 22, 1.3);
+
+    // ---------------------------------------------------------------------
+    // Screen 3: The cornfield — must be entered after clearing the bombs
+    // ---------------------------------------------------------------------
+    makePath(0, 17, 0, 25);
+    makeCornField(0, 25, 1.25);
+    makeFlag(-7, 29, 0xff9d32);
+    makeFlag(7, 29, 0x65d4ff);
+    makeCloud(0, 16, 31, 1.5);
+
+    // ---------------------------------------------------------------------
+    // The Orange Jellybean in the clearing
+    // ---------------------------------------------------------------------
+    const jellybean = makeJellybean(0, 15, materials.jellybean);
+    cylinder(.42, .48, .2, materials.soil, 0, .1, 15, world, 12);
+    makeRock(-1.2, 16.5, .55);
+    makeRock(1.2, 16.5, .55);
+
+    // ---------------------------------------------------------------------
+    // Screen 4: Popcorn dodging
+    // ---------------------------------------------------------------------
+    makePath(0, 25, 0, 34);
+    makeCornField(0, 34, 1.55);
+    makeFlag(-8, 38, 0x65d4ff);
+    makeFlag(8, 38, 0xff9d32);
+    makeCloud(-4, 17, 39, 1.6);
+    makeCloud(5, 18, 42, 1.4);
+
+    // ---------------------------------------------------------------------
+    // Distant mountain silhouettes and sky details
+    // ---------------------------------------------------------------------
+    const mountainMat = new THREE.MeshStandardMaterial({ color: 0x496f83, roughness: 1, flatShading: true });
+    [
+      [(-20, -38, 11, 7), mountainMat],
+      [(0, -42, 13, 9), mountainMat],
+      [(21, -39, 12, 8), mountainMat],
+      [(-30, -45, 10, 5), mountainMat],
+      [(31, -46, 11, 6), mountainMat]
+    ].forEach(([x, z, w, h], i) => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 7), mountainMat);
+      m.position.set(x, h/2 - .2, z);
+      m.rotation.y = i * .4;
+      world.add(m);
+    });
+
+    // Small animated wind chimes.
+    const chime = new THREE.Group();
+    chime.position.set(4.8, 4.2, 13);
+    world.add(chime);
+    const rod = cylinder(.025, .025, 1.1, materials.trunk, 0, 0, 0, chime, 6);
+    for (let i = 0; i < 5; i++) {
+      const bell = new THREE.Mesh(new THREE.ConeGeometry(.13 - i*.015, .28, 6), materials.blue);
+      bell.position.set((i-2)*.19, -.38, 0);
+      bell.rotation.z = (i-2)*.08;
+      chime.add(bell);
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: orbit with mouse/touch, wheel zoom, no OrbitControls dependency
+    // ---------------------------------------------------------------------
+    const cameraState = {
+      theta: Math.PI * .24,
+      phi: 1.13,
+      radius: 18,
+      target: new THREE.Vector3(0, 1.4, 12),
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    const pointer = new THREE.Vector2();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      cameraState.dragging = true;
+      cameraState.lastX = event.clientX;
+      cameraState.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!cameraState.dragging) return;
+      const dx = event.clientX - cameraState.lastX;
+      const dy = event.clientY - cameraState.lastY;
+      cameraState.lastX = event.clientX;
+      cameraState.lastY = event.clientY;
+      cameraState.theta -= dx * .006;
+      cameraState.phi = THREE.MathUtils.clamp(cameraState.phi - dy * .005, .48, 1.48);
+    });
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      cameraState.dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      cameraState.dragging = false;
+    });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      cameraState.radius = THREE.MathUtils.clamp(cameraState.radius + event.deltaY * .015, 8, 31);
+    }, { passive: false });
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+      camera.position.set(
+        cameraState.target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+      camera.lookAt(cameraState.target);
+    }
+    updateCamera();
+
+    // ---------------------------------------------------------------------
+    // Character: the boy and his blob
+    // ---------------------------------------------------------------------
+    const character = new THREE.Group();
+    character.position.set(0, 0, 21);
+    world.add(character);
+
+    const boyBody = new THREE.Group();
+    boyBody.position.y = .65;
+    character.add(boyBody);
+
+    const shirt = new THREE.MeshStandardMaterial({ color: 0x3c86d1, roughness: .85 });
+    const pants = new THREE.MeshStandardMaterial({ color: 0x24365f, roughness: .95 });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xffd9a3, roughness: .8 });
+    const hat = new THREE.MeshStandardMaterial({ color: 0xff9d32, roughness: .7 });
+
+    cylinder(.18, .23, .65, shirt, 0, .55, 0, boyBody, 10);
+    head = sphere(.25, skin, 0, 1.15, 0, boyBody, 12);
+    const cap = sphere(.31, hat, 0, 1.43, 0, boyBody, 12);
+    cap.scale.y = .55;
+    cylinder(.055, .055, .32, hat, 0, 1.76, 0, boyBody, 8);
+
+    const leftLeg = cylinder(.095, .11, .65, pants, -.1, .27, 0, boyBody, 8);
+    const rightLeg = cylinder(.095, .11, .65, pants, .1, .27, 0, boyBody, 8);
+    leftLeg.rotation.z = -.08;
+    rightLeg.rotation.z = .08;
+
+    const armL = cylinder(.075, .085, .55, shirt, -.31, .6, 0, boyBody, 8);
+    armL.rotation.z = -.55;
+    const armR = cylinder(.075, .085, .55, shirt, .31, .6, 0, boyBody, 8);
+    armR.rotation.z = .55;
+
+    const blob = new THREE.Group();
+    blob.position.set(0, .05, 0);
+    character.add(blob);
+    const blobBody = sphere(.48, materials.jellybean, 0, .48, 0, blob, 18);
+    blobBody.scale.set(1.05, .72, .9);
+    const blobHead = sphere(.29, materials.jellybean, .12, .9, -.05, blob, 14);
+    blobHead.scale.set(1, .75, .9);
+    const blobEye = sphere(.065, materials.white, .2, .96, -.1, blob, 10);
+    const blobMouth = new THREE.Mesh(
+      new THREE.RingGeometry(.055, .075, 12),
+      new THREE.MeshBasicMaterial({ color: 0x311000 })
+    );
+    blobMouth.rotation.y = Math.PI / 2;
+    blobMouth.position.set(.2, .94, -.11);
+    blob.add(blobMouth);
+
+    const boyGroup = new THREE.Group();
+    boyGroup.position.set(0, 0, 21);
+    world.add(boyGroup);
+
+    const legL = cylinder(.095, .11, .65, pants, -.1, .27, 0, boyGroup, 8);
+    const legR = cylinder(.095, .11, .65, pants, .1, .27, 0, boyGroup, 8);
+    legL.rotation.z = -.08;
+    legR.rotation.z = .08;
+
+    armL = cylinder(.075, .085, .55, shirt, -.31, .6, 0, boyGroup, 8);
+    armL.rotation.z = -.55;
+    armR = cylinder(.075, .085, .55, shirt, .31, .6, 0, boyGroup, 8);
+    armR.rotation.z = .55;
+
+    head = sphere(.25, skin, 0, 1.15, 0, boyGroup, 12);
+    cap = sphere(.31, hat, 0, 1.43, 0, boyGroup, 12);
+    cap.scale.y = .55;
+    cylinder(.055, .055, .32, hat, 0, 1.76, 0, boyGroup, 8);
+
+    const body = cylinder(.18, .23, .65, shirt, 0, .55, 0, boyGroup, 10);
+
+    // ---------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------
+    const jumpParticles = [];
+
+    function createJumpDust(x, y, z) {
+      for (let i = 0; i < 8; i++) {
+        const particle = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(.08, 0),
+          new THREE.MeshBasicMaterial({ color: 0xffd78b, transparent: true, opacity: .65 })
+        );
+        particle.position.set(x, y, z);
+        world.add(particle);
+        jumpParticles.push({
+          mesh: particle,
+          speed: .35 + Math.random() * .35,
+          angle: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function animateBouncingBalls() {
+      movingBalls.forEach((item, i) => {
+        item.timer += clock.getDelta();
+        const cycle = (item.timer * item.speed) % 4.4;
+        const y = 1.25 + Math.sin(cycle * Math.PI) * .75;
+        item.mesh.position.y = y;
+        item.mesh.rotation.y += clock.getDelta() * .4;
+        if (cycle > 4.1) item.mesh.rotation.z = Math.PI;
+      });
+    }
+
+    function animateCherryBombs() {
+      cherryBombs.forEach((bomb, i) => {
+        bomb.timer += clock.getDelta();
+        if (bomb.timer > .85) {
+          bomb.timer = .85;
+          const explosion = new THREE.Mesh(
+            new THREE.SphereGeometry(.78, 12, 8),
+            new THREE.MeshBasicMaterial({ color: 0xff5a45, side: THREE.BackSide })
+          );
+          explosion.position.copy(bomb.group.position);
+          explosion.scale.setScalar(.1);
+          world.add(explosion);
+          particles.push({
+            mesh: explosion,
+            age: 0,
+            life: 1.2,
+            origin: new THREE.Vector3(0, 0, 0)
+          });
+
+          for (let j = 0; j < 12; j++) {
+            const p = new THREE.Mesh(
+              new THREE.IcosahedronGeometry(.08 + Math.random() * .08, 0),
+              new THREE.MeshBasicMaterial({ color: 0xff8a45, transparent: true, opacity: .75 })
+            );
+            const v = new THREE.Vector3(
+              (Math.random() - .5) * 1.2,
+              Math.random() * .7 + .25,
+              (Math.random() - .5) * 1.2
+            );
+            p.position.copy(bomb.group.position).add(v);
+            world.add(p);
+            particles.push({
+              mesh: p,
+              age: 0,
+              life: .6,
+              origin: p.position.clone(),
+              velocity: v
+            });
+          }
+        }
+      });
+    }
+
+    function animatePopcorn() {
+      popcorn.forEach((plant, i) => {
+        plant.rotation.z = Math.sin(clock.elapsedTime * 1.2 + i) * .035;
+        plant.rotation.x = Math.cos(clock.elapsedTime * .9 + i) * .025;
+      });
+    }
+
+    function animateClouds() {
+      clouds.forEach((cloud, i) => {
+        cloud.position.x += clock.getDelta() * (.035 + (i % 3) * .012);
+        if (cloud.position.x > 25) cloud.position.x = -25;
+      });
+    }
+
+    function animateFlags() {
+      flags.forEach((flag, i) => {
+        const pole = flag.children[1];
+        pole.rotation.z = Math.sin(clock.elapsedTime * 1.4 + i) * .06;
+      });
+    }
+
+    function animateBlob() {
+      blobBody.rotation.y += clock.getDelta() * .35;
+      blobBody.rotation.z = Math.sin(clock.elapsedTime * .7) * .06;
+      blobHead.rotation.y = -blobBody.rotation.y;
+    }
+
+    function animateBoy() {
+      const t = clock.elapsedTime;
+      const step = Math.sin(t * 5.5) * .12;
+      legL.rotation.z = -.08 + step;
+      legR.rotation.z = .08 - step;
+      armL.rotation.z = -.55 - step * .65;
+      armR.rotation.z = .55 + step * .65;
+      head.rotation.y = Math.sin(t * 2.2) * .12;
+    }
+
+    function animateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.age += clock.getDelta();
+        if (p.age >= p.life) {
+          world.remove(p.mesh);
+          particles.splice(i, 1);
+          continue;
+        }
+        const t = p.age / p.life;
+        p.mesh.position.copy(p.origin);
+        p.mesh.position.y += p.velocity.y * clock.getDelta();
+        p.mesh.position.addScaledVector(p.velocity, clock.getDelta());
+        p.mesh.scale.addScalar(clock.getDelta() * 1.6);
+        p.mesh.rotation.x += clock.getDelta() * 2;
+        p.mesh.rotation.y += clock.getDelta() * 2;
+      }
+    }
+
+    function animateJumpDust() {
+      for (let i = jumpParticles.length - 1; i >= 0; i--) {
+        const p = jumpParticles[i];
+        p.mesh.position.y += p.speed * clock.getDelta();
+        p.mesh.position.x += Math.sin(p.angle) * .04 * clock.getDelta();
+        p.mesh.position.z += Math.cos(p.angle) * .04 * clock.getDelta();
+        p.mesh.scale.addScalar(clock.getDelta() * 1.5);
+        if (p.mesh.position.y > 1.25) world.remove(p.mesh);
+        jumpParticles.splice(i, 1);
+      }
+    }
+
+    function feedJellybean() {
+      const bean = makeJellybean(0, 15, materials.jellybean);
+      bean.scale.setScalar(1.25);
+      createJumpDust(0, 1.2, 15);
+      const sparkle = new THREE.Mesh(
+        new THREE.SphereGeometry(.12, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffe6a0 })
+      );
+      sparkle.position.set(0, 1.45, 15);
+      world.add(sparkle);
+      particles.push({
+        mesh: sparkle,
+        age: 0,
+        life: .8,
+        origin: sparkle.position.clone(),
+        velocity: new THREE.Vector3(0, .5, 0)
+      });
+      status.textContent = "The Orange Jellybean was fed!";
+      setTimeout(() => status.textContent = "Feed the Orange Jellybean", 1800);
+    }
+
+    // ---------------------------------------------------------------------
+    // Controls
+    // ---------------------------------------------------------------------
+    const keys = new Set();
+    const pressed = new Set();
+
+    addEventListener("keydown", (event) => {
+      keys.add(event.code);
+      pressed.add(event.code);
+    });
+
+    addEventListener("keyup", (event) => {
+      keys.delete(event.code);
+      pressed.delete(event.code);
+    });
+
+    addEventListener("blur", () => keys.clear());
+
+    function movePlayer(dx, dz) {
+      character.position.x += dx;
+      character.position.z += dz;
+      const previousX = character.position.x;
+      const previousZ = character.position.z;
+      character.position.x += Math.sin(keys.has("Space") ? 0 : 0) * .08;
+      character.position.z += Math.cos(keys.has("Space") ? 0 : 0) * .08;
+    }
+
+    function jump() {
+      if (pressed.has("Space") && keys.has("Space")) {
+        keys.delete("Space");
+        pressed.delete("Space");
+        const previousX = character.position.x;
+        const previousZ = character.position.z;
+        character.position.y += 3.4;
+        character.rotation.z = -.15;
+        createJumpDust(character.position.x, 1.2, character.position.z);
+      }
+    }
+
+    function feed() {
+      if (pressed.has("KeyF") && keys.has("KeyF")) {
+        keys.delete("KeyF");
+        pressed.delete("KeyF");
+        feedJellybean();
+      }
+    }
+
+    function respawn() {
+      if (pressed.has("KeyR") && keys.has("KeyR")) {
+        keys.delete("KeyR");
+        pressed.delete("KeyR");
+        character.position.set(0, 0, 21);
+        character.rotation.set(0, 0, 0);
+        status.textContent = "The boy respawned in the entrance clearing.";
+      }
+    }
+
+    addEventListener("keydown", (event) => {
+      if (event.code === "ArrowLeft" || event.code === "ArrowRight" || event.code === "ArrowUp" || event.code === "ArrowDown" || event.code === "KeyW" || event.code === "KeyS") {
+        event.preventDefault();
+      }
+    });
+
+    addEventListener("keydown", (event) => {
+      if (event.code === "ArrowLeft") keys.add("ArrowLeft");
+      if (event.code === "ArrowRight") keys.add("ArrowRight");
+      if (event.code === "ArrowUp") keys.add("ArrowUp");
+      if (event.code === "ArrowDown") keys.add("ArrowDown");
+      if (event.code === "KeyW") keys.add("KeyW");
+      if (event.code === "KeyS") keys.add("KeyS");
+    });
+
+    addEventListener("keyup", (event) => {
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyW", "KeyS"].includes(event.code)) {
+        keys.delete(event.code);
+      }
+    });
+
+    addEventListener("keydown", jump);
+    addEventListener("keydown", feed);
+    addEventListener("keydown", respawn);
+
+    // Touch keyboard support
+    window.addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        keys.add("Space");
+      }
+      if (event.code === "KeyF") keys.add("KeyF");
+      if (event.code === "KeyR") keys.add("KeyR");
+    });
+
+    window.addEventListener("keyup", (event) => {
+      if (event.code === "Space") keys.delete("Space");
+      if (event.code === "KeyF") keys.delete("KeyF");
+      if (event.code === "KeyR") keys.delete("KeyR");
+    });
+
+    // ---------------------------------------------------------------------
+    // Main loop
+    // ---------------------------------------------------------------------
+    const initialTime = performance.now();
+    let elapsed = 0;
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), .05);
+      elapsed += dt;
+
+      if (keys.has("ArrowLeft")) character.position.x -= dt * 1.8;
+      if (keys.has("ArrowRight")) character.position.x += dt * 1.8;
+      if (keys.has("ArrowUp") || keys.has("KeyW")) character.position.z -= dt * 1.8;
+      if (keys.has("ArrowDown") || keys.has("KeyS")) character.position.z += dt * 1.8;
+
+      const forward = new THREE.Vector3(0, 0, 1);
+      const right = new THREE.Vector3(1, 0, 0);
+      const movement = new THREE.Vector3();
+      forward.multiplyScalar(keys.has("ArrowUp") ? 1 : keys.has("ArrowDown") ? -1 : 0);
+      right.multiplyScalar(keys.has("ArrowRight") ? 1 : keys.has("ArrowLeft") ? -1 : 0);
+      movement.add(movement.addScaledVector(forward, keys.has("Space") ? 1 : 0));
+      movement.add(movement.addScaledVector(right, keys.has("KeyF") ? 1 : 0));
+      if (movement.lengthSq() > 0) {
+        character.position.addScaledVector(movement.normalize(), dt * 1.8);
+      }
+
+      // Gentle bobbing while moving.
+      if (keys.has("ArrowUp") || keys.has("ArrowDown") || keys.has("ArrowLeft") || keys.has("ArrowRight") || keys.has("KeyW") || keys.has("KeyS")) {
+        character.position.y = Math.sin(elapsed * 6) * .035;
+      }
+
+      animateBouncingBalls();
+      animateCherryBombs();
+      animatePopcorn();
+      animateClouds();
+      animateFlags();
+      animateBlob();
+      animateBoy();
+      animateParticles();
+      animateJumpDust();
+
+      reticle.style.left = `${(character.position.x + 10) / innerWidth * 100}%`;
+      reticle.style.top = `${(character.position.y + 10) / innerHeight * 100}%`;
+
+      updateCamera();
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>

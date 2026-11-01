@@ -277,5 +277,14 @@
     "filename": "031_crystalis_floating_tower_of_babylon.html",
     "verified_working": false,
     "generated_at": "2026-11-01 05:27:55"
+  },
+  "32": {
+    "id": 32,
+    "game": "A Boy and His Blob",
+    "target": "Blobolonia",
+    "platform": "NES",
+    "filename": "032_a_boy_and_his_blob_blobolonia.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 05:42:01"
   }
 }
