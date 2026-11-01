@@ -528,6 +528,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0, z: 13, yaw: 0 },
+    relic: { name: "Golden Idol", x: 0, z: 27 },
     env: { background: 0x17110d, fogColor: 0x271c13, fogDensity: 0.018 },
     doors: {
       next: { x: 8.8, z: 5.0 },

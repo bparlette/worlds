@@ -461,6 +461,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0, z: 24, yaw: 0 },
+    relic: { name: "Zorlon Cannon Cell", x: 0, z: 38 },
     env: { background: 0x070b18, fogColor: 0x081027, fogDensity: 0.022 },
     doors: {
       next: { x: 0, z: -14.8 },

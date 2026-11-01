@@ -80,6 +80,11 @@ def parse_scene_to_walker(html_content: str, spec: dict) -> str:
     door_prev_x = tx - 12.0
     door_prev_z = tz + 10.0
 
+    # Derive iconic relic name and off-beeline coordinate
+    relic_name = f"{title} Relic" if title else "Ancient Relic"
+    relic_x = tx - 10.0
+    relic_z = tz - 12.0 if tz <= 0 else tz + 12.0
+
     lines = [
         f'// @world {header_json}',
         f'// Converted from {spec.get("filename", "")} into a Back Roms World Walker module.',
@@ -160,6 +165,7 @@ def parse_scene_to_walker(html_content: str, spec: dict) -> str:
         '    group,',
         '    update,',
         f'    spawn: {{ x: {tx:.1f}, z: {spawn_z:.1f}, yaw: 0 }},',
+        f'    relic: {{ name: {json.dumps(relic_name)}, x: {relic_x:.1f}, z: {relic_z:.1f} }},',
         f'    env:   {{ background: {bg_val}, fogColor: {fog_val}, fogDensity: {density_val} }},',
         '    doors: {',
         f'      next: {{ x: {door_next_x:.1f}, z: {door_next_z:.1f} }},',
@@ -211,6 +217,9 @@ try {{
   if (!world.group) throw new Error('Missing world.group');
   if (!world.update || typeof world.update !== 'function') throw new Error('Missing world.update function');
   if (!world.spawn || typeof world.spawn.x !== 'number' || typeof world.spawn.z !== 'number') throw new Error('Invalid world.spawn');
+  if (!world.relic || typeof world.relic.name !== 'string' || typeof world.relic.x !== 'number' || typeof world.relic.z !== 'number') {{
+    throw new Error('Rule R8 failed: Missing or invalid world.relic {{ name, x, z }}');
+  }}
   if (!world.doors || !world.doors.next || !world.doors.prev) throw new Error('Invalid world.doors');
   if (!world.env) throw new Error('Missing world.env');
 

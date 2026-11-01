@@ -533,6 +533,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { name: "Crown of the Mountain King", x: 0, z: 28 },
     env:   { background: 0x080b10, fogColor: 0x101319, fogDensity: 0.025 },
     doors: {
       next: { x: 12.0, z: -10.0 },

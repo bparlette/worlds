@@ -665,6 +665,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: -21, z: 25, yaw: -0.6 },
+    relic: { name: "Enchanted Chalice", x: -21, z: 39 },
     env: { background: 0x17120d, fogColor: 0x17120d, fogDensity: 0.025 },
     doors: {
       next: { x: 13.1, z: -20.7 },

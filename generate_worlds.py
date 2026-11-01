@@ -30,12 +30,16 @@ CRITICAL CONSTRAINTS:
 2. Must properly close all functions, add the animation loop (requestAnimationFrame), and close </script></body></html>. NEVER leave code unfinished or cut off mid-function.
 3. Use only Three.js core ES module:
    https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js
-   Use renderer.toneMapping = THREE.ACESFilmicToneMapping; (do NOT use sRGB for toneMapping).
-   Always append renderer.domElement: document.body.appendChild(renderer.domElement).
+   Use renderer.toneMapping = THREE.ACESFilmicToneMapping;
+   Append canvas via document.body.appendChild(renderer.domElement);
    Never create inline canvas gradients inside CanvasTexture. Use standard Three.js materials.
 4. Implement native drag-to-orbit camera controls directly in JS.
 5. Create recognizable landmarks, atmospheric lighting/fog, and animated elements.
-6. Output ONLY executable HTML inside ```html ... ```."""
+6. RELIC (required): Include the world's hidden treasure relic object:
+   - name: this game's single most iconic treasure object (proper name in quotes, e.g. Adventure's chalice, Pitfall's golden idol).
+   - x, z: a point on WALKABLE ground in this world, at least 10 units from spawn and at least 6 units from doors/landmarks, off the direct beeline.
+7. HYGIENE (required): Do NOT create any object, variable, or group named 'glitch' (case-insensitive) to prevent collision with the Back Roms host entity.
+8. Output ONLY executable HTML inside ```html ... ```."""
 
 
 def load_progress() -> dict:
@@ -396,10 +400,11 @@ def update_gallery(specs: list, progress: dict):
 
 
 def git_commit_and_push(world_spec: dict, filename: str):
-    """Commits the newly generated world and pushes live to GitHub."""
+    """Commits the newly generated world, walk module & manifest, and pushes live to GitHub."""
     os.chdir(WORLDS_DIR)
     try:
-        subprocess.run(["git", "add", f"scenes/{filename}", "index.html", "generation_progress.json"], check=True)
+        subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
+        subprocess.run(["git", "add", f"scenes/{filename}", "index.html", "generation_progress.json", "walk/"], check=True)
         commit_msg = f"Add #{world_spec['id']:03d} {world_spec['game']} - {world_spec['target']} 3D World"
         subprocess.run(["git", "commit", "-m", commit_msg], check=True)
         subprocess.run(["git", "push", "origin", "main"], check=True)
@@ -465,6 +470,15 @@ def main():
         except Exception as e:
             print(f"[Chrome Verifier] Check exception: {e}")
             is_verified = False
+
+        # Automated Walker Module Conversion & R8 Validation Gate
+        try:
+            from make_walker_module import convert_scene_to_walker_module
+            walker_res = convert_scene_to_walker_module(filepath, spec)
+            if walker_res.get("status") == "registered":
+                print(f"[Walker Pipeline] ✓ Module registered in walk/worlds.json for #{spec['id']:03d}")
+        except Exception as e:
+            print(f"[Walker Pipeline] Exception in walker conversion: {e}")
 
         progress[s_id] = {
             "id": spec["id"],

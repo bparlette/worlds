@@ -455,6 +455,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 7, z: 30, yaw: 0 },
+    relic: { name: "Refueling Depot Core", x: 7, z: 44 },
     env: { background: 0x9d5c2e, fogColor: 0x9d5c2e, fogDensity: 0.016 },
     doors: {
       next: { x: 0, z: -33 },

@@ -584,6 +584,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0, z: 14, yaw: 0 },
+    relic: { name: "Master Urn Piece", x: 0, z: 28 },
     env,
     doors: {
       next: { x: -1.5, z: 9.6 },
