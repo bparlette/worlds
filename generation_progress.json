@@ -79,5 +79,14 @@
     "filename": "009_warlords_quadrant_fortresses.html",
     "verified_working": false,
     "generated_at": "2026-11-01 00:36:16"
+  },
+  "10": {
+    "id": 10,
+    "game": "Super Mario Bros.",
+    "target": "World 1-1",
+    "platform": "NES",
+    "filename": "010_super_mario_bros_world_1_1.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 01:26:01"
   }
 }
