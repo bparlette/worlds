@@ -57,8 +57,9 @@ def generate_single_world(spec: dict) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 16000,
-        "temperature": 0.7
+        "max_tokens": 4096,
+        "temperature": 0.7,
+        "stream": True
     }
 
     req = urllib.request.Request(
@@ -68,9 +69,25 @@ def generate_single_world(spec: dict) -> str:
     )
 
     t0 = time.time()
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        resp_json = json.loads(resp.read().decode("utf-8"))
-        raw_content = resp_json["choices"][0]["message"].get("content", "")
+    collected_chunks = []
+    # Using streaming with a generous per-chunk read timeout so long generation never drops connection
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        for line in resp:
+            line = line.decode("utf-8").strip()
+            if not line or not line.startswith("data: "):
+                continue
+            data_str = line[6:]
+            if data_str == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data_str)
+                delta = chunk["choices"][0]["delta"].get("content", "")
+                if delta:
+                    collected_chunks.append(delta)
+            except Exception:
+                continue
+
+    raw_content = "".join(collected_chunks)
     elapsed = time.time() - t0
     print(f"[AI Complete] Received response in {elapsed:.1f}s ({len(raw_content)} chars)")
 
