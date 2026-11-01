@@ -26,6 +26,7 @@ export function createWorld(THREE) {
       capabilities: { getMaxAnisotropy: () => 16 },
       domElement: {
         style: {},
+        setAttribute: () => {},
         addEventListener: () => {},
         removeEventListener: () => {}
       },
@@ -47,16 +48,32 @@ export function createWorld(THREE) {
   const devicePixelRatio = 1;
   const innerWidth = 1920;
   const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
   const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
     innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
   };
   const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
-    body: { prepend: () => {}, appendChild: () => {}, style: {} },
-    querySelector: () => ({ style: {}, addEventListener: () => {} }),
-    getElementById: () => ({ style: {}, classList: { add: () => {}, remove: () => {} } }),
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
     createElement: () => {
       const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
-      return { getContext: () => ctx, width: 64, height: 64, style: {} };
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
     }
   };
   const requestAnimationFrame = (fn) => { updateHook = fn; };
@@ -533,7 +550,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
-    relic: { name: "Crown of the Mountain King", x: 0, z: 28 },
+    relic: { name: "Mountain King Relic", x: -10.0, z: -12.0 },
     env:   { background: 0x080b10, fogColor: 0x101319, fogDensity: 0.025 },
     doors: {
       next: { x: 12.0, z: -10.0 },

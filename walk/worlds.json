@@ -40,5 +40,26 @@
     "sub": "Diamond Caverns",
     "system": "Atari 2600",
     "module": "modules/007.js"
+  },
+  {
+    "id": "011",
+    "title": "Super Mario Bros. 3",
+    "sub": "Dark Land Airships",
+    "system": "NES",
+    "module": "modules/011.js"
+  },
+  {
+    "id": "019",
+    "title": "Blaster Master",
+    "sub": "Area 1 Underworld",
+    "system": "NES",
+    "module": "modules/019.js"
+  },
+  {
+    "id": "020",
+    "title": "Bionic Commando",
+    "sub": "Neutral Area Military Base",
+    "system": "NES",
+    "module": "modules/020.js"
   }
 ]
