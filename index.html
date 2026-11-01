@@ -102,6 +102,26 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            margin-right: 6px;
+        }
+        .badge.verified {
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge.needs-attention {
+            background: rgba(241, 196, 15, 0.15);
+            color: #f1c40f;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .world-card.card-flagged {
+            border-color: rgba(241, 196, 15, 0.25);
         }
         .world-id {
             color: var(--text-muted);
@@ -167,9 +187,12 @@
     <main>
         <div class="grid">
             
-        <div class="world-card">
+        <div class="world-card ">
             <div class="card-header">
-                <span class="badge platform">Atari 2600</span>
+                <div>
+                    <span class="badge platform">Atari 2600</span>
+                    <span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>
+                </div>
                 <span class="world-id">#001</span>
             </div>
             <div class="card-body">
@@ -182,9 +205,12 @@
             </div>
         </div>
         
-        <div class="world-card">
+        <div class="world-card ">
             <div class="card-header">
-                <span class="badge platform">Atari 2600</span>
+                <div>
+                    <span class="badge platform">Atari 2600</span>
+                    <span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>
+                </div>
                 <span class="world-id">#002</span>
             </div>
             <div class="card-body">
@@ -197,9 +223,12 @@
             </div>
         </div>
         
-        <div class="world-card">
+        <div class="world-card ">
             <div class="card-header">
-                <span class="badge platform">Atari 2600</span>
+                <div>
+                    <span class="badge platform">Atari 2600</span>
+                    <span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>
+                </div>
                 <span class="world-id">#003</span>
             </div>
             <div class="card-body">
@@ -212,9 +241,12 @@
             </div>
         </div>
         
-        <div class="world-card">
+        <div class="world-card ">
             <div class="card-header">
-                <span class="badge platform">Atari 2600</span>
+                <div>
+                    <span class="badge platform">Atari 2600</span>
+                    <span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>
+                </div>
                 <span class="world-id">#004</span>
             </div>
             <div class="card-body">
@@ -227,9 +259,12 @@
             </div>
         </div>
         
-        <div class="world-card">
+        <div class="world-card ">
             <div class="card-header">
-                <span class="badge platform">Atari 2600</span>
+                <div>
+                    <span class="badge platform">Atari 2600</span>
+                    <span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>
+                </div>
                 <span class="world-id">#005</span>
             </div>
             <div class="card-body">
