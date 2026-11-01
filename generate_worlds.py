@@ -13,6 +13,7 @@ import re
 import urllib.request
 import urllib.error
 import subprocess
+import concurrent.futures
 from scene_linter import lint_and_autofix_scene
 
 WORLDS_DIR = "/Users/braidpairlette/worlds"
@@ -26,7 +27,7 @@ os.makedirs(SCENES_DIR, exist_ok=True)
 SYSTEM_PROMPT = """You are an expert 3D WebGL / Three.js developer.
 Generate a complete, self-contained 3D WebGL interactive world inside a single HTML file.
 CRITICAL CONSTRAINTS:
-1. Write concise, clean, highly modular Three.js code that ALWAYS finishes completely within 2,500 tokens.
+1. Write concise, clean, modular Three.js code using helper functions and loops so the entire file finishes in 15,000 to 20,000 characters (~3,500-4,500 tokens). Avoid bloated repetitive code.
 2. Must properly close all functions, add the animation loop (requestAnimationFrame), and close </script></body></html>. NEVER leave code unfinished or cut off mid-function.
 3. Use only Three.js core ES module:
    https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js
@@ -66,7 +67,7 @@ def generate_single_world(spec: dict) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 31500,
+        "max_tokens": 14000,
         "temperature": 0.6,
         "stream": True
     }
@@ -454,13 +455,78 @@ def git_commit_and_push(world_spec: dict, filename: str):
         print(f"[GitHub Sync] Warning on push: {e}")
 
 
+def post_process_and_publish(spec: dict, filename: str, filepath: str, specs: list, progress: dict):
+    """Runs linting, Chrome verification, Walker module compilation, gallery update, and Git push in background."""
+    s_id = str(spec["id"])
+    # Automated Node.js syntax linting & auto-repair step
+    lint_report = lint_and_autofix_scene(filepath)
+    if lint_report.get("status") == "repaired":
+        print(f"[Auto-Linter] Successfully auto-repaired {lint_report.get('repairs')} syntax issue(s) in {filename}")
+    elif lint_report.get("status") == "clean":
+        print(f"[Auto-Linter] Syntax verified clean for {filename}")
+    elif lint_report.get("status") == "syntax_error":
+        print(f"[Auto-Linter] Warning: Unresolved syntax error: {lint_report.get('errors')}")
+
+    # Automated Headless Chrome WebGL & Runtime Healer
+    is_verified = True
+    try:
+        from scene_healer import automated_rule_based_patch, test_scene_runtime_in_chrome
+        with open(filepath, "r", encoding="utf-8") as f:
+            c = f.read()
+        patched_c = automated_rule_based_patch(c)
+        if patched_c != c:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(patched_c)
+        t_res = test_scene_runtime_in_chrome(filepath)
+        if t_res["clean"]:
+            print(f"[Chrome Verifier] ✓ {filename} renders with 0 console errors!")
+            is_verified = True
+        else:
+            print(f"[Chrome Verifier] ⚠ Runtime warning: {t_res['errors'][:2]}")
+            is_verified = False
+    except Exception as e:
+        print(f"[Chrome Verifier] Check exception: {e}")
+        is_verified = False
+
+    # Automated Walker Module Conversion & R8 Validation Gate
+    try:
+        from make_walker_module import convert_scene_to_walker_module
+        walker_res = convert_scene_to_walker_module(filepath, spec)
+        if walker_res.get("status") == "registered":
+            print(f"[Walker Pipeline] ✓ Module registered in walk/worlds.json for #{spec['id']:03d}")
+    except Exception as e:
+        print(f"[Walker Pipeline] Exception in walker conversion: {e}")
+
+    progress[s_id] = {
+        "id": spec["id"],
+        "game": spec["game"],
+        "target": spec["target"],
+        "platform": spec["platform"],
+        "filename": filename,
+        "verified_working": is_verified,
+        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    save_progress(progress)
+
+    # Update Gallery index.html
+    update_gallery(specs, progress)
+
+    # Git commit & push live
+    git_commit_and_push(spec, filename)
+
+
 def main():
-    max_count = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+    max_count = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     with open(JSON_PATH, "r", encoding="utf-8") as f:
         specs = json.load(f)
 
     progress = load_progress()
     print(f"Loaded {len(specs)} world specifications. Already completed: {len(progress)}.")
+
+    # Background single-worker executor so post-processing (Chrome, Walker, Git)
+    # overlaps with Qwen generating the next world!
+    bg_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    pending_future = None
 
     count = 0
     for spec in specs:
@@ -472,8 +538,12 @@ def main():
             print(f"Reached batch limit of {max_count} worlds. Pausing.")
             break
 
-        # Generate world HTML
+        # Generate world HTML on Qwen immediately
         html_code = generate_single_world(spec)
+
+        # Wait for any previous background post-process to finish before mutating shared progress/git
+        if pending_future is not None:
+            pending_future.result()
 
         slug = re.sub(r"[^a-z0-9]+", "_", f"{spec['game']}_{spec['target']}".lower()).strip("_")
         filename = f"{spec['id']:03d}_{slug}.html"
@@ -482,64 +552,17 @@ def main():
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_code)
 
-        # Automated Node.js syntax linting & auto-repair step
-        lint_report = lint_and_autofix_scene(filepath)
-        if lint_report.get("status") == "repaired":
-            print(f"[Auto-Linter] Successfully auto-repaired {lint_report.get('repairs')} syntax issue(s) in {filename}")
-        elif lint_report.get("status") == "clean":
-            print(f"[Auto-Linter] Syntax verified clean for {filename}")
-        elif lint_report.get("status") == "syntax_error":
-            print(f"[Auto-Linter] Warning: Unresolved syntax error: {lint_report.get('errors')}")
-
-        # Automated Headless Chrome WebGL & Runtime Healer
-        is_verified = True
-        try:
-            from scene_healer import automated_rule_based_patch, test_scene_runtime_in_chrome
-            with open(filepath, "r", encoding="utf-8") as f:
-                c = f.read()
-            patched_c = automated_rule_based_patch(c)
-            if patched_c != c:
-                with open(filepath, "w", encoding="utf-8") as f:
-                    f.write(patched_c)
-            t_res = test_scene_runtime_in_chrome(filepath)
-            if t_res["clean"]:
-                print(f"[Chrome Verifier] ✓ {filename} renders with 0 console errors!")
-                is_verified = True
-            else:
-                print(f"[Chrome Verifier] ⚠ Runtime warning: {t_res['errors'][:2]}")
-                is_verified = False
-        except Exception as e:
-            print(f"[Chrome Verifier] Check exception: {e}")
-            is_verified = False
-
-        # Automated Walker Module Conversion & R8 Validation Gate
-        try:
-            from make_walker_module import convert_scene_to_walker_module
-            walker_res = convert_scene_to_walker_module(filepath, spec)
-            if walker_res.get("status") == "registered":
-                print(f"[Walker Pipeline] ✓ Module registered in walk/worlds.json for #{spec['id']:03d}")
-        except Exception as e:
-            print(f"[Walker Pipeline] Exception in walker conversion: {e}")
-
-        progress[s_id] = {
-            "id": spec["id"],
-            "game": spec["game"],
-            "target": spec["target"],
-            "platform": spec["platform"],
-            "filename": filename,
-            "verified_working": is_verified,
-            "generated_at": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
-        save_progress(progress)
-
-        # Update Gallery index.html
-        update_gallery(specs, progress)
-
-        # Git commit & push live
-        git_commit_and_push(spec, filename)
+        # Dispatch post-processing (Linter, Chrome, Walker, Git push) asynchronously
+        # so Qwen starts generating the next world immediately with zero idle gap!
+        pending_future = bg_executor.submit(
+            post_process_and_publish, spec, filename, filepath, specs, progress
+        )
 
         count += 1
-        time.sleep(1)
+
+    if pending_future is not None:
+        pending_future.result()
+    bg_executor.shutdown(wait=True)
 
     print(f"\nBatch processing finished. Total worlds complete: {len(progress)} / {len(specs)}.")
 
