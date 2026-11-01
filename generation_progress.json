@@ -205,5 +205,14 @@
     "filename": "023_startropics_submerged_coral_caverns.html",
     "verified_working": false,
     "generated_at": "2026-11-01 03:36:23"
+  },
+  "24": {
+    "id": 24,
+    "game": "Kirby's Adventure",
+    "target": "Rainbow Resort",
+    "platform": "NES",
+    "filename": "024_kirby_s_adventure_rainbow_resort.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 03:48:27"
   }
 }
