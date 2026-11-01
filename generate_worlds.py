@@ -124,23 +124,40 @@ def generate_single_world(spec: dict) -> str:
 
 
 def update_gallery(specs: list, progress: dict):
-    """Regenerates index.html with interactive cards for all generated worlds."""
-    completed = [s for s in specs if str(s["id"]) in progress]
+    """Regenerates index.html with interactive cards for all 1,000 worlds (completed + coming soon)."""
+    completed_count = sum(1 for s in specs if str(s["id"]) in progress)
+    total_count = len(specs)
 
     cards_html = []
-    for s in completed:
-        info = progress[str(s["id"])]
-        filename = info["filename"]
-        verified = info.get("verified_working", True)
-        
-        status_badge = (
-            '<span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>'
-            if verified else
-            '<span class="badge needs-attention" title="Runtime Notice: May require manual adjustment">⚠️ Issue Detected</span>'
-        )
-        
+    for s in specs:
+        s_id_str = str(s["id"])
+        is_done = s_id_str in progress
+
+        if is_done:
+            info = progress[s_id_str]
+            filename = info["filename"]
+            verified = info.get("verified_working", True)
+            status_badge = (
+                '<span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>'
+                if verified else
+                '<span class="badge needs-attention" title="Runtime Notice: May require manual adjustment">⚠️ Issue Detected</span>'
+            )
+            card_extra_cls = "card-flagged" if not verified else ""
+            if s["id"] == 1 and os.path.exists(os.path.join(SCENES_DIR, "001_adventure_chalice_run.html")):
+                footer_html = f'''
+                <div style="display:flex;gap:8px;">
+                    <a class="play-btn" style="flex:1;" href="scenes/{filename}" target="_blank">Launch 3D World ➔</a>
+                    <a class="play-btn" style="flex:1;background:#b8860b;" href="scenes/001_adventure_chalice_run.html" target="_blank">🎮 Play Chalice Run ➔</a>
+                </div>'''
+            else:
+                footer_html = f'<a class="play-btn" href="scenes/{filename}" target="_blank">Launch 3D World ➔</a>'
+        else:
+            status_badge = '<span class="badge coming-soon" title="Queued in Qwen3.5-3D-Coder synthesis pipeline">⏳ Coming Soon</span>'
+            card_extra_cls = "card-coming-soon"
+            footer_html = '<span class="play-btn disabled-btn">⏳ Coming Soon — Queued</span>'
+
         cards_html.append(f"""
-        <div class="world-card {'card-flagged' if not verified else ''}">
+        <div class="world-card {card_extra_cls}" data-status="{'ready' if is_done else 'coming-soon'}">
             <div class="card-header">
                 <div>
                     <span class="badge platform">{s['platform']}</span>
@@ -157,7 +174,7 @@ def update_gallery(specs: list, progress: dict):
                 </div>
             </div>
             <div class="card-footer">
-                <a class="play-btn" href="scenes/{filename}" target="_blank">Launch 3D World ➔</a>
+                {footer_html}
             </div>
         </div>
         """)
@@ -167,7 +184,7 @@ def update_gallery(specs: list, progress: dict):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>900 Retro Worlds - 3D WebGL Walkthrough Explorer</title>
+    <title>{total_count} Retro Worlds - 3D WebGL Walkthrough Explorer</title>
     <style>
         :root {{
             --bg: #090a10;
@@ -213,6 +230,8 @@ def update_gallery(specs: list, progress: dict):
         }}
         .stats-bar {{
             display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 24px;
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--card-border);
@@ -284,8 +303,20 @@ def update_gallery(specs: list, progress: dict):
             font-size: 0.75rem;
             font-weight: 600;
         }}
+        .badge.coming-soon {{
+            background: rgba(155, 89, 182, 0.18);
+            color: #c39bd3;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }}
         .world-card.card-flagged {{
             border-color: rgba(241, 196, 15, 0.25);
+        }}
+        .world-card.card-coming-soon {{
+            opacity: 0.85;
+            border-color: rgba(255, 255, 255, 0.05);
         }}
         .world-id {{
             color: var(--text-muted);
@@ -352,6 +383,12 @@ def update_gallery(specs: list, progress: dict):
         .play-btn:hover {{
             opacity: 0.9;
         }}
+        .play-btn.disabled-btn {{
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: default;
+        }}
         footer {{
             text-align: center;
             padding: 24px;
@@ -363,17 +400,21 @@ def update_gallery(specs: list, progress: dict):
 </head>
 <body>
     <header>
-        <h1>900 Retro Game Worlds</h1>
+        <h1>{total_count} Retro Game Worlds</h1>
         <p>Autonomous procedural 3D WebGL environments extracted from StrategyWiki walkthroughs and synthesized by Qwen3.5-3D-Coder.</p>
+        <div style="text-align:center;margin:14px 0 16px;">
+            <a href="walk/walker.html" style="display:inline-block;padding:12px 26px;border-radius:999px;background:linear-gradient(90deg,#4a5cff,#9b4dff);color:#fff;font-weight:700;font-size:1.05rem;text-decoration:none;">🌀 Back Roms — walk the {total_count} worlds, rift to rift ➔</a>
+        </div>
         <div class="stats-bar">
-            <span>Worlds Synthesized: <strong>{len(completed)} / 900</strong></span>
+            <span>Worlds Synthesized: <strong>{completed_count} / {total_count}</strong></span>
+            <span>Pre-loaded Walkthroughs: <strong>{total_count} / {total_count}</strong></span>
             <span>Architecture: <strong>Three.js WebGL</strong></span>
-            <span>Target Platforms: <strong>Atari, NES, SNES, Genesis, Arcade</strong></span>
+            <span>Target Platforms: <strong>Atari, NES, SNES, Genesis, Neo Geo, Arcade</strong></span>
         </div>
     </header>
     <main>
         <div class="grid">
-            {''.join(cards_html) if cards_html else '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;">Synthesizing worlds...</p>'}
+            {''.join(cards_html)}
         </div>
     </main>
     <footer>
@@ -500,7 +541,7 @@ def main():
         count += 1
         time.sleep(1)
 
-    print(f"\nBatch processing finished. Total worlds complete: {len(progress)} / 100.")
+    print(f"\nBatch processing finished. Total worlds complete: {len(progress)} / {len(specs)}.")
 
 
 if __name__ == "__main__":
