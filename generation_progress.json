@@ -1,138 +1,12 @@
 {
-  "112": {
-    "id": 112,
-    "game": "Super Mario Bros.",
-    "target": "World 1-1",
-    "platform": "NES",
-    "filename": "010_super_mario_bros_world_1_1.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 01:26:01"
-  },
-  "108": {
-    "id": 108,
-    "game": "Metroid",
-    "target": "Norfair Volcanic Caverns",
-    "platform": "NES",
-    "filename": "014_metroid_norfair_volcanic_caverns.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 01:19:32"
-  },
-  "109": {
-    "id": 109,
-    "game": "Mega Man 2",
-    "target": "Bubble Man's Underwater Lair",
-    "platform": "NES",
-    "filename": "016_mega_man_2_bubble_man_s_underwater_lair.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 01:51:38"
-  },
-  "224": {
-    "id": 224,
-    "game": "Blaster Master",
-    "target": "Area 1 Underworld",
-    "platform": "NES",
-    "filename": "019_blaster_master_area_1_underworld.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 02:39:32"
-  },
-  "132": {
-    "id": 132,
-    "game": "DuckTales",
-    "target": "The Moon Base",
-    "platform": "NES",
-    "filename": "021_ducktales_the_moon_base.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 03:04:46"
-  },
-  "110": {
-    "id": 110,
-    "game": "Kirby's Adventure",
-    "target": "Rainbow Resort",
-    "platform": "NES",
-    "filename": "024_kirby_s_adventure_rainbow_resort.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 03:48:27"
-  },
-  "11": {
-    "id": 11,
-    "game": "Dragon Warrior",
-    "target": "Charlock Castle",
-    "platform": "NES",
-    "filename": "027_dragon_warrior_charlock_castle.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 04:36:50"
-  },
-  "133": {
-    "id": 133,
-    "game": "Rygar",
-    "target": "Lapis Valley",
-    "platform": "NES",
-    "filename": "029_rygar_lapis_valley.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 05:02:48"
-  },
-  "134": {
-    "id": 134,
-    "game": "Crystalis",
-    "target": "Floating Tower of Babylon",
-    "platform": "NES",
-    "filename": "031_crystalis_floating_tower_of_babylon.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 05:27:55"
-  },
-  "245": {
-    "id": 245,
-    "game": "A Boy and His Blob",
-    "target": "Blobolonia",
-    "platform": "NES",
-    "filename": "032_a_boy_and_his_blob_blobolonia.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 05:42:01"
-  },
-  "344": {
-    "id": 344,
-    "game": "Super Mario World",
-    "target": "Forest of Illusion",
-    "platform": "SNES",
-    "filename": "034_super_mario_world_forest_of_illusion.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 06:46:25"
-  },
-  "355": {
-    "id": 355,
-    "game": "Super Metroid",
-    "target": "Maridia Submerged Depths",
-    "platform": "SNES",
-    "filename": "037_super_metroid_maridia_submerged_depths.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 07:24:53"
-  },
-  "262": {
-    "id": 262,
-    "game": "Chrono Trigger",
-    "target": "2300 A.D. Ruined Domes",
-    "platform": "SNES",
-    "filename": "038_chrono_trigger_2300_a_d_ruined_domes.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 07:35:07"
-  },
-  "263": {
-    "id": 263,
-    "game": "Chrono Trigger",
-    "target": "65,000,000 B.C. Tyrano Lair",
-    "platform": "SNES",
-    "filename": "039_chrono_trigger_65_000_000_b_c_tyrano_lair.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 07:49:20"
-  },
   "1": {
     "id": 1,
     "game": "Adventure",
     "target": "Castles & Mazes",
     "platform": "Atari 2600",
     "filename": "001_adventure_castles_mazes.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 10:49:36"
+    "verified_working": false,
+    "generated_at": "2026-11-01 12:11:44"
   },
   "2": {
     "id": 2,
@@ -141,7 +15,7 @@
     "platform": "Atari 2600",
     "filename": "002_pitfall_ii_lost_caverns_vertical_subterranean_labyrinths_rivers.html",
     "verified_working": true,
-    "generated_at": "2026-11-01 10:55:28"
+    "generated_at": "2026-11-01 12:18:05"
   },
   "3": {
     "id": 3,
@@ -149,7 +23,7 @@
     "target": "Level 12",
     "platform": "Atari 2600",
     "filename": "003_h_e_r_o_level_12.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 10:58:54"
+    "verified_working": false,
+    "generated_at": "2026-11-01 12:23:45"
   }
 }
