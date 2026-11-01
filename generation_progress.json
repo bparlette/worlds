@@ -304,5 +304,14 @@
     "filename": "034_super_mario_world_forest_of_illusion.html",
     "verified_working": false,
     "generated_at": "2026-11-01 06:46:25"
+  },
+  "35": {
+    "id": 35,
+    "game": "Yoshi's Island",
+    "target": "Pastel Crayon Hills",
+    "platform": "SNES",
+    "filename": "035_yoshi_s_island_pastel_crayon_hills.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 06:57:43"
   }
 }

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pastel Crayon Hills</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Trebuchet MS", system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b9e8ff;
+    }
+
+    #world {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    .hud {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 10;
+      pointer-events: none;
+      color: #533625;
+      text-shadow: 0 2px 8px rgba(255, 255, 255, 0.8);
+    }
+
+    .hud h1 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 46px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .hud p {
+      margin: 5px 0 0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.76;
+    }
+
+    .controls {
+      position: fixed;
+      right: 20px;
+      bottom: 18px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.58);
+      box-shadow: 0 8px 25px rgba(65, 120, 180, 0.13);
+      color: #4b6170;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .controls span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mouse-icon {
+      width: 15px;
+      height: 21px;
+      border: 1.5px solid currentColor;
+      border-radius: 8px;
+    }
+
+    .mouse-icon::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      width: 2px;
+      height: 5px;
+      border-radius: 2px;
+      background: currentColor;
+      transform: translateX(-50%);
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 42%, transparent 48%, rgba(255, 255, 255, 0.28) 100%),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.18), transparent 25%, transparent 75%, rgba(255, 255, 255, 0.2));
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 16px;
+        left: 16px;
+      }
+
+      .controls {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="world"></div>
+
+  <div class="hud">
+    <h1>Pastel Crayon Hills</h1>
+    <p>Yoshi's Island · SNES</p>
+  </div>
+
+  <div class="controls">
+    <span><i class="mouse-icon"></i> Drag to explore</span>
+    <span>Scroll to zoom</span>
+  </div>
+
+  <div class="vignette"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const world = document.getElementById("world");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb9e8ff);
+    scene.fog = new THREE.FogExp2(0xb9e8ff, 0.0125);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      innerWidth / innerHeight,
+      0.1,
+      120
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    world.appendChild(renderer.domElement);
+
+    const hemisphere = new THREE.HemisphereLight(0xeafaff, 0xf3b877, 2.1);
+    scene.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight(0xfff4d7, 3.2);
+    sun.position.set(-18, 30, 16);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -35;
+    sun.shadow.camera.right = 35;
+    sun.shadow.camera.top = 35;
+    sun.shadow.camera.bottom = -35;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 80;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9cdcff, 0.8);
+    fill.position.set(15, 12, -20);
+    scene.add(fill);
+
+    const materials = {
+      ground: new THREE.MeshStandardMaterial({
+        color: 0xf6d4a3,
+        roughness: 0.92
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x8ed79b,
+        roughness: 0.86
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0xa9dfad,
+        roughness: 0.88
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x65b878,
+        roughness: 0.9
+      }),
+      pink: new THREE.MeshStandardMaterial({
+        color: 0xf4a8bd,
+        roughness: 0.8
+      }),
+      peach: new THREE.MeshStandardMaterial({
+        color: 0xf4b49f,
+        roughness: 0.8
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0xa9d8ff,
+        roughness: 0.75
+      }),
+      mint: new THREE.MeshStandardMaterial({
+        color: 0x9ee7c0,
+        roughness: 0.78
+      }),
+      cream: new THREE.MeshStandardMaterial({
+        color: 0xfff4cf,
+        roughness: 0.9
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0xc8a7ef,
+        roughness: 0.8
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffe885,
+        roughness: 0.75
+      }),
+      sky: new THREE.MeshStandardMaterial({
+        color: 0x9ddfff,
+        roughness: 1
+      })
+    };
+
+    function mesh(
+      geometry,
+      material,
+      x = 0,
+      y = 0,
+      z = 0,
+      parent = scene,
+      castShadow = true,
+      receiveShadow = true
+    ) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(x, y, z);
+      object.castShadow = castShadow;
+      object.receiveShadow = receiveShadow;
+      parent.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, x, y, z, parent = scene) {
+      return mesh(
+        new THREE.BoxGeometry(w, h, d),
+        material,
+        x,
+        y,
+        z,
+        parent
+      );
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, parent = scene, segments = 12) {
+      return mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material,
+        x,
+        y,
+        z,
+        parent
+      );
+    }
+
+    function sphere(radius, material, x, y, z, parent = scene, segments = 16) {
+      return mesh(
+        new THREE.SphereGeometry(radius, segments, 12),
+        material,
+        x,
+        y,
+        z,
+        parent
+      );
+    }
+
+    // Stylized gradient sky dome.
+    const sky = mesh(
+      new THREE.SphereGeometry(65, 32, 18),
+      materials.sky,
+      0,
+      22,
+      0,
+      scene,
+      false,
+      false
+    );
+    sky.scale.y = 1.8;
+
+    // Main island and pastel hills.
+    const island = mesh(
+      new THREE.CylinderGeometry(23, 27, 4, 48),
+      materials.ground,
+      0,
+      -1.5,
+      0
+    );
+    island.receiveShadow = true;
+
+    const hillMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe8a9c2,
+      roughness: 1
+    });
+
+    const hillGeometry = new THREE.SphereGeometry(1, 24, 12);
+    const hills = [
+      [-22, 5.2, -14, 10, 11, 7],
+      [-10, 4.3, -20, 9, 9, 7],
+      [4, 5.4, -18, 11, 11, 8],
+      [18, 4.7, -13, 10, 10, 7],
+      [-24, 3.5, 7, 9, 8, 6],
+      [-13, 3.7, 12, 8, 8, 6],
+      [2, 3.6, 15, 9, 8, 6],
+      [15, 3.8, 8, 9, 8, 6],
+      [24, 2.5, -3, 7, 7, 5],
+      [-25, 2.2, -5, 7, 6, 5]
+    ];
+
+    for (const [x, y, z, rx, ry, rz] of hills) {
+      const hill = mesh(hillGeometry, hillMaterial, x, y, z);
+      hill.scale.set(rx, ry, rz);
+    }
+
+    // Curved foreground island edge.
+    const edgeGeometry = new THREE.TorusGeometry(22, 2.1, 10, 64, Math.PI * 1.35);
+    edgeGeometry.rotateY(Math.PI * 0.25);
+    const islandEdge = mesh(
+      edgeGeometry,
+      new THREE.MeshStandardMaterial({
+        color: 0xead19a,
+        roughness: 1
+      }),
+      0,
+      0.2,
+      0
+    );
+    islandEdge.receiveShadow = true;
+
+    // Grass tufts.
+    const grassTuft = new THREE.Group();
+    scene.add(grassTuft);
+
+    const grassMaterial = new THREE.MeshStandardMaterial({
+      color: 0x74c993,
+      roughness: 0.95,
+      side: THREE.DoubleSide
+    });
+
+    const grassLightMaterial = new THREE.MeshStandardMaterial({
+      color: 0x9bd79c,
+      roughness: 0.95,
+      side: THREE.DoubleSide
+    });
+
+    function grassTuft(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.3, z);
+      group.scale.setScalar(scale);
+
+      const blades = [
+        [-0.16, 0.42, 0.08],
+        [0.12, 0.58, -0.1],
+        [0.02, 0.72, 0.06],
+        [-0.08, 0.3, -0.16],
+        [0.18, 0.34, 0.12]
+      ];
+
+      for (const [bx, by, bz] of blades) {
+        const blade = mesh(
+          new THREE.ConeGeometry(0.09, 0.55, 5),
+          Math.random() > 0.5 ? grassMaterial : grassLightMaterial,
+          bx,
+          by,
+          bz,
+          group
+        );
+        blade.rotation.z = (Math.random() - 0.5) * 0.45;
+        blade.rotation.x = (Math.random() - 0.5) * 0.45;
+      }
+
+      scene.add(group);
+    }
+
+    for (let i = 0; i < 100; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 8 + Math.random() * 14;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      if (Math.abs(x) < 18 && Math.abs(z) < 14) {
+        grassTuft(x, z, 0.65 + Math.random() * 0.8);
+      }
+    }
+
+    // Flower fields.
+    const flowerMaterials = [
+      new THREE.MeshStandardMaterial({ color: 0xf7a6c1, roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: 0xf3c66d, roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: 0xa8dcff, roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: 0xd9a5ee, roughness: 0.8 })
+    ];
+
+    const flowerStem = new THREE.MeshStandardMaterial({
+      color: 0x4b9c72,
+      roughness: 0.9
+    });
+
+    const flowers = [];
+
+    function flower(x, z, colorIndex, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.38, z);
+      group.scale.setScalar(scale);
+
+      const stem = cylinder(
+        0.025,
+        0.035,
+        0.35,
+        flowerStem,
+        0,
+        0.17,
+        0,
+        group,
+        6
+      );
+
+      const petalMaterial = flowerMaterials[colorIndex % flowerMaterials.length];
+      const bloom = sphere(0.13, petalMaterial, 0, 0.39, 0, group, 8);
+      bloom.scale.y = 0.55;
+
+      scene.add(group);
+      flowers.push(group);
+    }
+
+    for (let i = 0; i < 80; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 7 + Math.random() * 13;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      flower(x, z, Math.random() * 4, 0.75 + Math.random() * 0.7);
+    }
+
+    // Rainbow arch.
+    const rainbowGroup = new THREE.Group();
+    rainbowGroup.position.set(5, 0, -7);
+    scene.add(rainbowGroup);
+
+    const rainbowMaterials = [
+      new THREE.MeshStandardMaterial({ color: 0xf4a8c2, roughness: 0.7 }),
+      new THREE.MeshStandardMaterial({ color: 0xf4b59f, roughness: 0.7 }),
+      new THREE.MeshStandardMaterial({ color: 0xa9dcff, roughness: 0.7 }),
+      new THREE.MeshStandardMaterial({ color: 0x9ee7c0, roughness: 0.7 }),
+      new THREE.MeshStandardMaterial({ color: 0xffe885, roughness: 0.7 }),
+      new THREE.MeshStandardMaterial({ color: 0xc8a7ef, roughness: 0.7 })
+    ];
+
+    const rainbowCurves = [
+      [0xf4a8c2],
+      [0xf4b59f],
+      [0xa9dcff],
+      [0x9ee7c0],
+      [0xffe885],
+      [0xc8a7ef]
+    ];
+
+    for (let i = 0; i < rainbowCurves.length; i++) {
+      const radius = 3.4 + i * 0.34;
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(-4.2, 0.6, 0),
+        new THREE.Vector3(0, 4.8 + i * 0.18, 0),
+        new THREE.Vector3(4.2, 0.6, 0)
+      );
+
+      const tube = mesh(
+        new THREE.TubeGeometry(curve, 48, 0.14, 8, false),
+        rainbowMaterials[i],
+        0,
+        0,
+        0,
+        rainbowGroup
+      );
+    }
+
+    // Clouds.
+    const clouds = [];
+    const cloudMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf7fbff,
+      roughness: 1,
+      transparent: true,
+      opacity: 0.86,
+      depthWrite: false
+    });
+
+    function cloud(x, y, z, scale) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+
+      const pieces = [
+        [-1.3, 0, 0, 0.8],
+        [-0.45, 0.25, 0, 1.0],
+        [0.55, 0.1, 0, 0.85],
+        [1.35, -0.05, 0, 0.65],
+        [0, 0.45, 0, 0.8]
+      ];
+
+      for (const [px, py, pz, s] of pieces) {
+        const puff = sphere(s, cloudMaterial, px, py, pz, group, 12);
+        puff.castShadow = false;
+        puff.receiveShadow = false;
+      }
+
+      scene.add(group);
+      clouds.push(group);
+    }
+
+    cloud(-12, 11, -22, 1.3);
+    cloud(8, 13, -28, 1.5);
+    cloud(20, 10, -15, 1.0);
+    cloud(-28, 9, 4, 1.2);
+    cloud(24, 12, 8, 1.0);
+
+    // Hanging lanterns.
+    const lanterns = [];
+    const lanternMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd27a,
+      emissive: 0xffa53d,
+      emissiveIntensity: 0.55,
+      roughness: 0.6
+    });
+
+    function lantern(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      const string = cylinder(
+        0.012,
+        0.012,
+        0.65,
+        new THREE.MeshStandardMaterial({ color: 0x735343, roughness: 1 }),
+        0,
+        0.3,
+        0,
+        group,
+        5
+      );
+
+      const lantern = cylinder(
+        0.16,
+        0.2,
+        0.28,
+        lanternMaterial,
+        0,
+        0.02,
+        0,
+        group,
+        8
+      );
+
+      const cap = cylinder(
+        0.13,
+        0.17,
+        0.1,
+        new THREE.MeshStandardMaterial({ color: 0x8a6f54, roughness: 0.8 }),
+        0,
+        0.21,
+        0,
+        group,
+        8
+      );
+
+      scene.add(group);
+      lanterns.push(group);
+    }
+
+    lantern(-4, 4.8, -4);
+    lantern(3.5, 4.2, -5.5);
+    lantern(-8, 3.8, -3);
+
+    // Small Yoshi-like hero figure in the foreground.
+    const hero = new THREE.Group();
+    hero.position.set(-1.5, 0.35, 5.5);
+    hero.rotation.y = -0.55;
+    scene.add(hero);
+
+    const YoshiMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe8b94f,
+      roughness: 0.72
+    });
+
+    const heroBody = cylinder(0.28, 0.42, 0.8, YoshiMaterial, 0, 0.45, 0, hero, 12);
+    heroBody.castShadow = true;
+
+    const heroHead = sphere(0.31, YoshiMaterial, 0, 0.95, 0, hero, 14);
+    heroHead.scale.set(0.9, 1.05, 0.9);
+
+    const headBand = cylinder(0.32, 0.32, 0.12, new THREE.MeshStandardMaterial({ color: 0x823939, roughness: 0.8 }), 0, 1.07, 0, hero, 14);
+    headBand.scale.z = 0.92;
+
+    const hat = cylinder(0.35, 0.35, 0.13, new THREE.MeshStandardMaterial({ color: 0xe8b94f, roughness: 0.8 }), 0, 1.25, 0, hero, 14);
+    hat.scale.z = 0.9;
+
+    const hatTop = cylinder(0.26, 0.31, 0.2, YoshiMaterial, 0, 1.39, 0, hero, 12);
+    hatTop.scale.z = 0.9;
+
+    const nose = sphere(0.075, new THREE.MeshStandardMaterial({ color: 0x823939, roughness: 0.8 }), 0, 0.99, 0.28, hero, 10);
+    nose.scale.set(1, 0.7, 0.65);
+
+    const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x5c3828, roughness: 0.7 });
+    const eyeLeft = sphere(0.055, eyeMaterial, -0.13, 1.04, 0.25, hero, 8);
+    const eyeRight = sphere(0.055, eyeMaterial, 0.13, 1.04, 0.25, hero, 8);
+    eyeLeft.scale.set(0.55, 1, 0.45);
+    eyeRight.scale.set(0.55, 1, 0.45);
+
+    const armLeft = cylinder(0.11, 0.14, 0.58, YoshiMaterial, -0.36, 0.45, 0, hero, 9);
+    armLeft.rotation.z = -0.35;
+    const armRight = cylinder(0.11, 0.14, 0.58, YoshiMaterial, 0.36, 0.45, 0, hero, 9);
+    armRight.rotation.z = 0.35;
+
+    // Tiny mushroom.
+    const mushroom = new THREE.Group();
+    mushroom.position.set(2.2, 0.35, 3.8);
+    mushroom.rotation.y = 0.4;
+    scene.add(mushroom);
+
+    const mushroomStem = cylinder(0.08, 0.12, 0.35, new THREE.MeshStandardMaterial({ color: 0xf6d38a, roughness: 0.9 }), 0, 0.17, 0, mushroom, 8);
+    const mushroomCap = sphere(0.22, new THREE.MeshStandardMaterial({ color: 0xe66f72, roughness: 0.75 }), 0, 0.45, 0, mushroom, 12);
+    mushroomCap.scale.y = 0.55;
+
+    // Animated butterflies.
+    const butterflies = [];
+    const butterflyMaterials = [
+      new THREE.MeshStandardMaterial({ color: 0xf4a8c2, roughness: 0.75 }),
+      new THREE.MeshStandardMaterial({ color: 0x8edcff, roughness: 0.75 }),
+      new THREE.MeshStandardMaterial({ color: 0xf2c66d, roughness: 0.75 })
+    ];
+
+    function butterfly(x, y, z, materialIndex, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+
+      const left = sphere(0.11, butterflyMaterials[materialIndex], -0.12, 0, 0, group, 8);
+      const right = sphere(0.11, butterflyMaterials[materialIndex], 0.12, 0, 0, group, 8);
+      left.scale.set(0.65, 1, 0.45);
+      right.scale.set(0.65, 1, 0.45);
+
+      const body = cylinder(0.025, 0.025, 0.28, new THREE.MeshStandardMaterial({ color: 0x5b3d32, roughness: 0.8 }), 0, 0, 0, group, 6);
+      body.rotation.z = Math.PI / 2;
+
+      scene.add(group);
+      butterflies.push({
+        group,
+        baseX: x,
+        baseY: y,
+        baseZ: z,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.55 + Math.random() * 0.55
+      });
+    }
+
+    butterfly(-3, 2.2, 3, 0, 0.8);
+    butterfly(3, 2.8, 4, 1, 0.75);
+    butterfly(0, 3.2, 1, 2, 0.65);
+    butterfly(-6, 1.8, -1, 1, 0.55);
+    butterfly(6, 2.2, -2, 0, 0.55);
+
+    // Fireflies / pollen.
+    const fireflies = [];
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffe79a,
+      transparent: true,
+      opacity: 0.85
+    });
+
+    for (let i = 0; i < 35; i++) {
+      const firefly = mesh(
+        new THREE.SphereGeometry(0.055, 6, 4),
+        fireflyMaterial,
+        (Math.random() - 0.5) * 25,
+        1 + Math.random() * 4,
+        (Math.random() - 0.5) * 20,
+        scene,
+        false,
+        false
+      );
+      fireflies.push({
+        object: firefly,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.45 + Math.random() * 0.55
+      });
+    }
+
+    // Camera controls: pointer orbit, wheel zoom, touch pinch.
+    const controls = {
+      target: new THREE.Vector3(0, 2.3, -2),
+      azimuth: 0.58,
+      polar: 1.12,
+      radius: 25,
+      targetAzimuth: 0.58,
+      targetPolar: 1.12,
+      targetRadius: 25,
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      pinchDistance: 0
+    };
+
+    const defaultView = {
+      azimuth: 0.58,
+      polar: 1.12,
+      radius: 25
+    };
+
+    function updateCamera() {
+      controls.azimuth += (controls.targetAzimuth - controls.azimuth) * 0.1;
+      controls.polar += (controls.targetPolar - controls.polar) * 0.1;
+      controls.radius += (controls.targetRadius - controls.radius) * 0.1;
+
+      controls.polar = THREE.MathUtils.clamp(controls.polar, 0.45, 1.45);
+
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.pointerX;
+      const dy = event.clientY - controls.pointerY;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+
+      controls.targetAzimuth -= dx * 0.006;
+      controls.targetPolar = THREE.MathUtils.clamp(
+        controls.targetPolar - dy * 0.005,
+        0.45,
+        1.45
+      );
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.targetRadius = THREE.MathUtils.clamp(
+        controls.targetRadius + event.deltaY * 0.015,
+        13,
+        43
+      );
+    }, { passive: false });
+
+    // Pinch-to-zoom support.
+    const activePointers = new Map();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        controls.pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (controls.pinchDistance > 0) {
+          controls.targetRadius = THREE.MathUtils.clamp(
+            controls.targetRadius + (controls.pinchDistance - distance) * 0.018,
+            13,
+            43
+          );
+        }
+
+        controls.pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) controls.pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    // Responsive rendering.
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle hero idle motion.
+      hero.position.y = 0.35 + Math.sin(elapsed * 1.2) * 0.025;
+      hero.rotation.y = -0.55 + Math.sin(elapsed * 0.45) * 0.08;
+
+      // Cloud drift.
+      for (const cloud of clouds) {
+        cloud.position.x += Math.sin(elapsed * 0.08 + cloud.position.z) * 0.0009;
+        if (cloud.position.x > 32) cloud.position.x = -32;
+      }
+
+      // Butterfly flapping and flight path.
+      for (const butterfly of butterflies) {
+        const t = elapsed * butterfly.speed + butterfly.phase;
+        butterfly.group.position.x =
+          butterfly.baseX + Math.sin(t) * 1.1;
+        butterfly.group.position.y =
+          butterfly.baseY + Math.sin(t * 0.8) * 0.35;
+        butterfly.group.position.z =
+          butterfly.baseZ + Math.cos(t * 0.65) * 0.8;
+        butterfly.group.rotation.y = Math.sin(t) * 0.6;
+        butterfly.group.scale.y = 0.8 + Math.sin(elapsed * 11 + butterfly.phase) * 0.18;
+      }
+
+      // Fireflies flicker.
+      for (const firefly of fireflies) {
+        const t = elapsed * firefly.speed + firefly.phase;
+        firefly.object.position.set(
+          (Math.random() - 0.5) * 24,
+          1.2 + (t * 0.35) % 4,
+          (Math.random() - 0.5) * 18
+        );
+        const pulse = 0.75 + Math.sin(t * 4) * 0.25;
+        firefly.object.scale.setScalar(pulse);
+      }
+
+      // Gentle rainbow shimmer.
+      rainbowGroup.children.forEach((child, index) => {
+        child.material.emissive = new THREE.Color(0x33172b);
+        child.material.emissiveIntensity = 0.08 + Math.sin(elapsed * 1.4 + index) * 0.04;
+      });
+
+      updateCamera();
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
