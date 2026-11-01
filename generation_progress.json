@@ -268,5 +268,14 @@
     "filename": "030_shadowgate_castle_crypt.html",
     "verified_working": true,
     "generated_at": "2026-11-01 05:13:29"
+  },
+  "31": {
+    "id": 31,
+    "game": "Crystalis",
+    "target": "Floating Tower of Babylon",
+    "platform": "NES",
+    "filename": "031_crystalis_floating_tower_of_babylon.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 05:27:55"
   }
 }

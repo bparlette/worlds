@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Floating Tower of Babylon — Crystalis</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #070a18;
+    }
+
+    #world {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #f5f1e8;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, .8);
+    }
+
+    .panel {
+      position: absolute;
+      top: 22px;
+      left: 22px;
+      width: min(360px, calc(100vw - 44px));
+      padding: 18px 20px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(15, 20, 42, .82), rgba(9, 12, 28, .62));
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
+    }
+
+    .eyebrow {
+      margin-bottom: 7px;
+      color: #d8b7ff;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: #fff7e9;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(23px, 4vw, 34px);
+      font-weight: 500;
+      line-height: 1.08;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: rgba(255, 255, 255, .67);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .route {
+      margin-top: 15px;
+      padding-top: 13px;
+      border-top: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .route-title {
+      margin-bottom: 9px;
+      color: #d8b7ff;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .route-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 7px 0;
+      color: rgba(255, 255, 255, .78);
+      font-size: 12px;
+    }
+
+    .route-row b {
+      color: #fff7e9;
+      font-weight: 650;
+    }
+
+    .key {
+      display: inline-block;
+      min-width: 24px;
+      padding: 3px 6px;
+      border: 1px solid rgba(216, 183, 255, .28);
+      border-radius: 5px;
+      background: rgba(111, 91, 220, .12);
+      color: #e8d9ff;
+      font-size: 10px;
+      text-align: center;
+    }
+
+    #hint {
+      position: absolute;
+      right: 22px;
+      bottom: 22px;
+      padding: 10px 13px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 9px;
+      background: rgba(8, 11, 27, .66);
+      color: rgba(255, 255, 255, .68);
+      font-size: 11px;
+      line-height: 1.5;
+      text-align: right;
+      backdrop-filter: blur(10px);
+    }
+
+    #status {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      max-width: 310px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 10px;
+      background: rgba(8, 11, 27, .65);
+      color: rgba(255, 255, 255, .72);
+      font-size: 11px;
+      line-height: 1.55;
+      backdrop-filter: blur(10px);
+    }
+
+    #status strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #ffd29b;
+      font-size: 12px;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background: #070a18;
+      color: #e8d9ff;
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: opacity .7s ease;
+    }
+
+    @media (max-width: 700px) {
+      .panel {
+        top: 12px;
+        left: 12px;
+        width: calc(100vw - 24px);
+        padding: 14px 15px;
+      }
+
+      .subtitle, .route {
+        display: none;
+      }
+
+      #status {
+        top: auto;
+        right: 12px;
+        bottom: 60px;
+        max-width: calc(100vw - 24px);
+      }
+
+      #hint {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="world"></div>
+
+  <div id="ui">
+    <section class="panel">
+      <div class="eyebrow">Crystalis · Southeast Cordel Plains</div>
+      <h1>The Floating Tower of Babylon</h1>
+      <p class="subtitle">
+        A crystalline spire above the clouds. Use <b>Change</b> to enter Queen Aryllis,
+        then find the <i>Kirisa Plant</i> to obtain the <b>Bow of Moon</b>.
+      </p>
+      <div class="route">
+        <div class="route-title">Recommended Route</div>
+        <div class="route-row"><b>Teleport</b><span class="key">T</span> to Brynmaer</div>
+        <div class="route-row"><b>Find</b><span class="key">W</span>aterfall Valley</div>
+        <div class="route-row"><b>Obtain</b><span class="key">B</span>all of Water</div>
+        <div class="route-row"><b>Find</b><span class="key">C</span>hange spell</div>
+        <div class="route-row"><b>Disguise</b><span class="key">A</span>ryllis</div>
+        <div class="route-row"><b>Get</b><span class="key">K</span>irisa Plant</div>
+        <div class="route-row"><b>Obtain</b><span class="key">B</span>ow of Moon</div>
+      </div>
+    </section>
+
+    <section id="status">
+      <strong id="status-title">Mission Status</strong>
+      <span id="status-copy">Preparing the Floating Tower…</span>
+    </section>
+
+    <div id="hint">
+      Drag to orbit · Scroll to zoom<br />
+      Keys: W A S D move · Q/E interact · R reset
+    </div>
+  </div>
+
+  <div id="loading">Raising the crystals…</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const world = document.getElementById("world");
+    const loading = document.getElementById("loading");
+    const statusTitle = document.getElementById("status-title");
+    const statusCopy = document.getElementById("status-copy");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090d24);
+    scene.fog = new THREE.FogExp2(0x7886ad, 0.0125);
+
+    const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 180);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    renderer.domElement.setAttribute("aria-label", "Interactive 3D Floating Tower of Babylon");
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    const materials = {
+      cloud: new THREE.MeshStandardMaterial({ color: 0x9ba9c9, roughness: 1 }),
+      cloudDark: new THREE.MeshStandardMaterial({ color: 0x52628b, roughness: 1 }),
+      crystal: new THREE.MeshStandardMaterial({
+        color: 0x9fe9ff,
+        emissive: 0x287ca5,
+        emissiveIntensity: 1.35,
+        roughness: .28,
+        metalness: .15
+      }),
+      crystalDark: new THREE.MeshStandardMaterial({
+        color: 0x52769c,
+        emissive: 0x163651,
+        emissiveIntensity: 1.1,
+        roughness: .35,
+        metalness: .2
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xf2c974,
+        emissive: 0x7a4a00,
+        emissiveIntensity: .45,
+        roughness: .3,
+        metalness: .75
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0x8b65d8,
+        emissive: 0x381d70,
+        emissiveIntensity: .75,
+        roughness: .45
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x68d7e5,
+        emissive: 0x147b8d,
+        emissiveIntensity: 1.2,
+        roughness: .2,
+        metalness: .25
+      }),
+      tree: new THREE.MeshStandardMaterial({
+        color: 0x416a58,
+        roughness: .95
+      }),
+      bark: new THREE.MeshStandardMaterial({
+        color: 0x56463b,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x6e8b55,
+        roughness: .95
+      })
+    };
+
+    function mesh(geometry, material, position, scale) {
+      const object = new THREE.Mesh(geometry, material);
+      if (position) object.position.set(...position);
+      if (scale) object.scale.set(...scale);
+      return object;
+    }
+
+    function addCylinderBetween(a, b, radius, material, radialSegments = 10) {
+      const start = new THREE.Vector3(...a);
+      const end = new THREE.Vector3(...b);
+      const direction = end.clone().sub(start);
+      const length = direction.length();
+      const object = mesh(
+        new THREE.CylinderGeometry(radius, radius, length, radialSegments),
+        material,
+        start.clone().add(end).multiplyScalar(.5).toArray()
+      );
+      object.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+      return object;
+    }
+
+    function createCrystalStack(x, y, z, scale = 1, color = 0xa7eaff) {
+      const group = new THREE.Group();
+      const base = mesh(new THREE.CylinderGeometry(.42 * scale, .72 * scale, .72 * scale, 8), materials.crystalDark, [x, y, z], [scale, scale, scale]);
+      group.add(base);
+
+      const tiers = [
+        [0, .42, .38, .26, 0xb9f2ff],
+        [0, .82, .26, .19, 0x83d8ff],
+        [0, 1.13, .14, .12, 0xe5fbff]
+      ];
+
+      tiers.forEach((t, i) => {
+        const crystal = mesh(
+          new THREE.ConeGeometry(t[3] * scale, t[1] * scale, 6),
+          new THREE.MeshStandardMaterial({
+            color: t[4],
+            emissive: t[4] === 0xe5fbff ? 0x246d88 : 0x174e70,
+            emissiveIntensity: 1.4,
+            roughness: .25,
+            metalness: .15
+          }),
+          [x, y + t[0] * scale, z],
+          [scale, scale, scale]
+        );
+        group.add(crystal);
+      });
+
+      const glow = mesh(
+        new THREE.SphereGeometry(.48 * scale, 16, 12),
+        new THREE.MeshBasicMaterial({
+          color: t[4] === 0xe5fbff ? 0x8deaff : 0x4b9bc5,
+          transparent: true,
+          opacity: .11,
+          depthWrite: false
+        }),
+        [x, y + .18 * scale, z],
+        [scale, scale, scale]
+      );
+      group.add(glow);
+      return group;
+    }
+
+    function createCloud(x, y, z, scale) {
+      const group = new THREE.Group();
+      const pieces = [
+        [-1.1, 0, 0, .9],
+        [-.45, .35, .1, 1.15],
+        [.55, .1, -.05, 1.0],
+        [1.2, -.15, .15, .75]
+      ];
+
+      pieces.forEach((p, i) => {
+        const cloud = mesh(
+          new THREE.SphereGeometry(1, 16, 10),
+          i % 2 ? materials.cloudDark : materials.cloud,
+          [p[0] * scale, p[1] * scale, p[2] * scale],
+          [p[3] * scale, p[3] * .55, p[3] * .7]
+        );
+        group.add(cloud);
+      });
+
+      group.position.set(x, y, z);
+      return group;
+    }
+
+    function createTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+
+      const trunk = mesh(
+        new THREE.CylinderGeometry(.18 * scale, .3 * scale, 3.6 * scale, 9),
+        materials.bark,
+        [0, 1.8 * scale, 0],
+        [scale, scale, scale]
+      );
+      group.add(trunk);
+
+      const crown = mesh(
+        new THREE.IcosahedronGeometry(1.55 * scale, 1),
+        materials.leaf,
+        [0, 3.8 * scale, 0],
+        [scale, scale, scale]
+      );
+      group.add(crown);
+
+      const crown2 = mesh(
+        new THREE.IcosahedronGeometry(1.05 * scale, 1),
+        materials.leaf,
+        [.55 * scale, 3.35 * scale, .12 * scale],
+        [scale, scale, scale]
+      );
+      group.add(crown2);
+
+      group.position.set(x, 0, z);
+      return group;
+    }
+
+    function createWaterfall(x, z, height = 12, width = 3.2) {
+      const group = new THREE.Group();
+
+      const pool = mesh(
+        new THREE.CylinderGeometry(width * .7, width * .95, .25, 20),
+        materials.water,
+        [x, height * .12, z],
+        [1, 1, 1]
+      );
+      group.add(pool);
+
+      const fall = mesh(
+        new THREE.CylinderGeometry(width * .22, width * .55, height * .82, 18, 1, true),
+        materials.water,
+        [x, height * .52, z],
+        [1, 1, 1]
+      );
+      group.add(fall);
+
+      const rim = mesh(
+        new THREE.TorusGeometry(width * .75, .18, 8, 30),
+        materials.crystalDark,
+        [x, height * .15, z],
+        [1, 1, 1]
+      );
+      rim.rotation.x = Math.PI / 2;
+      group.add(rim);
+
+      for (let i = 0; i < 12; i++) {
+        const droplet = mesh(
+          new THREE.SphereGeometry(.07 + Math.random() * .08, 7, 5),
+          materials.water,
+          [x + (Math.random() - .5) * width, height * (.12 + Math.random() * .88), z + (Math.random() - .5) * .5],
+          [1, 1, 1]
+        );
+        group.add(droplet);
+      }
+
+      group.position.set(x, 0, z);
+      return group;
+    }
+
+    function createSign(text, subtitle, x, y, z, color = 0x8b65d8) {
+      const group = new THREE.Group();
+
+      const post = mesh(
+        new THREE.CylinderGeometry(.07, .09, 2.4, 8),
+        materials.bark,
+        [0, 1.2, 0],
+        [1, 1, 1]
+      );
+      group.add(post);
+
+      const plaque = mesh(
+        new THREE.PlaneGeometry(2.2, 1.0),
+        new THREE.MeshStandardMaterial({
+          color: 0x161a2a,
+          roughness: .72,
+          emissive: color,
+          emissiveIntensity: .25
+        }),
+        [0, 2.55, 0],
+        [1, 1, 1]
+      );
+      group.add(plaque);
+
+      const lines = text.split("\n");
+      lines.forEach((line, i) => {
+        const textMesh = mesh(
+          new THREE.PlaneGeometry(line.length() * .18, .23),
+          new THREE.MeshBasicMaterial({
+            color: i === 0 ? 0xffe8bd : 0xa6b8d8,
+            transparent: true,
+            opacity: .92
+          }),
+          [0, 2.43 + i * .38, .012],
+          [1, 1, 1]
+        );
+        group.add(textMesh);
+      });
+
+      group.position.set(x, 0, z);
+      return group;
+    }
+
+    function createPortal(x, z, rotation = 0) {
+      const group = new THREE.Group();
+
+      const left = mesh(
+        new THREE.BoxGeometry(.55, 2.8, .6),
+        materials.crystalDark,
+        [-.65, 1.4, 0]
+      );
+      const right = left.clone();
+      right.position.x = .65;
+      group.add(left, right);
+
+      const top = mesh(
+        new THREE.BoxGeometry(1.85, .55, .6),
+        materials.crystal,
+        [0, 2.75, 0]
+      );
+      group.add(top);
+
+      const ring = mesh(
+        new THREE.TorusGeometry(.55, .1, 8, 24),
+        materials.gold,
+        [0, 1.5, .34],
+        [1, 1, 1]
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      return group;
+    }
+
+    // Lighting
+    scene.add(new THREE.HemisphereLight(0x9bbcff, 0x171326, 1.45));
+
+    const moonLight = new THREE.DirectionalLight(0xc6ddff, 2.2);
+    moonLight.position.set(-18, 28, 12);
+    scene.add(moonLight);
+
+    const warmLight = new THREE.PointLight(0xffb85c, 28, 30, 2);
+    warmLight.position.set(0, 4, 0);
+    scene.add(warmLight);
+
+    const violetLight = new THREE.PointLight(0x7755ff, 24, 28, 2);
+    violetLight.position.set(0, 8, -3);
+    scene.add(violetLight);
+
+    // World layout
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
+
+    const tower = new THREE.Group();
+    tower.position.set(0, 0, 0);
+
+    const foundation = mesh(
+      new THREE.CylinderGeometry(4.1, 4.6, .65, 12),
+      materials.crystalDark,
+      [0, .3, 0],
+      [1, 1, 1]
+    );
+    tower.add(foundation);
+
+    const entrance = createPortal(0, 0, 0);
+    tower.add(entrance);
+
+    for (let level = 1; level <= 5; level++) {
+      const y = 3.1 + level * 2.65;
+      const radius = 3.7 - level * .25;
+
+      const ring = mesh(
+        new THREE.TorusGeometry(radius, .18, 8, 40),
+        level % 2 ? materials.crystal : materials.crystalDark,
+        [0, y, 0],
+        [1, 1, 1]
+      );
+      ring.rotation.x = Math.PI / 2;
+      tower.add(ring);
+
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        tower.add(createCrystalStack(x, y, z, .75, 0xb6efff));
+      }
+
+      const arch = mesh(
+        new THREE.TorusGeometry(radius * .48, .11, 6, 24, Math.PI),
+        materials.gold,
+        [0, y + .2, 0],
+        [1, 1, 1]
+      );
+      arch.rotation.y = Math.PI;
+      tower.add(arch);
+    }
+
+    const crown = mesh(
+      new THREE.ConeGeometry(3.1, 3.2, 8),
+      materials.crystal,
+      [0, 14.7, 0],
+      [1, 1, 1]
+    );
+    tower.add(crown);
+
+    const crownTop = mesh(
+      new THREE.SphereGeometry(.7, 16, 10),
+      materials.gold,
+      [0, 16.65, 0],
+      [1, 1, 1]
+    );
+    tower.add(crownTop);
+
+    const clouds = [
+      [-13, 10, -17, 1.4],
+      [12, 12, -21, 1.8],
+      [-18, 15, 7, 1.2],
+      [16, 14, 10, 1.5],
+      [0, 19, -25, 2.1]
+    ];
+
+    clouds.forEach(c => worldGroup.add(createCloud(...c)));
+
+    // Cordel Plains
+    const ground = mesh(
+      new THREE.PlaneGeometry(80, 80, 1, 1),
+      new THREE.MeshStandardMaterial({
+        color: 0x66715b,
+        roughness: 1
+      }),
+      [0, -.05, 0],
+      [1, 1, 1]
+    );
+    ground.rotation.x = -Math.PI / 2;
+    worldGroup.add(ground);
+
+    const pathMaterial = new THREE.MeshStandardMaterial({
+      color: 0x9a7650,
+      roughness: 1
+    });
+
+    for (let i = 0; i < 18; i++) {
+      const x = -24 + i * 2.55;
+      const z = 15 + Math.sin(i * .72) * 1.2;
+      const stone = mesh(
+        new THREE.DodecahedronGeometry(.42 + (i % 3) * .08, 0),
+        pathMaterial,
+        [x, .04, z],
+        [1, .45, 1]
+      );
+      stone.rotation.set(.15, i * .4, .1);
+      worldGroup.add(stone);
+    }
+
+    const trees = [
+      [-13, -6, 1.1], [-16, 3, .9], [-10, 9, 1.2],
+      [12, -7, 1.0], [16, 2, 1.3], [10, 10, .9],
+      [-21, 12, 1.2], [21, 14, 1.1], [-7, -15, .9],
+      [7, -17, 1.0]
+    ];
+
+    trees.forEach(t => worldGroup.add(createTree(...t)));
+
+    const waterfall = createWaterfall(-11, 10, 13, 3.4);
+    worldGroup.add(waterfall);
+
+    const treeNearWater = createTree(-5.5, 5.5, .9);
+    worldGroup.add(treeNearWater);
+
+    const sign = createSign(
+      "BRYNMAER\nTHE FLOWING VALLEY",
+      "A sacred place of water and reflection",
+      -11,
+      1.2,
+      5.4,
+      0x70cfe8
+    );
+    worldGroup.add(sign);
+
+    // Tower route stairs
+    const stairGroup = new THREE.Group();
+    for (let i = 0; i < 7; i++) {
+      const step = mesh(
+        new THREE.BoxGeometry(2.6, .28, 1.25),
+        materials.crystalDark,
+        [0, 2.2 + i * .38, 0],
+        [1, 1, 1]
+      );
+      step.rotation.x = -.12;
+      stairGroup.add(step);
+    }
+    worldGroup.add(stairGroup);
+
+    // Queen Aryllis' House / disguise area
+    const house = new THREE.Group();
+    house.position.set(4.5, 0, -3.5);
+
+    const houseFloor = mesh(
+      new THREE.CylinderGeometry(2.3, 2.5, .25, 12),
+      materials.bark,
+      [0, .15, 0],
+      [1, 1, 1]
+    );
+    house.add(houseFloor);
+
+    const houseWall = mesh(
+      new THREE.CylinderGeometry(2.05, 2.05, 3.2, 12, 1, true),
+      new THREE.MeshStandardMaterial({
+        color: 0x332b3b,
+        roughness: .95,
+        side: THREE.DoubleSide
+      }),
+      [0, 1.8, 0],
+      [1, 1, 1]
+    );
+    house.add(houseWall);
+
+    const roof = mesh(
+      new THREE.ConeGeometry(2.35, 1.35, 12),
+      materials.purple,
+      [0, 4.0, 0],
+      [1, 1, 1]
+    );
+    house.add(roof);
+
+    const window = mesh(
+      new THREE.CircleGeometry(.38, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0xffc878,
+        emissive: 0xb85c00,
+        emissiveIntensity: 1.6
+      }),
+      [0, 2.7, 2.04],
+      [1, 1, 1]
+    );
+    house.add(window);
+
+    const queen = new THREE.Group();
+    queen.position.set(0, .25, 1.45);
+
+    const queenBody = mesh(
+      new THREE.CylinderGeometry(.48, .36, 1.65, 12),
+      new THREE.MeshStandardMaterial({
+        color: 0x5c3f8c,
+        roughness: .65,
+        emissive: 0x28134f,
+        emissiveIntensity: .35
+      }),
+      [0, .82, 0],
+      [1, 1, 1]
+    );
+    queen.add(queenBody);
+
+    const queenHead = mesh(
+      new THREE.SphereGeometry(.36, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0xd9b78f, roughness: .75 }),
+      [0, 1.85, 0],
+      [1, 1, 1]
+    );
+    queen.add(queenHead);
+
+    const hair = mesh(
+      new THREE.SphereGeometry(.39, 16, 10),
+      new THREE.MeshStandardMaterial({ color: 0x332047, roughness: .95 }),
+      [0, 1.9, 0],
+      [1, 1.1, 1]
+    );
+    queen.add(hair);
+
+    const crownRing = mesh(
+      new THREE.TorusGeometry(.42, .055, 8, 24),
+      materials.gold,
+      [0, 2.05, 0],
+      [1, 1, 1]
+    );
+    queen.add(crownRing);
+
+    const robe = mesh(
+      new THREE.SphereGeometry(.55, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshStandardMaterial({
+        color: 0x6b439b,
+        roughness: .7,
+        emissive: 0x210c43,
+        emissiveIntensity: .4
+      }),
+      [0, .3, 0],
+      [1, 1, 1]
+    );
+    queen.add(robe);
+
+    house.add(queen);
+    worldGroup.add(house);
+
+    // Kirisa Plant
+    const plant = new THREE.Group();
+    plant.position.set(-5.8, 0, -4.4);
+
+    const pot = mesh(
+      new THREE.CylinderGeometry(.42, .34, .7, 12),
+      materials.bark,
+      [0, .35, 0],
+      [1, 1, 1]
+    );
+    plant.add(pot);
+
+    const stem = mesh(
+      new THREE.CylinderGeometry(.055, .08, 1.45, 8),
+      materials.leaf,
+      [0, 1.1, 0],
+      [1, 1, 1]
+    );
+    plant.add(stem);
+
+    const flower = mesh(
+      new THREE.CylinderGeometry(.34, .25, .24, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x8b65d8,
+        emissive: 0x381d70,
+        emissiveIntensity: 1.25
+      }),
+      [0, 1.85, 0],
+      [1, 1, 1]
+    );
+    plant.add(flower);
+
+    const petals = [];
+    for (let i = 0; i < 6; i++) {
+      const petal = mesh(
+        new THREE.SphereGeometry(.12, 8, 5),
+        materials.purple,
+        [Math.cos((i / 6) * Math.PI * 2) * .25, 1.98, Math.sin((i / 6) * Math.PI * 2) * .25],
+        [1, .6, 1]
+      );
+      petal.rotation.y = (i / 6) * Math.PI * 2;
+      plant.add(petal);
+    }
+
+    worldGroup.add(plant);
+
+    const kirisaGlow = mesh(
+      new THREE.SphereGeometry(.58, 16, 10),
+      new THREE.MeshBasicMaterial({
+        color: 0x8b65d8,
+        transparent: true,
+        opacity: .14,
+        depthWrite: false
+      }),
+      [0, 1.1, 0],
+      [1, 1, 1]
+    );
+    plant.add(kirisaGlow);
+
+    // Bow of Moon
+    const bow = new THREE.Group();
+    bow.position.set(2.8, 1.2, 1.1);
+    bow.rotation.set(-.45, .3, -.2);
+
+    const bowStave = mesh(
+      new THREE.CylinderGeometry(.075, .1, 2.25, 10),
+      materials.gold,
+      [0, 0, 0],
+      [1, 1, 1]
+    );
+    bow.add(bowStave);
+
+    const bowCurve = mesh(
+      new THREE.TorusGeometry(.85, .055, 8, 32, Math.PI * 1.55),
+      materials.gold,
+      [0, 0, 0],
+      [1, 1, 1]
+    );
+    bowCurve.rotation.z = Math.PI * .5;
+    bow.add(bowCurve);
+
+    const bowString = mesh(
+      new THREE.Line(
+        [new THREE.Vector3(-.85, 0, 0), new THREE.Vector3(0, .5, 0), new THREE.Vector3(.85, 0, 0)],
+        new THREE.BufferGeometry().setFromPoints([...])
+      ),
+      new THREE.LineBasicMaterial({ color: 0xffe3a5 }),
+      [0, 0, 0],
+      [1, 1, 1]
+    );
+    bow.add(bowString);
+
+    worldGroup.add(bow);
+
+    // Floating particles
+    const particles = [];
+    const particleGeometry = new THREE.SphereGeometry(.035, 6, 4);
+    const particleMaterials = [
+      new THREE.MeshBasicMaterial({ color: 0xbcecff, transparent: true, opacity: .6 }),
+      new THREE.MeshBasicMaterial({ color: 0x8b65d8, transparent: true, opacity: .55 })
+    ];
+
+    for (let i = 0; i < 90; i++) {
+      const particle = mesh(
+        particleGeometry,
+        particleMaterials[i % 2],
+        [Math.random() * 30 - 15, Math.random() * 18, Math.random() * 28 - 14],
+        [1, 1, 1]
+      );
+      worldGroup.add(particle);
+      particles.push({
+        object: particle,
+        speed: .15 + Math.random() * .35,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // Interactive hotspots
+    const hotspots = [];
+
+    const hotspotData = [
+      {
+        position: new THREE.Vector3(-11, 3.1, 5.4),
+        title: "Brynmaer",
+        text: "The sacred waterfall. Gather the Ball of Water before continuing.",
+        color: 0x70cfe8
+      },
+      {
+        position: new THREE.Vector3(4.5, 3.3, -3.5),
+        title: "Queen Aryllis",
+        text: "Change Aryllis into a woman to enter her house.",
+        color: 0xffca78
+      },
+      {
+        position: new THREE.Vector3(-5.8, 2.2, -4.4),
+        title: "Kirisa Plant",
+        text: "Use the Kirisa Plant to transform Aryllis.",
+        color: 0x8b65d8
+      },
+      {
+        position: new THREE.Vector3(2.8, 2.0, 1.1),
+        title: "Bow of Moon",
+        text: "The Bow of Moon awakens the tower's hidden path.",
+        color: 0xffdf9a
+      }
+    ];
+
+    hotspotData.forEach((data, i) => {
+      const hotspot = new THREE.Mesh(
+        new THREE.SphereGeometry(.18, 12, 8),
+        new THREE.MeshBasicMaterial({ color: data.color })
+      );
+      hotspot.position.copy(data.position);
+      worldGroup.add(hotspot);
+      hotspots.push({ mesh: hotspot, ...data });
+    });
+
+    // Interaction
+    const interactionState = {
+      water: false,
+      change: false,
+      kirisa: false,
+      bow: false
+    };
+
+    function setInteraction(key, value) {
+      interactionState[key] = value;
+      statusTitle.textContent = `Mission Status — ${value ? key.toUpperCase() : "Missing"}`;
+      statusCopy.textContent = value
+        ? `${key} acquired. Continue toward Queen Aryllis.`
+        : `${key} not yet acquired. Return to the ${key === "water" ? "waterfall" : key === "change" ? "plains" : "tower"}.`;
+    }
+
+    function markMission(key) {
+      setInteraction(key, true);
+      if (key === "water") {
+        statusTitle.textContent = "Mission Status — Ball of Water";
+        statusCopy.textContent = "The Ball of Water is ready. Travel to Brynmaer and seek the Change spell.";
+      }
+      if (key === "change") {
+        statusTitle.textContent = "Mission Status — Change Spell";
+        statusCopy.textContent = "Aryllis can now be transformed. Use the Kirisa Plant to enter her house.";
+      }
+      if (key === "kirisa") {
+        statusTitle.textContent = "Mission Status — Kirisa Plant";
+        statusCopy.textContent = "Aryllis is disguised as a woman. Enter her house and locate the Kirisa Plant.";
+      }
+      if (key === "bow") {
+        statusTitle.textContent = "Mission Status — Bow of Moon";
+        statusCopy.textContent = "The Bow of Moon has been obtained. The path to the basement is now open.";
+      }
+    }
+
+    hotspots.forEach((hotspot, i) => {
+      hotspot.mesh.userData.index = i;
+    });
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      pointer.setFromEvent(event);
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        pointer.setFromEvent(event);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointerup", event => {
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+      const hit = raycaster.intersectObjects(worldGroup.children, true).find(hit => hit.object.userData.hotspotIndex !== undefined);
+      if (hit && hit.object.userData.hotspotIndex !== null) {
+        const hotspot = hotspots[hit.object.userData.hotspotIndex];
+        markMission(hotspot.key);
+      }
+    });
+
+    // Keyboard controls
+    const keys = new Set();
+
+    function addKey(key) {
+      keys.add(key.toLowerCase());
+    }
+
+    window.addEventListener("keydown", event => {
+      addKey(event.code);
+      if (event.code === "KeyT") teleport();
+      if (event.code === "KeyR") resetView();
+      if (event.code === "KeyQ") interactAt(0, 0, 0);
+      if (event.code === "KeyE") interactAt(4.5, 3.3, -3.5);
+      if (event.code === "KeyA") interactAt(-5.8, 2.2, -4.4);
+      if (event.code === "KeyB") interactAt(2.8, 2.0, 1.1);
+    });
+
+    window.addEventListener("keyup", event => {
+      keys.delete(event.code.toLowerCase());
+    });
+
+    function resetView() {
+      camera.position.set(19, 12, 22);
+      camera.lookAt(0, 7, 0);
+    }
+
+    function teleport() {
+      camera.position.set(-12, 7, 11);
+      camera.lookAt(-4, 5, 1);
+    }
+
+    function interactAt(x, y, z) {
+      camera.position.set(x, y, z);
+      camera.lookAt(0, 7, 0);
+    }
+
+    // Native orbit controls
+    let azimuth = .72;
+    let polar = 1.18;
+    let distance = 28;
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      const target = new THREE.Vector3(0, 7, 0);
+      camera.position.set(
+        target.x + distance * Math.sin(polar) * Math.sin(azimuth),
+        target.y + distance * Math.cos(polar),
+        target.z + distance * Math.sin(polar) * Math.cos(azimuth)
+      );
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!dragging) return;
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      azimuth -= dx * .005;
+      polar = THREE.MathUtils.clamp(polar - dy * .004, .38, 1.48);
+      updateCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", event => {
+      dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      dragging = false;
+    });
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      distance = THREE.MathUtils.clamp(distance + event.deltaY * .025, 12, 48);
+      updateCamera();
+    }, { passive: false });
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      const t = performance.now();
+      warmLight.intensity = 26 + Math.sin(elapsed * .7) * 3;
+      violetLight.intensity = 22 + Math.sin(elapsed * .9 + 1) * 4;
+
+      hotspots.forEach((hotspot, i) => {
+        hotspot.mesh.scale.setScalar(1 + Math.sin(elapsed * 1.8 + i * 1.7) * .18);
+        hotspot.mesh.material.opacity = .75 + Math.sin(elapsed * 1.8 + i * 1.7) * .2;
+      });
+
+      particles.forEach((particle, i) => {
+        particle.object.position.y += particle.speed * .016;
+        particle.object.position.x += Math.sin(elapsed * .35 + particle.phase) * .0009;
+        if (particle.object.position.y > 22) {
+          particle.object.position.y = -.5;
+        }
+      });
+
+      const waterPulse = 1 + Math.sin(elapsed * 1.3) * .08;
+      waterfall.children[1].scale.y = waterPulse;
+      waterfall.children[0].scale.x = waterPulse;
+
+      const queenPulse = 1 + Math.sin(elapsed * 1.25) * .035;
+      queen.scale.setScalar(queenPulse);
+      queenHead.rotation.y = Math.sin(elapsed * .35) * .12;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+    animate();
+
+    requestAnimationFrame(() => {
+      loading.style.opacity = "0";
+      setTimeout(() => loading.remove(), 800);
+    });
+  </script>
+</body>
+</html>
