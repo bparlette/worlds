@@ -5,7 +5,8 @@
     "target": "Castles & Mazes",
     "platform": "Atari 2600",
     "filename": "001_adventure_castles_mazes.html",
-    "generated_at": "2026-10-31 22:07:21"
+    "generated_at": "2026-10-31 22:07:21",
+    "verified_working": true
   },
   "2": {
     "id": 2,
@@ -13,7 +14,8 @@
     "target": "Jungle & Underworld",
     "platform": "Atari 2600",
     "filename": "002_pitfall_jungle_underworld.html",
-    "generated_at": "2026-10-31 22:17:06"
+    "generated_at": "2026-10-31 22:17:06",
+    "verified_working": true
   },
   "3": {
     "id": 3,
@@ -21,7 +23,8 @@
     "target": "Ghost Mansion",
     "platform": "Atari 2600",
     "filename": "003_haunted_house_ghost_mansion.html",
-    "generated_at": "2026-10-31 22:28:22"
+    "generated_at": "2026-10-31 22:28:22",
+    "verified_working": true
   },
   "4": {
     "id": 4,
@@ -29,7 +32,8 @@
     "target": "Neutral Zone & Shield",
     "platform": "Atari 2600",
     "filename": "004_yars_revenge_neutral_zone_shield.html",
-    "generated_at": "2026-10-31 22:37:26"
+    "generated_at": "2026-10-31 22:37:26",
+    "verified_working": true
   },
   "5": {
     "id": 5,
@@ -37,6 +41,7 @@
     "target": "Canyon Riverway",
     "platform": "Atari 2600",
     "filename": "005_river_raid_canyon_riverway.html",
-    "generated_at": "2026-10-31 22:47:54"
+    "generated_at": "2026-10-31 22:47:54",
+    "verified_working": true
   }
 }

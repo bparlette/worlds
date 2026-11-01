@@ -127,10 +127,21 @@ def update_gallery(specs: list, progress: dict):
     for s in completed:
         info = progress[str(s["id"])]
         filename = info["filename"]
+        verified = info.get("verified_working", True)
+        
+        status_badge = (
+            '<span class="badge verified" title="WebGL & Runtime Verified Clean">🟢 Verified</span>'
+            if verified else
+            '<span class="badge needs-attention" title="Runtime Notice: May require manual adjustment">⚠️ Issue Detected</span>'
+        )
+        
         cards_html.append(f"""
-        <div class="world-card">
+        <div class="world-card {'card-flagged' if not verified else ''}">
             <div class="card-header">
-                <span class="badge platform">{s['platform']}</span>
+                <div>
+                    <span class="badge platform">{s['platform']}</span>
+                    {status_badge}
+                </div>
                 <span class="world-id">#{s['id']:03d}</span>
             </div>
             <div class="card-body">
@@ -248,6 +259,26 @@ def update_gallery(specs: list, progress: dict):
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            margin-right: 6px;
+        }}
+        .badge.verified {{
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }}
+        .badge.needs-attention {{
+            background: rgba(241, 196, 15, 0.15);
+            color: #f1c40f;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }}
+        .world-card.card-flagged {{
+            border-color: rgba(241, 196, 15, 0.25);
         }}
         .world-id {{
             color: var(--text-muted);
@@ -376,6 +407,7 @@ def main():
             print(f"[Auto-Linter] Warning: Unresolved syntax error: {lint_report.get('errors')}")
 
         # Automated Headless Chrome WebGL & Runtime Healer
+        is_verified = True
         try:
             from scene_healer import automated_rule_based_patch, test_scene_runtime_in_chrome
             with open(filepath, "r", encoding="utf-8") as f:
@@ -387,10 +419,13 @@ def main():
             t_res = test_scene_runtime_in_chrome(filepath)
             if t_res["clean"]:
                 print(f"[Chrome Verifier] ✓ {filename} renders with 0 console errors!")
+                is_verified = True
             else:
                 print(f"[Chrome Verifier] ⚠ Runtime warning: {t_res['errors'][:2]}")
+                is_verified = False
         except Exception as e:
             print(f"[Chrome Verifier] Check exception: {e}")
+            is_verified = False
 
         progress[s_id] = {
             "id": spec["id"],
@@ -398,6 +433,7 @@ def main():
             "target": spec["target"],
             "platform": spec["platform"],
             "filename": filename,
+            "verified_working": is_verified,
             "generated_at": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         save_progress(progress)
