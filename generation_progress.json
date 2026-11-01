@@ -6,5 +6,13 @@
     "platform": "Atari 2600",
     "filename": "001_adventure_castles_mazes.html",
     "generated_at": "2026-10-31 22:07:21"
+  },
+  "2": {
+    "id": 2,
+    "game": "Pitfall!",
+    "target": "Jungle & Underworld",
+    "platform": "Atari 2600",
+    "filename": "002_pitfall_jungle_underworld.html",
+    "generated_at": "2026-10-31 22:17:06"
   }
 }
