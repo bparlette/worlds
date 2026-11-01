@@ -151,6 +151,11 @@ def sanitize_scene_html(html: str) -> str:
                            r"\1\nconst canvas = renderer.domElement;", fixed, count=1)
         if c:
             print("[Sanitizer] Declared missing `canvas` from renderer.domElement")
+    # Touch: without touch-action:none a phone treats a finger drag as page scroll
+    # and cancels the pointer events, so orbit/pan never fires (user report 2026-11-01).
+    if "touch-action" not in fixed and "</head>" in fixed:
+        fixed = fixed.replace("</head>", "<style>html,body,canvas{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}</style></head>", 1)
+        print("[Sanitizer] Added touch-action:none for touch orbit")
     # Gate 1: defaultCamera is a plain {x,y,z,target} object; .distance() does not exist.
     fixed, d = re.subn(
         r"defaultCamera\.distance\(\)",
