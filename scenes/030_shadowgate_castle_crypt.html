@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Castle Crypt — Interactive NES World</title>
+  <style>
+    :root {
+      --ink: #f0e4c7;
+      --muted: #a99b78;
+      --gold: #d9b86b;
+      --panel: rgba(16, 13, 10, 0.76);
+      --line: rgba(229, 201, 137, 0.24);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050505;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    #stage {
+      position: absolute;
+      inset: 0;
+    }
+
+    #stage canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #stage canvas:active { cursor: grabbing; }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 42%, transparent 35%, rgba(0,0,0,.28) 78%),
+        linear-gradient(180deg, rgba(0,0,0,.18), transparent 25%, transparent 75%, rgba(0,0,0,.35));
+      z-index: 2;
+    }
+
+    .title-card {
+      position: absolute;
+      z-index: 4;
+      top: 24px;
+      left: 28px;
+      max-width: 430px;
+      padding: 18px 20px 17px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(211, 175, 107, .12), rgba(211, 175, 107, 0)),
+        var(--panel);
+      box-shadow: 0 14px 50px rgba(0,0,0,.5);
+      backdrop-filter: blur(9px);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin-bottom: 7px;
+      color: var(--gold);
+      font: 700 10px/1.2 Arial, sans-serif;
+      letter-spacing: .24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 3vw, 38px);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: .025em;
+      text-shadow: 0 2px 16px #000;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font: 12px/1.5 Arial, sans-serif;
+    }
+
+    .controls {
+      position: absolute;
+      z-index: 4;
+      right: 24px;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      font: 11px/1.4 Arial, sans-serif;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .controls span { white-space: nowrap; }
+    .controls b { color: var(--ink); }
+
+    .deathook {
+      position: absolute;
+      z-index: 4;
+      left: 28px;
+      bottom: 24px;
+      width: 235px;
+      padding: 13px 15px;
+      border-left: 2px solid var(--gold);
+      background: linear-gradient(90deg, var(--panel), rgba(16,13,10,.18));
+      pointer-events: none;
+    }
+
+    .deathook strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #f6e8c4;
+      font-size: 12px;
+      letter-spacing: .04em;
+    }
+
+    .deathook p {
+      margin: 0;
+      color: #b8aa8c;
+      font: 11px/1.55 Arial, sans-serif;
+    }
+
+    .crosshair {
+      position: absolute;
+      z-index: 3;
+      top: 50%;
+      left: 50%;
+      width: 4px;
+      height: 4px;
+      border: 1px solid rgba(240,228,199,.55);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      opacity: .45;
+      pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+      .title-card {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        max-width: none;
+        padding: 13px 15px;
+      }
+
+      .subtitle { display: none; }
+      .deathook {
+        left: 12px;
+        bottom: 64px;
+        width: 190px;
+      }
+      .controls {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div class="vignette"></div>
+
+  <header class="title-card">
+    <div class="eyebrow">Shadowgate · Interactive World</div>
+    <h1>The Castle Crypt</h1>
+    <p class="subtitle">
+      A gloomy medieval fortress where the path to the treasure is filled
+      with traps, darkness, and deathalk.
+    </p>
+  </header>
+
+  <aside class="deathook">
+    <strong>How to Die</strong>
+    <p id="deathalk">
+      Click the glowing "Die here" buttons to trigger a deathalk.
+      Drag to orbit, scroll to zoom, and move the mouse to aim.
+    </p>
+  </aside>
+
+  <div class="controls">
+    <span><b>Drag</b> orbit</span>
+    <span><b>Scroll</b> zoom</span>
+    <span><b>Click</b> die</span>
+  </div>
+
+  <div class="crosshair"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const stage = document.querySelector("#stage");
+    const deathalkText = document.querySelector("#deathalk");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070708);
+    scene.fog = new THREE.FogExp2(0x08080a, 0.028);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    stage.appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      120
+    );
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x55504a,
+        roughness: 0.96,
+        metalness: 0.02
+      }),
+      darkStone: new THREE.MeshStandardMaterial({
+        color: 0x292725,
+        roughness: 1
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x302d29,
+        roughness: 0.93
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xc99c45,
+        roughness: 0.34,
+        metalness: 0.72,
+        emissive: 0x2a1704,
+        emissiveIntensity: 0.45
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x761d1b,
+        roughness: 0.78
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x080808,
+        roughness: 1
+      })
+    };
+
+    function mesh(geometry, material, parent = world) {
+      const object = new THREE.Mesh(geometry, material);
+      object.castShadow = true;
+      object.receiveShadow = true;
+      parent.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = world) {
+      const object = mesh(new THREE.BoxGeometry(w, h, d), material, parent);
+      object.position.set(x, y, z);
+      return object;
+    }
+
+    function cylinder(radius, height, material, x, y, z, parent = world, radialSegments = 12) {
+      const object = mesh(new THREE.CylinderGeometry(radius, radius, height, radialSegments), material, parent);
+      object.position.set(x, y, z);
+      return object;
+    }
+
+    // Lighting
+    const hemisphere = new THREE.HemisphereLight(0x6b6250, 0x110a08, 0.65);
+    scene.add(hemisphere);
+
+    const moon = new THREE.DirectionalLight(0x8b91b0, 2.1);
+    moon.position.set(-18, 24, -14);
+    moon.castShadow = true;
+    moon.shadow.mapSize.set(1024, 1024);
+    moon.shadow.camera.left = -28;
+    moon.shadow.camera.right = 28;
+    moon.shadow.camera.top = 28;
+    moon.shadow.camera.bottom = -28;
+    moon.shadow.camera.near = 1;
+    moon.shadow.camera.far = 70;
+    moon.shadow.bias = -0.00025;
+    scene.add(moon);
+
+    const warmLight = new THREE.PointLight(0xff7b27, 38, 20, 2);
+    warmLight.position.set(3, 3, -2);
+    scene.add(warmLight);
+
+    const blueLight = new THREE.PointLight(0x3677a8, 28, 18, 2);
+    blueLight.position.set(-8, 2, 6);
+    scene.add(blueLight);
+
+    // Main chamber
+    box(42, 1.1, 34, materials.floor, 0, -0.65, 0);
+    box(42, 10, 1.2, materials.darkStone, 0, 4.35, -16.8);
+    box(42, 10, 1.2, materials.darkStone, 0, 4.35, 16.8);
+    box(1.2, 10, 33, materials.darkStone, -20.7, 4.35, 0);
+    box(1.2, 10, 33, materials.darkStone, 20.7, 4.35, 0);
+
+    // Irregular masonry blocks
+    for (let row = 0; row < 5; row++) {
+      const y = 0.8 + row * 2.1;
+      for (let x = -19; x <= 19; x += 2.55) {
+        const offset = row % 2 ? 1.25 : 0;
+        const block = box(
+          2.35 + (Math.random() - 0.5) * 0.35,
+          1.85 + (Math.random() - 0.5) * 0.25,
+          1.75 + (Math.random() - 0.5) * 0.3,
+          materials.stone,
+          x + offset,
+          y,
+          -16.1 + Math.random() * 0.5
+        );
+        block.rotation.y = (Math.random() - 0.5) * 0.035;
+      }
+    }
+
+    // Arched windows using dark recess and glowing glass
+    function archWindow(x, z, color, glow = 0) {
+      const recess = mesh(new THREE.BoxGeometry(2.1, 3.2, 0.18), materials.black, world);
+      recess.position.set(x, 5.1, z);
+
+      const frame = mesh(new THREE.TorusGeometry(1.05, 0.16, 8, 24, Math.PI), materials.gold, world);
+      frame.position.set(x, 5.1, z + 0.12);
+      frame.rotation.z = Math.PI;
+
+      const glass = mesh(new THREE.CircleGeometry(0.9, 24), new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: glow,
+        roughness: 0.25
+      }), world);
+      glass.position.set(x, 5.1, z + 0.18);
+    }
+
+    archWindow(-13.5, -10.5, 0x6180a3, 1.8);
+    archWindow(13.5, -10.5, 0x6180a3, 1.8);
+    archWindow(-13.5, 10.5, 0x39274d, 1.2);
+    archWindow(13.5, 10.5, 0x39274d, 1.2);
+
+    // Tall central columns
+    cylinder(0.85, 8.4, materials.stone, -9.2, 4.2, -4.3);
+    cylinder(0.85, 8.4, materials.stone, 9.2, 4.2, -4.3);
+    cylinder(0.7, 8.4, materials.stone, -9.2, 4.2, 4.3);
+    cylinder(0.7, 8.4, materials.stone, 9.2, 4.2, 4.3);
+
+    // Hanging iron lanterns
+    const lanterns = [];
+    function lantern(x, y, z, color = 0xff6a22) {
+      const chain = cylinder(0.025, 1.2, materials.black, x, y + 0.55, z, world, 8);
+      const cap = mesh(new THREE.ConeGeometry(0.34, 0.38, 8), materials.gold, world);
+      cap.position.set(x, y - 0.2, z);
+      const glass = mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.6, 8), new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 1.6,
+        roughness: 0.4
+      }), world);
+      glass.position.set(x, y, z);
+      const flame = mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc06b }), world);
+      flame.position.set(x, y - 0.1, z);
+      lanterns.push(flame);
+    }
+
+    lantern(-7.2, 7.2, -8.2, 0xff6422);
+    lantern(7.2, 7.2, -8.2, 0xff6422);
+    lantern(-7.2, 7.2, 8.2, 0x8b3928);
+    lantern(7.2, 7.2, 8.2, 0x8b3928);
+    lantern(0, 8.2, 0, 0x436d91);
+
+    // Crystal shards
+    const crystals = [];
+    function crystal(x, y, z, color, height) {
+      const shard = mesh(new THREE.OctahedronGeometry(height * 0.45, 0), new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 1.25,
+        roughness: 0.2,
+        metalness: 0.35
+      }), world);
+      shard.position.set(x, y, z);
+      shard.scale.y = 1.7;
+      shard.rotation.set(0.2, Math.random() * Math.PI, 0.15);
+      crystals.push(shard);
+    }
+
+    crystal(-12, 1.6, 3.5, 0x2478a8, 1.2);
+    crystal(12, 1.6, 3.5, 0x2478a8, 1.5);
+    crystal(-10, 1.5, -3.5, 0x6a2b75, 1.25);
+    crystal(10, 1.5, -3.5, 0x6a2b75, 1.4);
+
+    // Cobwebs
+    const webMaterial = new THREE.LineBasicMaterial({
+      color: 0x8d8065,
+      transparent: true,
+      opacity: 0.32
+    });
+
+    function cobweb(x, y, z, scale = 1) {
+      const points = [
+        new THREE.Vector3(x, y, z),
+        new THREE.Vector3(x + 1.2 * scale, y + 0.7 * scale, z),
+        new THREE.Vector3(x + 2.4 * scale, y + 0.15 * scale, z),
+        new THREE.Vector3(x + 1.1 * scale, y + 0.45 * scale, z)
+      ];
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const web = new THREE.LineSegments(geometry, webMaterial);
+      world.add(web);
+      return web;
+    }
+
+    cobweb(-14.5, 4.8, -12.5, 1.4);
+    cobweb(14.5, 4.8, -12.5, 1.4);
+    cobweb(14.5, 4.8, 12.5, 1.2);
+
+    // Skeletons
+    const bones = [];
+    function skeleton(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      world.add(group);
+
+      const skull = mesh(new THREE.SphereGeometry(0.32, 10, 8), materials.bone, group);
+      skull.scale.set(0.8, 1.35, 0.8);
+      skull.position.y = 1.65;
+
+      const eye = mesh(new THREE.SphereGeometry(0.055, 6, 5), materials.black, group);
+      eye.position.set(-0.12, 1.72, 0.31);
+      const eye2 = eye.clone();
+      eye2.position.x = 0.12;
+      group.add(eye2);
+
+      for (let i = 0; i < 2; i++) {
+        const rib = mesh(new THREE.TorusGeometry(0.28, 0.045, 5, 10, Math.PI * 1.45), materials.bone, group);
+        rib.position.set(0, 1.05 - i * 0.35, 0);
+        rib.rotation.z = Math.PI * 0.5;
+        bones.push(rib);
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const vertebra = mesh(new THREE.SphereGeometry(0.11, 6, 5), materials.bone, group);
+        vertebra.position.set(0, 0.55 - i * 0.22, 0);
+        bones.push(vertebra);
+      }
+
+      const leftArm = mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.8, 6), materials.bone, group);
+      leftArm.position.set(-0.38, 1.25, 0);
+      leftArm.rotation.z = -0.45;
+      const rightArm = leftArm.clone();
+      rightArm.position.x = 0.38;
+      rightArm.rotation.z = 0.45;
+      group.add(rightArm);
+    }
+
+    skeleton(-6.5, 4.4, 0.4);
+    skeleton(6.4, 4.8, -0.5);
+    skeleton(8.7, -7.2, 1.2);
+    skeleton(-8.3, -7.5, -1.1);
+
+    // Chest
+    const chest = new THREE.Group();
+    chest.position.set(0, 0, -11.2);
+    world.add(chest);
+
+    const chestBody = box(3.3, 2.2, 2.2, materials.darkWood || materials.stone, 0, 1.25, 0, chest);
+    chestBody.material = new THREE.MeshStandardMaterial({
+      color: 0x332318,
+      roughness: 0.88
+    });
+
+    const lid = box(3.55, 0.22, 2.45, materials.gold, 0, 2.48, 0, chest);
+    lid.rotation.x = -0.04;
+
+    for (const x of [-1.1, 1.1]) {
+      const band = box(0.13, 2.35, 2.28, materials.gold, x, 1.25, 0, chest);
+    }
+
+    const treasure = new THREE.Group();
+    treasure.position.set(0, 2.7, 0);
+    chest.add(treasure);
+
+    for (let i = 0; i < 7; i++) {
+      const coin = cylinder(0.28, 0.08, materials.gold, (Math.random() - 0.5) * 1.5, Math.random() * 0.35, (Math.random() - 0.5) * 1.1, treasure, 12);
+      coin.rotation.y = Math.random() * Math.PI;
+    }
+
+    // Trap pit
+    const pit = new THREE.Group();
+    pit.position.set(0, 0, 5.2);
+    world.add(pit);
+
+    const pitHole = mesh(new THREE.CircleGeometry(1.7, 24), materials.black, pit);
+    pitHole.rotation.x = -Math.PI / 2;
+    pitHole.position.y = 0.012;
+
+    const pitRim = mesh(new THREE.TorusGeometry(1.72, 0.18, 8, 28), materials.stone, pit);
+    pitRim.rotation.x = Math.PI / 2;
+    pitRim.position.y = 0.18;
+
+    // Spike pit
+    const spikes = [];
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2;
+      const radius = 1.1 + Math.random() * 0.65;
+      const spike = mesh(new THREE.ConeGeometry(0.08, 0.85, 5), materials.gold, pit);
+      spike.position.set(Math.cos(angle) * radius, 0.45, Math.sin(angle) * radius);
+      spike.rotation.z = Math.cos(angle) * 0.25;
+      spike.rotation.x = Math.sin(angle) * 0.25;
+      spikes.push(spike);
+    }
+
+    // Skull gate
+    const skullGate = new THREE.Group();
+    skullGate.position.set(0, 0, 8.8);
+    skullGate.rotation.y = Math.PI;
+    world.add(skullGate);
+
+    const skull = mesh(new THREE.SphereGeometry(0.62, 12, 8), materials.bone, skullGate);
+    skull.scale.set(0.8, 1.25, 0.8);
+    skull.position.y = 1.7;
+
+    const eyeLeft = mesh(new THREE.SphereGeometry(0.12, 8, 6), materials.black, skullGate);
+    eyeLeft.position.set(-0.2, 1.8, 0.59);
+    const eyeRight = eyeLeft.clone();
+    eyeRight.position.x = 0.2;
+    skullGate.add(eyeRight);
+
+    for (let i = 0; i < 3; i++) {
+      const jaw = mesh(new THREE.BoxGeometry(0.95, 0.18, 0.5), materials.bone, skullGate);
+      jaw.position.set(0, 1.15 - i * 0.25, 0.05);
+      jaw.rotation.z = i % 2 ? 0.12 : -0.12;
+    }
+
+    // Flag and banners
+    function banner(x, y, z, color) {
+      const pole = cylinder(0.07, 4.8, materials.gold, x, y + 2.4, z, world, 8);
+      const cloth = mesh(new THREE.PlaneGeometry(1.5, 2.2, 6, 8), new THREE.MeshStandardMaterial({
+        color,
+        side: THREE.DoubleSide,
+        roughness: 0.95
+      }), world);
+      cloth.position.set(x + 0.75, y + 1.8, z);
+      cloth.rotation.y = Math.PI / 2;
+      cloth.rotation.z = 0.15;
+    }
+
+    banner(-14.8, 6.5, -15.4, 0x6c2638);
+    banner(14.8, 6.5, -15.4, 0x263c68);
+
+    // Dust motes
+    const moteCount = 450;
+    const motePositions = new Float32Array(moteCount * 3);
+    const moteData = [];
+
+    for (let i = 0; i < moteCount; i++) {
+      const x = (Math.random() - 0.5) * 39;
+      const y = 0.5 + Math.random() * 8;
+      const z = (Math.random() - 0.5) * 31;
+      motePositions.set([x, y, z], i * 3);
+      moteData.push({
+        x,
+        y,
+        z,
+        speed: 0.03 + Math.random() * 0.1,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    const moteGeometry = new THREE.BufferGeometry();
+    moteGeometry.setAttribute("position", new THREE.BufferAttribute(motePositions, 3));
+
+    const motes = new THREE.Points(
+      moteGeometry,
+      new THREE.PointsMaterial({
+        color: 0xd6c39a,
+        size: 0.045,
+        transparent: true,
+        opacity: 0.45,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    world.add(motes);
+
+    // Floating dust animation
+    const clock = new THREE.Clock();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      lanterns.forEach((flame, i) => {
+        flame.scale.setScalar(0.9 + Math.sin(elapsed * 2.2 + i) * 0.12);
+      });
+
+      crystals.forEach((shard, i) => {
+        shard.rotation.y += 0.003 + i * 0.0004;
+        shard.rotation.x += 0.0008;
+      });
+
+      bones.forEach((bone, i) => {
+        bone.rotation.z = Math.sin(elapsed * 0.55 + i) * 0.08;
+      });
+
+      const positions = moteGeometry.attributes.position.array;
+      for (let i = 0; i < moteCount; i++) {
+        const m = moteData[i];
+        positions[i * 3] = m.x + Math.sin(elapsed * m.speed + m.phase) * 0.25;
+        positions[i * 3 + 1] = m.y + Math.sin(elapsed * m.speed * 0.7 + m.phase) * 0.18;
+        positions[i * 3 + 2] = m.z + Math.cos(elapsed * m.speed + m.phase) * 0.2;
+      }
+      moteGeometry.attributes.position.needsUpdate = true;
+
+      // Gentle camera drift until user interacts
+      if (!cameraInteracted) {
+        camera.position.x = Math.sin(elapsed * 0.08) * 0.15;
+        camera.position.z = Math.cos(elapsed * 0.07) * 0.12;
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Camera controls: orbit, zoom, and subtle aim movement.
+    const cameraState = {
+      theta: 0.28,
+      phi: 1.12,
+      radius: 27,
+      target: new THREE.Vector3(0, 2.2, 0)
+    };
+
+    let cameraInteracted = false;
+    let pointerX = 0;
+    let pointerY = 0;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+      camera.position.set(
+        cameraState.target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+      camera.lookAt(cameraState.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      cameraInteracted = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!cameraInteracted) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      cameraState.theta -= dx * 0.005;
+      cameraState.phi = THREE.MathUtils.clamp(cameraState.phi - dy * 0.004, 0.35, 1.48);
+
+      // The crosshair follows the mouse for the first 1.2 seconds.
+      if (!aimLock) {
+        aimLock = true;
+        aimTimer = 1.2;
+      }
+
+      updateCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      if (!cameraInteracted) return;
+      cameraInteracted = false;
+      renderer.domElement.releasePointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      cameraInteracted = false;
+    });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      cameraInteracted = true;
+      cameraState.radius = THREE.MathUtils.clamp(
+        cameraState.radius + event.deltaY * 0.018,
+        12,
+        42
+      );
+      updateCamera();
+    }, { passive: false });
+
+    // Deathalk buttons
+    const deaths = [
+      {
+        title: "The Pit of Needles",
+        text: "Step onto the circular trap. The hidden spikes rise and pierce your boots."
+      },
+      {
+        title: "The Crimson Trap",
+        text: "Touch the glowing red crystal. Its cursed energy drains your life instantly."
+      },
+      {
+        title: "The Lantern Light",
+        text: "Look closely at the hanging lantern. It reveals a concealed blade behind it."
+      },
+      {
+        title: "The Shadow's Embrace",
+        text: "The darkness itself becomes a weapon. You vanish before your final breath."
+      },
+      {
+        title: "Treasure Too Heavy",
+        text: "The gold in the chest is heavier than you imagined, crushing your ribs."
+      }
+    ];
+
+    const deathalkButtons = deaths.map((death) => {
+      const button = document.createElement("button");
+      button.className = "deathalk-button";
+      button.style.color = "#e8d5a3";
+      button.innerHTML = `${death.title}<span style="display:block;margin-top:3px;color:#9e906d;font:10px Arial,sans-serif;font-size:11px">${death.text}</span>`;
+      document.body.appendChild(button);
+
+      button.addEventListener("click", () => {
+        deathalkText.innerHTML = `<strong>${death.title}</strong>${death.text}`;
+        cameraInteracted = false;
+        cameraState.theta = 0.28;
+        cameraState.phi = 1.12;
+        cameraState.radius = 27;
+        updateCamera();
+      });
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    document.querySelector(".deathook").addEventListener("pointermove", (event) => {
+      if (event.pointerType === "mouse") {
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+      }
+    });
+
+    document.querySelector(".crosshair").style.left = `${pointerX}px`;
+    document.querySelector(".crosshair").style.top = `${pointerY}px`;
+
+  </script>
+</body>
+</html>

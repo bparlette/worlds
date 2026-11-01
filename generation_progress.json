@@ -259,5 +259,14 @@
     "filename": "029_rygar_lapis_valley.html",
     "verified_working": false,
     "generated_at": "2026-11-01 05:02:48"
+  },
+  "30": {
+    "id": 30,
+    "game": "Shadowgate",
+    "target": "Castle Crypt",
+    "platform": "NES",
+    "filename": "030_shadowgate_castle_crypt.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 05:13:29"
   }
 }
