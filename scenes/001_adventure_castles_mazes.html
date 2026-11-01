@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Castles & Mazes — Atari 2600 World</title>
+  <style>
+    :root {
+      --amber: #ffd87a;
+      --amber-bright: #fff2b5;
+      --ink: #17130e;
+      --muted: rgba(255, 216, 122, 0.72);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #11100d;
+      color: var(--amber);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    .hud {
+      position: fixed;
+      top: 24px;
+      left: 26px;
+      z-index: 10;
+      width: min(360px, calc(100vw - 52px));
+      padding: 18px 20px 17px;
+      border: 1px solid rgba(255, 216, 122, 0.32);
+      background:
+        linear-gradient(135deg, rgba(255, 216, 122, 0.08), rgba(255, 216, 122, 0.015)),
+        rgba(18, 15, 12, 0.72);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 24px;
+      height: 2px;
+      background: var(--amber);
+      box-shadow: 0 0 10px rgba(255, 216, 122, 0.7);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--amber-bright);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(25px, 3vw, 36px);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.015em;
+    }
+
+    .subtitle {
+      margin: 9px 0 15px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 216, 122, 0.17);
+    }
+
+    .controls span {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .controls i {
+      color: var(--amber);
+      font-style: normal;
+    }
+
+    .corner {
+      position: fixed;
+      right: 22px;
+      bottom: 18px;
+      z-index: 10;
+      color: rgba(255, 216, 122, 0.55);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 48%, rgba(10, 8, 5, 0.38) 100%),
+        linear-gradient(to bottom, rgba(255, 216, 122, 0.025), transparent 24%, transparent 72%, rgba(10, 8, 5, 0.28));
+    }
+
+    @media (max-width: 620px) {
+      .hud {
+        top: 12px;
+        left: 12px;
+        width: calc(100vw - 24px);
+        padding: 14px 15px;
+      }
+
+      .subtitle {
+        margin-bottom: 10px;
+      }
+
+      .corner {
+        right: 12px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div class="eyebrow">Adventure · Atari 2600</div>
+    <h1>Castles &amp; Mazes</h1>
+    <p class="subtitle">
+      Explore the burnt-orange ruins of a fallen kingdom. The castle lies beyond the labyrinth,
+      but the path is hidden by shadow, smoke, and a restless fire.
+    </p>
+    <div class="controls">
+      <span><i>Drag</i> to orbit</span>
+      <span><i>Scroll</i> to zoom</span>
+      <span><i>Double-click</i> to focus</span>
+    </div>
+  </div>
+
+  <div class="vignette"></div>
+  <div class="corner">Interactive recreation · 1987</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x17130f);
+    scene.fog = new THREE.FogExp2(0x382519, 0.035);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.prepend(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const materials = {
+      brick: new THREE.MeshStandardMaterial({
+        color: 0x6e3920,
+        roughness: 0.92,
+        metalness: 0.02
+      }),
+      darkBark: new THREE.MeshStandardMaterial({
+        color: 0x35251c,
+        roughness: 1
+      }),
+      ash: new THREE.MeshStandardMaterial({
+        color: 0x484038,
+        roughness: 1
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd6a14c,
+        roughness: 0.52,
+        metalness: 0.55
+      }),
+      copper: new THREE.MeshStandardMaterial({
+        color: 0x8a4928,
+        roughness: 0.65,
+        metalness: 0.45
+      }),
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x665b4b,
+        roughness: 0.95
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x4b2d1c,
+        roughness: 0.95
+      }),
+      ember: new THREE.MeshStandardMaterial({
+        color: 0x4c1606,
+        emissive: 0xff3b08,
+        emissiveIntensity: 2.2,
+        roughness: 0.85
+      }),
+      flame: new THREE.MeshBasicMaterial({
+        color: 0xff6a12,
+        transparent: true,
+        opacity: 0.78,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0xffd3a0, 0x21150d, 1.45));
+
+    const sun = new THREE.DirectionalLight(0xffc273, 3.25);
+    sun.position.set(-22, 30, 18);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -38;
+    sun.shadow.camera.right = 38;
+    sun.shadow.camera.top = 38;
+    sun.shadow.camera.bottom = -38;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 100;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0xff7b32, 1.15);
+    rim.position.set(22, 12, -20);
+    scene.add(rim);
+
+    const fireLight = new THREE.PointLight(0xff631c, 42, 32, 2);
+    fireLight.position.set(0, 2.4, 0);
+    fireLight.castShadow = true;
+    fireLight.shadow.mapSize.set(512, 512);
+    fireLight.shadow.bias = -0.002;
+    scene.add(fireLight);
+
+    const coolFill = new THREE.PointLight(0x4c6b87, 13, 28, 2);
+    coolFill.position.set(-14, 8, -18);
+    scene.add(coolFill);
+
+    // -------------------------------------------------------------------------
+    // Utility geometry
+    // -------------------------------------------------------------------------
+    function box(w, h, d, material, x, y, z, parent = world) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, parent = world, segments = 12) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function makeBarkTrunk(x, z, height = 7, leanX = 0, leanZ = 0) {
+      const trunk = new THREE.Group();
+      trunk.position.set(x, 0, z);
+      trunk.rotation.z = leanX;
+      trunk.rotation.x = leanZ;
+
+      const segments = 11;
+      const positions = [];
+      const radii = [];
+
+      for (let i = 0; i < segments; i++) {
+        const t = i / (segments - 1);
+        const radius = 1.15 * Math.pow(1 - t, 0.72);
+        positions.push(
+          Math.sin(t * 3.1) * 0.16,
+          t * height,
+          Math.cos(t * 2.7) * 0.13
+        );
+        radii.push(radius);
+      }
+
+      const geometry = new THREE.CylinderGeometry(
+        radii[0],
+        radii[segments - 1],
+        height,
+        9,
+        1,
+        false
+      );
+
+      const trunkMesh = new THREE.Mesh(geometry, materials.darkBark);
+      trunkMesh.position.y = height * 0.5;
+      trunkMesh.castShadow = true;
+      trunkMesh.receiveShadow = true;
+      trunk.add(trunkMesh);
+
+      for (let i = 0; i < 7; i++) {
+        const bark = new THREE.Mesh(
+          new THREE.CylinderGeometry(
+            radii[i] * 1.06,
+            radii[i] * 1.08,
+            0.18,
+            7
+          ),
+          materials.ash
+        );
+        const a = (i / 7) * Math.PI * 2 + 0.4;
+        bark.position.set(
+          Math.sin(a) * radii[i],
+          1.2 + i * 0.75,
+          Math.cos(a) * radii[i]
+        );
+        bark.rotation.z = Math.cos(a) * 0.2;
+        bark.castShadow = true;
+        trunk.add(bark);
+      }
+
+      world.add(trunk);
+      return trunk;
+    }
+
+    function makeRoot(x, z, scale = 1) {
+      const root = new THREE.Group();
+      root.position.set(x, 0, z);
+      root.scale.setScalar(scale);
+
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const length = 2.2 + (i % 2) * 0.7;
+        const rootMesh = cylinder(
+          0.45,
+          0.75,
+          length,
+          materials.darkBark,
+          Math.cos(a) * length * 0.34,
+          0.25,
+          Math.sin(a) * length * 0.34,
+          root,
+          7
+        );
+        rootMesh.rotation.z = Math.cos(a) * 0.18;
+        rootMesh.rotation.x = Math.sin(a) * 0.18;
+      }
+
+      world.add(root);
+    }
+
+    function makeStoneWall(x, z, width, height, depth = 1.6, rotation = 0) {
+      const wall = new THREE.Group();
+      wall.position.set(x, 0, z);
+      wall.rotation.y = rotation;
+
+      const rows = Math.max(3, Math.floor(height / 0.85));
+      const blocks = 7;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < blocks; col++) {
+          const h = height / rows;
+          const w = width / blocks;
+          const offset = row % 2 ? w * 0.5 : 0;
+          const bx = -width * 0.5 + w * (col + 0.5) + offset;
+          const block = box(
+            w - 0.08,
+            h * 0.82,
+            depth,
+            materials.stone,
+            bx,
+            h * (row + 0.5),
+            0,
+            wall
+          );
+          block.rotation.y = (Math.random() - 0.5) * 0.08;
+        }
+      }
+
+      const cap = box(width + 0.25, 0.3, depth + 0.18, materials.ash, 0, height + 0.08, 0, wall);
+      cap.rotation.y = (Math.random() - 0.5) * 0.03;
+
+      world.add(wall);
+      return wall;
+    }
+
+    function makeArch(x, z, width = 3, height = 5) {
+      const arch = new THREE.Group();
+      arch.position.set(x, 0, z);
+
+      const left = box(width * 0.52, height *
