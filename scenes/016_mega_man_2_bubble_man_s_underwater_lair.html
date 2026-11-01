@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bubble Man's Underwater Lair</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #021b2b;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active { cursor: grabbing; }
+
+    .hud {
+      position: fixed;
+      z-index: 10;
+      pointer-events: none;
+      color: #e9ffff;
+      text-shadow: 0 2px 16px #003344;
+    }
+
+    .title {
+      top: 22px;
+      left: 24px;
+      max-width: min(560px, calc(100vw - 48px));
+    }
+
+    .eyebrow {
+      margin-bottom: 7px;
+      color: #79f2ff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 50px);
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+      font-weight: 900;
+    }
+
+    .subtitle {
+      margin-top: 11px;
+      color: rgba(224, 255, 255, 0.75);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      right: 22px;
+      bottom: 20px;
+      padding: 10px 13px;
+      border: 1px solid rgba(135, 239, 255, 0.25);
+      border-radius: 12px;
+      background: rgba(3, 29, 45, 0.66);
+      backdrop-filter: blur(12px);
+      color: rgba(225, 255, 255, 0.72);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    .controls strong {
+      color: #8ef6ff;
+      font-weight: 700;
+    }
+
+    .legend {
+      left: 24px;
+      bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      max-width: calc(100vw - 48px);
+      color: rgba(225, 255, 255, 0.65);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #79f2ff;
+      box-shadow: 0 0 10px #42dfff;
+    }
+
+    .dot.red { background: #ff4f6f; box-shadow: 0 0 10px #ff3355; }
+    .dot.purple { background: #b38cff; box-shadow: 0 0 10px #8b5cff; }
+    .dot.yellow { background: #ffd166; box-shadow: 0 0 10px #ffbd48; }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 42%, transparent 45%, rgba(0, 12, 24, 0.45) 100%),
+        linear-gradient(to bottom, rgba(0, 16, 28, 0.18), transparent 25%, transparent 72%, rgba(0, 10, 18, 0.35));
+    }
+
+    @media (max-width: 650px) {
+      .title { left: 16px; top: 16px; }
+      .subtitle { max-width: 280px; }
+      .legend { left: 16px; bottom: 72px; }
+      .controls { right: 12px; bottom: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div class="hud title">
+    <div class="eyebrow">Mega Man 2 · Underwater Lair</div>
+    <h1>Bubble Man's<br>Underwater Lair</h1>
+    <div class="subtitle">
+      Eight Robot Masters guard Dr. Wily’s Skull Fortress. Explore the bioluminescent depths,
+      discover weapon weaknesses, and choose the order of your assault.
+    </div>
+  </div>
+
+  <div class="hud legend">
+    <span><i class="dot"></i> Interactive 3D world</span>
+    <span><i class="dot red"></i> Robot Masters</span>
+    <span><i class="dot purple"></i> Wily’s fortress</span>
+  </div>
+
+  <div class="hud controls">
+    <strong>Drag</strong> to orbit · <strong>Scroll</strong> to zoom · <strong>Click</strong> to explore
+  </div>
+
+  <div class="vignette"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x062b3c);
+    scene.fog = new THREE.FogExp2(0x062b3c, 0.028);
+
+    const camera = new THREE.PerspectiveCamera(47, innerWidth / innerHeight, 0.1, 150);
+    camera.position.set(0, 8, 24);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement.setAttribute("aria-label", "Interactive 3D underwater scene from Mega Man 2");
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      water: new THREE.MeshStandardMaterial({
+        color: 0x07536c,
+        roughness: 0.24,
+        metalness: 0.18,
+        transparent: true,
+        opacity: 0.82
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x263c49,
+        roughness: 0.95,
+        metalness: 0.02
+      }),
+      rockLight: new THREE.MeshStandardMaterial({
+        color: 0x52707b,
+        roughness: 0.88,
+        metalness: 0.03
+      }),
+      bubble: new THREE.MeshPhysicalMaterial({
+        color: 0xb9f7ff,
+        roughness: 0.08,
+        metalness: 0,
+        transmission: 0.25,
+        transparent: true,
+        opacity: 0.72,
+        clearcoat: 1,
+        clearcoatRoughness: 0.08
+      }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x65f5ff,
+        emissive: 0x0b8da8,
+        emissiveIntensity: 2.2,
+        roughness: 0.35
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x22a9d6,
+        emissive: 0x065b75,
+        emissiveIntensity: 1.15,
+        roughness: 0.45
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0xb78cff,
+        emissive: 0x49227f,
+        emissiveIntensity: 1.35,
+        roughness: 0.42
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffd166,
+        emissive: 0x7d4500,
+        emissiveIntensity: 1.1,
+        roughness: 0.4
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xff4f6f,
+        emissive: 0x7a091f,
+        emissiveIntensity: 1.4,
+        roughness: 0.38
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xe8ffff,
+        emissive: 0x2e9bb2,
+        emissiveIntensity: 0.8,
+        roughness: 0.3
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x8cecff, 0x061a26, 1.65));
+
+    const keyLight = new THREE.DirectionalLight(0x9af7ff, 2.8);
+    keyLight.position.set(8, 18, 12);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -24;
+    keyLight.shadow.camera.right = 24;
+    keyLight.shadow.camera.top = 24;
+    keyLight.shadow.camera.bottom = -24;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 65;
+    keyLight.shadow.bias = -0.0003;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x4d67ff, 1.25);
+    rimLight.position.set(-15, 8, -18);
+    scene.add(rimLight);
+
+    const warmLight = new THREE.PointLight(0xff9a50, 18, 30, 2);
+    warmLight.position.set(5, 2, 7);
+    scene.add(warmLight);
+
+    // ---------------------------------------------------------------------
+    // Geometry helpers
+    // ---------------------------------------------------------------------
+    function mesh(geometry, material, position, scale = [1, 1, 1], parent = world) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(...position);
+      object.scale.set(...scale);
+      object.castShadow = true;
+      object.receiveShadow = true;
+      parent.add(object);
+      return object;
+    }
+
+    function cylinderBetween(a, b, radius, material, parent = world, radialSegments = 10) {
+      const start = new THREE.Vector3(...a);
+      const end = new THREE.Vector3(...b);
+      const direction = end.clone().sub(start);
+      const middle = start.clone().add(end).multiplyScalar(0.5);
+      const object = mesh(
+        new THREE.CylinderGeometry(radius, radius, direction.length(), radialSegments),
+        material,
+        middle.toArray(),
+        [1, 1, 1],
+        parent
+      );
+      object.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.clone().normalize()
+      );
+      return object;
+    }
+
+    function addTextSprite(text, color = "#a9f8ff", fontSize = 38, parent = world) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 128;
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = color;
+      context.font = `900 ${fontSize}px Arial, sans-serif`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(text, 256, 64);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false
+      });
+      const sprite = new THREE.Sprite(material);
+      parent.add(sprite);
+      return sprite;
+    }
+
+    // ---------------------------------------------------------------------
+    // Seafloor and underwater environment
+    // ---------------------------------------------------------------------
+    const seafloor = mesh(
+      new THREE.PlaneGeometry(100, 100, 32, 32),
+      materials.rock,
+      [0, -2.6, 0],
+      [1, 1, 1]
+    );
+    seafloor.rotation.x = -Math.PI / 2;
+    seafloor.receiveShadow = true;
+
+    const heightField = new THREE.Float32Array(33 * 33);
+    for (let y = 0; y < 33; y++) {
+      for (let x = 0; x < 33; x++) {
+        const px = (x / 32 - 0.5) * 46;
+        const pz = (y / 32 - 0.5) * 46;
+        const height = -2.5 + Math.sin(px * 0.28) * 0.75 + Math.cos(pz * 0.22) * 0.65
+          + Math.sin((px + pz) * 0.45) * 0.28;
+        heightField[y * 33 + x] = height;
+      }
+    }
+    seafloor.geometry.setAttribute("position", new THREE.BufferAttribute(heightField, 3));
+    seafloor.computeVertexNormals();
+
+    // Large coral formations.
+    const coralColors = [0xff5f78, 0xffb45c, 0x8a7cff, 0x55e6d0];
+
+    function coral(x, z, scale, colorIndex) {
+      const group = new THREE.Group();
+      group.position.set(x, -2.45, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      for (let i = 0; i < 5; i++) {
+        const angle = i * 2.399;
+        const radius = 0.25 + i * 0.15;
+        const height = 1.3 + (i % 3) * 0.45;
+        const cx = Math.cos(angle) * radius;
+        const cz = Math.sin(angle) * radius;
+        const material = new THREE.MeshStandardMaterial({
+          color: coralColors[colorIndex % coralColors.length],
+          emissive: coralColors[colorIndex % coralColors.length],
+          emissiveIntensity: 0.45,
+          roughness: 0.78
+        });
+
+        const stem = mesh(
+          new THREE.CylinderGeometry(0.12, 0.28, height, 8),
+          material,
+          [cx, height * 0.5, cz],
+          [1, 1, 1],
+          group
+        );
+
+        for (let j = 0; j < 3; j++) {
+          const branch = mesh(
+            new THREE.CylinderGeometry(0.08, 0.16, 0.75, 7),
+            material,
+            [cx + Math.cos(angle + j * 0.7) * 0.18, height + 0.25, cz + Math.sin(angle + j * 0.7) * 0.18],
+            [1, 1, 1],
+            group
+          );
+          branch.rotation.z = Math.cos(angle + j * 0.7) * 0.35;
+          branch.rotation.x = Math.sin(angle + j * 0.7) * 0.35;
+        }
+      }
+    }
+
+    coral(-10, -7, 1.5, 0);
+    coral(9, -8, 1.8, 1);
+    coral(-12, 7, 1.35, 2);
+    coral(11, 7, 1.6, 3);
+    coral(0, -13, 1.1, 0);
+    coral(-8, 13, 1.25, 1);
+    coral(8, 13, 1.4, 2);
+
+    // Underwater arches.
+    function arch(x, z, width, height, color) {
+      const group = new THREE.Group();
+      group.position.set(x, -2.4, z);
+      world.add(group);
+
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.7,
+        roughness: 0.65
+      });
+
+      const left = mesh(
+        new THREE.CylinderGeometry(width * 0.32, width * 0.48, height, 12, 1, true),
+        material,
+        [-width * 0.31, height * 0.5, 0],
+        [1, 1, 1],
+        group
+      );
+      left.rotation.z = -0.12;
+
+      const right = mesh(
+        new THREE.CylinderGeometry(width * 0.32, width * 0.48, height, 12, 1, true),
+        material,
+        [width * 0.31, height * 0.5, 0],
+        [1, 1, 1],
+        group
+      );
+      right.rotation.z = 0.12;
+    }
+
+    arch(-14, 2, 3.4, 5.2, 0x42dfff);
+    arch(14, -2, 4.1, 6.0, 0x9b72ff);
+    arch(0, 15, 2.8, 4.3, 0xff617d);
+
+    // Suspended particles.
+    const particleCount = 650;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSpeeds = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 55;
+      particlePositions[i * 3 + 1] = -1 + Math.random() * 22;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 55;
+      particleSpeeds[i] = 0.08 + Math.random() * 0.2;
+    }
+
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+    const particles = new THREE.Points(
+      particleGeometry,
+      new THREE.PointsMaterial({
+        color: 0x9af8ff,
+        size: 0.075,
+        transparent: true,
+        opacity: 0.48,
+        depthWrite: false
+      })
+    );
+    world.add(particles);
+
+    // ---------------------------------------------------------------------
+    // Robot Master habitats
+    // ---------------------------------------------------------------------
+    const robotMasters = [
+      { name: "Cutman", color: 0xff4f6f, weapon: "Slicer", weakness: "Jet" },
+      { name: "Pope", color: 0xb38cff, weapon: "Buster", weakness: "Magnet" },
+      { name: "Vile", color: 0xffbd55, weapon: "Fire", weakness: "Ice" },
+      { name: "Lollipop", color: 0x63e7d0, weapon: "Lollipop", weakness: "Magnet" },
+      { name: "Tallman", color: 0x7755ff, weapon: "Uppercut", weakness: "Magnet" },
+      { name: "Bull", color: 0xff685e, weapon: "Bullhorn", weakness: "Magnet" },
+      { name: "Guts", color: 0xe06cff, weapon: "Rush", weakness: "Magnet" },
+      { name: "Fore", color: 0x70b8ff, weapon: "Screw", weakness: "Magnet" }
+    ];
+
+    function robotHabitat(index, x, z, title) {
+      const group = new THREE.Group();
+      group.position.set(x, -2.45, z);
+      world.add(group);
+
+      const accent = new THREE.MeshStandardMaterial({
+        color: robotMasters[index].color,
+        emissive: robotMasters[index].color,
+        emissiveIntensity: 1.5
+      });
+
+      // Main habitat shell.
+      mesh(
+        new THREE.CylinderGeometry(4.6, 5.4, 7, 18, 1, true),
+        materials.rockLight,
+        [0, 3.5, 0],
+        [1, 1, 1],
+        group
+      );
+
+      mesh(
+        new THREE.CylinderGeometry(4.25, 4.25, 0.45, 18),
+        materials.rock,
+        [0, 0.25, 0],
+        [1, 1, 1],
+        group
+      );
+
+      // Inner glowing ring.
+      mesh(
+        new THREE.TorusGeometry(3.65, 0.18, 8, 40),
+        accent,
+        [0, 6.3, 0],
+        [1, 1, 1],
+        group
+      );
+
+      // Structural ribs.
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const rib = mesh(
+          new THREE.CylinderGeometry(0.16, 0.22, 6.5, 7),
+          materials.rock,
+          [Math.cos(angle) * 4.35, 3.2, Math.sin(angle) * 4.35],
+          [1, 1, 1],
+          group
+        );
+        rib.rotation.z = Math.cos(angle) * 0.12;
+        rib.rotation.x = Math.sin(angle) * 0.12;
+      }
+
+      // Weapon display.
+      const weapon = mesh(
+        new THREE.CylinderGeometry(0.42, 0.58, 1.25, 10),
+        accent,
+        [0, 5.1, 0],
+        [1, 1, 1],
+        group
+      );
+      weapon.rotation.z = Math.PI / 2;
+
+      mesh(
+        new THREE.SphereGeometry(0.72, 16, 12),
+        accent,
+        [0, 5.1, 0],
+        [1, 1, 1],
+        group
+      );
+
+      // Floating weapon fragments.
+      for (let i = 0; i < 5; i++) {
+        const fragment = mesh(
+          new THREE.TorusGeometry(0.18, 0.045, 6, 14),
+          accent,
+          [Math.random() * 7 - 3.5, 7.2 + Math.random() * 2.2, Math.random() * 6 - 3],
+          [1, 1, 1],
+          group
+        );
+        fragment.rotation.set(Math.random(), Math.random(), Math.random());
+      }
+
+      const label = addTextSprite(title, `#${robotMasters[index].color.toString(16).padStart(6, "0")}`, 31, group);
+      label.position.set(0, 8.2, 0);
+      label.scale.set(4.4, 1.1, 1);
+
+      // Orbiting energy ring.
+      const orbit = mesh(
+        new THREE.TorusGeometry(3.1, 0.055, 6, 64),
+        accent,
+        [0, 7.1, 0],
+        [1, 1, 1],
+        group
+      );
+      orbit.rotation.x = Math.PI / 2;
+
+      return { group, orbit, weapon, label, index };
+    }
+
+    const habitats = robotMasters.map((master, index) => {
+      const habitat = robotHabitat(index, 0, index * 3.4, master.name);
+      habitat.index = index;
+      return habitat;
+    });
+
+    // ---------------------------------------------------------------------
+    // Dr. Wily's Skull Fortress
+    // ---------------------------------------------------------------------
+    const fortress = new THREE.Group();
+    fortress.position.set(0, -2.4, 17);
+    world.add(fortress);
+
+    const fortressAccent = new THREE.MeshStandardMaterial({
+      color: 0x9c72ff,
+      emissive: 0x552b8b,
+      emissiveIntensity: 1.8,
+      roughness: 0.5
+    });
+
+    // Central skull-shaped command platform.
+    const skull = mesh(
+      new THREE.CylinderGeometry(4.6, 5.3, 1.3, 12),
+      materials.rock,
+      [0, 0.65, 0],
+      [1, 1, 1],
+      fortress
+    );
+
+    mesh(
+      new THREE.SphereGeometry(1.05, 18, 12),
+      materials.rockLight,
+      [0, 1.55, 0],
+      [1, 0.75, 0.75],
+      fortress
+    );
+
+    const skullEyeLeft = mesh(
+      new THREE.SphereGeometry(0.38, 14, 10),
+      materials.cyan,
+      [-0.78, 1.95, 0.08],
+      [1, 1, 0.7],
+      fortress
+    );
+    const skullEyeRight = mesh(
+      new THREE.SphereGeometry(0.38, 14, 10),
+      materials.cyan,
+      [0.78, 1.95, 0.08],
+      [1, 1, 0.7],
+      fortress
+    );
+    skullEyeLeft.rotation.z = -0.3;
+    skullEyeRight.rotation.z = 0.3;
+
+    // Six skull fortress stages, arranged around the center.
+    const fortressStages = [
+      { name: "Skull Stage 01", title: "SKULL STAGE 01", x: -11, z: -4, accent: 0x4adfff, boss: "Bull" },
+      { name: "Skull Stage 02", title: "SKULL STAGE 02", x: -11, z: 9, accent: 0x7d6cff, boss: "Tallman" },
+      { name: "Skull Stage 03", title: "SKULL STAGE 03", x: 0, z: 15, accent: 0xff5f78, boss: "Fore" },
+      { name: "Skull Stage 04", title: "SKULL STAGE 04", x: 11, z: 9, accent: 0x9b72ff, boss: "Pope" },
+      { name: "Skull Stage 05", title: "SKULL STAGE 05", x: 11, z: -4, accent: 0xffbd55, boss: "Vile" },
+      { name: "Skull Stage 06", title: "SKULL STAGE 06", x: 0, z: 23, accent: 0xe06cff, boss: "Guts" }
+    ];
+
+    function fortressStage(config) {
+      const group = new THREE.Group();
+      group.position.set(config.x, -2.4, config.z);
+      fortress.add(group);
+
+      const accent = new THREE.MeshStandardMaterial({
+        color: config.accent,
+        emissive: config.accent,
+        emissiveIntensity: 1.5
+      });
+
+      // Platform.
+      mesh(
+        new THREE.CylinderGeometry(4.5, 5.4, 1.2, 12),
+        materials.rock,
+        [0, 0.6, 0],
+        [1, 1, 1],
+        group
+      );
+
+      // Skull facade.
+      const skull = mesh(
+        new THREE.SphereGeometry(1.8, 16, 12),
+        materials.rockLight,
+        [0, 2.2, 0],
+        [1, 0.85, 0.8],
+        group
+      );
+
+      const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: config.accent,
+        emissive: config.accent,
+        emissiveIntensity: 3,
+        roughness: 0.25
+      });
+
+      const eyeLeft = mesh(
+        new THREE.SphereGeometry(0.48, 14, 10),
+        eyeMaterial,
+        [-0.62, 2.7, 0.55],
+        [1, 1, 0.7],
+        group
+      );
+      eyeLeft.rotation.z = -0.25;
+
+      const eyeRight = mesh(
+        new THREE.SphereGeometry(0.48, 14, 10),
+        eyeMaterial,
+        [0.62, 2.7, 0.55],
+        [1, 1, 0.7],
+        group
+      );
+      eyeRight.rotation.z = 0.25;
+
+      // Horns.
+      const leftHorn = mesh(
+        new THREE.ConeGeometry(0.36, 1.2, 8),
+        accent,
+        [-1.2, 3.35, 0],
+        [1, 1, 1],
+        group
+      );
+      leftHorn.rotation.z = -0.7;
+
+      const rightHorn = mesh(
+        new THREE.ConeGeometry(0.36, 1.2, 8),
+        accent,
+        [1.2, 3.35, 0],
+        [1, 1, 1],
+        group
+      );
+      rightHorn.rotation.z = 0.7;
+
+      // Gate arch.
+      const archMaterial = new THREE.MeshStandardMaterial({
+        color: 0x263849,
+        emissive: config.accent,
+        emissiveIntensity: 0.55,
+        roughness: 0.7
+      });
+
+      const leftArch = mesh(
+        new THREE.CylinderGeometry(2.3, 2.8, 4.2, 12, 1, true),
+        archMaterial,
+        [-2.35, 2.1, 0],
+        [1, 1, 1],
+        group
+      );
+      leftArch.rotation.z = -0.18;
+
+      const rightArch = mesh(
+        new THREE.CylinderGeometry(2.3, 2.8, 4.2, 12, 1, true),
+        archMaterial,
+        [2.35, 2.1, 0],
+        [1, 1, 1],
+        group
+      );
+      rightArch.rotation.z = 0.18;
+
+      // Boss weapon.
+      const weapon = mesh(
+        new THREE.CylinderGeometry(0.75, 0.9, 1.2, 12),
+        accent,
+        [0, 5.1, 0],
+        [1, 1, 1],
+        group
+      );
+      weapon.rotation.z = Math.PI / 2;
+
+      mesh(
+        new THREE.SphereGeometry(1.05, 16, 12),
+        accent,
+        [0, 5.1, 0],
+        [1, 1, 1],
+        group
+      );
+
+      // Floating weapon energy.
+      for (let i = 0; i < 7; i++) {
+        const energy = mesh(
+          new THREE.TorusGeometry(0.2, 0.055, 6, 14),
+          accent,
+          [Math.random() * 6 - 3, 6.2 + Math.random() * 3, Math.random() * 5 - 2.5],
+          [1, 1, 1],
+          group
+        );
+        energy.rotation.set(Math.random(), Math.random(), Math.random());
+      }
+
+      const label = addTextSprite(config.title, `#${config.accent.toString(16).padStart(6, "0")}`, 34, group);
+      label.position.set(0, 7.2, 0);
+      label.scale.set(4.7, 1.18, 1);
+
+      // Central boss figure.
+      const boss = new THREE.Group();
+      boss.position.set(0, 0.2, 0);
+      group.add(boss);
+
+      mesh(
+        new THREE.CylinderGeometry(1.05, 1.45, 2.2, 12),
+        materials.rockLight,
+        [0, 1.1, 0],
+        [1, 1, 1],
+        boss
+      );
+
+      const helmet = mesh(
+        new THREE.SphereGeometry(1.15, 16, 12),
+        accent,
+        [0, 2.25, 0],
+        [1, 0.72, 1],
+        boss
+      );
+
+      const visor = mesh(
+        new THREE.BoxGeometry(1.25, 0.32, 0.12),
+        eyeMaterial,
+        [0, 2.43, 0.94],
+        [1, 1, 1],
+        boss
+      );
+
+      mesh(
+        new THREE.ConeGeometry(0.18, 0.8, 8),
+        accent,
+        [-0.95, 2.35, 0],
+        [1, 1, 1],
+        boss
+      );
+
+      mesh(
+        new THREE.ConeGeometry(0.18, 0.8, 8),
+        accent,
+        [0.95, 2.35, 0],
+        [1, 1, 1],
+        boss
+      );
+
+      return { group, boss, weapon, energy: energy };
+    }
+
+    const stages = fortressStages.map(forressureStage);
+
+    // ---------------------------------------------------------------------
+    // Mega Man and Bubble Man
+    // ---------------------------------------------------------------------
+    const hero = new THREE.Group();
+    hero.position.set(-1.5, -2.2, 8);
+    world.add(hero);
+
+    const heroMaterial = new THREE.MeshStandardMaterial({
+      color: 0x72c9d0,
+      emissive: 0x0a4c55,
+      emissiveIntensity: 0.75,
+      roughness: 0.42,
+      metalness: 0.12
+    });
+
+    const heroDark = new THREE.MeshStandardMaterial({
+      color: 0x173b46,
+      roughness: 0.55,
+      metalness: 0.15
+    });
+
+    // Legs.
+    mesh(new THREE.CylinderGeometry(0.32, 0.4, 1.15, 10), heroMaterial, [-0.48, 0.58, 0], [1, 1, 1], hero);
+    mesh(new THREE.CylinderGeometry(0.32, 0.4, 1.15, 10), heroMaterial, [0.48, 0.58, 0], [1, 1, 1], hero);
+
+    // Torso.
+    mesh(new THREE.CylinderGeometry(0.72, 0.85, 1.25, 14), heroMaterial, [0, 1.55, 0], [1, 1, 1], hero);
+
+    // Head and visor.
+    mesh(new THREE.SphereGeometry(0.68, 16, 12), heroMaterial, [0, 2.55, 0], [1, 0.9, 1], hero);
+    mesh(new THREE.BoxGeometry(0.9, 0.26, 0.1), materials.cyan, [0, 2.56, 0.66], [1, 1, 1], hero);
+
+    // Arms.
+    const leftArm = mesh(new THREE.CylinderGeometry(0.25, 0.32, 0.95, 10), heroMaterial, [-0.98, 1.48, 0], [1, 1, 1], hero);
+    const rightArm = mesh(new THREE.CylinderGeometry(0.25, 0.32, 0.95, 10), heroMaterial, [0.98, 1.48, 0], [1, 1, 1], hero);
+    leftArm.rotation.z = -0.25;
+    rightArm.rotation.z = 0.25;
+
+    // Bubble shield.
+    const shield = mesh(
+      new THREE.SphereGeometry(1.05, 18, 12),
+      materials.bubble,
+      [0, 1.8, 0.05],
+      [1, 0.75, 0.72],
+      hero
+    );
+    shield.castShadow = false;
+
+    // Bubble trail.
+    const bubbleTrail = new THREE.Group();
+    hero.add(bubbleTrail);
+
+    for (let i = 0; i < 7; i++) {
+      const bubble = mesh(
+        new THREE.SphereGeometry(0.12 + i * 0.025, 10, 8),
+        materials.bubble,
+        [0, 0, 0],
+        [1, 1, 1],
+        bubbleTrail
+      );
+      bubble.scale.y = 0.7;
+    }
+
+    // Hero weapon.
+    const heroWeapon = mesh(
+      new THREE.CylinderGeometry(0.38, 0.5, 0.85, 12),
+      materials.cyan,
+      [0, 0.18, 0],
+      [1, 1, 1],
+      hero
+    );
+    heroWeapon.rotation.z = Math.PI / 2;
+
+    // ---------------------------------------------------------------------
+    // Animated environmental elements
+    // ---------------------------------------------------------------------
+    const bubbles = [];
+
+    function createBubble(x, y, z, scale = 1, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      const outer = mesh(
+        new THREE.SphereGeometry(0.48, 12, 8),
+        materials.bubble,
+        [0, 0, 0],
+        [1, 1, 1],
+        group
+      );
+      outer.castShadow = false;
+
+      const inner = mesh(
+        new THREE.SphereGeometry(0.31, 10, 7),
+        new THREE.MeshBasicMaterial({ color: 0x65d8e8, transparent: true, opacity: 0.42 }),
+        [0, 0.04, 0],
+        [1, 1, 1],
+        group
+      );
+      inner.castShadow = false;
+
+      bubbles.push({ group, outer, inner, speed: 0.18 + Math.random() * 0.25, phase: Math.random() * Math.PI * 2 });
+      return group;
+    }
+
+    createBubble(-7, 2, -4, 0.9);
+    createBubble(6, 4, -9, 0.7);
+    createBubble(2, 6, 8, 0.85);
+    createBubble(-5, 7, 12, 0.65);
+    createBubble(8, 8, 16, 0.55);
+
+    // Bubbles rising around the fortress.
+    for (let i = 0; i < 24; i++) {
+      createBubble(
+        (Math.random() - 0.5) * 32,
+        -1 + Math.random() * 16,
+        (Math.random() - 0.5) * 32,
+        0.25 + Math.random() * 0.55
+      );
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: orbit, pan, zoom, touch, and click exploration
+    // ---------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 2, 4),
+      azimuth: 0,
+      polar: 1.12,
+      radius: 25,
+      dragging: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      pressed: []
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      controls.dragging = true;
+      controls.pointerId = event.pointerId;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!controls.dragging || event.pointerId !== controls.pointerId) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.azimuth -= dx * 0.005;
+      controls.polar = THREE.MathUtils.clamp(controls.polar - dy * 0.004, 0.35, 1.48);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      if (event.pointerId !== controls.pointerId) return;
+      controls.dragging = false;
+      controls.pointerId = null;
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(controls.radius + event.deltaY * 0.018, 8, 48);
+      updateCamera();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("dblclick", () => {
+      const focus = habitats[0]?.group.position.clone().add(new THREE.Vector3(0, 0, 0));
+      controls.target.lerp(focus, 0.08);
+      controls.radius = THREE.MathUtils.clamp(controls.radius - 3, 8, 48);
+      updateCamera();
+    });
+
+    // Clickable landmarks.
+    const clickable = [];
+
+    function registerClickable(object, position, title, subtitle, color) {
+      object.userData.isClickable = true;
+      object.userData.position = new THREE.Vector3(...position);
+      object.userData.title = title;
+      object.userData.subtitle = subtitle;
+      object.userData.color = new THREE.Color(color);
+      clickable.push(object);
+    }
+
+    const heroLabel = addTextSprite("Mega Man", "#7ffaff", 42);
+    heroLabel.position.set(0, 4.4, 0);
+    heroLabel.scale.set(3.2, 0.8, 1);
+    registerClickable(hero, hero.position.toArray(), "Mega Man", "Bubble-man hero", 0x75e6ef);
+
+    for (const habitat of habitats) {
+      const label = habitat.label;
+      label.userData.title = `${habitat.name} · Weapon`;
+      label.userData.subtitle = `${habitat.weapon} · Weakness`;
+      registerClickable(label, habitat.group.position.toArray(), habitat.name, `${habitat.weapon} weapon`, habitat.group.children[0]?.material?.color ?? 0x79f2ff);
+    }
+
+    for (const stage of stages) {
+      const label = stage.group.children.find(child => child.isSprite);
+      if (label) {
+        label.userData.title = label.userData.title || stage.group.children[0].material?.color ? "Skull Stage" : "Skull Stage";
+        label.userData.subtitle = stage.boss;
+        registerClickable(label, stage.group.position.toArray(), stage.title, stage.boss, 0x9c72ff);
+      }
+    }
+
+    clickable.forEach(object => {
+      object.traverse(child => {
+        if (child.isMesh) child.userData.clickable = true;
+      });
+    });
+
+    renderer.domElement.addEventListener("click", event => {
+      const hit = pickClickable(event);
+      if (!hit) return;
+
+      const position = hit.userData.position;
+      controls.target.lerp(position, 0.08);
+      controls.radius = THREE.MathUtils.clamp(controls.radius - 4, 8, 48);
+      updateCamera();
+
+      const label = hit.userData.label;
+      if (label) {
+        label.material.depthTest = false;
+        label.material.depthWrite = false;
+      }
+    });
+
+    function pickClickable(event) {
+      const pointer = new THREE.Vector2(
+        (event.clientX / innerWidth) * 2 - 1,
+        -(event.clientY / innerHeight) * 2 + 1
+      );
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(clickable, false);
+      if (!hits.length) return null;
+
+      const hit = hits[0].object;
+      if (hit.userData.label) return hit;
+      return null;
+    }
+
+    // ---------------------------------------------------------------------
+    // UI and game narrative
+    // ---------------------------------------------------------------------
+    const narrative = {
+      title: "Mega Man 2",
+      subtitle: "Underwater Lair",
+      description: "Eight Robot Masters guard Dr. Wily’s Skull Fortress. Explore the depths, discover weapon weaknesses, and choose the order of your assault."
+    };
+
+    const titlePanel = document.createElement("div");
+    titlePanel.className = "hud title";
+    titlePanel.innerHTML = `
+      <div class="eyebrow">${narrative.title} · Underwater Lair</div>
+      <h1>${narrative.subtitle}</h1>
+      <div class="subtitle">${narrative.description}</div>
+    `;
+    document.body.insertBefore(titlePanel, document.querySelector(".legend"));
+
+    const status = document.createElement("div");
+    status.className = "hud";
+    status.style.top = "24px";
+    status.style.right = "24px";
+    status.style.textAlign = "right";
+    status.innerHTML = `
+      <div class="eyebrow">Mission status</div>
+      <div id="mission-title">Explore the lair</div>
+      <div id="mission-text">Find the Robot Masters and their weapon weaknesses.</div>
+    `;
+    document.body.appendChild(status);
+
+    const missionTitle = status.querySelector("#mission-title");
+    const missionText = status.querySelector("#mission-text");
+
+    function setMission(title, text) {
+      missionTitle.textContent = title;
+      missionText.textContent = text;
+    }
+
+    // ---------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------
+    clock = new THREE.Clock();
+    let elapsed = 0;
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      elapsed += delta;
+
+      // Gentle camera drift when idle.
+      if (!controls.dragging && performance.now() - (controls.lastInteraction || 0) > 3500) {
+        controls.azimuth += delta * 0.025;
+        updateCamera();
+      }
+
+      // Bubbles rise and pulse.
+      for (const bubble of bubbles) {
+        bubble.group.position.y += bubble.speed * delta;
+        bubble.group.rotation.y += delta * 0.18;
+        bubble.group.position.x += Math.sin(elapsed * 0.6 + bubble.phase) * delta * 0.035;
+
+        if (bubble.group.position.y > 19) {
+          bubble.group.position.y = -1;
+          bubble.group.position.x = (Math.random() - 0.5) * 32;
+          bubble.group.position.z = (Math.random() - 0.5) * 32;
+        }
+
+        const pulse = 1 + Math.sin(elapsed * 1.4 + bubble.phase) * 0.055;
+        bubble.outer.scale.set(pulse, 0.88, pulse);
+        bubble.inner.scale.set(1 - pulse * 0.16, 1 - pulse * 0.16, 1 - pulse * 0.16);
+      }
+
+      // Fortress energy pulses.
+      for (const stage of stages) {
+        const pulse = 1 + Math.sin(elapsed * 1.7 + stage.index) * 0.12;
+        stage.group.traverse(object => {
+          if (object.material?.emissiveIntensity !== undefined) {
+            object.material.emissiveIntensity = object.material.baseEmissive ?? 1.5 * pulse;
+          }
+        });
+      }
+
+      // Hero subtle breathing and bubble trail motion.
+      hero.position.y = -2.2 + Math.sin(elapsed * 1.2) * 0.08;
+      shield.scale.setScalar(1 + Math.sin(elapsed * 1.2) * 0.025);
+      heroWeapon.rotation.y = elapsed * 0.35;
+
+      for (let i = 0; i < bubbleTrail.children.length; i++) {
+        const bubble = bubbleTrail.children[i];
+        bubble.position.y = -0.8 + i * 0.16;
+        bubble.position.x = Math.sin(elapsed * 1.1 + i) * (0.25 + i * 0.035);
+        bubble.scale.setScalar(0.7 + i * 0.08);
+      }
+
+      // Update particles.
+      const positions = particleGeometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3 + 1] += particleSpeeds[i] * delta;
+        positions[i * 3] += Math.sin(elapsed * 0.3 + i) * delta * 0.012;
+
+        if (positions[i * 3 + 1] > 22) {
+          positions[i * 3 + 1] = -1;
+        }
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

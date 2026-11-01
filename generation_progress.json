@@ -133,5 +133,14 @@
     "filename": "015_castlevania_clock_tower.html",
     "verified_working": false,
     "generated_at": "2026-11-01 01:35:27"
+  },
+  "16": {
+    "id": 16,
+    "game": "Mega Man 2",
+    "target": "Bubble Man's Underwater Lair",
+    "platform": "NES",
+    "filename": "016_mega_man_2_bubble_man_s_underwater_lair.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 01:51:38"
   }
 }
