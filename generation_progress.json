@@ -241,5 +241,14 @@
     "filename": "027_dragon_warrior_charlock_castle.html",
     "verified_working": false,
     "generated_at": "2026-11-01 04:36:50"
+  },
+  "28": {
+    "id": 28,
+    "game": "Batman",
+    "target": "Axis Chemical Factory",
+    "platform": "NES",
+    "filename": "028_batman_axis_chemical_factory.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 04:49:44"
   }
 }
