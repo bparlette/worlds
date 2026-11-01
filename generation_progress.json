@@ -8,80 +8,8 @@
     "generated_at": "2026-10-31 22:07:21",
     "verified_working": true
   },
-  "2": {
-    "id": 2,
-    "game": "Pitfall!",
-    "target": "Jungle & Underworld",
-    "platform": "Atari 2600",
-    "filename": "002_pitfall_jungle_underworld.html",
-    "generated_at": "2026-10-31 22:17:06",
-    "verified_working": true
-  },
-  "3": {
-    "id": 3,
-    "game": "Haunted House",
-    "target": "Ghost Mansion",
-    "platform": "Atari 2600",
-    "filename": "003_haunted_house_ghost_mansion.html",
-    "generated_at": "2026-10-31 22:28:22",
-    "verified_working": true
-  },
-  "4": {
-    "id": 4,
-    "game": "Yars' Revenge",
-    "target": "Neutral Zone & Shield",
-    "platform": "Atari 2600",
-    "filename": "004_yars_revenge_neutral_zone_shield.html",
-    "generated_at": "2026-10-31 22:37:26",
-    "verified_working": true
-  },
-  "5": {
-    "id": 5,
-    "game": "River Raid",
-    "target": "Canyon Riverway",
-    "platform": "Atari 2600",
-    "filename": "005_river_raid_canyon_riverway.html",
-    "generated_at": "2026-10-31 22:47:54",
-    "verified_working": true
-  },
-  "6": {
-    "id": 6,
-    "game": "Solaris",
-    "target": "Stellar Quadrants & Canyons",
-    "platform": "Atari 2600",
-    "filename": "006_solaris_stellar_quadrants_canyons.html",
-    "verified_working": false,
-    "generated_at": "2026-10-31 23:29:46"
-  },
-  "7": {
-    "id": 7,
-    "game": "Mountain King",
-    "target": "Diamond Caverns",
-    "platform": "Atari 2600",
-    "filename": "007_mountain_king_diamond_caverns.html",
-    "verified_working": true,
-    "generated_at": "2026-10-31 23:36:52"
-  },
-  "8": {
-    "id": 8,
-    "game": "Berzerk",
-    "target": "Electrified Neon Maze",
-    "platform": "Atari 2600",
-    "filename": "008_berzerk_electrified_neon_maze.html",
-    "verified_working": false,
-    "generated_at": "2026-10-31 23:46:41"
-  },
-  "9": {
-    "id": 9,
-    "game": "Warlords",
-    "target": "Quadrant Fortresses",
-    "platform": "Atari 2600",
-    "filename": "009_warlords_quadrant_fortresses.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 00:36:16"
-  },
-  "10": {
-    "id": 10,
+  "112": {
+    "id": 112,
     "game": "Super Mario Bros.",
     "target": "World 1-1",
     "platform": "NES",
@@ -89,35 +17,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 01:26:01"
   },
-  "11": {
-    "id": 11,
-    "game": "Super Mario Bros. 3",
-    "target": "Dark Land Airships",
-    "platform": "NES",
-    "filename": "011_super_mario_bros_3_dark_land_airships.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 01:36:26"
-  },
-  "12": {
-    "id": 12,
-    "game": "The Legend of Zelda",
-    "target": "Underworld Dungeons",
-    "platform": "NES",
-    "filename": "012_the_legend_of_zelda_underworld_dungeons.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 01:52:02"
-  },
-  "13": {
-    "id": 13,
-    "game": "Zelda II: The Adventure of Link",
-    "target": "Palace Temples",
-    "platform": "NES",
-    "filename": "013_zelda_ii_the_adventure_of_link_palace_temples.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 01:04:03"
-  },
-  "14": {
-    "id": 14,
+  "108": {
+    "id": 108,
     "game": "Metroid",
     "target": "Norfair Volcanic Caverns",
     "platform": "NES",
@@ -125,17 +26,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 01:19:32"
   },
-  "15": {
-    "id": 15,
-    "game": "Castlevania",
-    "target": "Clock Tower",
-    "platform": "NES",
-    "filename": "015_castlevania_clock_tower.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 01:35:27"
-  },
-  "16": {
-    "id": 16,
+  "109": {
+    "id": 109,
     "game": "Mega Man 2",
     "target": "Bubble Man's Underwater Lair",
     "platform": "NES",
@@ -143,26 +35,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 01:51:38"
   },
-  "17": {
-    "id": 17,
-    "game": "Contra",
-    "target": "Jungle Waterfall",
-    "platform": "NES",
-    "filename": "017_contra_jungle_waterfall.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 02:06:36"
-  },
-  "18": {
-    "id": 18,
-    "game": "Ninja Gaiden",
-    "target": "Downtown Neon Rooftops",
-    "platform": "NES",
-    "filename": "018_ninja_gaiden_downtown_neon_rooftops.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 02:23:38"
-  },
-  "19": {
-    "id": 19,
+  "224": {
+    "id": 224,
     "game": "Blaster Master",
     "target": "Area 1 Underworld",
     "platform": "NES",
@@ -170,17 +44,8 @@
     "verified_working": true,
     "generated_at": "2026-11-01 02:39:32"
   },
-  "20": {
-    "id": 20,
-    "game": "Bionic Commando",
-    "target": "Neutral Area Military Base",
-    "platform": "NES",
-    "filename": "020_bionic_commando_neutral_area_military_base.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 02:52:06"
-  },
-  "21": {
-    "id": 21,
+  "132": {
+    "id": 132,
     "game": "DuckTales",
     "target": "The Moon Base",
     "platform": "NES",
@@ -188,26 +53,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 03:04:46"
   },
-  "22": {
-    "id": 22,
-    "game": "Kid Icarus",
-    "target": "Sky World Floating Palace",
-    "platform": "NES",
-    "filename": "022_kid_icarus_sky_world_floating_palace.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 03:20:13"
-  },
-  "23": {
-    "id": 23,
-    "game": "StarTropics",
-    "target": "Submerged Coral Caverns",
-    "platform": "NES",
-    "filename": "023_startropics_submerged_coral_caverns.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 03:36:23"
-  },
-  "24": {
-    "id": 24,
+  "110": {
+    "id": 110,
     "game": "Kirby's Adventure",
     "target": "Rainbow Resort",
     "platform": "NES",
@@ -215,26 +62,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 03:48:27"
   },
-  "25": {
-    "id": 25,
-    "game": "EarthBound Beginnings",
-    "target": "Magicant",
-    "platform": "NES",
-    "filename": "025_earthbound_beginnings_magicant.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 04:06:35"
-  },
-  "26": {
-    "id": 26,
-    "game": "Final Fantasy",
-    "target": "Flying Fortress",
-    "platform": "NES",
-    "filename": "026_final_fantasy_flying_fortress.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 04:23:39"
-  },
-  "27": {
-    "id": 27,
+  "11": {
+    "id": 11,
     "game": "Dragon Warrior",
     "target": "Charlock Castle",
     "platform": "NES",
@@ -242,17 +71,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 04:36:50"
   },
-  "28": {
-    "id": 28,
-    "game": "Batman",
-    "target": "Axis Chemical Factory",
-    "platform": "NES",
-    "filename": "028_batman_axis_chemical_factory.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 04:49:44"
-  },
-  "29": {
-    "id": 29,
+  "133": {
+    "id": 133,
     "game": "Rygar",
     "target": "Lapis Valley",
     "platform": "NES",
@@ -260,17 +80,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 05:02:48"
   },
-  "30": {
-    "id": 30,
-    "game": "Shadowgate",
-    "target": "Castle Crypt",
-    "platform": "NES",
-    "filename": "030_shadowgate_castle_crypt.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 05:13:29"
-  },
-  "31": {
-    "id": 31,
+  "134": {
+    "id": 134,
     "game": "Crystalis",
     "target": "Floating Tower of Babylon",
     "platform": "NES",
@@ -278,8 +89,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 05:27:55"
   },
-  "32": {
-    "id": 32,
+  "245": {
+    "id": 245,
     "game": "A Boy and His Blob",
     "target": "Blobolonia",
     "platform": "NES",
@@ -287,17 +98,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 05:42:01"
   },
-  "33": {
-    "id": 33,
-    "game": "Little Samson",
-    "target": "Molten Volcanic Caverns",
-    "platform": "NES",
-    "filename": "033_little_samson_molten_volcanic_caverns.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 06:32:16"
-  },
-  "34": {
-    "id": 34,
+  "344": {
+    "id": 344,
     "game": "Super Mario World",
     "target": "Forest of Illusion",
     "platform": "SNES",
@@ -305,26 +107,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 06:46:25"
   },
-  "35": {
-    "id": 35,
-    "game": "Yoshi's Island",
-    "target": "Pastel Crayon Hills",
-    "platform": "SNES",
-    "filename": "035_yoshi_s_island_pastel_crayon_hills.html",
-    "verified_working": false,
-    "generated_at": "2026-11-01 06:57:43"
-  },
-  "36": {
-    "id": 36,
-    "game": "A Link to the Past",
-    "target": "Dark World Pyramid",
-    "platform": "SNES",
-    "filename": "036_a_link_to_the_past_dark_world_pyramid.html",
-    "verified_working": true,
-    "generated_at": "2026-11-01 07:11:00"
-  },
-  "37": {
-    "id": 37,
+  "355": {
+    "id": 355,
     "game": "Super Metroid",
     "target": "Maridia Submerged Depths",
     "platform": "SNES",
@@ -332,8 +116,8 @@
     "verified_working": false,
     "generated_at": "2026-11-01 07:24:53"
   },
-  "38": {
-    "id": 38,
+  "262": {
+    "id": 262,
     "game": "Chrono Trigger",
     "target": "2300 A.D. Ruined Domes",
     "platform": "SNES",
@@ -341,8 +125,8 @@
     "verified_working": true,
     "generated_at": "2026-11-01 07:35:07"
   },
-  "39": {
-    "id": 39,
+  "263": {
+    "id": 263,
     "game": "Chrono Trigger",
     "target": "65,000,000 B.C. Tyrano Lair",
     "platform": "SNES",
