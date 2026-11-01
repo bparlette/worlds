@@ -1,0 +1,515 @@
+[
+ {
+  "rank": 1,
+  "game": "Marvel Super Heroes Vs. Street Fighter",
+  "name": "Death Valley",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-DeathValley.png",
+  "width": 768,
+  "height": 480,
+  "aspect": 1.6
+ },
+ {
+  "rank": 2,
+  "game": "Super Bonk",
+  "name": "The Bad City",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperBonk-BadCity.png",
+  "width": 2050,
+  "height": 797,
+  "aspect": 2.57
+ },
+ {
+  "rank": 3,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "On The Hilltop",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-OnTheHilltop.png",
+  "width": 768,
+  "height": 512,
+  "aspect": 1.5
+ },
+ {
+  "rank": 4,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "The Temple Of Fist",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-TempleOfFist.png",
+  "width": 768,
+  "height": 513,
+  "aspect": 1.5
+ },
+ {
+  "rank": 5,
+  "game": "Super Mario World 2: Yoshi's Island",
+  "name": "Welcome To Yoshi's Island",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperMarioWorld2-Yoshi'sIsland-World0-WelcomeToYoshi'sIsland.png",
+  "width": 1536,
+  "height": 1024,
+  "aspect": 1.5
+ },
+ {
+  "rank": 6,
+  "game": "Bonk's Adventure: Arcade Version",
+  "name": "Level 7: The Gloomy Highlands",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/Bonk'sAdventure-ArcadeVersion-Level7-GloomyHighlands.png",
+  "width": 1792,
+  "height": 808,
+  "aspect": 2.22
+ },
+ {
+  "rank": 7,
+  "game": "Ecco: The Tides Of Time",
+  "name": "Secret Cave",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/Ecco-TidesOfTime-SecretCave(Unmarked).png",
+  "width": 2048,
+  "height": 1546,
+  "aspect": 1.32
+ },
+ {
+  "rank": 8,
+  "game": "Super Ghouls 'N Ghosts",
+  "name": "Stage 6: The Castle Of The Emperor",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperGhouls'NGhosts-Stage6-CastleOfTheEmperor.png",
+  "width": 1280,
+  "height": 990,
+  "aspect": 1.29
+ },
+ {
+  "rank": 9,
+  "game": "Kirby: Squeak Squad",
+  "name": "Stage 3",
+  "image_url": "https://vgmaps.com/Atlas/DS/Kirby-SqueakSquad-PrismPlains-Stage3.png",
+  "width": 1903,
+  "height": 1402,
+  "aspect": 1.36
+ },
+ {
+  "rank": 10,
+  "game": "Kirby: Nightmare In Dream Land",
+  "name": "Stage 1 \u2014 Vegetable Valley",
+  "image_url": "https://vgmaps.com/Atlas/GBA/Kirby-NightmareInDreamLand-Level1-VegetableValley-Stage1.png",
+  "width": 1296,
+  "height": 544,
+  "aspect": 2.38
+ },
+ {
+  "rank": 11,
+  "game": "Marvel Super Heroes Vs. Street Fighter",
+  "name": "Dead Or Live: The Show",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-DeadOrLive-TheShow.png",
+  "width": 768,
+  "height": 480,
+  "aspect": 1.6
+ },
+ {
+  "rank": 12,
+  "game": "Marvel Super Heroes Vs. Street Fighter",
+  "name": "Mall Mayhem",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-MallMayhem.png",
+  "width": 768,
+  "height": 480,
+  "aspect": 1.6
+ },
+ {
+  "rank": 13,
+  "game": "Marvel Super Heroes Vs. Street Fighter",
+  "name": "Apocalypse",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-ApocalypseNow!-Apocalypse.png",
+  "width": 720,
+  "height": 448,
+  "aspect": 1.61
+ },
+ {
+  "rank": 14,
+  "game": "Marvel Super Heroes Vs. Street Fighter",
+  "name": "Cyber Akuma",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-ApocalypseNow!-CyberAkuma.png",
+  "width": 720,
+  "height": 448,
+  "aspect": 1.61
+ },
+ {
+  "rank": 15,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "Shadow In The Park",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-ShadowInThePark.png",
+  "width": 768,
+  "height": 512,
+  "aspect": 1.5
+ },
+ {
+  "rank": 16,
+  "game": "The King Of Fighters '94",
+  "name": "London, England - Windsor Great Park",
+  "image_url": "https://vgmaps.com/Atlas/Neo-Geo/KingOfFighters'94-London,England-WindsorGreatPark.png",
+  "width": 768,
+  "height": 481,
+  "aspect": 1.6
+ },
+ {
+  "rank": 17,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "The Cararact",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-Cararact.png",
+  "width": 768,
+  "height": 496,
+  "aspect": 1.55
+ },
+ {
+  "rank": 18,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "Raging Inferno (After)",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-RagingInferno(After).png",
+  "width": 1021,
+  "height": 351,
+  "aspect": 2.91
+ },
+ {
+  "rank": 19,
+  "game": "Street Fighter II: The World Warrior",
+  "name": "U.S.S.R. (Zangief)",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/StreetFighterII-WorldWarrior-USSR(Zangief).png",
+  "width": 794,
+  "height": 304,
+  "aspect": 2.61
+ },
+ {
+  "rank": 20,
+  "game": "Street Fighter II: The World Warrior",
+  "name": "Thailand (Sagat)",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/StreetFighterII-WorldWarrior-Thailand(Sagat).png",
+  "width": 853,
+  "height": 256,
+  "aspect": 3.33
+ },
+ {
+  "rank": 21,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Shopping District, Taiping Road, China (Chun-Li)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-ShoppingDistrict,TaipingRoad,China(Chun-Li).png",
+  "width": 379,
+  "height": 200,
+  "aspect": 1.9
+ },
+ {
+  "rank": 22,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Air Force Base, USA (Guile)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-AirForceBase,USA(Guile).png",
+  "width": 366,
+  "height": 200,
+  "aspect": 1.83
+ },
+ {
+  "rank": 23,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Suzaku Castle, Japan (Ryu)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-SuzakuCastle,Japan(Ryu).png",
+  "width": 379,
+  "height": 200,
+  "aspect": 1.9
+ },
+ {
+  "rank": 24,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Maharaja's Palace, India (Dhalsim)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-Maharaja'sPalace,India(Dhalsim).png",
+  "width": 383,
+  "height": 200,
+  "aspect": 1.92
+ },
+ {
+  "rank": 25,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Amazon River Basin, Brazil (Blanka)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-AmazonRiverBasin,Brazil(Blanka).png",
+  "width": 405,
+  "height": 200,
+  "aspect": 2.02
+ },
+ {
+  "rank": 26,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Kapukon Yu, Japan (E. Honda)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-KapukonYu,Japan(EHonda).png",
+  "width": 379,
+  "height": 200,
+  "aspect": 1.9
+ },
+ {
+  "rank": 27,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Battle Harbor, USA (Ken)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-BattleHarbor,USA(Ken).png",
+  "width": 353,
+  "height": 200,
+  "aspect": 1.76
+ },
+ {
+  "rank": 28,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Las Vegas, USA (Balrog)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-LasVegas,USA(Balrog).png",
+  "width": 353,
+  "height": 200,
+  "aspect": 1.76
+ },
+ {
+  "rank": 29,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Flamenco Tavern, Spain (Vega)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-FlamencoTavern,Spain(Vega).png",
+  "width": 401,
+  "height": 200,
+  "aspect": 2.0
+ },
+ {
+  "rank": 30,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Temple Hideout, Thailand (M. Bison)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-TempleHideout,Thailand(MBison).png",
+  "width": 380,
+  "height": 200,
+  "aspect": 1.9
+ },
+ {
+  "rank": 31,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Hong Kong (FeiLong)",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperStreetFighterII-NewChallengers-HongKong(FeiLong).png",
+  "width": 397,
+  "height": 196,
+  "aspect": 2.03
+ },
+ {
+  "rank": 32,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "Mexico (T. Hawk)",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/SuperStreetFighterII-NewChallengers-Mexico(THawk).png",
+  "width": 405,
+  "height": 205,
+  "aspect": 1.98
+ },
+ {
+  "rank": 33,
+  "game": "Super Street Fighter II: The New Challengers",
+  "name": "English Manor, England (Cammy)",
+  "image_url": "https://vgmaps.com/Atlas/Genesis/SuperStreetFighterII-NewChallengers-EnglishManor,England(Cammy).png",
+  "width": 383,
+  "height": 200,
+  "aspect": 1.92
+ },
+ {
+  "rank": 34,
+  "game": "Street Fighter Alpha 2",
+  "name": "Australian Outback Thunderstorms",
+  "image_url": "https://cdn.wikimg.net/en/strategywiki/images/4/4b/ELSPA_11.png",
+  "width": 300,
+  "height": 200,
+  "aspect": 1.5
+ },
+ {
+  "rank": 35,
+  "game": "Street Fighter Alpha: Warriors' Dreams",
+  "name": "China (Chun-Li)",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/StreetFighterAlpha-Warriors'Dreams-China(Chun-Li).png",
+  "width": 733,
+  "height": 240,
+  "aspect": 3.05
+ },
+ {
+  "rank": 36,
+  "game": "The King of Fighters '94",
+  "name": "Black Noah Aircraft Carrier Decks",
+  "image_url": "https://cdn.wikimg.net/en/strategywiki/images/7/76/KoF94_Screen_1.png",
+  "width": 320,
+  "height": 224,
+  "aspect": 1.43
+ },
+ {
+  "rank": 37,
+  "game": "Fatal Fury Special",
+  "name": "Geese Howard's Shinto Water Garden",
+  "image_url": "https://cdn.wikimg.net/en/strategywiki/images/b/b2/FFS_screen_2.png",
+  "width": 320,
+  "height": 224,
+  "aspect": 1.43
+ },
+ {
+  "rank": 38,
+  "game": "Garou: Mark of the Wolves",
+  "name": "Second South City Train Stations",
+  "image_url": "https://cdn.wikimg.net/en/strategywiki/images/0/02/GarouMOTW_Screen_3.png",
+  "width": 320,
+  "height": 224,
+  "aspect": 1.43
+ },
+ {
+  "rank": 39,
+  "game": "Samurai Shodown",
+  "name": "Amakusa's Temple",
+  "image_url": "https://vgmaps.com/Atlas/GameGear/SamuraiShodown-Amakusa'sTemple.png",
+  "width": 256,
+  "height": 144,
+  "aspect": 1.78
+ },
+ {
+  "rank": 40,
+  "game": "Samurai Shodown",
+  "name": "Gairyu Isle (Haohmaru)",
+  "image_url": "https://vgmaps.com/Atlas/GameGear/SamuraiShodown-GairyuIsle(Hoahmaru).png",
+  "width": 256,
+  "height": 144,
+  "aspect": 1.78
+ },
+ {
+  "rank": 41,
+  "game": "Marvel Super Heroes",
+  "name": "Thanos' Cosmic Shrine & Asteroids",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroes-Thanos.png",
+  "width": 1504,
+  "height": 480,
+  "aspect": 3.13
+ },
+ {
+  "rank": 42,
+  "game": "Marvel Super Heroes",
+  "name": "Captain America",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroes-CaptainAmerica.png",
+  "width": 1536,
+  "height": 480,
+  "aspect": 3.2
+ },
+ {
+  "rank": 43,
+  "game": "Marvel Super Heroes",
+  "name": "Wolverine",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroes-Wolverine.png",
+  "width": 768,
+  "height": 480,
+  "aspect": 1.6
+ },
+ {
+  "rank": 44,
+  "game": "Marvel Vs. Capcom: Clash Of Super Heroes",
+  "name": "Dr. Wily's Lab",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelVsCapcom-ClashOfSuperHeroes-DrWily'sLab.png",
+  "width": 768,
+  "height": 480,
+  "aspect": 1.6
+ },
+ {
+  "rank": 45,
+  "game": "Marvel Vs. Capcom: Clash Of Super Heroes",
+  "name": "Daily Bugle Rooftops",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelVsCapcom-ClashOfSuperHeroes-DailyBulgeRooftops.png",
+  "width": 768,
+  "height": 576,
+  "aspect": 1.33
+ },
+ {
+  "rank": 46,
+  "game": "Marvel Vs. Capcom: Clash Of Super Heroes",
+  "name": "Avengers Base",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelVsCapcom-ClashOfSuperHeroes-AvengersBase.png",
+  "width": 768,
+  "height": 480,
+  "aspect": 1.6
+ },
+ {
+  "rank": 47,
+  "game": "Marvel Vs. Capcom: Clash Of Super Heroes",
+  "name": "Onslaught",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelVsCapcom-ClashOfSuperHeroes-Onslaught.png",
+  "width": 768,
+  "height": 384,
+  "aspect": 2.0
+ },
+ {
+  "rank": 48,
+  "game": "Mortal Kombat II",
+  "name": "Dead Pool",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/MortalKombatII-DeadPool.png",
+  "width": 692,
+  "height": 211,
+  "aspect": 3.28
+ },
+ {
+  "rank": 49,
+  "game": "Mortal Kombat II",
+  "name": "Living Forest",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/MortalKombatII-LivingForest.png",
+  "width": 700,
+  "height": 216,
+  "aspect": 3.24
+ },
+ {
+  "rank": 50,
+  "game": "Mortal Kombat II",
+  "name": "Pit II",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/MortalKombatII-PitII.png",
+  "width": 659,
+  "height": 223,
+  "aspect": 2.96
+ },
+ {
+  "rank": 51,
+  "game": "Mortal Kombat 3",
+  "name": "Rooftop",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/MortalKombat3-Rooftop.png",
+  "width": 755,
+  "height": 223,
+  "aspect": 3.39
+ },
+ {
+  "rank": 52,
+  "game": "Mortal Kombat 3",
+  "name": "Subway",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/MortalKombat3-Subway.png",
+  "width": 617,
+  "height": 223,
+  "aspect": 2.77
+ },
+ {
+  "rank": 53,
+  "game": "Killer Instinct",
+  "name": "Castle Exterior",
+  "image_url": "https://vgmaps.com/Atlas/SuperNES/KillerInstinct-CastleExterior.png",
+  "width": 475,
+  "height": 222,
+  "aspect": 2.14
+ },
+ {
+  "rank": 54,
+  "game": "Vampire Savior",
+  "name": "Fetus of God Organic Cathedral",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/VampireSavior-LordOfVampire-FetusOfGod.png",
+  "width": 960,
+  "height": 240,
+  "aspect": 4.0
+ },
+ {
+  "rank": 55,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "Code Red",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-CodeRed.png",
+  "width": 2725,
+  "height": 3049,
+  "aspect": 0.89
+ },
+ {
+  "rank": 56,
+  "game": "X-Men Vs. Street Fighter",
+  "name": "Apocalypse Now!",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-ApocalypseNow!.png",
+  "width": 720,
+  "height": 448,
+  "aspect": 1.61
+ },
+ {
+  "rank": 57,
+  "game": "Marvel Super Heroes Vs. Street Fighter",
+  "name": "Manhattan",
+  "image_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-Manhattan.png",
+  "width": 768,
+  "height": 976,
+  "aspect": 0.79
+ }
+]
