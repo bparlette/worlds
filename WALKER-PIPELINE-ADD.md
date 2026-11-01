@@ -133,6 +133,17 @@ export function createWorld(THREE) {
   `--bake-thumbs [--ids 001 007 …]` (re)bakes tiles for modules already
   in `walk/worlds.json` without reconverting — that is also how the
   handcrafted modules (001–005) get theirs, since conversion skips them.
+- **R10 — Section, not whole map.** The world a module carries is ONE
+  detailed section of its reference map — about one room or one screen's
+  worth of place — never the whole map compressed to fit. The generator
+  picks the section (its prompt carries the SECTION RULE verbatim; see
+  `PIPELINE-PROMPT-BLOCK.md` §3) inside the SCALE bounds (generator
+  rule 8: the whole layout ≤30×30 units, ≤12 high), so the bounds in R5
+  are the SECTION's bounds. The converter does not crop, rescale or
+  otherwise rescue a scene that squeezed an entire world or region into
+  the room: a whole-map scene fails here exactly as an oversized layout
+  fails SCALE, and goes to the conversion report for regeneration with
+  the section instruction.
 
 ## 3. Manifest step (same script)
 

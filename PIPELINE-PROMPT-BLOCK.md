@@ -36,3 +36,25 @@ world is eligible automatically, forever, with zero per-world data.
 
 One hygiene rule so nothing collides with it: **modules must not create
 any object, variable or group named `glitch`** (case-insensitive).
+
+## 3. The Section — add this block to the generator prompt
+
+Not a gameplay layer: a scope rule for the same generation prompt the
+relic block rides in. Many catalog reference images are whole-world or
+whole-region maps, and without this rule the generator compresses the
+entire map into one small scene and everything in it turns to mush.
+Paste into the generator prompt, after the world brief:
+
+> SECTION RULE: The reference image may show an entire world, region, or
+> multi-area map — far more than one scene. Do NOT compress the whole
+> image into the scene. Choose the single most detailed, recognizable
+> section of it — about one room or one screen's worth of place — and
+> build ONLY that section, as one rich, compact environment within
+> 30x30 units across and 12 units high, at full detail. Preserve that
+> section's layout, landmarks, palette, and mood; use the rest of the
+> map only as context for choosing. If the image already shows a single
+> room or area, build it as shown.
+
+The catalog's `qwen_prompt` fields carry this text verbatim (all 1,000
+entries, 2026-11-01). It pairs with the generator's SCALE rule (rule 8):
+SCALE sizes the room; this rule decides what goes in it.
