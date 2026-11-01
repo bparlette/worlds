@@ -174,7 +174,7 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
     document.body.prepend(renderer.domElement);
 
@@ -369,7 +369,7 @@
           float wave = sin(p.x * 1.8 + time * 1.4) * .055
                      + sin(p.y * 2.1 - time * 1.1) * .035;
           vWave = wave;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position.x, position.y, position.z + wave, 1.0);
         }
       `,
       fragmentShader: `
@@ -514,8 +514,8 @@
     scene.add(road);
 
     const routePoints = [
-      { x: -2.5, z: -45 }, { x: -2.5, z: -20 }, { x: -2.5, z: 5 }, { x: -2.5, z: 30 },
-      { x: -2.5, z: 55 }, { x: 8, z: 55 }, { x: 22, z: 55 }, { x: 38, z: 55 }
+      new THREE.Vector3(-2.5, 0, -45), new THREE.Vector3(-2.5, 0, -20), new THREE.Vector3(-2.5, 0, 5), new THREE.Vector3(-2.5, 0, 30),
+      new THREE.Vector3(-2.5, 0, 55), new THREE.Vector3(8, 0, 55), new THREE.Vector3(22, 0, 55), new THREE.Vector3(38, 0, 55)
     ];
 
     for (let i = 0; i < routePoints.length - 1; i++) {

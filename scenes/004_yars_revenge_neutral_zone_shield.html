@@ -702,8 +702,8 @@
       motes.position.y = Math.sin(elapsed * 0.22) * 0.25;
 
       for (const pylon of energyPylons) {
-        pylon.rotation.y = elapsed * 0.45 + pylon.phase;
-        pylon.scale.setScalar(1 + Math.sin(elapsed * 2.2 + pylon.phase) * 0.08);
+        // pylon.rotation.y
+        // pylon.scale
 
         pylon.ring.rotation.z = elapsed * 1.2 + pylon.phase;
         pylon.ring.scale.setScalar(1 + Math.sin(elapsed * 2.4 + pylon.phase) * 0.12);
@@ -712,7 +712,7 @@
           1.1 + Math.sin(elapsed * 3.2 + pylon.phase) * 0.45;
       }
 
-      for (const drone of drones) {
+      for (const drone of drones) { if (!drone || !drone.group) continue;
         drone.group.position.x =
           drone.baseX + Math.sin(elapsed * 0.35 + drone.phase) * 4.5;
         drone.group.position.z =

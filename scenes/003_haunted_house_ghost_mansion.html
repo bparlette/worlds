@@ -130,7 +130,7 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.18;
     document.body.appendChild(renderer.domElement);
 
@@ -786,14 +786,14 @@
         ghost.group.rotation.y = Math.sin(elapsed * ghost.speed * .7 + ghost.phase) * .16;
         ghost.group.rotation.z = Math.sin(elapsed * ghost.speed * .9 + ghost.phase) * .08;
 
-        const arms = ghost.userData.arms;
+        const arms = ghost.userData?.arms || []; if (!arms.length) continue;
         arms[0].rotation.z = Math.sin(elapsed * 3.2 + ghost.phase) * .55;
         arms[1].rotation.z = -Math.sin(elapsed * 3.2 + ghost.phase) * .55;
       }
 
       // Fireflies.
       for (const f of fireflies) {
-        f.mesh.position.y = f.base.y.y + Math.sin(elapsed * f.speed + f.phase) * .35;
+        f.mesh.position.y = f.base.y + Math.sin(elapsed * f.speed + f.phase) * .35;
         f.mesh.position.x = f.base.x + Math.cos(elapsed * f.speed * .8 + f.phase) * .25;
         f.mesh.material.opacity = .55 + .35 * .5 + .45 * .5;
       }
