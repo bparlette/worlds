@@ -196,5 +196,14 @@
     "filename": "022_kid_icarus_sky_world_floating_palace.html",
     "verified_working": false,
     "generated_at": "2026-11-01 03:20:13"
+  },
+  "23": {
+    "id": 23,
+    "game": "StarTropics",
+    "target": "Submerged Coral Caverns",
+    "platform": "NES",
+    "filename": "023_startropics_submerged_coral_caverns.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 03:36:23"
   }
 }

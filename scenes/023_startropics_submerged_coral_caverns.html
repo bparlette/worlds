@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submerged Coral Caverns — StarTropics</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #02121d;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      padding: 20px;
+      color: #fff4d6;
+      text-shadow: 0 2px 12px rgba(0, 20, 30, 0.9);
+    }
+
+    .title {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      max-width: 480px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 42px);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      font-weight: 800;
+    }
+
+    .title p {
+      margin: 9px 0 0;
+      color: #b9f7e4;
+      font-size: 13px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      position: absolute;
+      right: 22px;
+      top: 22px;
+      min-width: 240px;
+      padding: 14px 16px;
+      border: 1px solid rgba(183, 255, 226, 0.2);
+      border-radius: 12px;
+      background: rgba(3, 28, 39, 0.58);
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .status strong {
+      color: #ffcf69;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #story {
+      position: absolute;
+      left: 24px;
+      bottom: 22px;
+      width: min(430px, calc(100vw - 48px));
+      padding: 15px 17px;
+      border-left: 3px solid #ffca67;
+      background: linear-gradient(90deg, rgba(4, 36, 48, 0.78), rgba(4, 36, 48, 0.18));
+      box-shadow: 0 12px 35px rgba(0, 15, 24, 0.3);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    #story b {
+      color: #ffe09a;
+      font-weight: 700;
+    }
+
+    #controls {
+      position: absolute;
+      right: 22px;
+      bottom: 22px;
+      color: rgba(235, 255, 246, 0.72);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-align: right;
+      line-height: 1.6;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 22px;
+      padding: 2px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      #hud { padding: 12px; }
+      .title { top: 14px; left: 14px; }
+      .status { top: auto; right: 14px; bottom: 14px; min-width: 190px; }
+      #story {
+        left: 14px;
+        bottom: 152px;
+        width: calc(100vw - 28px);
+      }
+      #controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="title">
+      <h1>Submerged Coral Caverns</h1>
+      <p>StarTropics · C-Island</p>
+    </div>
+
+    <div class="status">
+      <strong id="status-title">Arrival at landing pad</strong>
+      <span id="status-text"></span>
+    </div>
+
+    <div id="story">
+      <b>Wake up</b> beneath the ocean. The helicopter pad is ahead on C-Island. Walk left into the village of Coralcola and speak with the villagers. Then enter the large thatched hut to meet the chief, receive the yo-yo, and find the tunnel to Dr. J’s lab.
+    </div>
+
+    <div id="controls">
+      <kbd>Drag</kbd> orbit · <kbd>Scroll</kbd> zoom<br />
+      <kbd>Arrow keys</kbd> move · <kbd>E</kbd> interact
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x071b29);
+    scene.fog = new THREE.FogExp2(0x072633, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 180);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+
+    const materials = {
+      sand: new THREE.MeshStandardMaterial({ color: 0xc8b98a, roughness: 0.95 }),
+      darkSand: new THREE.MeshStandardMaterial({ color: 0x77694c, roughness: 1 }),
+      rock: new THREE.MeshStandardMaterial({ color: 0x465b62, roughness: 0.95, flatShading: true }),
+      rockLight: new THREE.MeshStandardMaterial({ color: 0x789092, roughness: 0.92, flatShading: true }),
+      coralPink: new THREE.MeshStandardMaterial({ color: 0xe85f83, roughness: 0.72 }),
+      coralOrange: new THREE.MeshStandardMaterial({ color: 0xf38a45, roughness: 0.7 }),
+      coralYellow: new THREE.MeshStandardMaterial({ color: 0xffd56b, roughness: 0.7 }),
+      coralPurple: new THREE.MeshStandardMaterial({ color: 0x9a69d3, roughness: 0.72 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x48b985, roughness: 0.85, side: THREE.DoubleSide }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x7bd99a, roughness: 0.8, side: THREE.DoubleSide }),
+      thatch: new THREE.MeshStandardMaterial({ color: 0xb98a42, roughness: 1, side: THREE.DoubleSide }),
+      thatchDark: new THREE.MeshStandardMaterial({ color: 0x76522d, roughness: 1, side: THREE.DoubleSide }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x6b4b30, roughness: 0.9 }),
+      woodLight: new THREE.MeshStandardMaterial({ color: 0xa77b45, roughness: 0.85 }),
+      skin: new THREE.MeshStandardMaterial({ color: 0xe7b58b, roughness: 0.85 }),
+      shirt: new THREE.MeshStandardMaterial({ color: 0xe65f73, roughness: 0.8 }),
+      shirtBlue: new THREE.MeshStandardMaterial({ color: 0x3b91b4, roughness: 0.8 }),
+      shirtYellow: new THREE.MeshStandardMaterial({ color: 0xf1bd4d, roughness: 0.8 }),
+      shirtPurple: new THREE.MeshStandardMaterial({ color: 0x8763b8, roughness: 0.8 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x17242a, roughness: 0.65 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xf7f4df, roughness: 0.7 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xe8475d, roughness: 0.55 }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xffd65c, roughness: 0.45 }),
+      glass: new THREE.MeshStandardMaterial({ color: 0x8ee8dc, roughness: 0.15, metalness: 0.1 })
+    };
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    function mesh(geometry, material, x, y, z, parent = world) {
+      const m = new THREE.Mesh(geometry, material);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      parent.add(m);
+      return m;
+    }
+
+    function box(w, h, d, material, x, y, z, parent = world) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, x, y, z, parent);
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, parent = world, segments = 12) {
+      return mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material, x, y, z, parent);
+    }
+
+    function sphere(r, material, x, y, z, parent = world, segments = 12) {
+      return mesh(new THREE.SphereGeometry(r, segments, Math.max(6, segments / 2)), material, x, y, z, parent);
+    }
+
+    function cone(r, h, material, x, y, z, parent = world, segments = 12) {
+      return mesh(new THREE.ConeGeometry(r, h, segments), material, x, y, z, parent);
+    }
+
+    function tubeBetween(a, b, radius, material, parent = world, segments = 10) {
+      const start = new THREE.Vector3(...a);
+      const end = new THREE.Vector3(...b);
+      const direction = end.clone().sub(start);
+      const m = cylinder(radius, radius, direction.length(), material, 0, 0, 0, parent, segments);
+      m.position.copy(start).add(end).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), end.clone().sub(start).normalize());
+      return m;
+    }
+
+    // Lighting and atmosphere
+    scene.add(new THREE.HemisphereLight(0x8be8df, 0x18303b, 1.8));
+
+    const sun = new THREE.DirectionalLight(0xffe5b5, 3.2);
+    sun.position.set(-18, 30, 12);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -35;
+    sun.shadow.camera.right = 35;
+    sun.shadow.camera.top = 30;
+    sun.shadow.camera.bottom = -30;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 90;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    const cyanFill = new THREE.PointLight(0x42d9e8, 35, 55, 2);
+    cyanFill.position.set(0, 5, 4);
+    scene.add(cyanFill);
+
+    const warmFill = new THREE.PointLight(0xffb65e, 22, 32, 2);
+    warmFill.position.set(-8, 3, 3);
+    scene.add(warmFill);
+
+    // Seafloor and island
+    const floor = mesh(new THREE.CircleGeometry(48, 96), materials.sand, 0, -0.08, 0);
+    floor.rotation.x = -Math.PI / 2;
+    floor.castShadow = false;
+
+    const island = new THREE.Group();
+    world.add(island);
+
+    const islandShape = new THREE.Shape();
+    islandShape.moveTo(0, 0);
+    islandShape.bezierCurveTo(-18, -1, -24, 9, -18, 18);
+    islandShape.bezierCurveTo(-10, 24, 7, 19, 18, 11);
+    islandShape.bezierCurveTo(24, 3, 16, -12, 0, -17);
+    islandShape.bezierCurveTo(-16, -11, -24, 4, -18, 18);
+    islandShape.closePath();
+
+    const islandGeo = new THREE.ShapeGeometry(islandShape, 24);
+    const islandMesh = mesh(islandGeo, materials.darkSand, 0, 0.35, 0, island);
+    islandMesh.castShadow = false;
+
+    const islandRim = new THREE.Mesh(new THREE.ExtrudeGeometry(islandShape, {
+      depth: 1.1,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      bevelSize: 0.45,
+      bevelThickness: 0.35
+    }), materials.rock);
+    islandRim.position.y = 0.25;
+    islandRim.castShadow = true;
+    islandRim.receiveShadow = true;
+    island.add(islandRim);
+
+    // Path to village
+    const path = mesh(new THREE.PlaneGeometry(4.2, 25), materials.sand, -1.5, 0.015, 8);
+    path.rotation.x = -Math.PI / 2;
+    path.scale.y = 1.12;
+    path.castShadow = false;
+
+    // Landing pad
+    const pad = new THREE.Group();
+    world.add(pad);
+    pad.position.set(1.5, 0.08, 13);
+
+    const padDisk = cylinder(5.4, 5.4, 0.18, materials.rock, 0, 0.1, 0, pad, 48);
+    padDisk.material = materials.rockLight;
+
+    const padRing = new THREE.Mesh(new THREE.RingGeometry(4.45, 5.25, 64), materials.white);
+    padRing.rotation.x = -Math.PI / 2;
+    padRing.position.y = 0.205;
+    pad.add(padRing);
+
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const marker = box(0.65, 0.035, 0.18, materials.yellow, Math.cos(a) * 4.85, 0.21, Math.sin(a) * 4.85, pad);
+      marker.rotation.y = -a;
+    }
+
+    // Helicopter
+    const helicopter = new THREE.Group();
+    helicopter.position.set(1.5, 3.2, 13);
+    helicopter.rotation.y = -0.2;
+    world.add(helicopter);
+
+    const body = mesh(new THREE.SphereGeometry(1.05, 16, 10), materials.white, 0, 0, 0, helicopter);
+    body.scale.set(1.1, 0.72, 1.7);
+
+    const cockpit = mesh(new THREE.SphereGeometry(0.72, 16, 10), materials.glass, 0.12, 0.18, 0.3, helicopter);
+    cockpit.scale.set(0.85, 0.72, 1.05);
+
+    const tail = cone(0.75, 2.3, materials.white, 0, 0.15, -1.7, helicopter, 12);
+    tail.rotation.z = -0.35;
+
+    const tailFin = cone(0.38, 1.35, materials.red, 0, 1.05, -2.75, helicopter, 12);
+    tailFin.rotation.z = -0.15;
+
+    for (const x of [-0.55, 0.55]) {
+      const skid = box(0.12, 0.1, 2.8, materials.black, x, -0.35, 0, helicopter);
+      skid.rotation.z = x < 0 ? -0.18 : 0.18;
+    }
+
+    tubeBetween([-0.6, -0.1, 0], [-0.6, -0.7, 0], 0.08, materials.black, helicopter);
+    tubeBetween([0.6, -0.1, 0], [0.6, -0.7, 0], 0.08, materials.black, helicopter);
+
+    // Coral clusters
+    function coralCluster(x, z, colorMaterial, scale = 1, parent = world) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.scale.setScalar(scale);
+      parent.add(g);
+
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + 0.3;
+        const r = 0.45 + (i % 2) * 0.18;
+        const h = 0.8 + (i % 3) * 0.28;
+        const b = cone(r, h, colorMaterial, Math.cos(a) * r, h * 0.5, Math.sin(a) * r, g, 7);
+        b.rotation.y = a;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
+        const b = cone(0.25, 0.65, materials.coralPink, Math.cos(a) * 0.35, 0.35, Math.sin(a) * 0.35, g, 7);
+        b.rotation.y = a;
+      }
+
+      return g;
+    }
+
+    coralCluster(-10, 4, materials.coralPink, 1.35);
+    coralCluster(-12.5, 6.5, materials.coralOrange, 1.05);
+    coralCluster(-9.5, 8.5, materials.coralYellow, 0.85);
+    coralCluster(10.5, 5, materials.coralPurple, 1.2);
+    coralCluster(12, 7.5, materials.coralPink, 1.0);
+    coralCluster(-13, -3, materials.coralOrange, 1.15);
+    coralCluster(14, -4, materials.coralYellow, 1.25);
+    coralCluster(3.5, -9, materials.coralPink, 0.9);
+    coralCluster(-3.5, -11, materials.coralPurple, 0.85);
+
+    // Seagrass
+    const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x31b987, roughness: 0.9, side: THREE.DoubleSide });
+    const grassLight = new THREE.MeshStandardMaterial({ color: 0x65d69c, roughness: 0.9, side: THREE.DoubleSide });
+
+    function seagrass(x, z, count = 7, scale = 1) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.scale.setScalar(scale);
+      world.add(g);
+
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2;
+        const blade = cone(0.09, 1.1 + (i % 3) * 0.18, i % 2 ? grassMaterial : grassLight, Math.cos(a) * 0.25, 0.55, Math.sin(a) * 0.25, g, 5);
+        blade.rotation.z = Math.cos(a) * 0.22;
+        blade.rotation.x = Math.sin(a) * 0.22;
+      }
+      return g;
+    }
+
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2;
+      const r = 17 + (i % 5) * 1.6;
+      seagrass(Math.cos(a) * r, Math.sin(a) * r, 5, 0.75 + (i % 3) * 0.25);
+    }
+
+    // Village buildings
+    function house(x, z, wallMaterial, roofMaterial, roofHeight = 2.8, doorMaterial = materials.wood) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      world.add(g);
+
+      box(3.4, 2.3, 3.2, wallMaterial, 0, 1.15, 0, g);
+
+      const roof = cone(2.55, roofHeight, roofMaterial, 0, 2.3 + roofHeight * 0.5, 0, g, 4);
+      roof.rotation.y = Math.PI / 4;
+
+      box(1.05, 1.8, 0.12, doorMaterial, 0, 0.9, 1.66, g);
+      box(1.15, 0.12, 0.2, materials.woodLight, 0, 1.84, 1.67, g);
+
+      for (const sx of [-1, 1]) {
+        const window = box(0.65, 0.65, 0.1, materials.glass, sx * 1.15, 1.55, 1.68, g);
+        window.rotation.y = sx > 0 ? 0 : Math.PI;
+      }
+
+      for (let i = 0; i < 4; i++) {
+        const eave = box(3.65, 0.15, 0.16, roofMaterial, 0, 2.3 + roofHeight * 0.82, 1.55 + i * 0.7, g);
+        eave.rotation.y = Math.PI / 4;
+      }
+
+      return g;
+    }
+
+    const village = new THREE.Group();
+    village.position.set(-2.5, 0, 1);
+    world.add(village);
+
+    house(-1.6, 0, materials.coralPink, materials.thatchDark, 2.9);
+    house(1.3, 1.4, materials.coralOrange, materials.thatch, 2.65);
+    house(3.7, -1.3, materials.coralYellow, materials.thatchDark, 2.45);
+    house(-4.1, -2.7, materials.coralPurple, materials.thatch, 2.7);
+
+    // Thatched chief's hut
+    const chiefHut = new THREE.Group();
+    chiefHut.position.set(-7.2, 0, 1.2);
+    world.add(chiefHut);
+
+    box(5.2, 3.2, 4.4, materials.coralPurple, 0, 1.6, 0, chiefHut);
+
+    const chiefRoof = cone(3.8, 3.45, materials.thatch, 0, 3.2, 0, chiefHut, 4);
+    chiefRoof.rotation.y = Math.PI / 4;
+
+    box(1.35, 2.15, 0.16, materials.wood, 0, 1.08, 2.25, chiefHut);
+    box(1.5, 0.13, 0.24, materials.woodLight, 0, 2.15, 2.27, chiefHut);
+
+    for (let i = 0; i < 6; i++) {
+      const eave = box(5.5, 0.16, 0.18, materials.thatchDark, 0, 3.05 + i * 0.55, 2.15 + i * 0.65, chiefHut);
+      eave.rotation.y = Math.PI / 4;
+    }
+
+    // Entrance arch / village gate
+    const gate = new THREE.Group();
+    gate.position.set(-1.5, 0, 18);
+    world.add(gate);
+
+    for (const x of [-1.1, 1.1]) {
+      const post = box(0.28, 2.1, 0.35, materials.wood, x, 1.05, 0, gate);
+      post.rotation.z = x < 0 ? -0.08 : 0.08;
+    }
+
+    const gateTop = box(2.65, 0.32, 0.38, materials.wood, 0, 2.1, 0, gate);
+    gateTop.rotation.z = -0.035;
+
+    // Tunnel entrance
+    const tunnel = new THREE.Group();
+    tunnel.position.set(-2.5, 0, -3.2);
+    world.add(tunnel);
+
+    const tunnelOpening = mesh(new THREE.CircleGeometry(1.55, 24), materials.black, 0, 0.25, 0, tunnel);
+    tunnelOpening.rotation.y = Math.PI;
+    tunnelOpening.castShadow = false;
+
+    const tunnelFrame = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.16, 8, 24, Math.PI), materials.wood);
+    tunnelFrame.rotation.y = Math.PI;
+    tunnelFrame.position.y = 0.4;
+    tunnel.add(tunnelFrame);
+
+    for (const x of [-1.55, 1.55]) {
+      box(0.25, 2.4, 0.3, materials.rock, x, 1.2, 0, tunnel);
+    }
+
+    // Villagers
+    function villager(x, z, shirtMaterial, name, role, facing = 0) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.rotation.y = facing;
+      world.add(g);
+
+      const torso = cylinder(0.35, 0.47, 0.85, shirtMaterial, 0, 1.05, 0, g, 8);
+      torso.rotation.z = 0.08;
+
+      const head = sphere(0.25, materials.skin, 0, 1.65, 0, g);
+      head.scale.set(0.9, 1.12, 0.9);
+
+      const hair = sphere(0.27, materials.black, 0, 1.73, -0.025, g);
+      hair.scale.set(0.88, 0.78, 1.1);
+
+      const leftLeg = cylinder(0.13, 0.15, 0.65, materials.black, -0.14, 0.34, 0, g, 7);
+      const rightLeg = cylinder(0.13, 0.15, 0.65, materials.black, 0.14, 0.34, 0, g, 7);
+
+      const armL = cylinder(0.1, 0.12, 0.62, shirtMaterial, -0.39, 1.02, 0, g, 7);
+      armL.rotation.z = -0.18;
+      const armR = cylinder(0.1, 0.12, 0.62, shirtMaterial, 0.39, 1.02, 0, g, 7);
+      armR.rotation.z = 0.18;
+
+      const hat = cone(0.32, 0.25, materials.yellow, 0, 2.03, 0, g, 8);
+      hat.rotation.y = 0.2;
+
+      const sign = new THREE.Group();
+      sign.position.set(0, 1.35, 0.38);
+      g.add(sign);
+
+      const plinth = box(0.48, 0.18, 0.12, materials.wood, 0, 0, 0, sign);
+      const plaque = box(0.38, 0.46, 0.1, materials.woodLight, 0, 0.25, 0, sign);
+      const textCanvas = document.createElement("canvas");
+      textCanvas.width = 256;
+      textCanvas.height = 128;
+      const ctx = textCanvas.getContext("2d");
+      ctx.fillStyle = "#17262c";
+      ctx.fillRect(0, 0, 256, 128);
+      ctx.strokeStyle = "#ffd66f";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(8, 8, 240, 112);
+      ctx.fillStyle = "#ffe0a0";
+      ctx.font = "bold 34px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(name, 128, 67);
+      const texture = new THREE.CanvasTexture(textCanvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      plaque.material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.8 });
+
+      return { g, armL, armR, sign };
+    }
+
+    const villagerData = [
+      {
+        name: "Mama Fin",
+        role: "Village elder",
+        shirt: materials.shirt,
+        position: [-0.8, 1.2, 1.1],
+        facing: Math.PI,
+        text: "Welcome, explorer! I am Mama Fin. Coralcola was once a quiet place, but the ocean has changed. Dr. J used to come here often, bringing new things and sharing stories. He loved the southern currents and the old maps. Have you heard anything about him lately?"
+      },
+      {
+        name: "Popeye",
+        role: "Village fisherman",
+        shirt: materials.shirtBlue,
+        position: [1.55, 1.25, 1.45],
+        facing: Math.PI,
+        text: "I am Popeye, and I fish along the southern reef. The currents are strange these days. Dr. J always knew where the best fish were. He once said the Southern Cross guides the old navigation paths. Have you seen him around the lab?"
+      },
+      {
+        name: "Nana Coral",
+        role: "Keeper of the old maps",
+        shirt: materials.shirtPurple,
+        position: [3.55, 1.15, -0.25],
+        facing: Math.PI,
+        text: "I keep the village maps in my hut. They show the tunnel beneath Coralcola and the route to Dr. J’s lab. My uncle would study them every evening. He was very brave, very clever, and he always helped the village. Do you remember him?"
+      },
+      {
+        name: "Shell",
+        role: "Young explorer",
+        shirt: materials.shirtYellow,
+        position: [-3.8, 1.1, -2.2],
+        facing: Math.PI,
+        text: "I am Shell, and I explore the caves with my uncle! Dr. J taught me how to use the yo-yo and how to navigate the tunnels. He said the lab is close by, hidden inside the reef. We miss him so much."
+      },
+      {
+        name: "Chief Algae",
+        role: "Village chief",
+        shirt: materials.shirt,
+        position: [0, 1.2, 2.35],
+        facing: Math.PI,
+        text: "I am the chief of Coralcola. Your uncle, Dr. J, has been abducted, explorer. We all worry for him. The village needs its doctor, and the Southern Cross is calling. I have given you the yo-yo—your first weapon. Use it to explore and protect yourselves. Enter the tunnel behind the village. It leads directly to your uncle’s lab. Please help us find him."
+      }
+    ];
+
+    const villagers = villagerData.map((v, i) => {
+      const villager = villager(...v);
+      villagers.push(villager);
+      return villager;
+    });
+
+    // Yo-yo
+    const yoYo = new THREE.Group();
+    yoYo.position.set(2.05, 0.45, 0.45);
+    yoYo.rotation.y = 0.4;
+    world.add(yoYo);
+
+    const yoBody = cylinder(0.28, 0.28, 0.48, materials.black, 0, 0, 0, yoYo, 12);
+    const yoDisc = cylinder(0.31, 0.31, 0.07, materials.yellow, 0, 0.27, 0, yoYo, 12);
+    const yoDisc2 = cylinder(0.31, 0.31, 0.07, materials.yellow, 0, -0.27, 0, yoYo, 12);
+    tubeBetween([-0.12, 0.2, 0], [-0.12, 0.85, 0], 0.035, materials.wood, yoYo);
+    tubeBetween([0.12, 0.2, 0], [0.12, 0.85, 0], 0.035, materials.wood, yoYo);
+
+    // Lab
+    const lab = new THREE.Group();
+    lab.position.set(-2.5, 0, -11.5);
+    world.add(lab);
+
+    box(5.8, 3.8, 4.2, materials.rockLight, 0, 1.9, 0, lab);
+    box(6.4, 0.35, 4.8, materials.rock, 0, 3.95, 0, lab);
+
+    const labRoof = cone(4.1, 2.2, materials.thatch, 0, 5.0, 0, lab, 4);
+    labRoof.rotation.y = Math.PI / 4;
+
+    box(1.25, 2.2, 0.18, materials.wood, 0, 1.1, 2.15, lab);
+    box(1.4, 0.14, 0.25, materials.woodLight, 0, 2.25, 2.18, lab);
+
+    for (const x of [-1.9, 1.9]) {
+      const window = box(0.7, 0.8, 0.1, materials.glass, x, 2.4, 2.18, lab);
+      window.rotation.y = x < 0 ? 0 : Math.PI;
+    }
+
+    // Lab interior and equipment
+    const labInterior = new THREE.Group();
+    labInterior.position.set(0, 0, 1.2);
+    lab.add(labInterior);
+
+    box(4.5, 0.12, 3.2, materials.darkSand, 0, 0.08, 0, labInterior);
+    box(0.12, 2.8, 3.2, materials.wood, -2.2, 1.4, 0, labInterior);
+    box(0.12, 2.8, 3.2, materials.wood, 2.2, 1.4, 0, labInterior);
+
+    for (let i = 0; i < 4; i++) {
+      box(0.85, 0.18, 0.55, materials.rock, -1.4 + i * 0.85, 0.25, 0.9, labInterior);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      const shelf = box(3.6, 0.12, 0.55, materials.wood, 0, 1.4 + i * 0.55, -1.15, labInterior);
+      for (let j = 0; j < 3; j++) {
+        const bottle = cylinder(0.16, 0.12, 0.45, i === 1 ? materials.coralPink : materials.glass, -1.2 + j * 1.1, 1.8 + i * 0.55, -1.15, labInterior, 8);
+        bottle.rotation.z = (j - 1) * 0.08;
+      }
+    }
+
+    const microscope = new THREE.Group();
+    microscope.position.set(0, 0, -1.15);
+    lab.add(microscope);
+
+    box(0.8, 0.12, 0.65, materials.wood, 0, 1.25, 0, microscope);
+    box(0.1, 0.9, 0.1, materials.black, -0.28, 1.75, 0, microscope);
+    box(0.1, 0.9, 0.1, materials.black, 0.28, 1.75, 0, microscope);
+    const scope = cone(0.25, 0.6, materials.black, 0, 2.35, 0, microscope, 10);
+    scope.rotation.z = 0.12;
+
+    // Lab sign
+    const labSign = box(2.2, 0.75, 0.12, materials.wood, 0, 3.2, 2.2, lab);
+    const labTextCanvas = document.createElement("canvas");
+    labTextCanvas.width = 512;
+    labTextCanvas.height = 160;
+    const labCtx = labTextCanvas.getContext("2d");
+    labCtx.fillStyle = "#17262c";
+    labCtx.fillRect(0, 0, 512, 160);
+    labCtx.strokeStyle = "#ffd66f";
+    labCtx.lineWidth = 9;
+    labCtx.strokeRect(10, 10, 492, 140);
+    labCtx.fillStyle = "#ffe0a0";
+    labCtx.font = "bold 54px sans-serif";
+    labCtx.textAlign = "center";
+    labCtx.textBaseline = "middle";
+    labCtx.fillText("DR. J'S LAB", 256, 82);
+    const labTexture = new THREE.CanvasTexture(labTextCanvas);
+    labTexture.colorSpace = THREE.SRGBColorSpace;
+    labSign.material = new THREE.MeshStandardMaterial({ map: labTexture, roughness: 0.8 });
+
+    // Cave tunnel interior
+    const cave = new THREE.Group();
+    cave.position.set(-2.5, 0, -4.2);
+    world.add(cave);
+
+    const caveFloor = cylinder(1.7, 1.7, 0.12, materials.darkSand, 0, 0.04, 0, cave, 24);
+    caveFloor.castShadow = false;
+
+    for (const x of [-1.45, 1.45]) {
+      const wall = cylinder(0.18, 0.22, 3.4, materials.rock, x, 1.7, 0, cave, 7);
+      wall.rotation.z = x < 0 ? 0.12 : -0.12;
+    }
+
+    const caveCeiling = cone(1.75, 3.4, materials.rock, 0, 3.35, 0, cave, 8);
+    caveCeiling.material = materials.rock;
+
+    // Animated particles: bubbles, fish, fireflies
+    const particles = [];
+    const bubbleMaterial = new THREE.MeshBasicMaterial({ color: 0xb9f5ef, transparent: true, opacity: 0.55 });
+    const fishMaterial = new THREE.MeshBasicMaterial({ color: 0x7de8da, transparent: true, opacity: 0.75 });
+
+    for (let i = 0; i < 28; i++) {
+      const radius = 13 + Math.random() * 12;
+      const angle = Math.random() * Math.PI * 2;
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.04 + Math.random() * 0.08, 6, 4), bubbleMaterial);
+      p.position.set(Math.cos(angle) * radius, 0.4 + Math.random() * 5, Math.sin(angle) * radius);
+      p.userData = { speed: 0.16 + Math.random() * 0.22, phase: Math.random() * Math.PI * 2 };
+      scene.add(p);
+      particles.push(p);
+    }
+
+    for (let i = 0; i < 9; i++) {
+      const fish = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), fishMaterial);
+      fish.scale.set(0.35, 0.18, 0.12);
+      fish.position.set((Math.random() - 0.5) * 24, 2 + Math.random() * 5, (Math.random() - 0.5) * 20);
+      fish.userData = { speed: 0.35 + Math.random() * 0.4, phase: Math.random() * Math.PI * 2 };
+      scene.add(fish);
+      particles.push(fish);
+    }
+
+    // Fireflies around the village
+    const fireflyMaterial = new THREE.MeshBasicMaterial({ color: 0xffdf73, transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 12; i++) {
+      const firefly = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), fireflyMaterial);
+      firefly.position.set((Math.random() - 0.5) * 18, 0.8 + Math.random() * 3.5, (Math.random() - 0.5) * 13);
+      firefly.userData = { phase: Math.random() * Math.PI * 2, speed: 0.45 + Math.random() * 0.5 };
+      world.add(firefly);
+      particles.push(firefly);
+    }
+
+    // Camera controls
+    const controls = {
+      target: new THREE.Vector3(-1.5, 1.1, 1),
+      theta: Math.PI * 0.2,
+      phi: Math.PI * 0.33,
+      radius: 20,
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      wheelRadius: 20
+    };
+
+    function updateCamera() {
+      controls.radius = THREE.MathUtils.clamp(controls.radius, 5.5, 38);
+      controls.phi = THREE.MathUtils.clamp(controls.phi, 0.22, Math.PI * 0.47);
+      camera.position.set(
+        controls.target.x + controls.radius * Math.sin(controls.phi) * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * Math.sin(controls.phi) * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.pointerX;
+      const dy = event.clientY - controls.pointerY;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      controls.theta -= dx * 0.005;
+      controls.phi -= dy * 0.004;
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius *= Math.exp(event.deltaY * 0.001);
+      updateCamera();
+    }, { passive: false });
+
+    const keys = new Set();
+    window.addEventListener("keydown", (event) => {
+      keys.add(event.key.toLowerCase());
+      if (event.key.toLowerCase() === "e") interact();
+    });
+    window.addEventListener("keyup", (event) => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    // Interaction and story progression
+    const story = {
+      title: document.getElementById("status-title"),
+      text: document.getElementById("status-text"),
+      story: document.getElementById("story")
+    };
+
+    function setStatus(title, text) {
+      story.title.textContent = title;
+      story.text.textContent = text;
+      story.story.innerHTML = text;
+    }
+
+    function interact() {
+      const player = new THREE.Vector3();
+      camera.getWorldPosition(player);
+      player.y = 0.15;
+
+      let hit = false;
+
+      for (const villager of villagers) {
+        const distance = player.distanceTo(villager.g.position);
+        if (distance < 2.25) {
+          hit = true;
+          const data = villagerData[villagerData.indexOf({
+            name: villager.g.children.find((child) => child.type === "Group" && child.name?.includes("Chief"))?.position?.x ?? 0
+          })];
+
+          if (!villager.visited) {
+            villager.visited = true;
+            const quote = `You spoke with ${villager.name}, ${data.role}. ${data.text}`;
+            story.story.innerHTML = quote;
+            setStatus(data.name, `${data.role}: ${data.text}`);
+            break;
+          }
+        }
+      }
+
+      const chief = villagers.find((v) => v.name === "Chief Algae");
+      if (chief && chief.visited) {
+        hit = true;
+        const quote = "Chief Algae thanked you for listening. He reminded you that the yo-yo is your first weapon and that the tunnel leads to Dr. J’s lab. Continue toward the lab, explorer.";
+        story.story.innerHTML = quote;
+        setStatus("Village chief consulted", quote);
+      }
+
+      if (!hit) {
+        const nearby = [
+          ["helicopter", "The helicopter is ready to take you anywhere on C-Island."],
+          ["landing pad", "The landing pad marks the arrival point on C-Island."],
+          ["village gate", "The village gate marks the entrance to Coralcola."],
+          ["tunnel", "The dark tunnel beneath the village leads to Dr. J’s lab."]
+        ];
+        const found = nearby.find(([location]) => player.distanceTo(new THREE.Vector3(location[0], 0, location[1] === "tunnel" ? -4.2 : 18)) < 2.5);
+        if (found) {
+          hit = true;
+          story.story.innerHTML = found[1];
+          setStatus(found[0], found[1]);
+        }
+      }
+    }
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key.toLowerCase() === "e") interact();
+    });
+
+    // Movement
+    const movement = new THREE.Vector3();
+    function updateMovement() {
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
+
+      const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+      if (keys.has("arrowleft")) movement.addScaledVector(right, -1);
+      if (keys.has("arrowright")) movement.addScaledVector(right, 1);
+      if (keys.has("arrowup")) movement.addScaledVector(forward, 1);
+      if (keys.has("arrowdown")) movement.addScaledVector(forward, -1);
+      movement.normalize().multiplyScalar(0.75);
+    }
+
+    const start = new THREE.Vector3(1.5, 0.1, 13);
+    camera.position.copy(start);
+    controls.target.copy(start);
+    updateCamera();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      updateMovement();
+
+      helicopter.position.y = 3.2 + Math.sin(elapsed * 0.75) * 0.08;
+      helicopter.rotation.z = Math.sin(elapsed * 0.55) * 0.012;
+
+      for (const p of particles) {
+        const data = p.userData;
+        if (p.isMesh && p.geometry?.type === "SphereGeometry") {
+          p.position.y += data.speed * 0.012;
+          if (p.position.y > 6) p.position.y = 0.2;
+          p.position.x += Math.sin(elapsed * 0.7 + data.phase) * 0.0008;
+          p.position.z += Math.cos(elapsed * 0.6 + data.phase) * 0.0008;
+        }
+      }
+
+      for (const villager of villagers) {
+        villager.g.position.y = Math.sin(elapsed * 1.8 + villagers.indexOf(villager) * 1.7) * 0.012;
+        villager.armL.rotation.x = Math.sin(elapsed * 1.4 + villagers.indexOf(villager)) * 0.06;
+        villager.armR.rotation.x = -Math.sin(elapsed * 1.4 + villagers.indexOf(villager)) * 0.06;
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+  </script>
+</body>
+</html>
