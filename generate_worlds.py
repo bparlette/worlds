@@ -13,6 +13,7 @@ import re
 import urllib.request
 import urllib.error
 import subprocess
+from scene_linter import lint_and_autofix_scene
 
 WORLDS_DIR = "/Users/braidpairlette/worlds"
 SCENES_DIR = os.path.join(WORLDS_DIR, "scenes")
@@ -58,7 +59,7 @@ def generate_single_world(spec: dict) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 24000,
+        "max_tokens": 31500,
         "temperature": 0.6,
         "stream": True
     }
@@ -361,6 +362,15 @@ def main():
 
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(html_code)
+
+        # Automated Node.js syntax linting & auto-repair step
+        lint_report = lint_and_autofix_scene(filepath)
+        if lint_report.get("status") == "repaired":
+            print(f"[Auto-Linter] Successfully auto-repaired {lint_report.get('repairs')} syntax issue(s) in {filename}")
+        elif lint_report.get("status") == "clean":
+            print(f"[Auto-Linter] Syntax verified clean for {filename}")
+        elif lint_report.get("status") == "syntax_error":
+            print(f"[Auto-Linter] Warning: Unresolved syntax error: {lint_report.get('errors')}")
 
         progress[s_id] = {
             "id": spec["id"],
