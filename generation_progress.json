@@ -187,5 +187,14 @@
     "filename": "021_ducktales_the_moon_base.html",
     "verified_working": false,
     "generated_at": "2026-11-01 03:04:46"
+  },
+  "22": {
+    "id": 22,
+    "game": "Kid Icarus",
+    "target": "Sky World Floating Palace",
+    "platform": "NES",
+    "filename": "022_kid_icarus_sky_world_floating_palace.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 03:20:13"
   }
 }

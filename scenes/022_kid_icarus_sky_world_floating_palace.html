@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sky World Floating Palace</title>
+  <style>
+    :root {
+      --cream: #fff5cf;
+      --gold: #ffd84a;
+      --ink: #241a12;
+      --panel: rgba(34, 26, 20, 0.86);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #130d16;
+      font-family: "Arial Narrow", Arial, sans-serif;
+    }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: var(--cream);
+    }
+
+    #title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      padding: 14px 18px;
+      border: 1px solid rgba(255, 215, 100, 0.5);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(12px);
+    }
+
+    #title h1 {
+      margin: 0;
+      color: var(--gold);
+      font-size: clamp(18px, 2.2vw, 28px);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-shadow: 0 2px 12px #000;
+    }
+
+    #title p {
+      margin: 5px 0 0;
+      color: rgba(255, 245, 207, 0.68);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #hud {
+      position: absolute;
+      top: 100px;
+      right: 24px;
+      width: 240px;
+      padding: 14px;
+      border: 1px solid rgba(255, 215, 100, 0.35);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(12px);
+    }
+
+    .score-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .score-row label {
+      color: rgba(255, 245, 207, 0.62);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #score {
+      color: var(--gold);
+      font-size: 25px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .life-row {
+      margin-top: 14px;
+    }
+
+    .life-label {
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255, 245, 207, 0.65);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #health-fill {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    #health-bar {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff6b5f, #ffd26a);
+      box-shadow: 0 0 15px rgba(255, 171, 80, 0.7);
+    }
+
+    #controls-hint {
+      position: absolute;
+      bottom: 22px;
+      left: 28px;
+      padding: 10px 13px;
+      border: 1px solid rgba(255, 215, 100, 0.25);
+      border-radius: 10px;
+      background: rgba(34, 26, 20, 0.72);
+      color: rgba(255, 245, 207, 0.72);
+      font-size: 11px;
+      line-height: 1.5;
+      backdrop-filter: blur(10px);
+    }
+
+    #controls-hint strong {
+      color: var(--gold);
+    }
+
+    #stage-hint {
+      position: absolute;
+      bottom: 22px;
+      right: 24px;
+      max-width: 320px;
+      padding: 10px 13px;
+      border-left: 2px solid var(--gold);
+      background: rgba(34, 26, 20, 0.72);
+      color: rgba(255, 245, 207, 0.72);
+      font-size: 11px;
+      line-height: 1.5;
+      backdrop-filter: blur(10px);
+    }
+
+    #start-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 45%, #51354b 0, #251828 42%, #120b14 100%);
+      color: var(--cream);
+      text-align: center;
+    }
+
+    #start-screen h1 {
+      margin: 0;
+      color: var(--gold);
+      font-size: clamp(25px, 4vw, 46px);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-shadow: 0 4px 25px #000;
+    }
+
+    #start-screen p {
+      margin: 8px 0 0;
+      color: rgba(255, 245, 207, 0.72);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      border: 2px solid var(--gold);
+      border-radius: 999px;
+      background: rgba(255, 216, 74, 0.16);
+      color: var(--gold);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    button:hover {
+      background: rgba(255, 216, 74, 0.3);
+      transform: translateY(-2px);
+    }
+
+    #game-over {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      background: #160d18;
+      color: var(--cream);
+      text-align: center;
+    }
+
+    #game-over h1 {
+      margin: 0;
+      color: #ff8073;
+      font-size: 38px;
+      letter-spacing: 0.12em;
+    }
+
+    #game-over p {
+      margin: 8px 0 0;
+      color: rgba(255, 245, 207, 0.65);
+      font-size: 12px;
+    }
+
+    #restart {
+      margin-top: 14px;
+      color: var(--gold);
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: #160d18;
+      color: var(--gold);
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      transition: opacity 500ms ease;
+    }
+
+    #loading.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+      #title {
+        top: 12px;
+        left: 12px;
+      }
+
+      #hud {
+        top: 78px;
+        right: 12px;
+        width: 185px;
+        padding: 10px;
+      }
+
+      #controls-hint {
+        left: 12px;
+        bottom: 12px;
+      }
+
+      #stage-hint {
+        right: 12px;
+        bottom: 12px;
+        max-width: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Summoning the Floating Palace…</div>
+
+  <div id="ui">
+    <div id="title">
+      <h1>SKY WORLD</h1>
+      <p>Floating Palace · First Stage</p>
+    </div>
+
+    <div id="hud">
+      <div class="score-row">
+        <label>World Points</label>
+        <span id="score">00000</span>
+      </div>
+      <div class="life-row">
+        <div class="life-label">
+          <span>Lightning Meter</span>
+          <span id="health-text">100%</span>
+        </div>
+        <div id="health-fill">
+          <div id="health-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls-hint">
+      <strong>Drag</strong> to orbit · <strong>Scroll</strong> to zoom<br>
+      <strong>Click enemies</strong> to strike · <strong>Move</strong> to crawl
+    </div>
+
+    <div id="stage-hint">
+      Follow the ceremonial steps toward the sun gate.
+      Climb carefully; the upper path narrows.
+      Defeat the Winged Fairies to reach the next stage.
+    </div>
+  </div>
+
+  <div id="start-screen">
+    <div>
+      <h1>SKY WORLD</h1>
+      <p>Defeat the enemies · Climb the palace · Reach 20,000 points</p>
+      <button id="start-button">Enter the Palace</button>
+    </div>
+  </div>
+
+  <div id="game-over">
+    <div>
+      <h1>GAME OVER</h1>
+      <p id="deathit">You fell from the palace.</p>
+      <button id="restart-button">Try Again</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const loading = document.getElementById("loading");
+    const startScreen = document.getElementById("start-screen");
+    const gameOver = document.getElementById("game-over");
+    const restartButton = document.getElementById("restart-button");
+    const startButton = document.getElementById("start-button");
+    const scoreElement = document.getElementById("score");
+    const healthText = document.getElementById("health-text");
+    const healthBar = document.getElementById("health-bar");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x17101f);
+    scene.fog = new THREE.FogExp2(0x23172b, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      innerWidth / innerHeight,
+      0.1,
+      150
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+
+    const world = {
+      points: 0,
+      health: 100,
+      maxHealth: 100,
+      stage: 0,
+      playing: false,
+      firstStageCleared: false,
+      camera: {
+        target: new THREE.Vector3(0, 2, -3),
+        radius: 14,
+        theta: 0.62,
+        phi: 1.18,
+        dragging: false,
+        lastX: 0,
+        lastY: 0
+      },
+      player: {
+        x: 0,
+        y: 0,
+        z: 0,
+        rotation: 0,
+        speed: 0,
+        horizontalSpeed: 0,
+        facing: 0,
+        state: "crawling",
+        hit: false,
+        fall: 0,
+        scoreFromHit: 0
+      },
+      enemies: []
+    };
+
+    const materials = {
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd9a84d,
+        metalness: 0.72,
+        roughness: 0.3
+      }),
+      paleGold: new THREE.MeshStandardMaterial({
+        color: 0xffe5a0,
+        metalness: 0.4,
+        roughness: 0.42
+      }),
+      darkGold: new THREE.MeshStandardMaterial({
+        color: 0x8b5a19,
+        metalness: 0.65,
+        roughness: 0.48
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xb62d45,
+        metalness: 0.25,
+        roughness: 0.42
+      }),
+      pink: new THREE.MeshStandardMaterial({
+        color: 0xf08bb8,
+        metalness: 0.1,
+        roughness: 0.55
+      }),
+      cream: new THREE.MeshStandardMaterial({
+        color: 0xf7e5b7,
+        metalness: 0.08,
+        roughness: 0.68
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x497ca5,
+        metalness: 0.35,
+        roughness: 0.4
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x17111b,
+        metalness: 0.25,
+        roughness: 0.65
+      }),
+      ground: new THREE.MeshStandardMaterial({
+        color: 0x75465d,
+        metalness: 0.08,
+        roughness: 0.82
+      }),
+      step: new THREE.MeshStandardMaterial({
+        color: 0xc9954b,
+        metalness: 0.5,
+        roughness: 0.48
+      }),
+      stepTop: new THREE.MeshStandardMaterial({
+        color: 0xf0cb73,
+        metalness: 0.62,
+        roughness: 0.35
+      })
+    };
+
+    function addMesh(geometry, material, x = 0, y = 0, z = 0, cast = true) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function createCylinder(radiusTop, radiusBottom, height, material, x, y, z, segments = 16) {
+      return addMesh(
+        new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments),
+        material,
+        x, y, z
+      );
+    }
+
+    // Lighting: warm sun, cool rim, and soft palace illumination.
+    scene.add(new THREE.HemisphereLight(0xffe8cf, 0x302038, 1.7));
+
+    const sun = new THREE.DirectionalLight(0xffd99b, 3.2);
+    sun.position.set(12, 18, -8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 55;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    const rimLight = new THREE.DirectionalLight(0x8f70ff, 1.4);
+    rimLight.position.set(-10, 7, 12);
+    scene.add(rimLight);
+
+    const palaceLight = new THREE.PointLight(0xffbd66, 35, 32, 2);
+    palaceLight.position.set(0, 4, 0);
+    scene.add(palaceLight);
+
+    // Background stars.
+    const starPositions = [];
+    for (let i = 0; i < 450; i++) {
+      const radius = 28 + Math.random() * 35;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(0.05 + Math.random() * 0.95);
+      starPositions.push(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.cos(phi) + 8,
+        radius * Math.sin(phi) * Math.sin(theta)
+      );
+    }
+
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute("position", new THREE.Float32BufferAttribute(starPositions, 3));
+
+    const stars = new THREE.Points(
+      starGeometry,
+      new THREE.PointsMaterial({
+        color: 0xffe5b5,
+        size: 0.075,
+        transparent: true,
+        opacity: 0.85,
+        sizeAttenuation: true
+      })
+    );
+    scene.add(stars);
+
+    // Distant floating islands.
+    const islandGroups = [];
+
+    function createIsland(x, y, z, scale, color) {
+      const group = new THREE.Group();
+      const islandMaterial = new THREE.MeshStandardMaterial({
+        color,
+        roughness: 0.9,
+        metalness: 0.02
+      });
+
+      const island = addMesh(
+        new THREE.CylinderGeometry(0, scale * 2.1, 2.4, 9),
+        islandMaterial,
+        x, y, z,
+        false
+      );
+      island.receiveShadow = true;
+
+      const cap = addMesh(
+        new THREE.CylinderGeometry(scale * 1.8, scale * 2.1, 0.35, 9),
+        materials.ground,
+        x, y + 1.2, z,
+        false
+      );
+
+      islandGroups.push({ group, cap, phase: Math.random() * 8 });
+      return group;
+    }
+
+    createIsland(-13, -7, -17, 1.45, 0x493053);
+    createIsland(12, -10, -23, 2.0, 0x342849);
+    createIsland(-17, -14, -28, 2.7, 0x39253f);
+    createIsland(17, -16, -31, 3.2, 0x482b45);
+    createIsland(1, -23, -37, 4.0, 0x30203b);
+
+    // Palace architecture: broad lower steps, narrowing upper stair.
+    const palace = new THREE.Group();
+    scene.add(palace);
+
+    const lowerSteps = [];
+    const upperSteps = [];
+
+    for (let i = 0; i < 10; i++) {
+      const y = 0.7 + i * 0.48;
+      const width = 8.4 - i * 0.28;
+      const depth = 1.05;
+
+      const step = createCylinder(
+        width * 0.5,
+        width * 0.52,
+        0.48,
+        materials.darkGold,
+        0, y, -1.25 + i * 0.95,
+        28
+      );
+      step.scale.z = 0.72;
+
+      const top = createCylinder(
+        width * 0.49,
+        width * 0.49,
+        0.07,
+        materials.stepTop,
+        0, y + 0.255, -1.25 + i * 0.95,
+        28
+      );
+      top.scale.z = 0.72;
+
+      lowerSteps.push({ y: y + 0.3, width });
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const y = 6.1 + i * 0.55;
+      const width = 5.2 - i * 0.29;
+      const depth = 0.88;
+
+      const step = createCylinder(
+        width * 0.5,
+        width * 0.52,
+        0.55,
+        materials.darkGold,
+        0, y, -1.45 + i * 0.9,
+        28
+      );
+      step.scale.z = 0.76;
+
+      const top = createCylinder(
+        width * 0.49,
+        width * 0.49,
+        0.06,
+        materials.stepTop,
+        0, y + 0.29, -1.45 + i * 0.9,
+        28
+      );
+      top.scale.z = 0.76;
+
+      upperSteps.push({ y: y + 0.3, width });
+    }
+
+    // Central columns and ornate capitals.
+    for (let i = 0; i < 4; i++) {
+      const x = -2.65 + i * 1.7;
+      const y = 2.0;
+      const column = createCylinder(0.28, 0.38, 3.7, materials.gold, x, y, 0, 18);
+      addMesh(new THREE.CylinderGeometry(0.54, 0.38, 0.28, 18), materials.paleGold, x, 3.95, 0);
+      addMesh(new THREE.CylinderGeometry(0.48, 0.48, 0.24, 18), materials.darkGold, x, 2.15, 0);
+    }
+
+    // Side towers.
+    for (const side of [-1, 1]) {
+      const tower = new THREE.Group();
+      tower.position.set(side * 5.2, 0, -0.5);
+      palace.add(tower);
+
+      const towerBody = createCylinder(
+        1.15,
+        1.3,
+        5.8,
+        materials.gold,
+        0, 2.9, 0,
+        16
+      );
+      towerBody.scale.z = 0.8;
+
+      addMesh(new THREE.CylinderGeometry(1.28, 1.28, 0.28, 16), materials.paleGold, 0, 5.85, 0, false);
+      addMesh(new THREE.CylinderGeometry(0.85, 1.25, 0.25, 16), materials.darkGold, 0, 1.05, 0, false);
+
+      const windowMaterial = new THREE.MeshBasicMaterial({ color: 0xffc767 });
+      for (let y = 2.4; y < 5.5; y += 0.9) {
+        addMesh(new THREE.CircleGeometry(0.18, 12), windowMaterial, side * 1.17, y, 0.02, false);
+      }
+
+      const flag = addMesh(
+        new THREE.ConeGeometry(0.46, 1.25, 4),
+        materials.red,
+        side * 1.1,
+        6.65,
+        0
+      );
+      flag.rotation.y = Math.PI / 4;
+    }
+
+    // Sun gate at the end.
+    const gate = new THREE.Group();
+    gate.position.set(0, 9.5, -1.5);
+    palace.add(gate);
+
+    const gateLeft = createCylinder(1.35, 1.65, 2.2, materials.gold, -1.65, 0, 0, 18);
+    const gateRight = createCylinder(1.35, 1.65, 2.2, materials.gold, 1.65, 0, 0, 18);
+    gateLeft.scale.z = 0.72;
+    gateRight.scale.z = 0.72;
+
+    addMesh(new THREE.CylinderGeometry(1.8, 1.8, 0.3, 18), materials.paleGold, 0, 1.15, 0, false);
+    addMesh(new THREE.CylinderGeometry(0.2, 0.2, 2.2, 10), materials.darkGold, 0, 1.1, 0);
+
+    const sunDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(1.05, 48),
+      new THREE.MeshBasicMaterial({ color: 0xffd777 })
+    );
+    sunDisc.position.set(0, 1.2, 0.03);
+    sunDisc.rotation.y = Math.PI / 2;
+    gate.add(sunDisc);
+
+    // Hanging lanterns.
+    const lanterns = [];
+
+    function createLantern(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      palace.add(group);
+
+      const cord = addMesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 8), materials.black, 0, 0.35, 0);
+      addMesh(new THREE.SphereGeometry(0.14, 10, 8), materials.cream, 0, -0.05, 0);
+      addMesh(new THREE.ConeGeometry(0.28, 0.28, 8), materials.gold, 0, -0.24, 0);
+
+      const glow = new THREE.PointLight(0xffb84d, 4, 5, 2);
+      glow.position.set(0, -0.1, 0);
+      group.add(glow);
+
+      lanterns.push(glow);
+    }
+
+    createLantern(-2.6, 4.6, 0.2);
+    createLantern(2.6, 4.6, 0.2);
+    createLantern(-2.6, 7.4, 0.2);
+    createLantern(2.6, 7.4, 0.2);
+
+    // Decorative banners and hanging chains.
+    for (let i = 0; i < 6; i++) {
+      const x = -4.4 + i * 1.47;
+      const banner = addMesh(
+        new THREE.ConeGeometry(0.38, 1.15, 4),
+        i % 2 === 0 ? materials.red : materials.pink,
+        x, 4.2, 0.1
+      );
+      banner.rotation.y = Math.PI / 4;
+    }
+
+    // Small side platforms and railings.
+    for (let i = 0; i < 8; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = side * (3.35 + i * 0.28);
+      const y = 0.65 + Math.floor(i / 2) * 0.48;
+
+      addMesh(
+        new THREE.CylinderGeometry(0.27, 0.32, 0.35, 12),
+        materials.gold,
+        x, y, 1.25
+      );
+    }
+
+    // Enchanted particles drifting around the palace.
+    const particles = [];
+    const particleCount = 150;
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 3 + Math.random() * 8;
+      const y = 0.5 + Math.random() * 11;
+
+      particles.push({
+        x: Math.cos(angle) * radius,
+        y,
+        z: Math.sin(angle) * radius,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.12 + Math.random() * 0.25,
+        size: 0.025 + Math.random() * 0.045
+      });
+    }
+
+    const particleMaterial = new THREE.PointsMaterial({
+      color: 0xffd27a,
+      size: 0.09,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+
+    const particleField = new THREE.Points(
+      new THREE.BufferGeometry().setFromPoints(
+        particles.map(p => new THREE.Vector3(p.x, p.y, p.z))
+      ),
+      particleMaterial
+    );
+    scene.add(particleField);
+
+    // Main player: Link-like figure with cloak, cap, boots, and spear.
+    const player = new THREE.Group();
+    scene.add(player);
+
+    const cloak = addMesh(
+      new THREE.ConeGeometry(0.55, 1.15, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x8f3558,
+        metalness: 0.1,
+        roughness: 0.65
+      }),
+      0, 0.65, 0
+    );
+    cloak.rotation.y = Math.PI / 4;
+
+    addMesh(new THREE.SphereGeometry(0.22, 12, 10), materials.paleGold, 0, 1.12, 0);
+    addMesh(new THREE.CylinderGeometry(0.25, 0.27, 0.18, 10), materials.darkGold, 0, 1.35, 0);
+    addMesh(new THREE.CylinderGeometry(0.15, 0.19, 0.55, 10), materials.gold, 0, 0.16, 0);
+    addMesh(new THREE.CylinderGeometry(0.08, 0.08, 0.48, 8), materials.darkGold, 0.35, 0.02, 0);
+    addMesh(new THREE.CylinderGeometry(0.08, 0.08, 0.48, 8), materials.darkGold, -0.35, 0.02, 0);
+
+    const spear = addMesh(
+      new THREE.CylinderGeometry(0.025, 0.035, 1.3, 8),
+      materials.gold,
+      0.7, 1.05, 0
+    );
+    spear.rotation.z = -0.18;
+    addMesh(new THREE.SphereGeometry(0.13, 10, 8), materials.red, 0.7, 1.7, 0);
+
+    // Trail particles behind the player.
+    const trailParticles = [];
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailPositions = new Float32Array(12 * 3);
+    trailGeometry.setAttribute("position", new THREE.BufferAttribute(trailPositions, 3));
+    const trail = new THREE.Points(
+      trailGeometry,
+      new THREE.PointsMaterial({
+        color: 0xffd27a,
+        size: 0.1,
+        transparent: true,
+        opacity: 0.75,
+        depthWrite: false
+      })
+    );
+    scene.add(trail);
+
+    // Winged Fairy enemies.
+    const fairyMaterials = [
+      new THREE.MeshStandardMaterial({ color: 0xf2a7dc, roughness: 0.55, metalness: 0.05 }),
+      new THREE.MeshStandardMaterial({ color: 0xc88cff, roughness: 0.55, metalness: 0.05 }),
+      new THREE.MeshStandardMaterial({ color: 0xffd48b, roughness: 0.55, metalness: 0.05 })
+    ];
+
+    function createFairy(x, y, z, scale = 1, variant = 0) {
+      const fairy = new THREE.Group();
+      fairy.position.set(x, y, z);
+      fairy.scale.setScalar(scale);
+      scene.add(fairy);
+
+      const bodyMaterial = fairyMaterials[variant % fairyMaterials.length];
+
+      const body = addMesh(
+        new THREE.SphereGeometry(0.25, 12, 10),
+        bodyMaterial,
+        0, 0, 0
+      );
+      body.scale.set(0.8, 1.15, 0.8);
+
+      for (const side of [-1, 1]) {
+        const wing = addMesh(
+          new THREE.ConeGeometry(0.38, 0.85, 3),
+          bodyMaterial,
+          side * 0.27,
+          0.12,
+          0
+        );
+        wing.rotation.z = side * 0.25;
+        wing.rotation.x = -0.15;
+      }
+
+      const eyes = new THREE.MeshBasicMaterial({ color: 0x6b2144 });
+      addMesh(new THREE.SphereGeometry(0.045, 8, 6), eyes, 0.12, 0.25, 0.22);
+      addMesh(new THREE.SphereGeometry(0.045, 8, 6), eyes, -0.12, 0.25, 0.22);
+
+      const horn = addMesh(
+        new THREE.ConeGeometry(0.06, 0.48, 8),
+        materials.gold,
+        0, 0.48, 0
+      );
+      horn.rotation.z = 0.2;
+
+      fairy.userData = {
+        body,
+        wings: [wing, wing],
+        horn,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.7 + Math.random() * 0.5,
+        baseY: y,
+        hit: false
+      };
+
+      world.enemies.push(fairy);
+      return fairy;
+    }
+
+    const fairyData = {
+      left: createFairy(-2.2, 3.1, 0.5, 0.85, 0),
+      right: createFairy(2.2, 3.1, 0.5, 0.85, 1),
+      upperLeft: createFairy(-1.9, 6.0, -0.2, 0.72, 2),
+      upperRight: createFairy(1.9, 6.0, -0.2, 0.72, 0),
+      far: createFairy(0.8, 8.2, -1.0, 0.62, 1)
+    };
+
+    // Click raycasting.
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    function setPointer(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    function hitEnemy(event) {
+      if (!world.playing || world.player.hit) return;
+
+      setPointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(world.enemies, true);
+
+      if (hits.length) {
+        const hit = hits[0].object;
+        const fairy = hit.userData.fairy;
+        if (!fairy) return;
+
+        fairy.hit = true;
+        world.player.hit = true;
+        world.points += 1000;
+        world.player.scoreFromHit += 1000;
+        updateHUD();
+
+        fairy.userData.body.scale.setScalar(0.78);
+        fairy.userData.body.material.color.setHex(0xff6b78);
+
+        setTimeout(() => {
+          fairy.userData.body.scale.setScalar(1);
+          fairy.userData.body.material.color.setHex(fairyMaterials[fairy.userData.body.material.color.getHex()].color.getHex());
+        }, 350);
+
+        setTimeout(() => {
+          world.enemies = world.enemies.filter(e => e !== fairy);
+        }, 550);
+      }
+    }
+
+    renderer.domElement.addEventListener("click", hitEnemy);
+
+    // Custom orbit controls.
+    renderer.domElement.addEventListener("pointerdown", event => {
+      world.camera.dragging = true;
+      world.camera.lastX = event.clientX;
+      world.camera.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!world.camera.dragging) return;
+
+      const dx = event.clientX - world.camera.lastX;
+      const dy = event.clientY - world.camera.lastY;
+      world.camera.lastX = event.clientX;
+      world.camera.lastY = event.clientY;
+
+      world.camera.theta -= dx * 0.005;
+      world.camera.phi = THREE.MathUtils.clamp(world.camera.phi - dy * 0.004, 0.45, 1.48);
+    });
+
+    function endDrag(event) {
+      world.camera.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      world.camera.radius = THREE.MathUtils.clamp(
+        world.camera.radius + event.deltaY * 0.008,
+        7,
+        28
+      );
+    }, { passive: false });
+
+    // Player movement and collision.
+    const keys = new Set();
+    const touchPoints = new Map();
+
+    renderer.domElement.addEventListener("keydown", event => {
+      keys.add(event.code);
+    });
+
+    renderer.domElement.addEventListener("keyup", event => {
+      keys.delete(event.code);
+    });
+
+    renderer.domElement.addEventListener("touchstart", event => {
+      for (const touch of event.changedTouches) {
+        touchPoints.set(touch.identifier, {
+          x: touch.clientX,
+          y: touch.clientY
+        });
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchmove", event => {
+      for (const touch of event.changedTouches) {
+        const previous = touchPoints.get(touch.identifier);
+        if (!previous) continue;
+
+        const dx = touch.clientX - previous.x;
+        const dy = touch.clientY - previous.y;
+        previous.x = touch.clientX;
+        previous.y = touch.clientY;
+
+        world.camera.theta -= dx * 0.005;
+        world.camera.phi = THREE.MathUtils.clamp(world.camera.phi - dy * 0.004, 0.45, 1.48);
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchend", event => {
+      for (const touch of event.changedTouches) {
+        touchPoints.delete(touch.identifier);
+      }
+    }, { passive: true });
+
+    function updatePlayer(delta) {
+      const p = world.player;
+
+      if (p.state === "falling") {
+        p.fall -= delta * 5.2;
+        p.y -= delta * 8.5;
+        p.x += delta * 3.8;
+
+        if (p.y < 0.15 || p.fall <= 0) {
+          p.state = "crawling";
+          p.fall = 0;
+          takeDamage(18);
+        }
+      } else {
+        p.fall = 0;
+
+        const forward = new THREE.Vector3(0, 0, 1);
+        forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), p.rotation);
+
+        const input = new THREE.Vector3();
+        if (keys.has("ArrowLeft") || keys.has("KeyA")) input.add(forward.clone().multiplyScalar(-1));
+        if (keys.has("ArrowRight") || keys.has("KeyD")) input.add(forward.clone());
+        if (keys.has("ArrowUp") || keys.has("KeyW")) input.y += 1;
+        if (keys.has("ArrowDown") || keys.has("KeyS")) input.y -= 1;
+        if (keys.has("Space")) input.z += 1;
+        if (keys.has("KeyQ")) input.z -= 1;
+
+        const movement = input.length();
+        if (movement > 0) {
+          p.horizontalSpeed = movement * 2.2;
+          p.rotation = Math.atan2(input.x, input.z);
+        } else {
+          p.horizontalSpeed *= 0.92;
+        }
+
+        p.x += p.horizontalSpeed * delta;
+        p.y += delta * 0.12;
+
+        const targetY = p.state === "crawling" ? 0.45 : 0.45;
+        p.y = THREE.MathUtils.lerp(p.y, targetY, 1 - Math.exp(-delta * 8));
+
+        const nextX = p.x + p.horizontalSpeed * delta;
+        const nextZ = p.z + Math.sin(p.rotation) * p.horizontalSpeed * delta;
+
+        // Follow the step sequence.
+        if (p.state === "crawling") {
+          const step = lowerSteps.find(s => s.y <= p.y < s.y + 0.48) || upperSteps[0];
+          const targetZ = p.state === "upper" ? p.z : -1.25 + lowerSteps.length * 0.95;
+          p.z = THREE.MathUtils.lerp(p.z, targetZ, 1 - Math.exp(-delta * 2.3));
+        } else {
+          const targetZ = -1.45 + upperSteps.length * 0.9;
+          p.z = THREE.MathUtils.lerp(p.z, targetZ, 1 - Math.exp(-delta * 2.2));
+        }
+
+        // Very narrow upper steps: force a deliberate, slower crawl.
+        if (p.y > 5.4) {
+          p.horizontalSpeed *= 0.72;
+        }
+
+        // Enemy collision.
+        for (const fairy of world.enemies) {
+          const dx = fairy.position.x - p.x;
+          const dz = fairy.position.z - p.z;
+          if (dx * dx + dz * dz < 0.7) {
+            p.hit = true;
+            takeDamage(12);
+          }
+        }
+      }
+
+      p.x = THREE.MathUtils.clamp(p.x, -8, 8);
+      player.position.set(p.x, p.y, p.z);
+      player.rotation.y = p.rotation;
+    }
+
+    function takeDamage(amount) {
+      if (world.player.hit) return;
+      world.player.hit = true;
+      world.health -= amount;
+      if (world.health <= 0) {
+        world.health = 0;
+        endGame("You were struck and fell from the palace.");
+      }
+      updateHUD();
+    }
+
+    function updateHUD() {
+      scoreElement.textContent = String(world.points).padStart(6, "0");
+      healthText.textContent = `${Math.max(0, world.health)}%`;
+      const percent = Math.max(0, world.health / world.maxHealth) * 100;
+      healthBar.style.width = `${percent}%`;
+    }
+
+    function resetWorld() {
+      world.points = 0;
+      world.health = 100;
+      world.maxHealth = 100;
+      world.stage = 0;
+      world.playing = true;
+      world.player.hit = false;
+      world.player.fall = 0;
+      world.player.state = "crawling";
+      world.player.x = 0;
+      world.player.y = 0.45;
+      world.player.z = 0;
+      world.player.rotation = 0;
+      world.player.horizontalSpeed = 0;
+      world.enemies = [];
+
+      fairyData.left.position.set(-2.2, 3.1, 0.5);
+      fairyData.right.position.set(2.2, 3.1, 0.5);
+      fairyData.upperLeft.position.set(-1.9, 6.0, -0.2);
+      fairyData.upperRight.position.set(1.9, 6.0, -0.2);
+      fairyData.far.position.set(0.8, 8.2, -1.0);
+
+      for (const fairy of world.enemies) {
+        fairy.hit = false;
+      }
+
+      updateHUD();
+      startScreen.style.display = "none";
+      gameOver.style.display = "none";
+      loading.classList.add("done");
+      setTimeout(() => loading.remove(), 600);
+    }
+
+    function endGame(message) {
+      world.playing = false;
+      document.getElementById("ithit").textContent = message;
+      gameOver.style.display = "grid";
+    }
+
+    startButton.addEventListener("click", resetWorld);
+    restartButton.addEventListener("click", resetWorld);
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateHUD();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+
+      if (world.playing) {
+        updatePlayer(delta);
+
+        for (const fairy of world.enemies) {
+          const data = fairy.userData;
+          if (data.hit) continue;
+
+          const flap = Math.sin(elapsed * data.speed + data.phase) * 0.45;
+          fairy.rotation.z = flap;
+          fairy.rotation.y = Math.sin(elapsed * data.speed * 0.8 + data.phase) * 0.35;
+          fairy.position.y = data.baseY + Math.sin(elapsed * data.speed + data.phase) * 0.18;
+          fairy.rotation.x = Math.cos(elapsed * data.speed * 0.8 + data.phase) * 0.13;
+        }
+
+        palaceLight.intensity = 30 + Math.sin(elapsed * 1.7) * 4;
+
+        for (const particle of particles) {
+          particle.phase += delta * particle.speed;
+          particle.x += Math.sin(elapsed * 0.35 + particle.phase) * delta * 0.08;
+          particle.z += Math.cos(elapsed * 0.28 + particle.phase) * delta * 0.06;
+
+          if (particle.x > 12) particle.x = -12;
+          if (particle.z > 12) particle.z = -12;
+          if (particle.y > 12) particle.y = 0.5;
+        }
+
+        particleField.geometry.attributes.position.needsUpdate = true;
+
+        const trailAttribute = trailGeometry.getAttribute("position");
+        for (let i = 0; i < 12; i++) {
+          const age = i / 12;
+          trailAttribute.setXYZ(
+            i,
+            player.position.x + Math.sin(elapsed * 2.5 + i) * 0.12 * age,
+            player.position.y + 0.18 + age * 0.3,
+            player.position.z + Math.cos(elapsed * 2.2 + i) * 0.1 * age
+          );
+        }
+        trailAttribute.needsUpdate = true;
+      }
+
+      // Gentle camera auto-orbit while the player is not dragging.
+      if (!world.camera.dragging) {
+        world.camera.theta += delta * 0.025;
+      }
+
+      const { target, radius, theta, phi } = world.camera;
+      camera.position.set(
+        target.x + radius * Math.sin(phi) * Math.cos(theta),
+        target.y + radius * Math.cos(phi),
+        target.z + radius * Math.sin(phi) * Math.sin(theta)
+      );
+      camera.lookAt(target);
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
