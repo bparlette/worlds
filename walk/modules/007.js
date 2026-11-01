@@ -1,0 +1,542 @@
+// @world {"id": "007", "title": "Mountain King", "sub": "Diamond Caverns", "system": "Atari 2600"}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    return {
+      position: { set: () => {}, copy: () => {} },
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: { prepend: () => {}, appendChild: () => {}, style: {} },
+    querySelector: () => ({ style: {}, addEventListener: () => {} }),
+    getElementById: () => ({ style: {}, classList: { add: () => {}, remove: () => {} } }),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // scene redirect
+    scene.background = new THREE.Color(0x080b10);
+    scene.fog = new THREE.FogExp2(0x101319, 0.025);
+
+    camera = dummyCamera();
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x718096, 0x21150c, 1.15));
+
+    const keyLight = new THREE.DirectionalLight(0xffd59b, 2.6);
+    keyLight.position.set(8, 12, 7);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -18;
+    keyLight.shadow.camera.right = 18;
+    keyLight.shadow.camera.top = 18;
+    keyLight.shadow.camera.bottom = -18;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 45;
+    keyLight.shadow.bias = -0.0008;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x6a86ff, 1.4);
+    rimLight.position.set(-10, 5, -9);
+    scene.add(rimLight);
+
+    const warmFill = new THREE.PointLight(0xff8a3c, 18, 24, 2);
+    warmFill.position.set(-3, 1.5, 5);
+    scene.add(warmFill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const rockMaterial = new THREE.MeshStandardMaterial({
+      color: 0x4b4740,
+      roughness: 0.94,
+      metalness: 0.02
+    });
+
+    const darkRockMaterial = new THREE.MeshStandardMaterial({
+      color: 0x242529,
+      roughness: 0.98,
+      metalness: 0.01
+    });
+
+    const caveMaterial = new THREE.MeshStandardMaterial({
+      color: 0x555048,
+      roughness: 0.95
+    });
+
+    const goldMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd6a53b,
+      roughness: 0.32,
+      metalness: 0.78
+    });
+
+    const rubyMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8f152c,
+      roughness: 0.2,
+      metalness: 0.25,
+      emissive: 0x3b020c,
+      emissiveIntensity: 0.65
+    });
+
+    const diamondMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe8f5ff,
+      roughness: 0.08,
+      metalness: 0.18,
+      emissive: 0x8bbcff,
+      emissiveIntensity: 0.45
+    });
+
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x34302a,
+      roughness: 0.9
+    });
+
+    // -------------------------------------------------------------------------
+    // Procedural cave shell with irregular rock columns
+    // -------------------------------------------------------------------------
+
+    const caveShell = new THREE.Mesh(
+      new THREE.SphereGeometry(22, 48, 28, 0, Math.PI * 2, 0, Math.PI * 1.42),
+      caveMaterial
+    );
+    caveShell.rotation.x = Math.PI;
+    caveShell.scale.y = 0.72;
+    caveShell.receiveShadow = true;
+    scene.add(caveShell);
+
+    function createRockGeometry(seed = 1) {
+      const geometry = new THREE.IcosahedronGeometry(1, 1);
+      const position = geometry.attributes.position;
+
+      for (let i = 0; i < position.count; i++) {
+        let x = position.getX(i);
+        let y = position.getY(i);
+        let z = position.getZ(i);
+
+        const n = Math.sin(x * 4.1 + seed) * Math.cos(z * 3.7 - seed) * 0.48;
+        x += n;
+        y += n * 0.65;
+        z += n;
+
+        position.setXYZ(i, x, y, z);
+      }
+
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    const rockGeometry = createRockGeometry(2.4);
+
+    for (let i = 0; i < 22; i++) {
+      const angle = (i / 22) * Math.PI * 2 + Math.sin(i * 1.7) * 0.12;
+      const radius = 10.5 + (i % 4) * 1.4;
+      const height = 2.2 + (i % 5) * 0.55;
+
+      const rock = new THREE.Mesh(rockGeometry, i % 3 === 0 ? darkRockMaterial : rockMaterial);
+      rock.position.set(
+        Math.cos(angle) * radius,
+        height * 0.5,
+        Math.sin(angle) * radius
+      );
+      rock.scale.set(
+        1.6 + (i % 3),
+        height * 0.65,
+        1.4 + (i % 4) * 0.25
+      );
+      rock.rotation.set(i * 0.4, angle, i * 0.23);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      scene.add(rock);
+    }
+
+    // Floor rings and scattered debris.
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(11.5, 64),
+      floorMaterial
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.12;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    for (let i = 0; i < 70; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 1.5 + Math.random() * 8.5;
+      const size = 0.08 + Math.random() * 0.32;
+
+      const pebble = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(size, 0),
+        Math.random() > 0.5 ? rockMaterial : darkRockMaterial
+      );
+      pebble.position.set(
+        Math.cos(angle) * radius,
+        -0.02,
+        Math.sin(angle) * radius
+      );
+      pebble.rotation.set(Math.random(), Math.random(), Math.random());
+      pebble.castShadow = true;
+      pebble.receiveShadow = true;
+      scene.add(pebble);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hanging crystals
+    // -------------------------------------------------------------------------
+
+    const crystals = [];
+    const crystalGeometry = new THREE.ConeGeometry(0.18, 1, 5);
+    const crystalMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8bbcff,
+      roughness: 0.2,
+      metalness: 0.15,
+      emissive: 0x173c70,
+      emissiveIntensity: 0.8
+    });
+
+    function createCrystal(position, scale = 1, phase = 0) {
+      const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
+      crystal.position.copy(position);
+      crystal.position.y += 0.6 * scale;
+      crystal.scale.set(scale, scale * 1.8, scale);
+      crystal.rotation.z = (Math.random() - 0.5) * 0.5;
+      crystal.castShadow = true;
+      scene.add(crystal);
+      crystals.push({ mesh: crystal, phase });
+    }
+
+    [
+      [-5.8, 4.2, 1.3],
+      [-3.7, 5.5, 1.8],
+      [2.8, 4.8, 1.5],
+      [4.9, 6.0, 2.0],
+      [0.2, 7.0, 2.5],
+      [-1.3, 6.4, 1.7]
+    ].forEach((p, i) => createCrystal(new THREE.Vector3(...p), 0.8 + (i % 3) * 0.18, i));
+
+    // -------------------------------------------------------------------------
+    // Treasure and glowing diamonds
+    // -------------------------------------------------------------------------
+
+    const collectibles = [];
+
+    function createTreasure(position, type = "diamond", scale = 1) {
+      const group = new THREE.Group();
+      group.position.copy(position);
+      group.scale.setScalar(scale);
+
+      if (type === "diamond") {
+        const diamond = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.48, 0),
+          diamondMaterial
+        );
+        diamond.rotation.set(0.4, 0.7, -0.2);
+        diamond.castShadow = true;
+        group.add(diamond);
+
+        const halo = new THREE.Mesh(
+          new THREE.SphereGeometry(0.72, 16, 12),
+          new THREE.MeshBasicMaterial({
+            color: 0x9ac8ff,
+            transparent: true,
+            opacity: 0.08,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+          })
+        );
+        group.add(halo);
+
+        const glow = new THREE.PointLight(0x79baff, 4, 5, 2);
+        group.add(glow);
+      } else if (type === "gold") {
+        const gold = new THREE.Mesh(
+          new THREE.TorusGeometry(0.42, 0.09, 8, 20),
+          goldMaterial
+        );
+        gold.rotation.x = Math.PI / 2;
+        gold.rotation.z = 0.25;
+        gold.castShadow = true;
+        group.add(gold);
+
+        const coin = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.22, 0.08, 16),
+          goldMaterial
+        );
+        coin.rotation.x = Math.PI / 2;
+        group.add(coin);
+      } else {
+        const ruby = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.36, 0),
+          rubyMaterial
+        );
+        ruby.rotation.set(0.5, 0.4, 0.3);
+        ruby.castShadow = true;
+        group.add(ruby);
+      }
+
+      group.userData.baseRotation = group.rotation.clone();
+      group.userData.type = type;
+      scene.add(group);
+      collectibles.push(group);
+      return group;
+    }
+
+    createTreasure(new THREE.Vector3(-3.1, 0.25, 2.8), "diamond", 1.15);
+    createTreasure(new THREE.Vector3(3.2, 0.25, -2.7), "gold", 1.0);
+    createTreasure(new THREE.Vector3(0.2, 0.25, 3.7), "ruby", 0.95);
+    createTreasure(new THREE.Vector3(-5.0, 0.25, -3.8), "diamond", 0.75);
+    createTreasure(new THREE.Vector3(4.5, 0.25, 3.2), "gold", 0.7);
+
+    // Dust motes.
+    const dustCount = 350;
+    const dustPositions = new Float32Array(dustCount * 3);
+    const dustSpeeds = new Float32Array(dustCount);
+
+    for (let i = 0; i < dustCount; i++) {
+      dustPositions[i * 3] = (Math.random() - 0.5) * 17;
+      dustPositions[i * 3 + 1] = Math.random() * 7;
+      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 17;
+      dustSpeeds[i] = 0.03 + Math.random() * 0.12;
+    }
+
+    const dustGeometry = new THREE.BufferGeometry();
+    dustGeometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+
+    const dust = new THREE.Points(
+      dustGeometry,
+      new THREE.PointsMaterial({
+        color: 0xd7b56b,
+        size: 0.035,
+        transparent: true,
+        opacity: 0.45,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    scene.add(dust);
+
+    // -------------------------------------------------------------------------
+    // Camera controls: pointer orbit and wheel zoom
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      theta: -0.42,
+      phi: 1.18,
+      radius: 15.5,
+      target: new THREE.Vector3(0, 2.2, 0),
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(
+        controls.phi - dy * 0.005,
+        0.35,
+        Math.PI * 0.78
+      );
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius + event.deltaY * 0.012,
+        7.5,
+        25
+      );
+    }, { passive: false });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      updateCamera();
+
+      for (const item of crystals) {
+        item.mesh.rotation.y = Math.sin(elapsed * 0.7 + item.phase) * 0.18;
+        item.mesh.rotation.z = Math.sin(elapsed * 0.45 + item.phase) * 0.08;
+        item.mesh.position.y = 0.6 * item.mesh.scale + Math.sin(elapsed * 1.2 + item.phase) * 0.08 * item.mesh.scale;
+      }
+
+      for (const item of collectibles) {
+        item.rotation.y += 0.006;
+        item.rotation.x = Math.sin(elapsed * 0.7 + item.position.x) * 0.12;
+        item.rotation.z = Math.cos(elapsed * 0.55 + item.position.z) * 0.1;
+
+        if (item.userData.type === "diamond") {
+          item.children[1].scale.setScalar(1 + Math.sin(elapsed * 2.4) * 0.08);
+        }
+      }
+
+      const positions = dustGeometry.attributes.position.array;
+      for (let i = 0; i < dustCount; i++) {
+        positions[i * 3 + 1] += dustSpeeds[i] * 0.012;
+        positions[i * 3] += Math.sin(elapsed * 0.4 + i) * 0.0008;
+
+        if (positions[i * 3 + 1] > 7.5) {
+          positions[i * 3 + 1] = -0.2;
+        }
+      }
+      dustGeometry.attributes.position.needsUpdate = true;
+
+      warmFill.intensity = 18 + Math.sin(elapsed * 1.7) * 2.5;
+      rimLight.intensity = 1.35 + Math.sin(elapsed * 0.7) * 0.18;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    env:   { background: 0x080b10, fogColor: 0x101319, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
+  };
+}

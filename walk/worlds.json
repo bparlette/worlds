@@ -33,5 +33,12 @@
     "sub": "Canyon Riverway",
     "system": "Atari 2600",
     "module": "modules/005.js"
+  },
+  {
+    "id": "007",
+    "title": "Mountain King",
+    "sub": "Diamond Caverns",
+    "system": "Atari 2600",
+    "module": "modules/007.js"
   }
 ]
