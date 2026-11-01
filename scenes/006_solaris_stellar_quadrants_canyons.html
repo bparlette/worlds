@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stellar Quadrants & Canyons — Solaris</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --amber: #ffc66b;
+      --cyan: #72d8ff;
+      --violet: #b78cff;
+      --panel: rgba(12, 15, 24, 0.72);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #05060b;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #f4f1ec;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, .8);
+    }
+
+    .brand {
+      position: absolute;
+      top: 28px;
+      left: 30px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255, 198, 107, .75);
+      border-radius: 50%;
+      box-shadow: inset 0 0 15px rgba(255, 198, 107, .18);
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      background: var(--amber);
+    }
+
+    .brand-mark::before {
+      width: 17px;
+      height: 2px;
+      left: 10px;
+      top: 18px;
+    }
+
+    .brand-mark::after {
+      width: 2px;
+      height: 17px;
+      left: 18px;
+      top: 10px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(14px, 1.5vw, 20px);
+      line-height: 1.2;
+      letter-spacing: .14em;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: #aeb6c7;
+      font-size: 10px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .panel {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      width: 230px;
+      padding: 16px 17px;
+      border: 1px solid rgba(114, 216, 255, .2);
+      border-left: 2px solid var(--cyan);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 16px 50px rgba(0, 0, 0, .28);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 12px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 9px var(--cyan);
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 7px;
+      margin: 8px 0;
+      color: #9ba8ba;
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .readout strong {
+      color: #f3f0e8;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 24px;
+      left: 30px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      color: #8e9baa;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .controls span {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .key {
+      display: inline-grid;
+      min-width: 25px;
+      height: 23px;
+      place-items: center;
+      padding: 0 5px;
+      border: 1px solid rgba(255, 198, 107, .35);
+      border-radius: 4px;
+      color: var(--amber);
+      background: rgba(255, 198, 107, .07);
+      font-size: 9px;
+    }
+
+    .retro-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 43%, transparent 45%, rgba(3, 4, 10, .42) 100%),
+        linear-gradient(180deg, rgba(5, 6, 12, .12), transparent 20%, transparent 78%, rgba(5, 6, 12, .35));
+    }
+
+    .retro-grain {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .055;
+      background-image:
+        repeating-radial-gradient(circle at 20% 30%, rgba(255,255,255,.2) 0, rgba(255,255,255,.2) .45px, transparent .55px, transparent 2px),
+        repeating-radial-gradient(circle at 70% 60%, rgba(255,198,107,.25) 0, rgba(255,198,107,.25) .35px, transparent .45px, transparent 2px);
+      mix-blend-mode: soft-light;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background: #05060b;
+      transition: opacity .7s ease, visibility .7s ease;
+    }
+
+    .loading.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .boot {
+      color: var(--amber);
+      font-size: 11px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .boot::after {
+      content: "";
+      display: block;
+      width: 120px;
+      height: 2px;
+      margin-top: 12px;
+      background: linear-gradient(90deg, transparent, var(--amber), transparent);
+      animation: boot 1.2s ease-in-out infinite;
+    }
+
+    @keyframes boot {
+      50% { transform: scaleX(.35); opacity: .35; }
+      100% { transform: scaleX(1); opacity: 1; }
+    }
+
+    @media (max-width: 650px) {
+      .brand { top: 18px; left: 18px; }
+      .brand-mark { width: 32px; height: 32px; }
+      .brand-mark::before { left: 8px; top: 16px; }
+      .brand-mark::after { left: 16px; top: 8px; }
+      .panel { right: 14px; top: auto; bottom: 68px; width: 190px; }
+      .controls { left: 18px; bottom: 18px; flex-wrap: wrap; gap: 8px; }
+      .controls .desktop { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loading"><div class="boot">Initializing Solaris</div></div>
+
+  <div class="hud">
+    <div class="retro-vignette"></div>
+    <div class="retro-grain"></div>
+
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <h1>Stellar Quadrants & Canyons</h1>
+        <p>Solaris · Interactive Atari 2600 World</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">
+        <span class="status-dot"></span>
+        Solaris Telemetry
+      </div>
+      <div class="readout"><span>Quadrant</span><strong>47° 12′ N</strong></div>
+      <div class="readout"><span>Surface</span><strong>−42°C</strong></div>
+      <div class="readout"><span>Wind</span><strong>18 km/h</strong></div>
+      <div class="readout"><span>Signal</span><strong>98.4%</strong></div>
+      <div class="readout"><span>Time</span><strong id="time">03:17:42</strong></div>
+    </div>
+
+    <div class="controls">
+      <span><span class="key">DRAG</span> Orbit</span>
+      <span><span class="key">WASD</span> Move</span>
+      <span class="desktop"><span class="key">R</span> Reset</span>
+      <span class="desktop"><span class="key">F</span> Focus</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement: document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070912);
+    scene.fog = new THREE.FogExp2(0x10131e, 0.0125);
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 180);
+    const clock = new THREE.Clock();
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const mat = {
+      rock: new THREE.MeshStandardMaterial({ color: 0x51433a, roughness: 0.96, metalness: 0.02 }),
+      darkRock: new THREE.MeshStandardMaterial({ color: 0x27232a, roughness: 1 }),
+      paleRock: new THREE.MeshStandardMaterial({ color: 0x75675c, roughness: 0.94 }),
+      metal: new THREE.MeshStandardMaterial({ color: 0x343a42, roughness: 0.55, metalness: 0.72 }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xc99b45, roughness: 0.35, metalness: 0.78 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xd9d7cf, roughness: 0.65 }),
+      glass: new THREE.MeshPhysicalMaterial({ color: 0x8bd8ff, roughness: 0.15, metalness: 0.05, transparent: true, opacity: 0.62 }),
+      cyan: new THREE.MeshStandardMaterial({ color: 0x67d7ff, emissive: 0x267f9c, emissiveIntensity: 1.7, roughness: 0.35 }),
+      amber: new THREE.MeshStandardMaterial({ color: 0xffc56b, emissive: 0xa95b08, emissiveIntensity: 1.4, roughness: 0.4 }),
+    };
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x7893bd, 0x15100c, 1.25));
+
+    const sun = new THREE.DirectionalLight(0xffd9a0, 3.2);
+    sun.position.set(-24, 34, 18);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -36;
+    sun.shadow.camera.right = 36;
+    sun.shadow.camera.top = 36;
+    sun.shadow.camera.bottom = -36;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 100;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0x4c8fff, 1.7);
+    rim.position.set(20, 12, -28);
+    scene.add(rim);
+
+    const warmFill = new THREE.PointLight(0xff8b3d, 24, 45, 2);
+    warmFill.position.set(-8, 4, 8);
+    scene.add(warmFill);
+
+    // ------------------------------------------------------------
+    // Procedural terrain
+    // ------------------------------------------------------------
+    const terrain = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 100, 120, 120),
+      mat.rock
+    );
+    terrain.rotation.x = -Math.PI / 2;
+    terrain.receiveShadow = true;
+    terrain.castShadow = true;
+    scene.add(terrain);
+
+    const height = (x, z) => {
+      const d = Math.hypot(x - 4, z + 2);
+      const canyon = Math.max(0, 1 - Math.min(1, d / 36));
+      const ridge = Math.max(0, Math.sin(x * 0.12) * 0.55 + Math.cos(z * 0.16) * 0.35);
+      const noise = Math.sin(x * 0.83 + z * 0.41) * 0.28 + Math.sin(x * 1.7 - z * 0.9) * 0.12;
+      return -2.8 + canyon * 13 + ridge * 4.5 + noise * 1.2;
+    };
+
+    const terrainGeometry = terrain.geometry;
+    const positions = terrainGeometry.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i);
+      const z = positions.getZ(i);
+      positions.setY(i, height(x, z));
+    }
+    terrainGeometry.computeVertexNormals();
+
+    // Large canyon rim and distant mesas.
+    const mesaGroup = new THREE.Group();
+    scene.add(mesaGroup);
+
+    function createMesa(x, z, width, depth, height, material) {
+      const group = new THREE.Group();
+      const top = new THREE.Mesh(
+        new THREE.CylinderGeometry(width * 0.55, width, height, 7),
+        material
+      );
+      top.position.y = height / 2;
+      top.rotation.y = x * 0.11;
+      top.castShadow = true;
+      top.receiveShadow = true;
+      group.add(top);
+
+      const lip = new THREE.Mesh(
+        new THREE.CylinderGeometry(width * 0.76, width * 0.9, 1.2, 7),
+        mat.paleRock
+      );
+      lip.position.set(0, height * 0.78, 0);
+      lip.rotation.y = x * 0.11;
+      lip.castShadow = true;
+      group.add(lip);
+
+      group.position.set(x, height(x, z) - 3, z);
+      mesaGroup.add(group);
+    }
+
+    createMesa(-30, -34, 15, 12, 12, mat.darkRock);
+    createMesa(-43, -48, 19, 14, 16, mat.paleRock);
+    createMesa(31, -42, 17, 13, 14, mat.darkRock);
+    createMesa(47, -55, 22, 16, 19, mat.paleRock);
+    createMesa(-52, 16, 15, 10, 10, mat.darkRock);
+
+    // Canyon path.
+    const path = new THREE.Mesh(
+      new THREE.PlaneGeometry(18, 80, 24, 80),
+      mat.paleRock
+    );
+    path.rotation.x = -Math.PI / 2;
+    path.rotation.z = -0.12;
+    path.position.set(1, 0, 24);
+    path.receiveShadow = true;
+    scene.add(path);
+
+    // ------------------------------------------------------------
+    // Outpost
+    // ------------------------------------------------------------
+    const outpost = new THREE.Group();
+    outpost.position.set(7, height(7, 3), 3);
+    scene.add(outpost);
+
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(7, 1.25, 6),
+      mat.darkRock
+    );
+    base.position.y = 0.65;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    outpost.add(base);
+
+    const building = new THREE.Mesh(
+      new THREE.BoxGeometry(4.5, 3.2, 3.8),
+      mat.metal
+    );
+    building.position.set(0, 2.75, 0);
+    building.rotation.y = -0.12;
+    building.castShadow = true;
+    building.receiveShadow = true;
+    outpost.add(building);
+
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(3.5, 1.25, 4),
+      mat.gold
+    );
+    roof.position.set(0, 4.65, 0);
+    roof.rotation.y = Math.PI / 4;
+    roof.castShadow = true;
+    outpost.add(roof);
+
+    for (let i = 0; i < 4; i++) {
+      const window = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.72, 0.08),
+        mat.cyan
+      );
+      window.position.set(-1.25 + i * 0.92, 3.2, 1.93);
+      outpost.add(window);
+    }
+
+    const antenna = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.06, 5.8, 6),
+      mat.gold
+    );
+    antenna.position.set(2.6, 6.3, -0.8);
+    antenna.castShadow = true;
+    outpost.add(antenna);
+
+    const dish = new THREE.Mesh(
+      new THREE.ConeGeometry(1.15, 0.75, 24, 1, true),
+      mat.white
+    );
+    dish.position.set(2.6, 7.2, -0.8);
+    dish.rotation.z = -0.55;
+    dish.rotation.y = 0.3;
+    dish.castShadow = true;
+    outpost.add(dish);
+
+    const dishRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.12, 0.06, 8, 32),
+      mat.gold
+    );
+    dishRing.position.set(2.6, 7.2, -0.8);
+    dishRing.rotation.set(Math.PI / 2, 0, -0.55);
+    outpost.add(dishRing);
+
+    // Antenna glow.
+    const beacon = new THREE.PointLight(0xffa34d, 7, 12, 2);
+    beacon.position.set(2.6, 8, -0.8);
+    outpost.add(beacon);
+
+    // ------------------------------------------------------------
+    // Stars
+    // ------------------------------------------------------------
+    const starCount = 1100;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const radius = 80 + Math.random() * 120;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      starPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+      starPositions[i * 3 + 1] = radius * Math.cos(phi) + 12;
+      starPositions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+    }
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(
+      starGeometry,
+      new THREE.PointsMaterial({ color: 0x9ebcff, size: 0.18, sizeAttenuation: true, transparent: true, opacity: 0.85 })
+    );
+    scene.add(stars);
+
+    // ------------------------------------------------------------
+    // Animated atmospheric elements
+    // ------------------------------------------------------------
+    const particles = [];
+    const particleMaterials = [
+      new THREE.PointsMaterial({ color: 0xffc56b, size: 0.18, transparent: true, opacity: 0.55 }),
+      new THREE.PointsMaterial({ color: 0x75d9ff, size: 0.13, transparent: true, opacity: 0.38 })
+    ];
+
+    for (let i = 0; i < 65; i++) {
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(3);
+      const p = new THREE.Vector3(
+        (Math.random() - 0.5) * 65,
+        2 + Math.random() * 18,
+        (Math.random() - 0.5) * 65
+      );
+      positions[0] = p.x;
+      positions[1] = p.y;
+      positions[2] = p.z;
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+      const points = new THREE.Points(geometry, particleMaterials[i % 2]);
+      points.userData = {
+        baseX: p.x,
+        baseY: p.y,
+        baseZ: p.z,
+        drift: Math.random() * Math.PI * 2,
+        speed: 0.18 + Math.random() * 0.3
+      };
+      scene.add(points);
+      particles.push(points);
+    }
+
+    const fallingDust = new THREE.Points(
+      new THREE.BufferGeometry(),
+      new THREE.PointsMaterial({ color: 0xffc56b, size: 0.07, transparent: true, opacity: 0.45, depthWrite: false })
+    );
+    const dustPositions = new Float32Array(250 * 3);
+    for (let i = 0; i < 250; i++) {
+      dustPositions[i * 3] = (Math.random() - 0.5) * 70;
+      dustPositions[i * 3 + 1] = Math.random() * 22;
+      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 70;
+    }
+    fallingDust.geometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+    scene.add(fallingDust);
+
+    // Small lights along the canyon.
+    const lampPositions = [
+      [-12, 0, 12], [-4, 0, 18], [7, 0, 10], [15, 0, 18], [-20, 0, 25], [25, 0, 25]
+    ];
+    const lamps = [];
+
+    lampPositions.forEach(([x, y, z]) => {
+      const lamp = new THREE.Group();
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.08, 2.2, 6),
+        mat.gold
+      );
+      pole.position.y = 1.1;
+      lamp.add(pole);
+
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 8, 6),
+        mat.amber
+      );
+      bulb.position.y = 2.25;
+      lamp.add(bulb);
+
+      const light = new THREE.PointLight(0xffa447, 4, 8, 2);
+      light.position.y = 2.25;
+      lamp.add(light);
+
+      lamp.position.set(x, height(x, z) + 0.08, z);
+      scene.add(lamp);
+      lamps.push({ group: lamp, light, phase: Math.random() * 6.28 });
+    });
+
+    // ------------------------------------------------------------
+    // Camera controls: orbit, pan, zoom, keyboard movement
+    // ------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(1, 3, 0),
+      yaw: 0.55,
+      pitch: 0.38,
+      distance: 29,
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+      keys: new Set()
+    };
+
+    const defaultTarget = controls.target.clone();
+    const defaultYaw = controls.yaw;
+    const defaultPitch = controls.pitch;
+    const defaultDistance = controls.distance;
+
+    function updateCamera() {
+      const horizontal = Math.cos(controls.pitch) * controls.distance;
+      camera.position.set(
+        controls.target.x + Math.sin(controls.yaw) * horizontal,
+        controls.target.y + Math.sin(controls.pitch) * controls.distance,
+        controls.target.z - Math.cos(controls.yaw) * horizontal
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      controls.yaw -= dx * 0.006;
+      controls.pitch = THREE.MathUtils.clamp(controls.pitch + dy * 0.004, -0.05, 1.25);
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.distance = THREE.MathUtils.clamp(controls.distance * Math.exp(event.deltaY * 0.001), 10, 65);
+    }, { passive: false });
+
+    const moveForward = new THREE.Vector3(0, 0, 1);
+    const moveRight = new THREE.Vector3(1, 0, 0);
+
+    window.addEventListener("keydown", (event) => {
+      controls.keys.add(event.key.toLowerCase());
+      if (event.key.toLowerCase() === "r") resetCamera();
+      if (event.key.toLowerCase() === "f") focusCamera();
+    });
+
+    window.addEventListener("keyup", (event) => controls.keys.delete(event.key.toLowerCase()));
+
+    function resetCamera() {
+      controls.target.copy(defaultTarget);
+      controls.yaw = defaultYaw;
+      controls.pitch = defaultPitch;
+      controls.distance = defaultDistance;
+    }
+
+    function focusCamera() {
+      controls.target.set(-1, 4, 3);
+      controls.yaw = 0.7;
+      controls.pitch = 0.45;
+      controls.distance = 16;
+    }
+
+    updateCamera();
+
+    // ------------------------------------------------------------
+    // Animation
+    // ------------------------------------------------------------
+    const timeEl = document.getElementById("time");
+    let elapsed = 0;
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.05);
+      elapsed += delta;
+
+      // Subtle outpost beacon pulse.
+      beacon.intensity = 5.5 + Math.sin(elapsed * 2.4) * 1.2;
+
+      // Slowly rotate dish.
+      dish.rotation.z = -0.55 + Math.sin(elapsed * 0.18) * 0.08;
+      dishRing.rotation.z = -0.55 + Math.sin(elapsed * 0.18) * 0.08;
+
+      // Animate particles.
+      particles.forEach((points, i) => {
+        const data = points.userData;
+        const positions = points.geometry.attributes.position;
+        for (let j = 0; j < 3; j++) {
+          let value = positions.array[j];
+          if (j === 1) value += delta * data.speed * 0.08;
+          positions.array[j] = value;
+        }
+        positions.needsUpdate = true;
+        points.rotation.y = data.drift + elapsed * data.speed * 0.18;
+        points.position.x = data.baseX + Math.sin(elapsed * data.speed) * 2.5;
+      });
+
+      // Falling dust.
+      const dustArray = fallingDust.geometry.attributes.position.array;
+      for (let i = 0; i < 250; i++) {
+        let y = dustArray[i * 3 + 1];
+        if (y < 0.25) y = 20;
+        dustArray[i * 3 + 1] -= delta * (0.035 + (i % 5) * 0.012);
+        dustArray[i * 3] += Math.sin(elapsed * 0.45 + i) * delta * 0.025;
+      }
+      fallingDust.geometry.attributes.position.needsUpdate = true;
+
+      // Lamp flicker.
+      lamps.forEach((lamp, i) => {
+        lamp.light.intensity = 3.6 + Math.sin(elapsed * 4.1 + lamp.phase) * 0.35 + Math.sin(elapsed * 7.7 + i) * 0.12;
+      });
+
+      // Telemetry time.
+      const totalSeconds = 3 * 3600 + 17 * 60 + 42 + elapsed;
+      const hours = Math.floor(totalSeconds / 3600) % 24;
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      timeEl.textContent = [hours, minutes, seconds]
+        .map(value => String(value).padStart(2, "0"))
+        .join(":");
+
+      updateCamera();
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    requestAnimationFrame(() => {
+      document.getElementById("loading").classList.add("hidden");
+    });
+  </script>
+</body>
+</html>

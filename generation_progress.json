@@ -43,5 +43,14 @@
     "filename": "005_river_raid_canyon_riverway.html",
     "generated_at": "2026-10-31 22:47:54",
     "verified_working": true
+  },
+  "6": {
+    "id": 6,
+    "game": "Solaris",
+    "target": "Stellar Quadrants & Canyons",
+    "platform": "Atari 2600",
+    "filename": "006_solaris_stellar_quadrants_canyons.html",
+    "verified_working": false,
+    "generated_at": "2026-10-31 23:29:46"
   }
 }
