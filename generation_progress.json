@@ -88,5 +88,14 @@
     "filename": "010_super_mario_bros_world_1_1.html",
     "verified_working": false,
     "generated_at": "2026-11-01 01:26:01"
+  },
+  "11": {
+    "id": 11,
+    "game": "Super Mario Bros. 3",
+    "target": "Dark Land Airships",
+    "platform": "NES",
+    "filename": "011_super_mario_bros_3_dark_land_airships.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 01:36:26"
   }
 }
