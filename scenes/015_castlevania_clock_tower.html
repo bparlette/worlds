@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Castlevania: Clock Tower — NES World</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #020306;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      color: #f2d88a;
+      text-shadow: 0 0 12px #7a3b00;
+      font-size: clamp(20px, 3vw, 38px);
+      line-height: 1;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      position: absolute;
+      top: 26px;
+      right: 28px;
+      width: min(520px, 45vw);
+      color: #b9b4a5;
+      font-size: 12px;
+      line-height: 1.55;
+      text-align: right;
+      letter-spacing: .04em;
+      text-shadow: 0 1px 4px #000;
+    }
+
+    .controls {
+      position: absolute;
+      left: 28px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #d5c8a8;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .controls span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .key {
+      padding: 4px 7px;
+      border: 1px solid #756b52;
+      border-radius: 3px;
+      color: #f0dfbd;
+      background: rgba(0,0,0,.35);
+      font-size: 10px;
+    }
+
+    #status {
+      position: absolute;
+      top: 112px;
+      right: 28px;
+      min-width: 170px;
+      padding: 12px 14px;
+      border-left: 2px solid #ef9b38;
+      color: #f0dfbd;
+      background: linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.08));
+      font-size: 11px;
+      line-height: 1.5;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #status::before {
+      content: "";
+      position: absolute;
+      top: 13px;
+      right: -4px;
+      width: 8px;
+      height: 30px;
+      background: #ef9b38;
+      box-shadow: 0 0 10px #ef9b38;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      color: #e4c77c;
+      background: #020306;
+      font-size: 12px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      transition: opacity .6s ease;
+    }
+
+    #loading.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+      .subtitle { display: none; }
+      .title { top: 18px; left: 18px; }
+      .controls { left: 18px; bottom: 16px; }
+      #status { top: 82px; right: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Opening the castle…</div>
+
+  <div id="hud">
+    <div class="title">Castlevania: Clock Tower</div>
+    <div class="subtitle">
+      Fishmen descend into the underground. Bats strike at inconvenient moments.
+      Rise only to have Fleamen drop from eagle claws, then confront the dragon
+      skeletons and Frankenstein’s Monster with Igor.
+    </div>
+    <div id="status">The Fishmen return…</div>
+    <div class="controls">
+      <span><b class="key">Drag</b> to orbit</span>
+      <span><b class="key">Wheel</b> to zoom</span>
+      <span><b class="key">R</b> reset</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer, scene, camera
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05070d);
+    scene.fog = new THREE.FogExp2(0x101421, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement: document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const mat = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x393a3c, roughness: 0.94, metalness: 0.02
+      }),
+      darkStone: new THREE.MeshStandardMaterial({
+        color: 0x17191d, roughness: 1, metalness: 0.02
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x514b40, roughness: 0.92, metalness: 0.03
+      }),
+      brass: new THREE.MeshStandardMaterial({
+        color: 0xb58a3c, roughness: 0.43, metalness: 0.72
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xe0b45d, roughness: 0.3, metalness: 0.68
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x7e1018, roughness: 0.68, metalness: 0.18
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x08090b, roughness: 0.8, metalness: 0.25
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x0b2730, roughness: 0.24, metalness: 0.48,
+        transparent: true, opacity: 0.9
+      }),
+      bat: new THREE.MeshStandardMaterial({
+        color: 0x111319, roughness: 0.9, metalness: 0
+      }),
+      bone: new THREE.MeshStandardMaterial({
+        color: 0xd3b978, roughness: 0.78, metalness: 0.05
+      }),
+      flesh: new THREE.MeshStandardMaterial({
+        color: 0x9a5b43, roughness: 0.92, metalness: 0
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x365a2a, roughness: 0.95, metalness: 0
+      }),
+      dragon: new THREE.MeshStandardMaterial({
+        color: 0x30281b, roughness: 0.86, metalness: 0.18
+      }),
+      eagle: new THREE.MeshStandardMaterial({
+        color: 0x25292d, roughness: 0.78, metalness: 0.2
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    function mesh(geometry, material, parent = world, position = [0, 0, 0], rotation = [0, 0, 0]) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(...position);
+      object.rotation.set(...rotation);
+      object.castShadow = true;
+      object.receiveShadow = true;
+      parent.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = world) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, parent, [x, y, z]);
+    }
+
+    function cylinder(rt, rb, h, material, x = 0, y = 0, z = 0, parent = world, segments = 12) {
+      return mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material, parent, [x, y, z]);
+    }
+
+    function sphere(r, material, x = 0, y = 0, z = 0, parent = world) {
+      return mesh(new THREE.SphereGeometry(r, 16, 10), material, parent, [x, y, z]);
+    }
+
+    function cone(r, h, material, x = 0, y = 0, z = 0, parent = world, segments = 10) {
+      return mesh(new THREE.ConeGeometry(r, h, segments), material, parent, [x, y, z]);
+    }
+
+    function createRuneTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, 128, 128);
+      ctx.strokeStyle = "#d7ad58";
+      ctx.lineWidth = 8;
+      ctx.translate(64, 64);
+      ctx.rotate(Math.PI / 4);
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        ctx.arc(0, 0, 34 + i * 7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    const runeTexture = createRuneTexture();
+    const runeMaterial = new THREE.MeshBasicMaterial({
+      map: runeTexture,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    // -------------------------------------------------------------------------
+    // Castle architecture
+    // -------------------------------------------------------------------------
+
+    // Lake and submerged lower castle.
+    const lake = mesh(new THREE.CircleGeometry(34, 64), mat.water, world, [0, -0.15, 0], [0, 0, -Math.PI / 2]);
+    lake.castShadow = false;
+
+    const lowerPlatform = box(28, 1.2, 24, mat.darkStone, 0, -1.25, 0);
+    const lowerBridge = box(18, 0.55, 2.2, mat.stone, 0, -0.1, 7.5);
+
+    // Main castle floor.
+    box(36, 0.5, 34, mat.darkStone, 0, 0.1, 0);
+    box(33, 0.18, 31, mat.stone, 0, 0.43, 0);
+
+    // Tower shell: stepped square turrets and corner turrets.
+    const tower = box(10, 15, 10, mat.wall, 0, 8.1, 0);
+    box(12, 1.2, 12, mat.stone, 0, 15.1, 0);
+    box(14, 1.1, 14, mat.stone, 0, 16.1, 0);
+
+    const cornerPositions = [
+      [-5.1, 18.5, -5.1], [5.1, 18.5, -5.1],
+      [-5.1, 18.5, 5.1], [5.1, 18.5, 5.1]
+    ];
+
+    for (const [x, y, z] of cornerPositions) {
+      const turret = cylinder(1.45, 1.65, 7, mat.wall, x, y, z, world, 12);
+      turret.rotation.y = Math.PI / 4;
+      cylinder(1.65, 1.65, 0.35, mat.darkStone, x, y + 3.6, z, world, 12);
+      const cap = cone(1.68, 1.15, mat.brass, x, y + 4.35, z, world, 12);
+      cap.rotation.y = Math.PI / 4;
+    }
+
+    // Central clock chamber.
+    box(8.2, 5.8, 8.2, mat.wall, 0, 19.5, 0);
+    box(9.4, 0.55, 9.4, mat.stone, 0, 22.65, 0);
+    cylinder(0.35, 0.45, 1.8, mat.brass, 0, 24.2, 0, world, 12);
+
+    // Clock faces.
+    const clockGroup = new THREE.Group();
+    clockGroup.position.set(0, 21.4, 4.17);
+    world.add(clockGroup);
+
+    const clockFace = mesh(new THREE.CircleGeometry(2.15, 48), mat.gold, clockGroup, [0, 0, 0]);
+    clockFace.castShadow = false;
+
+    const innerFace = mesh(new THREE.CircleGeometry(1.86, 48), mat.darkStone, clockGroup, [0, 0, 0.02]);
+    innerFace.castShadow = false;
+
+    const hourHand = box(0.12, 1.18, 0.08, mat.black, 0, 0.28, 0.08, clockGroup);
+    hourHand.rotation.z = -0.45;
+    const minuteHand = box(0.1, 1.55, 0.08, mat.black, 0, -0.18, 0.09, clockGroup);
+    minuteHand.rotation.z = 0.75;
+    sphere(0.16, mat.gold, 0, 0, 0.12, clockGroup);
+
+    // Arched windows.
+    function archedWindow(x, y, z, width = 1.3, height = 3) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      world.add(group);
+
+      const archShape = new THREE.Shape();
+      archShape.moveTo(-width / 2, 0);
+      archShape.lineTo(width / 2, 0);
+      archShape.lineTo(width / 2, height * 0.55);
+      archShape.absarc(0, height * 0.55, width / 2, 0, Math.PI, false);
+      archShape.lineTo(-width / 2, 0);
+
+      const opening = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(archShape, { depth: 0.18, bevelEnabled: false }),
+        mat.black
+      );
+      opening.position.z = -0.08;
+      group.add(opening);
+
+      const frame = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(archShape, { depth: 0.25, bevelEnabled: false }),
+        mat.brass
+      );
+      frame.scale.set(1.18, 1.15, 1);
+      frame.position.z = 0.03;
+      group.add(frame);
+
+      const glass = new THREE.Mesh(
+        new THREE.CircleGeometry(width * 0.4, 24),
+        new THREE.MeshBasicMaterial({ color: 0x17232d, side: THREE.DoubleSide })
+      );
+      glass.position.set(0, height * 0.5, 0.2);
+      group.add(glass);
+    }
+
+    archedWindow(-2.6, 11.3, 5.06);
+    archedWindow(2.6, 11.3, 5.06);
+    archedWindow(-3.2, 14.5, 5.06);
+    archedWindow(3.2, 14.5, 5.06);
+    archedWindow(0, 25.5, 4.17, 2.4, 2.5);
+
+    // Hanging banners.
+    for (const x of [-3.4, 3.4]) {
+      const banner = box(0.75, 3.4, 0.12, mat.red, x, 12.2, 5.25);
+      banner.rotation.z = x < 0 ? -0.08 : 0.08;
+      cylinder(0.035, 0.035, 0.8, mat.gold, x, 14.1, 5.2, world, 8);
+    }
+
+    // Balcony and railings.
+    box(11.5, 0.35, 2.1, mat.stone, 0, 10.1, 5.35);
+    for (let x = -5.3; x <= 5.3; x += 1.3) {
+      box(0.12, 1.1, 0.12, mat.brass, x, 10.75, 6.45);
+    }
+    box(11, 0.12, 0.12, mat.brass, 0, 11.28, 6.45);
+
+    // Bell.
+    cylinder(0.55, 0.35, 1.25, mat.brass, 0, 26.2, 0, world, 16);
+    sphere(0.45, mat.gold, 0, 27, 0);
+    cylinder(0.035, 0.035, 1.1, mat.brass, 0, 28.2, 0, world, 8);
+
+    // Exterior stairs.
+    for (let i = 0; i < 12; i++) {
+      const step = box(3.2, 0.45, 1.2, mat.stone, 0, 0.2 + i * 0.48, 10 + i * 0.9);
+      step.rotation.y = -0.22;
+    }
+
+    // -------------------------------------------------------------------------
+    // Clock mechanism and runes
+    // -------------------------------------------------------------------------
+
+    const mechanism = new THREE.Group();
+    mechanism.position.set(0, 18.4, 0);
+    world.add(mechanism);
+
+    for (let i = 0; i < 6; i++) {
+      const arm = box(0.12, 4.4, 0.16, mat.brass, 0, 0, 0, mechanism);
+      arm.rotation.z = (i / 6) * Math.PI * 2;
+    }
+
+    const runeRing = mesh(new THREE.RingGeometry(4.2, 4.65, 64), runeMaterial, mechanism, [0, 0, 0]);
+    runeRing.rotation.x = Math.PI / 2;
+
+    // -------------------------------------------------------------------------
+    // Water ripples and submerged debris
+    // -------------------------------------------------------------------------
+
+    const rippleMaterial = new THREE.MeshBasicMaterial({
+      color: 0x65b8bd,
+      transparent: true,
+      opacity: 0.2,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    const ripples = [];
+    for (let i = 0; i < 9; i++) {
+      const ripple = mesh(
+        new THREE.RingGeometry(0.65 + i * 0.18, 0.72 + i * 0.18, 48),
+        rippleMaterial,
+        world,
+        [Math.sin(i * 2.3) * 12, -0.08, Math.cos(i * 1.7) * 10],
+        [0, 0, -Math.PI / 2]
+      );
+      ripple.castShadow = false;
+      ripples.push(ripple);
+    }
+
+    // Submerged fish skeleton.
+    const fishSkeleton = new THREE.Group();
+    fishSkeleton.position.set(-8, -0.8, 5);
+    fishSkeleton.rotation.y = 0.4;
+    world.add(fishSkeleton);
+
+    for (const side of [-1, 1]) {
+      const spine = box(0.25, 2.5, 0.2, mat.bone, 0, 0, 0, fishSkeleton);
+      spine.rotation.z = side * 0.12;
+      for (let i = 0; i < 5; i++) {
+        const fin = cone(0.42, 0.25, mat.bone, side * 0.4, -0.7 + i * 0.5, 0, fishSkeleton, 5);
+        fin.rotation.z = side * -0.65;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Bats
+    // -------------------------------------------------------------------------
+
+    const bats = [];
+    const batWingGeometry = new THREE.BufferGeometry();
+    batWingGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+      -0.45, 0, 0,
+      0, 0, 0,
+      0.45, 0, 0
+    ], 3));
+    batWingGeometry.computeVertexNormals();
+    const batWingMaterial = new THREE.MeshStandardMaterial({
+      color: 0x11141b,
+      roughness: 0.9,
+      side: THREE.DoubleSide
+    });
+
+    function createBat(scale = 1) {
+      const bat = new THREE.Group();
+      const body = sphere(0.22, mat.bat, 0, 0, 0, bat);
+      body.scale.set(1, 1.35, 0.75);
+
+      const leftWing = mesh(batWingGeometry, batWingMaterial, bat, [-0.2, 0, 0]);
+      const rightWing = mesh(batWingGeometry, batWingMaterial, bat, [0.2, 0, 0]);
+      leftWing.scale.setScalar(scale);
+      rightWing.scale.setScalar(scale);
+      rightWing.rotation.y = Math.PI;
+
+      const head = sphere(0.13, mat.bat, 0, 0.12, 0.12, bat);
+      head.scale.set(1, 0.7, 0.7);
+
+      const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xf3d56b });
+      sphere(0.035, eyeMaterial, -0.075, 0.18, 0.24, bat);
+      sphere(0.035, eyeMaterial, 0.075, 0.18, 0.24, bat);
+
+      world.add(bat);
+      bats.push({
+        group: bat,
+        leftWing,
+        rightWing,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.25 + Math.random() * 0.2,
+        radius: 8 + Math.random() * 12,
+        height: 13 + Math.random() * 10,
+        angle: Math.random() * Math.PI * 2
+      });
+    }
+
+    for (let i = 0; i < 18; i++) {
+      createBat(0.65 + Math.random() * 0.65);
+    }
+
+    // -------------------------------------------------------------------------
+    // Dragon skeletons
+    // -------------------------------------------------------------------------
+
+    const dragons = [];
+
+    function createDragonSkeleton(scale = 1, x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      const spine = box(1.15, 0.35, 0.35, mat.bone, 0, 0, 0, group);
+      spine.rotation.z = -0.18;
+
+      for (let i = 0; i < 5; i++) {
+        const segment = box(0.8, 0.32, 0.32, mat.bone, 1.05, -0.25 + i * 0.34, 0, group);
+        segment.rotation.z = -0.08 - i * 0.035;
+      }
+
+      for (const side of [-1, 1]) {
+        const shoulder = sphere(0.32, mat.bone, 0.45, 0.25, side * 0.32, group);
+        shoulder.scale.set(1, 0.75, 0.7);
+
+        const head = sphere(0.42, mat.bone, 1.75, 0.18, side * 0.18, group);
+        head.scale.set(0.85, 1.05, 0.75);
+        head.rotation.y = side > 0 ? -0.15 : 0.15;
+
+        const jaw = sphere(0.29, mat.bone, 2.1, -0.12, side * 0.13, group);
+        jaw.scale.set(0.8, 0.65, 0.7);
+
+        const eye = sphere(0.065, mat.gold, 1.95, 0.31, side * 0.36, group);
+        eye.scale.set(0.7, 0.7, 0.5);
+
+        for (let i = 0; i < 4; i++) {
+          const tailSegment = box(0.45, 0.28, 0.28, mat.bone, 2.4 + i * 0.5, -0.45 - i * 0.12, side * 0.1, group);
+          tailSegment.rotation.z = -0.28;
+        }
+
+        for (let i = 0; i < 3; i++) {
+          const claw = cone(0.12, 0.45, mat.bone, 2.25, -0.65 + i * 0.32, side * 0.48, group, 5);
+          claw.rotation.z = -0.18;
+        }
+      }
+
+      for (const side of [-1, 1]) {
+        const wing = mesh(batWingGeometry, batWingMaterial, group, [0.15, 0.1, side * 0.55]);
+        wing.scale.set(1.4, 1, 0.7);
+        wing.rotation.z = side * -0.25;
+        wing.rotation.x = -0.2;
+      }
+
+      dragons.push({
+        group,
+        leftWing: bats[0]?.leftWing || mesh(batWingGeometry, batWingMaterial, group, [-0.2, 0, 0]),
+        rightWing: bats[0]?.rightWing || mesh(batWingGeometry, batWingMaterial, group, [0.2, 0, 0]),
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.28 + Math.random() * 0.18,
+        radius: 12 + Math.random() * 8,
+        height: 18 + Math.random() * 7,
+        angle: Math.random() * Math.PI * 2
+      });
+    }
+
+    createDragonSkeleton(1.25, -8, 0.7, 3, 0.3);
+    createDragonSkeleton(0.95, 8, 0.7, 5, -0.4);
+    createDragonSkeleton(0.75, 0, 0.7, 12, 0.2);
+
+    // Fire effects.
+    const fireParticles = [];
+    const fireMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff6a18,
+      transparent: true,
+      opacity: 0.75,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 32; i++) {
+      const particle = mesh(
+        new THREE.SphereGeometry(0.1 + Math.random() * 0.18, 6, 4),
+        fireMaterial,
+        world,
+        [0, 0, 0]
+      );
+      particle.castShadow = false;
+      particle.receiveShadow = false;
+      fireParticles.push({
+        mesh: particle,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.8 + Math.random() * 1.5,
+        radius: 4 + Math.random() * 4,
+        height: 18 + Math.random() * 7,
+        angle: Math.random() * Math.PI * 2
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Fleamen and eagles
+    // -------------------------------------------------------------------------
+
+    const fleamen = [];
+
+    function createFleamen(color = 0x7b2e18) {
+      const group = new THREE.Group();
+      world.add(group);
+
+      const robe = cylinder(0.28, 0.48, 1.25, new THREE.MeshStandardMaterial({
+        color, roughness: 0.9, metalness: 0.04
+      }), 0, 0.7, 0, group, 10);
+      robe.rotation.z = 0.08;
+
+      const head = sphere(0.2, mat.flesh, 0, 1.45, 0, group);
+      head.scale.set(0.85, 1.1, 0.85);
+
+      const hat = cone(0.33, 0.28, mat.red, 0, 1.78, 0, group, 10);
+      hat.rotation.y = 0.2;
+
+      const eyes = [];
+      for (const side of [-1, 1]) {
+        const eye = sphere(0.035, mat.gold, 0, 1.49, side * 0.16, group);
+        eyes.push(eye);
+      }
+
+      const arm = box(0.12, 0.75, 0.12, mat.red, 0, 1.02, 0, group);
+      arm.rotation.z = 0.18;
+
+      const claw = cone(0.08, 0.55, mat.gold, 0, 0.55, 0, group, 5);
+      claw.rotation.z = -0.35;
+
+      fleamen.push({
+        group,
+        arm,
+        claw,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.35 + Math.random() * 0.2,
+        radius: 8 + Math.random() * 8,
+        height: 14 + Math.random() * 8,
+        angle: Math.random() * Math.PI * 2
+      });
+    }
+
+    for (let i = 0; i < 7; i++) {
+      createFleamen(i % 2 ? 0x7b2e18 : 0x354c66);
+    }
+
+    const eagles = [];
+
+    function createEagle() {
+      const group = new THREE.Group();
+      world.add(group);
+
+      const body = sphere(0.55, mat.eagle, 0, 0, 0, group);
+      body.scale.set(0.85, 1.2, 0.8);
+
+      const head = sphere(0.3, mat.eagle, 0.35, 0.45, 0, group);
+      head.scale.set(0.9, 1.05, 0.9);
+      const beak = cone(0.12, 0.42, mat.gold, 0.55, 0.42, 0, group, 6);
+      beak.rotation.z = -0.5;
+
+      const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xe8cf86 });
+      sphere(0.07, eyeMaterial, 0.19, 0.54, 0.24, group);
+      sphere(0.07, eyeMaterial, 0.51, 0.54, 0.24, group);
+
+      for (const side of [-1, 1]) {
+        const wing = mesh(batWingGeometry, batWingMaterial, group, [0.05, 0.05, side * 0.45]);
+        wing.scale.set(1.25, 1, 0.65);
+        wing.rotation.z = side * -0.12;
+      }
+
+      eagles.push({
+        group,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.18 + Math.random() * 0.12,
+        radius: 12 + Math.random() * 12,
+        height: 24 + Math.random() * 8,
+        angle: Math.random() * Math.PI * 2
+      });
+    }
+
+    for (let i = 0; i < 5; i++) {
+      createEagle();
+    }
+
+    // -------------------------------------------------------------------------
+    // Igor and Frankenstein's Monster
+    // -------------------------------------------------------------------------
+
+    constigor = new THREE.Group();
+    Igor.position.set(12, 0.55, -5);
+    Igor.rotation.y = -0.5;
+    world.add(Igor);
+
+    const igorBody = cylinder(0.38, 0.5, 1.55, mat.green, 0, 0.85, 0, Igor, 10);
+    igorBody.rotation.z = 0.08;
+
+    const igorHead = sphere(0.32, mat.green, 0, 1.75, 0, Igor);
+    igorHead.scale.set(0.9, 1.15, 0.9);
+
+    const igorHat = cone(0.38, 0.28, mat.gold, 0, 2.13, 0, Igor, 10);
+    igorHat.rotation.y = 0.25;
+
+    const igorEyeMaterial = new THREE.MeshBasicMaterial({ color: 0x9d7b31 });
+    sphere(0.045, igorEyeMaterial, -0.16, 1.8, 0.23, Igor);
+    sphere(0.045, igorEyeMaterial, 0.16, 1.8, 0.23, Igor);
+
+    const igorArm = box(0.13, 0.85, 0.13, mat.green, -0.3, 1.05, 0, Igor);
+    igorArm.rotation.z = 0.25;
+
+    const monster = new THREE.Group();
+    monster.position.set(-10, 0.55, 3);
+    monster.rotation.y = 0.8;
+    world.add(monster);
+
+    const monsterBody = cylinder(1.05, 1.35, 2.2, mat.flesh, 0, 1.1, 0, monster, 12);
+    monsterBody.rotation.z = 0.05;
+
+    const monsterHead = sphere(0.9, mat.flesh, 0, 2.35, 0, monster);
+    monsterHead.scale.set(0.85, 1.25, 0.9);
+
+    const monsterHat = cone(0.65, 0.22, mat.red, 0, 2.9, 0, monster, 12);
+    monsterHat.rotation.y = 0.4;
+
+    const monsterEyeMaterial = new THREE.MeshBasicMaterial({ color: 0x74321c });
+    sphere(0.18, monsterEyeMaterial, -0.37, 2.65, 0.28, monster);
+    sphere(0.18, monsterEyeMaterial, 0.37, 2.65, 0.28, monster);
+
+    const monsterArm = box(0.55, 1.7, 0.42, mat.flesh, -0.75, 1.25, 0, monster);
+    monsterArm.rotation.z = 0.3;
+
+    // Ground fog and atmospheric particles.
+    const particles = [];
+    const particleMaterial = new THREE.PointsMaterial({
+      color: 0x8aa6b2,
+      size: 0.045,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false
+    });
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = new THREE.Float32Array(260 * 3);
+
+    for (let i = 0; i < 260; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 48;
+      particlePositions[i * 3 + 1] = Math.random() * 30;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 48;
+    }
+
+    particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+    const particlesMesh = new THREE.Points(particleGeometry, particleMaterial);
+    world.add(particlesMesh);
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    const hemisphere = new THREE.HemisphereLight(0x7891b2, 0x160c08, 1.45);
+    scene.add(hemisphere);
+
+    const moonLight = new THREE.DirectionalLight(0x9bb8dc, 2.2);
+    moonLight.position.set(-18, 28, 14);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.set(2048, 2048);
+    moonLight.shadow.camera.left = -30;
+    moonLight.shadow.camera.right = 30;
+    moonLight.shadow.camera.top = 30;
+    moonLight.shadow.camera.bottom = -30;
+    moonLight.shadow.camera.near = 1;
+    moonLight.shadow.camera.far = 80;
+    moonLight.shadow.bias = -0.00025;
+    scene.add(moonLight);
+
+    const warmLight = new THREE.PointLight(0xff7b24, 75, 32, 2);
+    warmLight.position.set(0, 20, 4);
+    scene.add(warmLight);
+
+    const blueLight = new THREE.PointLight(0x315d83, 55, 28, 2);
+    blueLight.position.set(-12, 8, 8);
+    scene.add(blueLight);
+
+    const undergroundLight = new THREE.PointLight(0x7186a3, 45, 38, 2);
+    undergroundLight.position.set(0, 2, -4);
+    scene.add(undergroundLight);
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 12, 0),
+      azimuth: 0.62,
+      polar: 1.18,
+      radius: 34,
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    function resetCamera() {
+      controls.target.set(0, 12, 0);
+      controls.azimuth = 0.62;
+      controls.polar = 1.18;
+      controls.radius = 34;
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      controls.azimuth -= dx * 0.005;
+      controls.polar = THREE.MathUtils.clamp(controls.polar - dy * 0.004, 0.35, 1.48);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius + event.deltaY * 0.025,
+        12,
+        66
+      );
+      updateCamera();
+    }, { passive: false });
+
+    addEventListener("keydown", (event) => {
+      if (event.key.toLowerCase() === "r") resetCamera();
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    updateCamera();
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const status = document.getElementById("status");
+    let statusTimer = 0;
+    const statuses = [
+      "The Fishmen return…",
+      "Bats circle the water…",
+      "Fleamen descend from the eagles…",
+      "Dragon skeletons wake…",
+      "Igor awaits Frankenstein’s Monster…"
+    ];
+
+    const initialStatus = statuses[0];
+    status.textContent = initialStatus;
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle environmental motion.
+      warmLight.intensity = 70 + Math.sin(elapsed * 1.5) * 7;
+      blueLight.intensity = 52 + Math.sin(elapsed * 1.1 + 1) * 6;
+      undergroundLight.intensity = 43 + Math.sin(elapsed * 0.8 + 2) * 5;
+
+      // Bats circle and flap.
+      for (const bat of bats) {
+        bat.angle += bat.speed * 0.016;
+        const x = bat.radius * Math.cos(bat.angle);
+        const z = bat.radius * Math.sin(bat.angle);
+        const y = bat.height + Math.sin(elapsed * bat.speed + bat.phase) * 1.1;
+
+        bat.group.position.set(x, y, z);
+        bat.group.rotation.y = -bat.angle + Math.PI / 2;
+        bat.group.scale.setScalar(
+          0.92 + Math.sin(elapsed * bat.speed * 0.7 + bat.phase) * 0.08
+        );
+
+        const flap = Math.sin(elapsed * 11 + bat.phase) * 0.45;
+        bat.leftWing.rotation.z = flap;
+        bat.rightWing.rotation.z = -flap;
+      }
+
+      // Dragon skeletons circle, breathe fire, and shake.
+      for (const dragon of dragons) {
+        dragon.angle += dragon.speed * 0.018;
+        const x = dragon.radius * Math.cos(dragon.angle);
+        const z = dragon.radius * Math.sin(dragon.angle);
+        const y = dragon.height + Math.sin(elapsed * dragon.speed + dragon.phase) * 0.7;
+
+        dragon.group.position.set(x, y, z);
+        dragon.group.rotation.y = -dragon.angle + Math.PI / 2;
+        dragon.group.rotation.z = Math.sin(elapsed * 2.1 + dragon.phase) * 0.025;
+
+        const flap = Math.sin(elapsed * 8 + dragon.phase) * 0.28;
+        dragon.leftWing.rotation.z = flap;
+        dragon.rightWing.rotation.z = -flap;
+
+        const fireIndex = Math.floor(elapsed * dragon.speed + dragon.phase / (Math.PI * 2));
+        const pulse = 0.7 + Math.sin((elapsed * dragon.speed + dragon.phase) % (Math.PI * 2)) * 0.3;
+        dragon.group.scale.setScalar(pulse);
+      }
+
+      // Fire particles rise and expand around the dragons.
+      for (const particle of fireParticles) {
+        const cycle = (elapsed * particle.speed + particle.phase) % (Math.PI * 2);
+        const angle = particle.angle + cycle * 0.18;
+        const radius = particle.radius + cycle * 0.55;
+        const height = particle.height + cycle * 0.9;
+
+        particle.mesh.position.set(
+          Math.cos(angle) * radius,
+          height,
+          Math.sin(angle) * radius
+        );
+        particle.mesh.scale.setScalar(0.5 + cycle * 0.45);
+        particle.mesh.rotation.y = cycle;
+        particle.mesh.material.opacity = Math.sin(cycle) * 0.75;
+      }
+
+      // Fleamen drop from eagles and attack.
+      for (const fleamen of fleamen) {
+        fleamen.angle += fleamen.speed * 0.012;
+        const x = fleamen.radius * Math.cos(fleamen.angle);
+        const z = fleamen.radius * Math.sin(fleamen.angle);
+        const y = fleamen.height + Math.sin(elapsed * fleamen.speed + fleamen.phase) * 0.55;
+
+        fleamen.group.position.set(x, y, z);
+        fleamen.group.rotation.y = -fleamen.angle + Math.PI / 2;
+        fleamen.group.rotation.z = Math.sin(elapsed * 4 + fleamen.phase) * 0.12;
+
+        const cycle = (elapsed * fleamen.speed + fleamen.phase) % (Math.PI * 2);
+        fleamen.arm.rotation.z = 0.18 + Math.sin(cycle) * 0.45;
+        fleamen.claw.rotation.z = -0.35 - Math.sin(cycle) * 0.35;
+        fleamen.group.scale.setScalar(0.95 + Math.sin(cycle) * 0.12);
+      }
+
+      for (const eagle of eagles) {
+        eagle.angle += eagle.speed * 0.01;
+        const x = eagle.radius * Math.cos(eagle.angle);
+        const z = eagle.radius * Math.sin(eagle.angle);
+        const y = eagle.height + Math.sin(elapsed * eagle.speed + eagle.phase) * 1.2;
+
+        eagle.group.position.set(x, y, z);
+        eagle.group.rotation.y = -eagle.angle + Math.PI / 2;
+        eagle.group.rotation.z = Math.sin(elapsed * 0.8 + eagle.phase) * 0.04;
+      }
+
+      // Igor and the Monster patrol.
+      Igor.position.x = 12 + Math.sin(elapsed * 0.28) * 2.8;
+      Igor.position.z = -5 + Math.cos(elapsed * 0.22) * 1.4;
+      Igor.rotation.y = 0.8 + Math.sin(elapsed * 0.28) * 0.18;
+      Igor.scale.setScalar(0.95 + Math.sin(elapsed * 2 + 1) * 0.05);
+
+      monster.position.x = -10 + Math.sin(elapsed * 0.22 + 1.4) * 3.2;
+      monster.position.z = 3 + Math.cos(elapsed * 0.18) * 1.2;
+      monster.rotation.y = 0.8 + Math.sin(elapsed * 0.22 + 1.4) * 0.22;
+      monster.scale.setScalar(0.96 + Math.sin(elapsed * 1.7) * 0.04);
+
+      // Water ripples.
+      for (const ripple of ripples) {
+        const phase = (elapsed * 0.12 + ripple.userData.phase || 0) % 1;
+        const scale = 0.7 + phase * 2.4;
+        ripple.scale.setScalar(scale);
+        ripple.material.opacity = (1 - phase) * 0.18;
+      }
+
+      // Atmospheric motes.
+      particlesMesh.rotation.y = elapsed * 0.008;
+      particlesMesh.position.y = Math.sin(elapsed * 0.15) * 0.35;
+
+      // Clock hands move slowly.
+      hourHand.rotation.z = -0.45 + Math.sin(elapsed * 0.18) * 0.08;
+      minuteHand.rotation.z = 0.75 + Math.cos(elapsed * 0.18) * 0.12;
+
+      // Subtle status updates.
+      statusTimer += 1 / 60;
+      if (statusTimer > 13) {
+        statusTimer = 0;
+        const index = Math.floor(statusTimer / 0.65) % statuses.length;
+        status.textContent = statuses[index];
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    requestAnimationFrame(() => {
+      const loading = document.getElementById("loading");
+      loading.classList.add("done");
+      setTimeout(() => loading.remove(), 700);
+    });
+  </script>
+</body>
+</html>

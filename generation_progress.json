@@ -124,5 +124,14 @@
     "filename": "014_metroid_norfair_volcanic_caverns.html",
     "verified_working": false,
     "generated_at": "2026-11-01 01:19:32"
+  },
+  "15": {
+    "id": 15,
+    "game": "Castlevania",
+    "target": "Clock Tower",
+    "platform": "NES",
+    "filename": "015_castlevania_clock_tower.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 01:35:27"
   }
 }
