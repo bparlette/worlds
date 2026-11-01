@@ -115,5 +115,14 @@
     "filename": "013_zelda_ii_the_adventure_of_link_palace_temples.html",
     "verified_working": true,
     "generated_at": "2026-11-01 01:04:03"
+  },
+  "14": {
+    "id": 14,
+    "game": "Metroid",
+    "target": "Norfair Volcanic Caverns",
+    "platform": "NES",
+    "filename": "014_metroid_norfair_volcanic_caverns.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 01:19:32"
   }
 }

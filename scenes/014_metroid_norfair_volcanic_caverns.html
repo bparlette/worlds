@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Norfair Volcanic Caverns</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080403;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #ffd6a3;
+      text-shadow: 0 2px 14px #000;
+    }
+
+    .title {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      max-width: 520px;
+    }
+
+    .eyebrow {
+      margin-bottom: 7px;
+      color: #e85b28;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 46px);
+      line-height: 0.95;
+      letter-spacing: -0.035em;
+      font-weight: 850;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: rgba(255, 215, 174, 0.68);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .legend {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 360px;
+    }
+
+    .legend span {
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 225, 181, 0.18);
+      border-radius: 999px;
+      background: rgba(15, 8, 6, 0.58);
+      backdrop-filter: blur(8px);
+      color: rgba(255, 220, 179, 0.76);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .legend b {
+      color: #ff9a55;
+    }
+
+    .controls {
+      position: absolute;
+      left: 24px;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255, 225, 185, 0.7);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .controls button {
+      pointer-events: auto;
+      border: 1px solid rgba(255, 225, 181, 0.25);
+      border-radius: 6px;
+      padding: 8px 11px;
+      background: rgba(18, 10, 7, 0.72);
+      color: #ffd5a6;
+      font: inherit;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      border-color: rgba(255, 154, 85, 0.7);
+      color: #fff;
+    }
+
+    #reticle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border: 1px solid rgba(255, 240, 205, 0.5);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #reticle::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: #ff8b38;
+      box-shadow: 0 0 14px rgba(255, 100, 35, 0.9);
+    }
+
+    @media (max-width: 700px) {
+      .title { top: 16px; left: 16px; }
+      .subtitle { max-width: 280px; }
+      .legend { top: auto; right: 14px; bottom: 58px; max-width: 250px; }
+      .controls { left: 14px; bottom: 14px; }
+      .controls .desktop { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="title">
+      <div class="eyebrow">Metroid • NES Region</div>
+      <h1>Norfair<br />Volcanic Caverns</h1>
+      <p class="subtitle">
+        Explore the collapsed tunnels, frozen platforms, and Ridley’s route.
+        Use the Ice Beam to turn enemies into launchpads.
+      </p>
+    </div>
+
+    <div class="legend">
+      <span><b>Ice Beam</b> active</span>
+      <span><b>Wave Beam</b> nearby</span>
+      <span><b>High Jump</b> boots</span>
+      <span><b>Extra missiles</b></span>
+      <span><b>Energy tanks</b></span>
+    </div>
+
+    <div id="reticle"></div>
+
+    <div class="controls">
+      <span class="desktop">Drag to orbit · Scroll to zoom</span>
+      <button id="reset">Reset View</button>
+      <button id="toggleTour">Guided Tour</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer, scene, atmosphere
+    // -------------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x120b08);
+    scene.fog = new THREE.FogExp2(0x32120b, 0.025);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 120);
+    camera.position.set(14, 8, 18);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0x637890, 0x3b1207, 1.15);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffb15c, 3.3);
+    sun.position.set(-12, 18, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -25;
+    sun.shadow.camera.right = 25;
+    sun.shadow.camera.top = 25;
+    sun.shadow.camera.bottom = -25;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 60;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const lavaLight = new THREE.PointLight(0xff4a0b, 28, 28, 2);
+    lavaLight.position.set(1, 2, -4);
+    scene.add(lavaLight);
+
+    const coolFill = new THREE.PointLight(0x4c91c7, 12, 25, 2);
+    coolFill.position.set(-8, 4, 8);
+    scene.add(coolFill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const mats = {
+      rock: new THREE.MeshStandardMaterial({ color: 0x4b382d, roughness: 0.96 }),
+      darkRock: new THREE.MeshStandardMaterial({ color: 0x211915, roughness: 1 }),
+      ash: new THREE.MeshStandardMaterial({ color: 0x75675b, roughness: 1 }),
+      floor: new THREE.MeshStandardMaterial({ color: 0x594437, roughness: 0.9 }),
+      floorDark: new THREE.MeshStandardMaterial({ color: 0x2c201b, roughness: 0.95 }),
+      rubble: new THREE.MeshStandardMaterial({ color: 0x6b5140, roughness: 1 }),
+      metal: new THREE.MeshStandardMaterial({ color: 0x9a7652, roughness: 0.55, metalness: 0.65 }),
+      darkMetal: new THREE.MeshStandardMaterial({ color: 0x3b2d24, roughness: 0.48, metalness: 0.75 }),
+      ice: new THREE.MeshStandardMaterial({
+        color: 0xa9e8ff,
+        emissive: 0x217d9f,
+        emissiveIntensity: 0.55,
+        roughness: 0.25,
+        metalness: 0.05
+      }),
+      blueLamp: new THREE.MeshStandardMaterial({
+        color: 0x8bd9ff,
+        emissive: 0x3b9fd0,
+        emissiveIntensity: 2.2,
+        roughness: 0.25
+      }),
+      redLamp: new THREE.MeshStandardMaterial({
+        color: 0xff6a31,
+        emissive: 0xff2c05,
+        emissiveIntensity: 2.4,
+        roughness: 0.3
+      }),
+      yellowLamp: new THREE.MeshStandardMaterial({
+        color: 0xffd166,
+        emissive: 0xff9c28,
+        emissiveIntensity: 2.1,
+        roughness: 0.3
+      }),
+      glass: new THREE.MeshPhysicalMaterial({
+        color: 0x8de4ff,
+        emissive: 0x173e52,
+        emissiveIntensity: 0.7,
+        roughness: 0.08,
+        metalness: 0,
+        transmission: 0.25,
+        transparent: true,
+        opacity: 0.68,
+        ior: 1.45
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Procedural geometry helpers
+    // -------------------------------------------------------------------------
+    function mesh(geometry, material, position, castShadow = true, receiveShadow = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.copy(position);
+      object.castShadow = castShadow;
+      object.receiveShadow = receiveShadow;
+      scene.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, x, y, z, castShadow = true) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, new THREE.Vector3(x, y, z), castShadow, true);
+    }
+
+    function cylinder(radius, height, material, x, y, z, radialSegments = 12) {
+      return mesh(
+        new THREE.CylinderGeometry(radius, radius, height, radialSegments),
+        material,
+        new THREE.Vector3(x, y, z)
+      );
+    }
+
+    function ico(radius, material, x, y, z, detail = 1) {
+      return mesh(
+        new THREE.IcosahedronGeometry(radius, detail),
+        material,
+        new THREE.Vector3(x, y, z)
+      );
+    }
+
+    function tubeBetween(a, b, radius, material, radialSegments = 8) {
+      const direction = new THREE.Vector3().subVectors(b, a);
+      const length = direction.length();
+      const midpoint = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+      const object = cylinder(radius, length, material, midpoint.x, midpoint.y, midpoint.z, radialSegments);
+      object.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+      );
+      return object;
+    }
+
+    function makeRubble(x, z, scale = 1) {
+      const group = new THREE.Group();
+      const pieces = 3 + Math.floor(Math.random() * 5);
+
+      for (let i = 0; i < pieces; i++) {
+        const p = ico(
+          0.16 + Math.random() * 0.35,
+          Math.random() > 0.45 ? mats.rubble : mats.darkRock,
+          (Math.random() - 0.5) * scale * 1.5,
+          0.18 + Math.random() * 0.35 * scale,
+          (Math.random() - 0.5) * scale * 1.5,
+          0
+        );
+        p.rotation.set(Math.random(), Math.random(), Math.random());
+        group.add(p);
+      }
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    function makeLavaPool(x, z, radius, color = 0xff4a0b, intensity = 25) {
+      const group = new THREE.Group();
+      const pool = cylinder(radius, 0.18, mats.floorDark, 0, -0.12, 0, 32);
+      pool.receiveShadow = true;
+      group.add(pool);
+
+      const surface = cylinder(
+        radius * 0.91,
+        0.035,
+        new THREE.MeshStandardMaterial({
+          color,
+          emissive: color,
+          emissiveIntensity: 3.2,
+          roughness: 0.22,
+          metalness: 0.15
+        }),
+        0,
+        0.005,
+        0,
+        40
+      );
+      surface.receiveShadow = true;
+      group.add(surface);
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * 0.82, 0.08, 7, 36),
+        new THREE.MeshStandardMaterial({
+          color: 0xff6a20,
+          emissive: 0xff3505,
+          emissiveIntensity: 2.2,
+          roughness: 0.65
+        })
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.05;
+      group.add(rim);
+
+      const particles = [];
+      for (let i = 0; i < 22; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * radius * 0.7;
+        const particle = ico(
+          0.025 + Math.random() * 0.06,
+          new THREE.MeshBasicMaterial({ color }),
+          Math.cos(angle) * radius,
+          0.1 + Math.random() * 0.25,
+          Math.sin(angle) * radius,
+          0
+        );
+        particle.userData = {
+          base: new THREE.Vector3(Math.cos(angle) * radius, 0.1, Math.sin(angle) * radius),
+          speed: 0.25 + Math.random() * 0.55,
+          phase: Math.random() * Math.PI * 2
+        };
+        group.add(particle);
+        particles.push(particle);
+      }
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return { group, particles, surface };
+    }
+
+    function makeGlassBubble(x, y, z, radius = 1) {
+      const group = new THREE.Group();
+      const shell = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.62),
+        mats.glass
+      );
+      shell.position.y = 0.12;
+      group.add(shell);
+
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 0.2, 12, 8),
+        mats.glass
+      );
+      cap.scale.y = 0.35;
+      cap.position.y = radius * 0.75;
+      group.add(cap);
+
+      const glow = new THREE.PointLight(0x55d8ff, 1.8, 4, 2);
+      glow.position.y = radius * 0.4;
+      group.add(glow);
+
+      group.position.set(x, y, z);
+      scene.add(group);
+      return { group, shell, cap, glow };
+    }
+
+    function makeLamp(x, y, z, material = mats.blueLamp, scale = 1) {
+      const group = new THREE.Group();
+      const pole = cylinder(0.055 * scale, 0.95 * scale, mats.darkMetal, 0, 0.48 * scale, 0, 8);
+      const cap = cylinder(0.12 * scale, 0.18 * scale, material, 0, 1.02 * scale, 0, 10);
+      cap.castShadow = false;
+      const glow = new THREE.PointLight(material.color, 2.2, 3.2, 2);
+      glow.position.y = 1.03 * scale;
+      group.add(glow);
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    function makeWallTunnel(x, z, width = 7, height = 5, rotation = 0) {
+      const group = new THREE.Group();
+      group.rotation.y = rotation;
+
+      const back = box(width, height, 0.45, mats.darkRock, 0, height / 2, -1.8);
+      const left = box(0.45, height, 4.2, mats.rock, -width / 2, height / 2, 0);
+      const right = box(0.45, height, 4.2, mats.rock, width / 2, height / 2, 0);
+      const ceiling = box(width + 0.3, 0.4, 4.3, mats.rock, 0, height, 0);
+      const floor = box(width + 0.2, 0.18, 4.2, mats.floorDark, 0, -0.08, 0);
+
+      for (let i = 0; i < 8; i++) {
+        const crack = ico(
+          0.18 + Math.random() * 0.35,
+          mats.darkRock,
+          (Math.random() - 0.5) * width * 0.8,
+          Math.random() * height * 0.65,
+          -1.5 + Math.random() * 3.8,
+          0
+        );
+        crack.scale.z = 0.35;
+        group.add(crack);
+      }
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    function makeCaveWall(x, z, width = 6, height = 4, rotation = 0) {
+      const group = new THREE.Group();
+      group.rotation.y = rotation;
+
+      const wall = box(width, height, 0.8, mats.rock, 0, height / 2, 0);
+      wall.receiveShadow = true;
+
+      for (let i = 0; i < 9; i++) {
+        const chunk = ico(
+          0.35 + Math.random() * 0.8,
+          Math.random() > 0.5 ? mats.rock : mats.darkRock,
+          (Math.random() - 0.5) * width,
+          Math.random() * height,
+          0.25 + Math.random() * 0.4,
+          1
+        );
+        chunk.scale.z = 0.4 + Math.random() * 0.4;
+        group.add(chunk);
+      }
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // Main cavern layout
+    // -------------------------------------------------------------------------
+    const mainFloor = box(34, 0.35, 34, mats.floor, 0, -0.18, 0);
+    mainFloor.receiveShadow = true;
+
+    // Central winding path, with rubble and collapsed sections.
+    const pathPoints = [
+      [-15, -15], [-11, -11], [-7, -7], [-3, -3], [1, 1], [5, 5], [9, 9], [13, 13]
+    ];
+
+    for (let i = 0; i < pathPoints.length - 1; i++) {
+      const a = new THREE.Vector3(pathPoints[i][0], 0, pathPoints[i][1]);
+      const b = new THREE.Vector3(pathPoints[i + 1][0], 0, pathPoints[i + 1][1]);
+      const direction = new THREE.Vector3().subVectors(b, a);
+      const length = direction.length();
+      const center = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+      const corridor = box(length + 0.2, 0.18, 3.4, mats.floorDark, center.x, 0, center.z);
+      corridor.rotation.y = Math.atan2(direction.x, direction.z);
+      corridor.receiveShadow = true;
+    }
+
+    // Broken walls and ceiling remnants.
+    makeWallTunnel(-13, -11, 7, 5, -0.25);
+    makeWallTunnel(-6, -6, 6, 4.7, 0.12);
+    makeWallTunnel(0, 0, 7, 5.2, -0.08);
+    makeWallTunnel(7, 7, 6, 4.8, 0.2);
+    makeWallTunnel(14, 14, 7, 5, -0.15);
+
+    makeCaveWall(-18, 5, 7, 5, 0.15);
+    makeCaveWall(18, -5, 6, 4.5, -0.2);
+    makeCaveWall(-4, 20, 8, 5, 0.1);
+    makeCaveWall(4, -20, 7, 4.5, -0.1);
+
+    // A high ceiling slab over the central chamber.
+    box(19, 0.65, 7, mats.darkRock, 0, 5.6, 0);
+    for (let i = 0; i < 8; i++) {
+      ico(0.7 + Math.random() * 0.6, mats.rock, (i - 3.5) * 2.2, 6.05, (Math.random() - 0.5) * 4, 1);
+    }
+
+    // Scattered rubble.
+    for (let i = 0; i < 85; i++) {
+      const x = (Math.random() - 0.5) * 37;
+      const z = (Math.random() - 0.5) * 37;
+      if (Math.abs(x) < 2.2 && Math.abs(z) < 2.2) continue;
+      makeRubble(x, z, 0.55 + Math.random() * 1.3);
+    }
+
+    // Lava pools.
+    const lavaPools = [
+      makeLavaPool(-15, -4, 3.2, 0xff3b08, 29),
+      makeLavaPool(-8, 12, 2.8, 0xff6a16, 23),
+      makeLavaPool(8, -12, 3.4, 0xff4b0c, 31),
+      makeLavaPool(15, 3, 2.5, 0xff7a22, 25),
+      makeLavaPool(-3, 18, 2.2, 0xff3c09, 20),
+      makeLavaPool(3, -18, 2.4, 0xff5a14, 22)
+    ];
+
+    // Glass bubbles.
+    const bubbles = [
+      makeGlassBubble(-18, 1.4, -13, 1.15),
+      makeGlassBubble(-12, 1.8, 17, 0.9),
+      makeGlassBubble(17, 1.5, -16, 1.05),
+      makeGlassBubble(19, 1.2, 15, 0.8),
+      makeGlassBubble(-4, 2.1, 21, 0.75),
+      makeGlassBubble(5, 1.9, -21, 0.85),
+      makeGlassBubble(-21, 1.3, 7, 0.65),
+      makeGlassBubble(21, 1.2, 5, 0.7)
+    ];
+
+    // -------------------------------------------------------------------------
+    // Ice platforms and enemies frozen into them
+    // -------------------------------------------------------------------------
+    function makeIcePlatform(x, z, width, depth) {
+      const group = new THREE.Group();
+      const base = box(width, 0.28, depth, mats.ice, 0, 0.12, 0);
+      base.castShadow = false;
+      base.receiveShadow = true;
+
+      const top = box(width * 0.88, 0.08, depth * 0.88, mats.ice, 0, 0.31, 0);
+      top.castShadow = false;
+      top.receiveShadow = true;
+
+      const edge = new THREE.Mesh(
+        new THREE.TorusGeometry(Math.max(width, depth) * 0.48, 0.055, 6, 32),
+        mats.ice
+      );
+      edge.rotation.x = Math.PI / 2;
+      edge.scale.set(width / (Math.max(width, depth) * 0.48), depth / (Math.max(width, depth) * 0.48), 1);
+      edge.position.y = 0.34;
+      group.add(edge);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    makeIcePlatform(-11.5, -8.5, 3.2, 2.1);
+    makeIcePlatform(2.5, -9.5, 3.0, 2.2);
+    makeIcePlatform(12.5, 8.5, 3.2, 2.2);
+    makeIcePlatform(-16, 12, 2.6, 1.7);
+
+    // Enemies frozen on platforms.
+    function frozenEnemy(x, z, color = 0xff4b18) {
+      const group = new THREE.Group();
+      const body = ico(0.48, mats.darkMetal, 0, 0.55, 0, 1);
+      body.scale.set(0.7, 1.2, 0.7);
+      const head = ico(0.32, mats.darkMetal, 0, 1.05, 0, 0);
+      head.scale.set(0.8, 0.8, 0.8);
+      const horn = ico(0.09, mats.darkMetal, 0, 1.45, 0.2, 0);
+      horn.scale.set(0.5, 1.7, 0.5);
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 8, 6),
+        new THREE.MeshBasicMaterial({ color })
+      );
+      eye.position.set(0, 1.18, 0.34);
+      group.add(eye);
+      group.add(body, head, horn, eye);
+
+      const frost = new THREE.PointLight(0x72c8ff, 1.4, 3, 2);
+      group.add(frost);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    frozenEnemy(-11.5, -8.5, 0xff4b18);
+    frozenEnemy(2.5, -9.5, 0xff5b20);
+    frozenEnemy(12.5, 8.5, 0xff4b18);
+
+    // -------------------------------------------------------------------------
+    // Screw Attack, Wave Beam, High Jump, extra missiles, energy tanks
+    // -------------------------------------------------------------------------
+    const screwAttack = new THREE.Group();
+    screwAttack.position.set(-6.5, 0, 3.5);
+    screwAttack.rotation.y = 0.25;
+    scene.add(screwAttack);
+
+    const screwBase = cylinder(0.55, 0.22, mats.darkMetal, 0, 0.11, 0, 16);
+    const screw = cylinder(0.25, 1.15, mats.metal, 0, 0.9, 0, 16);
+    screwAttack.add(screwBase, screw);
+    for (let i = 0; i < 4; i++) {
+      const blade = box(0.12, 0.78, 0.09, mats.metal, 0, 1.55, 0);
+      blade.rotation.z = Math.PI / 4;
+      screwAttack.add(blade);
+    }
+    const screwLight = new THREE.PointLight(0x65d7ff, 2.5, 3.8, 2);
+    screwLight.position.y = 1.7;
+    screwAttack.add(screwLight);
+
+    const waveBeam = new THREE.Group();
+    waveBeam.position.set(5.5, 0, -4.5);
+    waveBeam.rotation.y = -0.35;
+    scene.add(waveBeam);
+
+    const wavePedestal = cylinder(0.65, 0.25, mats.darkMetal, 0, 0.12, 0, 16);
+    waveBeam.add(wavePedestal);
+    const waveBody = cylinder(0.3, 0.9, mats.metal, 0, 0.72, 0, 16);
+    waveBeam.add(waveBody);
+    const waveGlow = cylinder(0.38, 0.08, mats.blueLamp, 0, 1.22, 0, 16);
+    waveBeam.add(waveGlow);
+    const waveLight = new THREE.PointLight(0x42c8ff, 3, 5, 2);
+    waveLight.position.y = 1.4;
+    waveBeam.add(waveLight);
+
+    const highJump = new THREE.Group();
+    highJump.position.set(1.5, 0, 10.5);
+    highJump.rotation.y = 0.45;
+    scene.add(highJump);
+
+    const bootBase = cylinder(0.45, 0.2, mats.darkMetal, 0, 0.1, 0, 16);
+    highJump.add(bootBase);
+    const boot = cylinder(0.25, 0.85, mats.metal, 0, 0.65, 0, 16);
+    highJump.add(boot);
+    const bootGlow = cylinder(0.16, 0.08, mats.yellowLamp, 0, 1.12, 0, 16);
+    highJump.add(bootGlow);
+    const bootLight = new THREE.PointLight(0xffbd48, 2.2, 4, 2);
+    bootLight.position.y = 1.3;
+    highJump.add(bootLight);
+
+    function makeExtraMissileRack(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.rotation.y = rotation;
+
+      const rack = box(1.8, 1.15, 0.55, mats.darkMetal, 0, 0.58, 0);
+      for (let i = 0; i < 3; i++) {
+        const missile = cylinder(
+          0.16,
+          0.72,
+          mats.metal,
+          (i - 1) * 0.52,
+          1.4,
+          0,
+          10
+        );
+        const nozzle = cylinder(
+          0.18,
+          0.17,
+          mats.darkMetal,
+          (i - 1) * 0.52,
+          1.1,
+          0,
+          10
+        );
+        group.add(missile, nozzle);
+      }
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    makeExtraMissileRack(-17, 10, 0.2);
+    makeExtraMissileRack(17, -10, -0.2);
+    makeExtraMissileRack(2, 20, 0.1);
+
+    function makeEnergyTank(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.rotation.y = rotation;
+
+      const tank = cylinder(0.72, 1.25, mats.metal, 0, 0.7, 0, 16);
+      const top = cylinder(0.48, 0.22, mats.darkMetal, 0, 1.43, 0, 16);
+      const bottom = cylinder(0.48, 0.22, mats.darkMetal, 0, 0.02, 0, 16);
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.48, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+        mats.blueLamp
+      );
+      cap.position.y = 1.48;
+      group.add(tank, top, bottom, cap);
+      const light = new THREE.PointLight(0x44c8ff, 2.5, 4.2, 2);
+      light.position.y = 1.6;
+      group.add(light);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+      return group;
+    }
+
+    makeEnergyTank(-12, 18, 0.2);
+    makeEnergyTank(13, 18, -0.2);
+    makeEnergyTank(-19, -13, 0.5);
+
+    // -------------------------------------------------------------------------
+    // Lighting fixtures, distant Ridley hideout, sky
+    // -------------------------------------------------------------------------
+    for (let i = 0; i < 10; i++) {
+      makeLamp(
+        -13 + i * 3.1,
+        4.7,
+        (i % 2 ? 1 : -1) * 2.4,
+        i % 3 === 0 ? mats.yellowLamp : mats.blueLamp,
+        0.8
+      );
+    }
+
+    // Distant hideout silhouette.
+    const hideout = new THREE.Group();
+    const hideoutBase = box(11, 1.2, 7, mats.darkRock, 0, 0.6, 0);
+    const hideoutTower = box(2.2, 7, 2.2, mats.rock, 0, 3.5, 0);
+    const hideoutRoof = box(3.2, 1.1, 3.2, mats.darkMetal, 0, 7.2, 0);
+    const hideoutWindow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 8, 6),
+      mats.redLamp
+    );
+    hideoutWindow.position.set(0, 5.2, 1.12);
+    hideout.add(hideoutBase, hideoutTower, hideoutRoof, hideoutWindow);
+    hideout.position.set(26, 0, 13);
+    scene.add(hideout);
+
+    const hideoutLight = new THREE.PointLight(0xff4b18, 8, 18, 2);
+    hideoutLight.position.set(26, 4, 13);
+    scene.add(hideoutLight);
+
+    // Dark distant mountains.
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2;
+      const radius = 38 + Math.random() * 14;
+      const height = 4 + Math.random() * 11;
+      ico(
+        1.2 + Math.random() * 2,
+        mats.darkRock,
+        Math.cos(angle) * radius,
+        height,
+        Math.sin(angle) * radius,
+        1
+      );
+    }
+
+    // Animated sky particles.
+    const skyParticles = [];
+    const particleMaterial = new THREE.PointsMaterial({
+      color: 0xff8b45,
+      size: 0.065,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 180; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 20 + Math.random() * 30;
+      const particle = new THREE.Points(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(Math.cos(angle) * radius, Math.random() * 18 - 2, Math.sin(angle) * radius)
+        ]),
+        particleMaterial
+      );
+      scene.add(particle);
+      skyParticles.push({
+        particle,
+        angle,
+        radius,
+        speed: 0.05 + Math.random() * 0.08,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Ice Beam
+    // -------------------------------------------------------------------------
+    const iceBeam = new THREE.Group();
+    const iceGlow = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.22, 1.5, 12),
+      new THREE.MeshBasicMaterial({ color: 0xaeeaff })
+    );
+    iceGlow.position.y = 0.75;
+    iceBeam.add(iceGlow);
+    const iceCone = new THREE.Mesh(
+      new THREE.ConeGeometry(0.38, 1.2, 12),
+      mats.ice
+    );
+    iceCone.position.y = 1.65;
+    iceBeam.add(iceCone);
+    const iceLight = new THREE.PointLight(0x79e6ff, 3.2, 5, 2);
+    iceLight.position.y = 1.8;
+    iceBeam.add(iceLight);
+    scene.add(iceBeam);
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls: pointer drag, wheel zoom, touch pinch
+    // -------------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 1.5, 0),
+      yaw: 0.65,
+      pitch: 0.48,
+      radius: 24,
+      dragging: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      pinchDistance: 0,
+      tour: false
+    };
+
+    function updateCamera() {
+      const horizontal = Math.cos(controls.pitch) * controls.radius;
+      camera.position.set(
+        controls.target.x + Math.sin(controls.yaw) * horizontal,
+        controls.target.y + Math.sin(controls.pitch) * controls.radius,
+        controls.target.z + Math.cos(controls.yaw) * horizontal
+      );
+      camera.lookAt(controls.target);
+    }
+
+    function resetView() {
+      controls.target.set(0, 1.5, 0);
+      controls.yaw = 0.65;
+      controls.pitch = 0.48;
+      controls.radius = 24;
+      controls.tour = false;
+      document.getElementById("toggleTour").textContent = "Guided Tour";
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      controls.dragging = true;
+      controls.pointerId = event.pointerId;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!controls.dragging || event.pointerId !== controls.pointerId) return;
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      controls.yaw -= dx * 0.006;
+      controls.pitch = THREE.MathUtils.clamp(controls.pitch + dy * 0.005, 0.12, 1.35);
+      updateCamera();
+    });
+
+    function endPointer(event) {
+      if (event.pointerId !== controls.pointerId) return;
+      controls.dragging = false;
+      controls.pointerId = null;
+    }
+
+    renderer.domElement.addEventListener("pointerup", endPointer);
+    renderer.domElement.addEventListener("pointercancel", endPointer);
+    renderer.domElement.addEventListener("lostpointercapture", endPointer);
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(controls.radius + event.deltaY * 0.015, 8, 48);
+      updateCamera();
+    }, { passive: false });
+
+    // Pinch zoom.
+    const activePointers = new Map();
+    let previousPinch = 0;
+
+    renderer.domElement.addEventListener("touchstart", event => {
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        previousPinch = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchmove", event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (previousPinch > 0) {
+          controls.radius = THREE.MathUtils.clamp(
+            controls.radius + (previousPinch - distance) * 0.018,
+            8,
+            48
+          );
+          updateCamera();
+        }
+        previousPinch = distance;
+      }
+    }, { passive: true });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) previousPinch = 0;
+    }
+
+    renderer.domElement.addEventListener("touchend", removePointer, { passive: true });
+    renderer.domElement.addEventListener("touchleave", removePointer, { passive: true });
+
+    document.getElementById("reset").addEventListener("click", resetView);
+
+    const tourButton = document.getElementById("toggleTour");
+    tourButton.addEventListener("click", () => {
+      controls.tour = !controls.tour;
+      tourButton.textContent = controls.tour ? "Stop Tour" : "Guided Tour";
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+    let tourIndex = 0;
+    const tourPositions = [
+      new THREE.Vector3(-15, 7, -4),
+      new THREE.Vector3(-10, 5, 15),
+      new THREE.Vector3(5, 7, -12),
+      new THREE.Vector3(12, 5, 8),
+      new THREE.Vector3(-6, 5, 3.5),
+      new THREE.Vector3(5.5, 5, -4.5),
+      new THREE.Vector3(1.5, 5, 10.5)
+    ];
+    const tourLookAt = [
+      new THREE.Vector3(-10, 1, -8),
+      new THREE.Vector3(-4, 1, 12),
+      new THREE.Vector3(8, 1, -10),
+      new THREE.Vector3(15, 1, 6),
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(3, 1, -2),
+      new THREE.Vector3(0, 1, 9)
+    ];
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      // Gentle lava surface and particle motion.
+      lavaPools.forEach((pool, poolIndex) => {
+        pool.surface.rotation.y = elapsed * (0.08 + poolIndex * 0.015) * (poolIndex % 2 ? -1 : 1);
+        pool.group.position.y = Math.sin(elapsed * 0.7 + poolIndex) * 0.025;
+
+        pool.particles.forEach(particle => {
+          const data = particle.userData;
+          const t = (elapsed * data.speed + data.phase) % 1;
+          particle.position.set(
+            data.base.x + Math.sin(t * 4 + data.phase) * 0.18,
+            data.base.y + t * 0.45,
+            data.base.z + Math.cos(t * 3.2 + data.phase) * 0.15
+          );
+          particle.scale.setScalar(0.7 + Math.sin(t * 5 + data.phase) * 0.35);
+        });
+      });
+
+      // Bubble drift and internal shimmer.
+      bubbles.forEach((bubble, index) => {
+        bubble.group.position.y = 1.2 + Math.sin(elapsed * 0.55 + index) * 0.16;
+        bubble.group.rotation.y = elapsed * (0.08 + index * 0.025);
+        bubble.shell.material.emissiveIntensity = 0.55 + Math.sin(elapsed * 1.4 + index) * 0.15;
+        bubble.glow.intensity = 1.6 + Math.sin(elapsed * 1.8 + index) * 0.4;
+      });
+
+      // Ice platforms subtly pulse.
+      const icePulses = [
+        [-11.5, -8.5, 0.025],
+        [2.5, -9.5, 0.03],
+        [12.5, 8.5, 0.025]
+      ];
+      icePulses.forEach((entry, index) => {
+        const [x, z, amplitude] = entry;
+        const platform = scene.children.find(object => object.position.x === x && object.position.z === z && object.isGroup);
+        if (!platform) return;
+        platform.children.forEach(child => {
+          if (child.material === mats.ice) {
+            child.material.emissiveIntensity = 0.45 + Math.sin(elapsed * 1.2 + index) * amplitude;
+          }
+        });
+      });
+
+      // Slow camera tour.
+      if (controls.tour) {
+        tourIndex = (tourIndex + 1) % tourPositions.length;
+        const position = tourPositions[tourIndex];
+        const lookAt = tourLookAt[tourIndex];
+        camera.position.lerp(position, 0.035);
+        camera.lookAt(lookAt);
+        controls.target.copy(lookAt);
+      }
+
+      // Ambient motion in the distant hideout.
+      hideoutLight.intensity = 7 + Math.sin(elapsed * 0.7) * 1.5;
+      hideoutWindow.material.emissiveIntensity = 2.2 + Math.sin(elapsed * 1.2) * 0.5;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
