@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adventure — Chalice Run · Castles & Mazes</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --amber: #f3b744;
+      --cream: #f5e6bd;
+      --ink: #171008;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #120b06;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active { cursor: grabbing; }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: var(--cream);
+      text-shadow: 0 2px 8px #000;
+    }
+
+    #hud .title {
+      position: absolute;
+      top: 28px;
+      left: 32px;
+      font-size: clamp(24px, 4vw, 48px);
+      line-height: .95;
+      letter-spacing: .08em;
+      font-weight: bold;
+    }
+
+    #hud .title span {
+      color: var(--amber);
+    }
+
+    #hud .subtitle {
+      margin-top: 9px;
+      font-size: 12px;
+      letter-spacing: .18em;
+      opacity: .85;
+    }
+
+    #hud .help {
+      position: absolute;
+      right: 24px;
+      bottom: 22px;
+      padding: 10px 13px;
+      border: 1px solid rgba(245, 230, 189, .25);
+      background: rgba(23, 16, 8, .65);
+      backdrop-filter: blur(6px);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-align: right;
+      line-height: 1.7;
+    }
+
+    #hud .retro {
+      position: absolute;
+      left: 32px;
+      bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      letter-spacing: .15em;
+    }
+
+    #hud .retro::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border: 2px solid var(--amber);
+      border-radius: 50%;
+      box-shadow: 0 0 14px var(--amber);
+    }
+
+    @media (max-width: 650px) {
+      #hud .title { top: 20px; left: 20px; }
+      #hud .help { right: 14px; bottom: 14px; }
+      #hud .retro { left: 20px; bottom: 58px; }
+    }
+
+    /* --- Game layer: Adventure — Chalice Run --- */
+    #gameHud {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 18px; z-index: 20;
+      padding: 8px 16px; border: 1px solid rgba(245, 230, 189, .3); border-radius: 10px;
+      background: rgba(23, 16, 8, .66); backdrop-filter: blur(6px);
+      color: var(--cream); font-size: 17px; letter-spacing: .06em; white-space: nowrap;
+    }
+    #muteBtn {
+      pointer-events: auto; background: none; border: none; font-size: 19px;
+      cursor: pointer; padding: 2px 4px; line-height: 1;
+    }
+    #pauseBadge {
+      position: fixed; top: 66px; left: 50%; transform: translateX(-50%); display: none; z-index: 20;
+      color: var(--amber); font-size: 15px; letter-spacing: .25em; text-shadow: 0 2px 8px #000;
+    }
+    #joyBase, #joyKnob {
+      position: fixed; border-radius: 50%; display: none; z-index: 25; pointer-events: none;
+    }
+    #joyBase {
+      width: 110px; height: 110px;
+      border: 2px solid rgba(245, 230, 189, .45); background: rgba(23, 16, 8, .3);
+    }
+    #joyKnob {
+      width: 48px; height: 48px;
+      background: rgba(243, 183, 68, .75); border: 2px solid rgba(245, 230, 189, .8);
+    }
+    .screen {
+      position: fixed; inset: 0; z-index: 30; display: flex;
+      align-items: center; justify-content: center;
+      background: rgba(12, 7, 3, .68); padding: 18px;
+    }
+    .screen .panel {
+      max-width: 520px; text-align: center; color: var(--cream);
+      border: 1px solid rgba(245, 230, 189, .35); border-radius: 14px; padding: 28px 30px;
+      background: rgba(23, 16, 8, .82); backdrop-filter: blur(8px);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .55);
+    }
+    .screen h1 {
+      margin: 0 0 12px; font-size: clamp(26px, 5vw, 42px);
+      line-height: 1.02; letter-spacing: .06em;
+    }
+    .screen h1 span { color: var(--amber); }
+    .screen .quest { font-size: 15.5px; line-height: 1.55; margin: 0 0 18px; }
+    .screen .controls { font-size: 12px; opacity: .75; letter-spacing: .05em; margin: 14px 0 0; line-height: 1.6; }
+    .screen .bigTime { font-size: 17px; margin: 0 0 18px; }
+    .bigBtn {
+      pointer-events: auto; font-family: inherit; font-size: 19px; font-weight: bold;
+      letter-spacing: .1em; color: var(--ink); background: var(--amber); border: none;
+      border-radius: 10px; padding: 13px 30px; cursor: pointer;
+      box-shadow: 0 6px 24px rgba(243, 183, 68, .35);
+    }
+    .bigBtn:active { transform: translateY(1px); }
+    @media (max-width: 650px) {
+      #gameHud { font-size: 14px; gap: 10px; top: 10px; padding: 6px 10px; }
+      .screen .panel { padding: 20px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="title">CASTLES <span>&amp; MAZES</span></div>
+    <div class="subtitle">ATARI 2600 · ADVENTURE</div>
+    <div class="retro">EXPLORING THE DIGITAL FOREST</div>
+    <div class="help">WASD / ARROWS · MOVE — DRAG · CAMERA<br>SPACE / ESC · PAUSE</div>
+  </div>
+
+  <!-- Game layer UI: Adventure — Chalice Run -->
+  <div id="gameHud">
+    <div id="hearts">❤️❤️❤️</div>
+    <div id="hudTime">00:00</div>
+    <div id="hudChalice">🏆 at the altar</div>
+    <button id="muteBtn" type="button" aria-label="Toggle sound">🔊</button>
+  </div>
+  <div id="pauseBadge">⏸ PAUSED</div>
+  <div id="joyBase"></div>
+  <div id="joyKnob"></div>
+
+  <div class="screen" id="startScreen">
+    <div class="panel">
+      <h1>ADVENTURE<br><span>CHALICE RUN</span></h1>
+      <p class="quest">Steal the Enchanted Chalice from the maze altar. Bring it to the Golden Castle gate. Beware the dragon.</p>
+      <button class="bigBtn" id="startBtn" type="button">▶ START</button>
+      <p class="controls">WASD / arrows or the left-thumb stick to move · drag to swing the camera · Space pauses</p>
+    </div>
+  </div>
+
+  <div class="screen" id="winScreen" style="display:none">
+    <div class="panel">
+      <h1>🏆 CHALICE<br><span>DELIVERED!</span></h1>
+      <p class="quest">The Enchanted Chalice gleams in the Golden Castle once more.</p>
+      <p class="bigTime">Time: <b id="winTime">00:00</b> · Best: <b id="winBest">—</b></p>
+      <button class="bigBtn" id="againBtn" type="button">↻ PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <div class="screen" id="overScreen" style="display:none">
+    <div class="panel">
+      <h1>🐉 THE DRAGON<br><span>PREVAILS</span></h1>
+      <p class="quest">Three bites was two too many. The Chalice waits for a braver knight.</p>
+      <p class="bigTime">You lasted <b id="overTime">00:00</b></p>
+      <button class="bigBtn" id="retryBtn" type="button">↻ TRY AGAIN</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer, scene, camera
+    // -------------------------------------------------------------------------
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.prepend(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x17120d);
+    scene.fog = new THREE.FogExp2(0x17120d, 0.025);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      180
+    );
+
+    const clock = new THREE.Clock();
+    const animated = [];
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      earth: new THREE.MeshStandardMaterial({ color: 0x3c2817, roughness: 1 }),
+      earthDark: new THREE.MeshStandardMaterial({ color: 0x21170f, roughness: 1 }),
+      path: new THREE.MeshStandardMaterial({ color: 0x9b7846, roughness: 1 }),
+      pathLight: new THREE.MeshStandardMaterial({ color: 0xb9955d, roughness: 1 }),
+      stone: new THREE.MeshStandardMaterial({ color: 0x665646, roughness: .96 }),
+      stoneLight: new THREE.MeshStandardMaterial({ color: 0x918068, roughness: .94 }),
+      stoneDark: new THREE.MeshStandardMaterial({ color: 0x39332d, roughness: 1 }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xd9a43b, roughness: .55, metalness: .25 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x345c2b, roughness: .95 }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x527a35, roughness: .95 }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x203c20, roughness: 1 }),
+      trunk: new THREE.MeshStandardMaterial({ color: 0x493220, roughness: 1 }),
+      moss: new THREE.MeshStandardMaterial({ color: 0x506736, roughness: 1 }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x173c45,
+        roughness: .25,
+        metalness: .15,
+        transparent: true,
+        opacity: .84
+      }),
+      candle: new THREE.MeshStandardMaterial({
+        color: 0xe2b969,
+        emissive: 0x7b3500,
+        emissiveIntensity: .8,
+        roughness: .65
+      }),
+      fire: new THREE.MeshBasicMaterial({ color: 0xff9b26 }),
+      glow: new THREE.MeshBasicMaterial({ color: 0xffc45c })
+    };
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x7e8965, 0x24150d, 1.5));
+
+    const sun = new THREE.DirectionalLight(0xffc878, 3.1);
+    sun.position.set(25, 35, 18);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -35;
+    sun.shadow.camera.right = 35;
+    sun.shadow.camera.top = 35;
+    sun.shadow.camera.bottom = -35;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 90;
+    sun.shadow.bias = -.0004;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0x6d879a, 1.25);
+    rim.position.set(-20, 15, -25);
+    scene.add(rim);
+
+    const fireLight = new THREE.PointLight(0xff7a22, 2.4, 18, 2);
+    fireLight.position.set(0, 3.5, 0);
+    scene.add(fireLight);
+
+    // -------------------------------------------------------------------------
+    // Procedural canvas textures
+    // -------------------------------------------------------------------------
+
+    function makeTexture(type) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+
+      if (type === "stone") {
+        ctx.fillStyle = "#71624c";
+        ctx.fillRect(0, 0, 256, 256);
+
+        for (let i = 0; i < 900; i++) {
+          const shade = 70 + Math.random() * 65;
+          ctx.fillStyle = `rgba(${shade},${shade - 8},${shade - 16},${.05 + Math.random()*.2})`;
+          ctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 3, 1 + Math.random() * 3);
+        }
+
+        ctx.strokeStyle = "rgba(35,28,22,.25)";
+        ctx.lineWidth = 2;
+        for (let row = 0; row < 8; row++) {
+          for (let col = 0; col < 8; col++) {
+            const x = col * 32 + (row % 2) * 16;
+            ctx.strokeRect(x, row * 32, 30, 30);
+          }
+        }
+      } else {
+        ctx.fillStyle = "#243a24";
+        ctx.fillRect(0, 0, 256, 256);
+
+        for (let i = 0; i < 1500; i++) {
+          const light = Math.random() > .55;
+          ctx.fillStyle = light ? "rgba(135,170,95,.12)" : "rgba(8,25,10,.18)";
+          const r = 1 + Math.random() * 4;
+          ctx.fillRect(Math.random() * 256, Math.random() * 256, r, r);
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    const stoneTexture = makeTexture("stone");
+    stoneTexture.repeat.set(3, 3);
+    materials.stone.map = stoneTexture;
+
+    const leafTexture = makeTexture("leaf");
+    leafTexture.repeat.set(12, 12);
+    materials.leaf.map = leafTexture;
+    materials.leafLight.map = leafTexture;
+    materials.leafDark.map = leafTexture;
+
+    // -------------------------------------------------------------------------
+    // Terrain and winding path
+    // -------------------------------------------------------------------------
+
+    const terrainGeometry = new THREE.PlaneGeometry(110, 110, 110, 110);
+    terrainGeometry.rotateX(-Math.PI / 2);
+
+    const terrainPosition = terrainGeometry.attributes.position;
+    const terrainColors = [];
+
+    for (let i = 0; i < terrainPosition.count; i++) {
+      const x = terrainPosition.getX(i);
+      const z = terrainPosition.getZ(i);
+      const edge = Math.max(Math.abs(x) / 48, Math.abs(z) / 48);
+      const noise = Math.sin(x * .24) * .35 + Math.cos(z * .21) * .35 + Math.sin((x+z)*.11)*.25;
+      const h = Math.max(-.5, Math.min(3.2, noise + edge * 1.4));
+      terrainPosition.setY(i, h);
+
+      const color = new THREE.Color();
+      if (h > 2.2) color.set(0x34251a);
+      else if (h < -1.2) color.set(0x251b12);
+      else color.set(0x49331f);
+      terrainColors.push(color.r, color.g, color.b);
+    }
+
+    terrainGeometry.setAttribute("color", new THREE.Float32BufferAttribute(terrainColors, 3));
+    terrainGeometry.computeVertexNormals();
+
+    const terrain = new THREE.Mesh(
+      terrainGeometry,
+      new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 1
+      })
+    );
+    terrain.receiveShadow = true;
+    world.add(terrain);
+
+    // A hand-carved path through the forest, with gentle elevation.
+    const pathPoints = [
+      new THREE.Vector3(-23, 0, 28),
+      new THREE.Vector3(-14, 0, 20),
+      new THREE.Vector3(-7, 0, 13),
+      new THREE.Vector3(0, 0, 7),
+      new THREE.Vector3(7, 0, 0),
+      new THREE.Vector3(13, 0, -8),
+      new THREE.Vector3(18, 0, -18)
+    ];
+
+    const pathCurve = new THREE.CatmullRomCurve3(pathPoints, false, "catmullrom", .45);
+    const pathSegments = 180;
+    const pathGeometry = new THREE.BufferGeometry();
+    const pathPositions = [];
+    const pathUVs = [];
+
+    for (let i = 0; i <= pathSegments; i++) {
+      const t = i / pathSegments;
+      const p = pathCurve.getPoint(t);
+      const side = Math.sin(t * Math.PI * 3.2) * .5 + .5;
+      const width = .7 + side * 1.25;
+      const y = 0.02 + Math.sin(t * Math.PI * 2) * .12;
+
+      const left = p.clone().add(new THREE.Vector3(-width, 0, 0));
+      const right = p.clone().add(new THREE.Vector3(width, 0, 0));
+      pathPositions.push(left.x, y, left.z, right.x, y, right.z);
+      pathUVs.push(0, t * 12, 1, t * 12);
+    }
+
+    pathGeometry.setAttribute("position", new THREE.Float32BufferAttribute(pathPositions, 3));
+    pathGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(pathUVs, 2));
+    pathGeometry.computeVertexNormals();
+
+    const path = new THREE.Mesh(
+      pathGeometry,
+      new THREE.MeshStandardMaterial({
+        color: 0xb58b50,
+        roughness: 1,
+        side: THREE.DoubleSide
+      })
+    );
+    path.receiveShadow = true;
+    world.add(path);
+
+    // -------------------------------------------------------------------------
+    // Castle
+    // -------------------------------------------------------------------------
+
+    const castle = new THREE.Group();
+    castle.position.set(15, 0, -31);
+    castle.rotation.y = -.18;
+    world.add(castle);
+
+    function castleBox(w, h, d, x, y, z, material = materials.stone) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      castle.add(mesh);
+      return mesh;
+    }
+
+    castleBox(12, 5, 12, 0, 2.5, 0);
+    castleBox(16, 1.2, 16, 0, 5.1, 0, materials.stoneLight);
+    castleBox(8, 4.5, 8, -4.2, 7.3, 1.3, materials.stone);
+    castleBox(8, 4.5, 8, 4.2, 7.3, 1.3, materials.stone);
+    castleBox(3.2, 2.8, 3.2, 0, 10.7, -1.2, materials.stoneLight);
+    castleBox(7, 2.1, 7, 0, 12.3, -1.2, materials.stoneLight);
+
+    // Towers and crenellations.
+    const towerPositions = [
+      [-7.2, 1.6, -4.4, 3.2],
+      [7.2, 1.6, -4.4, 3.2],
+      [-7.2, 1.6, 4.4, 3.2],
+      [7.2, 1.6, 4.4, 3.2]
+    ];
+
+    for (const [x, y, z, size] of towerPositions) {
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(size, size * 1.08, y * 2, 8), materials.stone);
+      tower.position.set(x, y, z);
+      tower.castShadow = true;
+      tower.receiveShadow = true;
+      castle.add(tower);
+
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2;
+        const merlon = new THREE.Mesh(new THREE.BoxGeometry(.55, .75, .55), materials.stoneLight);
+        merlon.position.set(
+          Math.cos(a) * (size * .72),
+          y * 2 + .35,
+          Math.sin(a) * (size * .72)
+        );
+        merlon.rotation.y = -a;
+        merlon.castShadow = true;
+        castle.add(merlon);
+      }
+    }
+
+    // Arched windows.
+    function archWindow(x, y, z, width = 1.2) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      const dark = new THREE.Mesh(new THREE.BoxGeometry(width, width * .65, .12), materials.earthDark);
+      dark.position.y = width * .25;
+      group.add(dark);
+
+      const arch = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape()), materials.stoneDark);
+      const shape = new THREE.Shape();
+      shape.moveTo(-width / 2, 0);
+      shape.lineTo(width / 2, 0);
+      shape.lineTo(width / 2, width * .35);
+      shape.absarc(0, width * .35, width / 2, 0, Math.PI, false);
+      shape.lineTo(-width / 2, 0);
+      arch.position.y = width * .35;
+      group.add(arch);
+
+      const glow = new THREE.Mesh(new THREE.CircleGeometry(width * .22, 16), materials.glow);
+      glow.position.set(0, width * .25, .09);
+      group.add(glow);
+
+      group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      castle.add(group);
+    }
+
+    archWindow(-3.6, 3.3, 6.07, 1.2);
+    archWindow(3.6, 3.3, 6.07, 1.2);
+    archWindow(-7.2, 2.5, 0, 1.4);
+    archWindow(7.2, 2.5, 0, 1.4);
+    archWindow(0, 11.7, 4.67, 1.4);
+    archWindow(0, 11.7, -6.61, 1.4);
+
+    // Gatehouse.
+    const gate = new THREE.Group();
+    gate.position.set(0, 0, 7.4);
+    castle.add(gate);
+
+    const gatePillars = [
+      new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.4, 2.2), materials.stoneLight),
+      new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.4, 2.2), materials.stoneLight)
+    ];
+    gatePillars.forEach(m => {
+      m.position.x = m === gatePillars[0] ? -1.05 : 1.05;
+      m.castShadow = true;
+      m.receiveShadow = true;
+      gate.add(m);
+    });
+
+    const gateLintel = new THREE.Mesh(new THREE.BoxGeometry(4.4, .8, 2.6), materials.stoneLight);
+    gateLintel.position.set(0, 5.3, 0);
+    gateLintel.castShadow = true;
+    gate.add(gateLintel);
+
+    const gateSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.2, .65),
+      new THREE.MeshBasicMaterial({ color: 0x9b6b25, side: THREE.DoubleSide })
+    );
+    gateSign.position.set(0, 4.85, .03);
+    gate.add(gateSign);
+
+    // -------------------------------------------------------------------------
+    // Maze / enchanted grove
+    // -------------------------------------------------------------------------
+
+    const maze = new THREE.Group();
+    maze.position.set(-18, 0, -23);
+    maze.rotation.y = .22;
+    world.add(maze);
+
+    const mazeWallMeshes = [];
+
+    function mazeWall(x, z, w, d, material = materials.leafDark) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2 + Math.random() * .5, d), material);
+      wall.position.set(x, .55, z);
+      wall.rotation.y = (Math.random() - .5) * .18;
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      maze.add(wall);
+      mazeWallMeshes.push(wall);
+      return wall;
+    }
+
+    // Curved maze walls around the central clearing.
+    mazeWall(-6, -2, 5.2, 1.1);
+    mazeWall(-1.8, -2, 4.2, 1.1);
+    mazeWall(2.5, -2, 5.2, 1.1);
+    mazeWall(6.2, -2, 4.2, 1.1);
+    mazeWall(-6, 2, 5.2, 1.1);
+    mazeWall(-1.8, 2, 4.2, 1.1);
+    mazeWall(2.5, 2, 5.2, 1.1);
+    mazeWall(6.2, 2, 4.2, 1.1);
+
+    // Inner maze.
+    mazeWall(-2.5, -3.5, 3.5, .8);
+    mazeWall(-.5, -3.5, 2.8, .8);
+    mazeWall(1.5, -3.5, 3.5, .8);
+    mazeWall(3.5, -3.5, 2.8, .8);
+    mazeWall(-2.5, 3.5, 3.5, .8);
+    mazeWall(-.5, 3.5, 2.8, .8);
+    mazeWall(1.5, 3.5, 3.5, .8);
+    mazeWall(3.5, 3.5, 2.8, .8);
+
+    // Central altar.
+    const altar = new THREE.Group();
+    altar.position.set(0, 0, 0);
+    maze.add(altar);
+
+    const altarBase = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.5, .55, 8), materials.stoneDark);
+    altarBase.position.y = .25;
+    altarBase.castShadow = true;
+    altar.add(altarBase);
+
+    const altarStem = new THREE.Mesh(new THREE.CylinderGeometry(.38, .55, 2.2, 8), materials.stoneLight);
+    altarStem.position.y = 1.45;
+    altarStem.castShadow = true;
+    altar.add(altarStem);
+
+    const altarBowl = new THREE.Mesh(new THREE.CylinderGeometry(1.0, .45, .35, 12), materials.gold);
+    altarBowl.position.y = 2.7;
+    altarBowl.castShadow = true;
+    altar.add(altarBowl);
+
+    // Candle flames.
+    const flames = [];
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const x = Math.cos(angle) * .62;
+      const z = Math.sin(angle) * .62;
+
+      const candle = new THREE.Mesh(
+        new THREE.CylinderGeometry(.055, .065, .55, 8),
+        materials.candle
+      );
+      candle.position.set(x, 3.05, z);
+      altar.add(candle);
+
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(.12, 8, 8), materials.fire);
+      flame.scale.y = 1.8;
+      flame.position.set(x, 3.43, z);
+      altar.add(flame);
+      flames.push(flame);
+    }
+
+    // -------------------------------------------------------------------------
+    // Trees
+    // -------------------------------------------------------------------------
+
+    const treeColliders = [];
+    const trunkGeometry = new THREE.CylinderGeometry(.22, .38, 1, 7);
+    const crownGeometry = new THREE.IcosahedronGeometry(1, 1);
+
+    function createTree(x, z, scale = 1, variant = 0) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.rotation.y = Math.random() * Math.PI * 2;
+      tree.scale.setScalar(scale);
+
+      const trunk = new THREE.Mesh(trunkGeometry, materials.trunk);
+      trunk.position.y = .55;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      tree.add(trunk);
+
+      const crown = new THREE.Mesh(crownGeometry, variant % 2 ? materials.leaf : materials.leafLight);
+      crown.position.y = 2.25;
+      crown.scale.set(1.25, 1.55, 1.15);
+      crown.rotation.set(Math.random(), Math.random(), Math.random());
+      crown.castShadow = true;
+      crown.receiveShadow = true;
+      tree.add(crown);
+
+      const lowerCrown = new THREE.Mesh(crownGeometry, materials.leafDark);
+      lowerCrown.position.set(.35, 1.65, -.1);
+      lowerCrown.scale.set(.85, 1.05, .85);
+      lowerCrown.castShadow = true;
+      tree.add(lowerCrown);
+
+      treeColliders.push({ x, z, r: .55 * scale });
+      world.add(tree);
+      animated.push({
+        type: "tree",
+        object: tree,
+        phase: Math.random() * Math.PI * 2,
+        amplitude: .035 + Math.random() * .05
+      });
+    }
+
+    const treePositions = [
+      [-29, -20, 1.15], [-25, -31, .95], [-35, -10, 1.05],
+      [-31, 6, 1.2], [-25, 16, .9], [-36, 28, 1.1],
+      [-12, -35, 1.1], [-8, -41, .9], [5, -37, 1.0],
+      [12, -31, 1.15], [24, -34, .95], [31, -20, 1.1],
+      [28, -9, 1.2], [34, 8, .95], [25, 22, 1.1],
+      [10, 31, 1.0], [-4, 35, 1.15], [-18, 37, .9],
+      [-30, 4, 1.0], [-20, -3, .9], [-10, -4, 1.15],
+      [18, -1, .9], [28, 1, 1.1], [18, 12, 1.0]
+    ];
+
+    treePositions.forEach(([x, z, s], i) => {
+      createTree(x, z, s, i);
+    });
+
+    // -------------------------------------------------------------------------
+    // Water pool and rocks
+    // -------------------------------------------------------------------------
+
+    const pool = new THREE.Group();
+    pool.position.set(-10, 0, 13);
+    world.add(pool);
+
+    const poolCircle = new THREE.Mesh(
+      new THREE.CircleGeometry(6.5, 64),
+      materials.water
+    );
+    poolCircle.rotation.x = -Math.PI / 2;
+    poolCircle.position.y = .04;
+    poolCircle.receiveShadow = true;
+    pool.add(poolCircle);
+
+    const poolRing = new THREE.Mesh(
+      new THREE.RingGeometry(6.45, 6.8, 64),
+      new THREE.MeshBasicMaterial({ color: 0x8f6937, side: THREE.DoubleSide })
+    );
+    poolRing.rotation.x = -Math.PI / 2;
+    poolRing.position.y = .05;
+    pool.add(poolRing);
+
+    const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+    const rockColliders = [];
+    for (let i = 0; i < 22; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 8 + Math.random() * 12;
+      const rock = new THREE.Mesh(rockGeometry, materials.stoneDark);
+      rock.position.set(
+        Math.cos(angle) * radius,
+        .25 + Math.random() * .3,
+        Math.sin(angle) * radius
+      );
+      rock.scale.set(.5 + Math.random() * 1.4, .35 + Math.random() * .7, .5 + Math.random() * 1.2);
+      rock.rotation.set(Math.random(), Math.random(), Math.random());
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      rockColliders.push({ x: rock.position.x, z: rock.position.z, r: rock.scale.x * .85 });
+      world.add(rock);
+    }
+
+    // -------------------------------------------------------------------------
+    // Fire pit and ambient particles
+    // -------------------------------------------------------------------------
+
+    const fire = new THREE.Group();
+    fire.position.set(-4, 0, 8);
+    world.add(fire);
+
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(.13, .18, 1.4, 6), materials.trunk);
+      log.position.set(Math.cos(angle) * .55, .15, Math.sin(angle) * .55);
+      log.rotation.z = Math.PI / 2;
+      log.rotation.y = angle;
+      log.castShadow = true;
+      fire.add(log);
+    }
+
+    const smoke = [];
+    for (let i = 0; i < 12; i++) {
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(.25 + Math.random() * .25, 8, 6),
+        new THREE.MeshBasicMaterial({
+          color: 0x29211c,
+          transparent: true,
+          opacity: .18,
+          depthWrite: false
+        })
+      );
+      fire.add(puff);
+      smoke.push({
+        object: puff,
+        phase: Math.random() * Math.PI * 2,
+        speed: .18 + Math.random() * .12
+      });
+    }
+
+    // Fireflies.
+    const fireflies = [];
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffd36b,
+      transparent: true,
+      opacity: .85
+    });
+
+    for (let i = 0; i < 28; i++) {
+      const x = (Math.random() - .5) * 55;
+      const y = 1.5 + Math.random() * 6;
+      const z = (Math.random() - .5) * 55;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        color: 0xffd36b,
+        transparent: true,
+        opacity: .75,
+        depthWrite: false
+      }));
+      sprite.position.set(x, y, z);
+      scene.add(sprite);
+      fireflies.push({
+        sprite,
+        base: new THREE.Vector3(x, y, z),
+        phase: Math.random() * Math.PI * 2,
+        speed: .5 + Math.random() * .8
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Interactive flags and banners
+    // -------------------------------------------------------------------------
+
+    const flags = [];
+
+    function createFlag(x, y, z, color) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(.055, .075, 4.2, 6), materials.gold);
+      pole.position.y = 2.1;
+      pole.castShadow = true;
+      group.add(pole);
+
+      const flag = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.65, .85),
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: .85,
+          side: THREE.DoubleSide
+        })
+      );
+      flag.position.set(.82, 3.65, 0);
+      flag.castShadow = true;
+      group.add(flag);
+
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 1.9, 6), materials.gold);
+      rod.rotation.z = Math.PI / 2;
+      rod.position.set(1.65, 3.65, 0);
+      group.add(rod);
+
+      world.add(group);
+      flags.push({ group, flag, phase: Math.random() * Math.PI * 2 });
+    }
+
+    createFlag(-13, 5.5, 15, 0x8f3f2f);
+    createFlag(13, 5.5, -15, 0x285b63);
+
+    // =========================================================================
+    // GAME — Adventure: Chalice Run
+    // =========================================================================
+    // A complete game layer on top of the diorama. Play the golden knight:
+    // steal the Enchanted Chalice from the maze altar and carry it back to
+    // the Golden Castle gate — while the dragon hunts whoever holds it.
+
+    // Ground height: exact replica of the terrain displacement built above,
+    // so the knight walks the mesh instead of raycasting every frame.
+    function groundHeight(x, z) {
+      const edge = Math.max(Math.abs(x) / 48, Math.abs(z) / 48);
+      const noise = Math.sin(x * .24) * .35 + Math.cos(z * .21) * .35 + Math.sin((x + z) * .11) * .25;
+      return Math.max(-.5, Math.min(3.2, noise + edge * 1.4));
+    }
+
+    function angleLerp(a, b, t) {
+      let d = (b - a) % (Math.PI * 2);
+      if (d > Math.PI) d -= Math.PI * 2;
+      if (d < -Math.PI) d += Math.PI * 2;
+      return a + d * t;
+    }
+
+    // --- Colliders (2D: circles + oriented boxes), fed by the build code ---
+    const colliders = { circles: [], boxes: [] };
+    function addCircleCollider(x, z, r) { colliders.circles.push({ x, z, r }); }
+    function addBoxCollider(x, z, hw, hd, yaw) {
+      colliders.boxes.push({ x, z, hw, hd, cos: Math.cos(yaw), sin: Math.sin(yaw) });
+    }
+
+    const PLAYER_R = .42;
+    function resolveColliders(p) {
+      for (let pass = 0; pass < 2; pass++) {
+        for (const c of colliders.circles) {
+          const dx = p.x - c.x, dz = p.z - c.z;
+          const rr = c.r + PLAYER_R;
+          const d2 = dx * dx + dz * dz;
+          if (d2 < rr * rr && d2 > 1e-8) {
+            const d = Math.sqrt(d2);
+            p.x = c.x + dx / d * rr;
+            p.z = c.z + dz / d * rr;
+          }
+        }
+        for (const b of colliders.boxes) {
+          const dx = p.x - b.x, dz = p.z - b.z;
+          // world -> box local (inverse of a three.js Y rotation)
+          const lx = dx * b.cos - dz * b.sin;
+          const lz = dx * b.sin + dz * b.cos;
+          const qx = Math.max(-b.hw, Math.min(b.hw, lx));
+          const qz = Math.max(-b.hd, Math.min(b.hd, lz));
+          let px = lx - qx, pz = lz - qz;
+          const d2 = px * px + pz * pz;
+          if (d2 > PLAYER_R * PLAYER_R) continue;
+          let nlx, nlz;
+          if (d2 < 1e-8) {
+            // Centre inside the box: leave along the shallowest axis.
+            const ox = b.hw - Math.abs(lx), oz = b.hd - Math.abs(lz);
+            if (ox < oz) { nlx = lx + (lx >= 0 ? 1 : -1) * (ox + PLAYER_R); nlz = lz; }
+            else { nlx = lx; nlz = lz + (lz >= 0 ? 1 : -1) * (oz + PLAYER_R); }
+          } else {
+            const d = Math.sqrt(d2);
+            const push = (PLAYER_R - d) / d;
+            nlx = lx + px * push;
+            nlz = lz + pz * push;
+          }
+          // box local -> world
+          p.x = b.x + nlx * b.cos + nlz * b.sin;
+          p.z = b.z - nlx * b.sin + nlz * b.cos;
+        }
+      }
+      p.x = Math.max(-45, Math.min(45, p.x));
+      p.z = Math.max(-45, Math.min(45, p.z));
+    }
+
+    // --- World anchors ---
+    scene.updateMatrixWorld(true);
+    const castleW = new THREE.Vector3(); castle.getWorldPosition(castleW);
+    const gateW = new THREE.Vector3(); gate.getWorldPosition(gateW);
+    const altarW = new THREE.Vector3(); altar.getWorldPosition(altarW);
+    const gateOut = new THREE.Vector3(gateW.x - castleW.x, 0, gateW.z - castleW.z).normalize();
+    const spawnPos = new THREE.Vector3(gateW.x + gateOut.x * 4.2, 0, gateW.z + gateOut.z * 4.2);
+    const altarTop = new THREE.Vector3(altarW.x, 3.02, altarW.z);
+
+    addBoxCollider(castleW.x, castleW.z, 6, 6, castle.rotation.y);
+    towerPositions.forEach(([tx, , tz, ts]) => {
+      const v = new THREE.Vector3(tx, 0, tz);
+      castle.localToWorld(v);
+      addCircleCollider(v.x, v.z, ts * 1.02);
+    });
+    gatePillars.forEach(m => {
+      const v = new THREE.Vector3();
+      m.getWorldPosition(v);
+      addCircleCollider(v.x, v.z, 1.12);
+    });
+    mazeWallMeshes.forEach(w => {
+      const v = new THREE.Vector3();
+      w.getWorldPosition(v);
+      addBoxCollider(
+        v.x, v.z,
+        w.geometry.parameters.width / 2, w.geometry.parameters.depth / 2,
+        maze.rotation.y + w.rotation.y
+      );
+    });
+    addCircleCollider(altarW.x, altarW.z, 1.32);
+    treeColliders.forEach(t => addCircleCollider(t.x, t.z, t.r));
+    rockColliders.forEach(r => addCircleCollider(r.x, r.z, r.r));
+    addCircleCollider(-4, 8, 1.05); // fire pit
+
+    // --- The golden knight (boxes, scene palette) ---
+    const knight = new THREE.Group();
+    const knightBody = new THREE.Group();
+    knight.add(knightBody);
+    function kBox(w, h, d, x, y, z, mat) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      knightBody.add(m);
+      return m;
+    }
+    kBox(.2, .34, .24, -.15, .17, 0, materials.stoneDark);       // legs
+    kBox(.2, .34, .24, .15, .17, 0, materials.stoneDark);
+    kBox(.62, .68, .42, 0, .68, 0, materials.gold);             // torso
+    kBox(.64, .12, .44, 0, .38, 0, materials.stoneDark);        // belt
+    kBox(.42, .42, .42, 0, 1.24, 0, materials.gold);            // helmet
+    kBox(.09, .2, .52, 0, 1.52, 0,                              // plume
+      new THREE.MeshStandardMaterial({ color: 0xb8442c, roughness: .8 }));
+    kBox(.1, .55, .48, -.42, .72, 0, materials.stoneLight);     // shield
+    const sword = kBox(.07, .66, .07, .42, .78, 0, materials.stoneLight);
+    sword.rotation.z = -.5;                                     // sword
+    kBox(.2, .07, .07, .36, .97, 0, materials.gold);            // crossguard
+    knight.position.set(spawnPos.x, groundHeight(spawnPos.x, spawnPos.z), spawnPos.z);
+    world.add(knight);
+
+    // --- The Enchanted Chalice ---
+    const goldGlow = new THREE.MeshStandardMaterial({
+      color: 0xe8b34b, emissive: 0xa86e0a, emissiveIntensity: .85,
+      roughness: .35, metalness: .35
+    });
+    const chalice = new THREE.Group();
+    {
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(.3, .13, .34, 10), goldGlow);
+      cup.position.y = .34;
+      chalice.add(cup);
+      const rimT = new THREE.Mesh(new THREE.TorusGeometry(.3, .05, 8, 14), goldGlow);
+      rimT.rotation.x = Math.PI / 2;
+      rimT.position.y = .51;
+      chalice.add(rimT);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, .2, 8), goldGlow);
+      stem.position.y = .1;
+      chalice.add(stem);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, .08, 10), goldGlow);
+      base.position.y = .04;
+      chalice.add(base);
+      chalice.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      const light = new THREE.PointLight(0xffc45c, 1.4, 7, 2);
+      light.position.y = .5;
+      chalice.add(light);
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+        color: 0xffd36b, transparent: true, opacity: .45, depthWrite: false
+      }));
+      spr.scale.setScalar(1.6);
+      spr.position.y = .35;
+      chalice.add(spr);
+    }
+    chalice.position.copy(altarTop);
+    world.add(chalice);
+
+    // --- The dragon (primitives, scene style; wings flap like the flags) ---
+    const dragonMats = {
+      body: new THREE.MeshStandardMaterial({ color: 0x47702e, roughness: .9 }),
+      light: new THREE.MeshStandardMaterial({ color: 0x6d9a44, roughness: .9 }),
+      wing: new THREE.MeshStandardMaterial({ color: 0x5d8a3c, roughness: .85, side: THREE.DoubleSide })
+    };
+    const dragon = new THREE.Group();
+    const dragonWings = [];
+    {
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.58, 10, 8), dragonMats.body);
+      body.scale.set(1.65, .92, .95);
+      body.castShadow = true;
+      dragon.add(body);
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(.5, 10, 8), dragonMats.light);
+      belly.scale.set(1.4, .7, .8);
+      belly.position.set(.05, -.18, 0);
+      dragon.add(belly);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(.17, .26, .75, 7), dragonMats.body);
+      neck.position.set(.95, .38, 0);
+      neck.rotation.z = -.7;
+      neck.castShadow = true;
+      dragon.add(neck);
+      const head = new THREE.Group();
+      head.position.set(1.32, .66, 0);
+      dragon.add(head);
+      const skull = new THREE.Mesh(new THREE.BoxGeometry(.52, .42, .5), dragonMats.body);
+      skull.castShadow = true;
+      head.add(skull);
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(.4, .26, .36), dragonMats.light);
+      snout.position.set(.32, -.06, 0);
+      head.add(snout);
+      [-1, 1].forEach(s => {
+        const horn = new THREE.Mesh(new THREE.ConeGeometry(.09, .38, 6), materials.gold);
+        horn.position.set(-.22, .28, .16 * s);
+        horn.rotation.z = .7;
+        head.add(horn);
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(.055, 6, 6), materials.glow);
+        eye.position.set(.2, .08, .26 * s);
+        head.add(eye);
+        const wing = new THREE.Group();
+        wing.position.set(-.1, .38, .3 * s);
+        dragon.add(wing);
+        const membrane = new THREE.Mesh(new THREE.BoxGeometry(1.05, .05, 1.5), dragonMats.wing);
+        membrane.position.set(-.25, 0, .8 * s);
+        membrane.castShadow = true;
+        wing.add(membrane);
+        dragonWings.push({ group: wing, side: s });
+        const legF = new THREE.Mesh(new THREE.CylinderGeometry(.09, .11, .5, 6), dragonMats.body);
+        legF.position.set(.45, -.5, .3 * s);
+        dragon.add(legF);
+        const legB = legF.clone();
+        legB.position.x = -.5;
+        dragon.add(legB);
+      });
+      let tx = -.85;
+      [.3, .22, .14].forEach(r => {
+        const seg = new THREE.Mesh(new THREE.ConeGeometry(r, .62, 6), dragonMats.body);
+        seg.rotation.z = Math.PI / 2; // tip points backwards (-x)
+        seg.position.set(tx, .05, 0);
+        dragon.add(seg);
+        tx -= .5;
+      });
+    }
+    world.add(dragon);
+
+    const dragonPath = [
+      [12, -5], [10, 10], [-2, 13.5], [-12.5, 8], [-12.5, -8], [-1, -13]
+    ].map(([ox, oz]) => new THREE.Vector3(altarW.x + ox, 0, altarW.z + oz));
+    let dragonWp = 0;
+    const dragonPos = dragonPath[0].clone();
+    let dragonYaw = 0;
+
+    // --- Sound: tiny synthesized WebAudio, iOS-safe unlock ---
+    let audioCtx = null, masterGain = null, soundMuted = false;
+    function ensureAudio() {
+      if (navigator.audioSession) {
+        try { navigator.audioSession.type = "playback"; } catch (e) {}
+      }
+      if (!audioCtx) {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          masterGain = audioCtx.createGain();
+          masterGain.gain.value = .5;
+          masterGain.connect(audioCtx.destination);
+        } catch (e) { audioCtx = null; }
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    }
+    function tone(freq, delay, dur, type, vol, slideTo) {
+      if (!audioCtx || soundMuted) return;
+      const t0 = audioCtx.currentTime + delay;
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + .012);
+      g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      o.connect(g);
+      g.connect(masterGain);
+      o.start(t0);
+      o.stop(t0 + dur + .05);
+    }
+    const sfxPickup = () => { tone(880, 0, .1, "sine", .22); tone(1318, .09, .16, "sine", .22); };
+    const sfxHit = () => { tone(220, 0, .32, "sawtooth", .25, 65); tone(110, 0, .32, "square", .12, 55); };
+    const sfxWin = () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .22, "triangle", .22)); };
+    const sfxStep = () => { tone(95, 0, .05, "square", .045); };
+
+    // --- Game state + HUD ---
+    const G = {
+      phase: "title", hearts: 3, carrying: false,
+      runMs: 0, started: false, invulnUntil: 0, walkPhase: 0, stepAt: 0
+    };
+    const heartsEl = document.getElementById("hearts");
+    const timeEl = document.getElementById("hudTime");
+    const chaliceEl = document.getElementById("hudChalice");
+    function fmtTime(ms) {
+      const s = Math.floor(ms / 1000);
+      return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    }
+    function syncHud() {
+      heartsEl.textContent = "❤️".repeat(G.hearts) + "🖤".repeat(Math.max(0, 3 - G.hearts));
+      chaliceEl.textContent = G.carrying ? "🏆 CARRIED!" : "🏆 at the altar";
+      timeEl.textContent = fmtTime(G.runMs);
+    }
+    function syncPauseBadge() {
+      document.getElementById("pauseBadge").style.display = paused ? "block" : "none";
+    }
+
+    // --- Follow camera (drag swings the offset; orbit mode is pre-game) ---
+    let followCam = false;
+    const camSph = { yaw: 0, pitch: .42, dist: 9.5 };
+    const camTargetSm = new THREE.Vector3().copy(spawnPos);
+    function followCameraUpdate() {
+      const cp = Math.cos(camSph.pitch), sp = Math.sin(camSph.pitch);
+      camera.position.set(
+        camTargetSm.x + Math.sin(camSph.yaw) * cp * camSph.dist,
+        camTargetSm.y + sp * camSph.dist,
+        camTargetSm.z + Math.cos(camSph.yaw) * cp * camSph.dist
+      );
+      camera.lookAt(camTargetSm.x, camTargetSm.y + 1.35, camTargetSm.z);
+    }
+    function aimCameraBehindPlayer() {
+      const fx = altarW.x - spawnPos.x, fz = altarW.z - spawnPos.z;
+      camSph.yaw = Math.atan2(-fx, -fz);
+      camSph.pitch = .42;
+      camSph.dist = 9.5;
+      camTargetSm.copy(knight.position);
+    }
+
+    // --- Run lifecycle ---
+    function resetRun() {
+      G.hearts = 3;
+      G.carrying = false;
+      G.runMs = 0;
+      G.started = false;
+      G.invulnUntil = 0;
+      knight.position.set(spawnPos.x, groundHeight(spawnPos.x, spawnPos.z), spawnPos.z);
+      knight.visible = true;
+      dragonWp = 0;
+      dragonPos.copy(dragonPath[0]);
+      aimCameraBehindPlayer();
+      syncHud();
+    }
+    function startRun() {
+      ensureAudio();
+      resetRun();
+      G.phase = "playing";
+      followCam = true;
+      document.getElementById("startScreen").style.display = "none";
+      document.getElementById("winScreen").style.display = "none";
+      document.getElementById("overScreen").style.display = "none";
+      document.getElementById("gameHud").style.display = "flex";
+      // Fade the diorama's big decorative title so it can't fight the game HUD.
+      const decoTitle = document.querySelector("#hud .title");
+      if (decoTitle) decoTitle.style.opacity = ".16";
+      const decoSub = document.querySelector("#hud .subtitle");
+      if (decoSub) decoSub.style.opacity = ".16";
+      if (document.activeElement) document.activeElement.blur();
+    }
+    function applyHit(force) {
+      if (G.phase !== "playing") return;
+      if (!force && performance.now() < G.invulnUntil) return;
+      G.hearts -= 1;
+      sfxHit();
+      if (G.hearts <= 0) {
+        G.phase = "over";
+        syncHud();
+        document.getElementById("overTime").textContent = fmtTime(G.runMs);
+        document.getElementById("overScreen").style.display = "flex";
+        return;
+      }
+      // Dropped! Respawn at the gate; the chalice returns to the altar.
+      G.carrying = false;
+      knight.position.set(spawnPos.x, groundHeight(spawnPos.x, spawnPos.z), spawnPos.z);
+      G.invulnUntil = performance.now() + 1500;
+      syncHud();
+    }
+    function applyWin() {
+      G.phase = "won";
+      sfxWin();
+      const bestKey = "chaliceRunBestMs";
+      let best = 0;
+      try {
+        const prev = Number(localStorage.getItem(bestKey)) || 0;
+        if (!prev || G.runMs < prev) localStorage.setItem(bestKey, String(Math.round(G.runMs)));
+        best = Number(localStorage.getItem(bestKey)) || 0;
+      } catch (e) {}
+      document.getElementById("winTime").textContent = fmtTime(G.runMs);
+      document.getElementById("winBest").textContent = best ? fmtTime(best) : "—";
+      document.getElementById("winScreen").style.display = "flex";
+    }
+    document.getElementById("startBtn").addEventListener("click", startRun);
+    document.getElementById("againBtn").addEventListener("click", startRun);
+    document.getElementById("retryBtn").addEventListener("click", startRun);
+    document.getElementById("muteBtn").addEventListener("click", () => {
+      soundMuted = !soundMuted;
+      document.getElementById("muteBtn").textContent = soundMuted ? "🔇" : "🔊";
+      if (!soundMuted) ensureAudio();
+    });
+
+    // --- Input: keyboard + floating touch joystick ---
+    const keysDown = new Set();
+    window.addEventListener("keydown", e => {
+      keysDown.add(e.code);
+      ensureAudio();
+      if (e.code === "Escape" && G.phase === "playing") {
+        paused = !paused;
+        syncPauseBadge();
+      }
+      if (e.code === "KeyR" && followCam) aimCameraBehindPlayer();
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+    });
+    window.addEventListener("keyup", e => keysDown.delete(e.code));
+    window.addEventListener("blur", () => keysDown.clear());
+
+    const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+    const joyBase = document.getElementById("joyBase");
+    const joyKnob = document.getElementById("joyKnob");
+    function gamePointerDown(event) {
+      ensureAudio();
+      if (event.pointerType === "touch" && event.clientX < window.innerWidth * .45 && joy.id === null) {
+        joy.id = event.pointerId;
+        joy.ox = event.clientX;
+        joy.oy = event.clientY;
+        joy.x = 0;
+        joy.y = 0;
+        joyBase.style.display = "block";
+        joyBase.style.left = (joy.ox - 55) + "px";
+        joyBase.style.top = (joy.oy - 55) + "px";
+        joyKnob.style.display = "block";
+        joyKnob.style.left = (joy.ox - 24) + "px";
+        joyKnob.style.top = (joy.oy - 24) + "px";
+        return true;
+      }
+      return false;
+    }
+    function gamePointerMove(event) {
+      if (event.pointerId !== joy.id) return false;
+      let dx = event.clientX - joy.ox, dy = event.clientY - joy.oy;
+      const d = Math.hypot(dx, dy), max = 48;
+      if (d > max) { dx *= max / d; dy *= max / d; }
+      joy.x = dx / max;
+      joy.y = dy / max;
+      joyKnob.style.left = (joy.ox + dx - 24) + "px";
+      joyKnob.style.top = (joy.oy + dy - 24) + "px";
+      return true;
+    }
+    function gamePointerUp(event) {
+      if (event.pointerId === joy.id) {
+        joy.id = null;
+        joy.x = 0;
+        joy.y = 0;
+        joyBase.style.display = "none";
+        joyKnob.style.display = "none";
+      }
+    }
+
+    // --- Dragon + chalice behaviour ---
+    function updateDragon(dt, elapsed) {
+      const hunting = G.phase === "playing" && G.carrying;
+      let tx, tz, speed;
+      if (hunting) {
+        tx = knight.position.x;
+        tz = knight.position.z;
+        speed = 6.2; // just slower than the knight's 7 — a clean run escapes
+      } else {
+        const wp = dragonPath[dragonWp];
+        tx = wp.x;
+        tz = wp.z;
+        speed = 4.3;
+        const dx = tx - dragonPos.x, dz = tz - dragonPos.z;
+        if (dx * dx + dz * dz < 4) dragonWp = (dragonWp + 1) % dragonPath.length;
+      }
+      const dx = tx - dragonPos.x, dz = tz - dragonPos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > .05) {
+        const vx = dx / d * speed, vz = dz / d * speed;
+        dragonPos.x += vx * dt;
+        dragonPos.z += vz * dt;
+        dragonYaw = angleLerp(dragonYaw, Math.atan2(-vz, vx), 1 - Math.exp(-5 * dt));
+      }
+      // Flies at terrain height + a hover, straight over the hedge walls.
+      dragon.position.set(
+        dragonPos.x,
+        groundHeight(dragonPos.x, dragonPos.z) + 2.35 + Math.sin(elapsed * 2.2) * .18,
+        dragonPos.z
+      );
+      dragon.rotation.y = dragonYaw;
+      dragon.rotation.z = Math.sin(elapsed * 2.2) * .05;
+      const flap = Math.sin(elapsed * 7) * .55;
+      dragonWings.forEach(w => { w.group.rotation.x = w.side * flap; });
+
+      if (G.phase === "playing" && performance.now() >= G.invulnUntil) {
+        const hx = knight.position.x - dragonPos.x, hz = knight.position.z - dragonPos.z;
+        if (hx * hx + hz * hz < 1.3 * 1.3) applyHit(false);
+      }
+    }
+
+    function updateChalice(dt, elapsed) {
+      if (G.carrying) {
+        chalice.position.set(
+          knight.position.x,
+          knight.position.y + 2.02 + Math.sin(elapsed * 3) * .05,
+          knight.position.z
+        );
+        chalice.rotation.y = elapsed * 1.4;
+      } else {
+        chalice.position.set(
+          altarTop.x,
+          altarTop.y + Math.sin(elapsed * 1.8) * .09,
+          altarTop.z
+        );
+        chalice.rotation.y = elapsed * .7;
+        if (G.phase === "playing") {
+          const dx = knight.position.x - altarW.x, dz = knight.position.z - altarW.z;
+          if (dx * dx + dz * dz < 2.4 * 2.4) {
+            G.carrying = true;
+            sfxPickup();
+            syncHud();
+          }
+        }
+      }
+    }
+
+    // --- Per-frame game update (called from animate; honours scene pause) ---
+    let lastTickMs = performance.now();
+    function gameTick(elapsed) {
+      const nowMs = performance.now();
+      let dt = (nowMs - lastTickMs) / 1000;
+      lastTickMs = nowMs;
+      if (dt > .1) dt = .1;
+      if (dt < 0) dt = 0;
+      if (paused) return;
+
+      updateDragon(dt, elapsed);
+      updateChalice(dt, elapsed);
+
+      if (G.phase === "playing") {
+        let ix = 0, iy = 0;
+        if (keysDown.has("KeyW") || keysDown.has("ArrowUp")) iy += 1;
+        if (keysDown.has("KeyS") || keysDown.has("ArrowDown")) iy -= 1;
+        if (keysDown.has("KeyA") || keysDown.has("ArrowLeft")) ix -= 1;
+        if (keysDown.has("KeyD") || keysDown.has("ArrowRight")) ix += 1;
+        ix += joy.x;
+        iy -= joy.y;
+        const mag = Math.hypot(ix, iy);
+        const moving = mag > .12;
+        if (moving) {
+          if (!G.started) G.started = true;
+          const cl = Math.min(1, mag) / mag;
+          ix *= cl;
+          iy *= cl;
+          // Move relative to where the camera actually is.
+          const fwd = new THREE.Vector3(
+            knight.position.x - camera.position.x, 0,
+            knight.position.z - camera.position.z
+          ).normalize();
+          const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+          const mx = fwd.x * iy + right.x * ix;
+          const mz = fwd.z * iy + right.z * ix;
+          knight.position.x += mx * 7 * dt;
+          knight.position.z += mz * 7 * dt;
+          resolveColliders(knight.position);
+          knight.rotation.y = angleLerp(
+            knight.rotation.y, Math.atan2(mx, mz), 1 - Math.exp(-14 * dt)
+          );
+          G.walkPhase += dt * 9;
+          if (nowMs > G.stepAt) { G.stepAt = nowMs + 330; sfxStep(); }
+        }
+        knight.position.y = groundHeight(knight.position.x, knight.position.z);
+        knightBody.position.y = moving ? Math.abs(Math.sin(G.walkPhase)) * .07 : 0;
+        knightBody.rotation.z = moving ? Math.sin(G.walkPhase) * .05 : 0;
+        knight.visible = !(nowMs < G.invulnUntil && Math.floor(nowMs / 120) % 2 === 0);
+
+        if (G.started) {
+          G.runMs += dt * 1000;
+          timeEl.textContent = fmtTime(G.runMs);
+        }
+        if (G.carrying) {
+          const dx = knight.position.x - gateW.x, dz = knight.position.z - gateW.z;
+          if (dx * dx + dz * dz < 3 * 3) applyWin();
+        }
+      }
+
+      // Smooth-follow the knight; updateCamera() branches on followCam.
+      const k = 1 - Math.exp(-9 * dt);
+      camTargetSm.x += (knight.position.x - camTargetSm.x) * k;
+      camTargetSm.y += (knight.position.y - camTargetSm.y) * k;
+      camTargetSm.z += (knight.position.z - camTargetSm.z) * k;
+      if (followCam) updateCamera();
+    }
+
+    // --- Frame sampler (test hook): copies the GL canvas right after render ---
+    const sampleCanvas = document.createElement("canvas");
+    sampleCanvas.width = 64;
+    sampleCanvas.height = 36;
+    function gameSampleFrame() {
+      if (!window.__game || !window.__game._wantSample) return;
+      window.__game._wantSample = false;
+      try {
+        const ctx2 = sampleCanvas.getContext("2d");
+        ctx2.drawImage(renderer.domElement, 0, 0, 64, 36);
+        const data = ctx2.getImageData(0, 0, 64, 36).data;
+        const colors = new Set();
+        let sum = 0, n = 0;
+        for (let i = 0; i < data.length; i += 16) {
+          colors.add((data[i] >> 4) + "," + (data[i + 1] >> 4) + "," + (data[i + 2] >> 4));
+          sum += data[i] + data[i + 1] + data[i + 2];
+          n++;
+        }
+        window.__game.frameStats = { colors: colors.size, mean: sum / (n * 3) };
+      } catch (e) {
+        window.__game.frameStats = { colors: 0, mean: 0 };
+      }
+    }
+
+    // --- Test / debug hooks ---
+    function debugToAltar() {
+      const v = new THREE.Vector3(2.05, 0, 0);
+      maze.localToWorld(v);
+      knight.position.set(v.x, groundHeight(v.x, v.z), v.z);
+      camTargetSm.copy(knight.position);
+    }
+    function debugToGate() {
+      knight.position.set(
+        gateW.x + gateOut.x * 1.2, 0, gateW.z + gateOut.z * 1.2
+      );
+      knight.position.y = groundHeight(knight.position.x, knight.position.z);
+      camTargetSm.copy(knight.position);
+    }
+    function debugDragonTouch() { applyHit(true); }
+
+    window.__game = {
+      get phase() { return G.phase; },
+      get hearts() { return G.hearts; },
+      get carrying() { return G.carrying; },
+      get paused() { return paused; },
+      get time() { return G.runMs / 1000; },
+      get player() {
+        return { x: knight.position.x, y: knight.position.y, z: knight.position.z };
+      },
+      groundHeight,
+      start: startRun,
+      debugToAltar,
+      debugToGate,
+      debugDragonTouch,
+      _wantSample: false,
+      frameStats: null
+    };
+
+    resetRun();
+    G.phase = "title";
+
+    // -------------------------------------------------------------------------
+    // Orbit controls, implemented directly
+    // -------------------------------------------------------------------------
+
+    const orbit = {
+      theta: .72,
+      phi: 1.08,
+      radius: 42,
+      target: new THREE.Vector3(0, 4, -4),
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      lastX: 0,
+      lastY: 0
+    };
+
+    const initialOrbit = {
+      theta: orbit.theta,
+      phi: orbit.phi,
+      radius: orbit.radius,
+      target: orbit.target.clone()
+    };
+
+    function updateCamera() {
+      if (followCam) { followCameraUpdate(); return; }
+      const sinPhi = Math.sin(orbit.phi);
+      camera.position.set(
+        orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+        orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+        orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
+      );
+      camera.lookAt(orbit.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      if (followCam && gamePointerDown(event)) return;
+      orbit.dragging = true;
+      orbit.pointerX = event.clientX;
+      orbit.pointerY = event.clientY;
+      orbit.lastX = event.clientX;
+      orbit.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (followCam && gamePointerMove(event)) return;
+      if (!orbit.dragging) return;
+
+      const dx = event.clientX - orbit.lastX;
+      const dy = event.clientY - orbit.lastY;
+      orbit.lastX = event.clientX;
+      orbit.lastY = event.clientY;
+
+      if (followCam) {
+        camSph.yaw -= dx * .005;
+        camSph.pitch = THREE.MathUtils.clamp(camSph.pitch + dy * .004, .12, 1.15);
+      } else {
+        orbit.theta -= dx * .005;
+        orbit.phi = THREE.MathUtils.clamp(orbit.phi - dy * .004, .25, 1.45);
+      }
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      gamePointerUp(event);
+      orbit.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      if (followCam) camSph.dist = THREE.MathUtils.clamp(camSph.dist + event.deltaY * .012, 5.5, 15);
+      else orbit.radius = THREE.MathUtils.clamp(orbit.radius + event.deltaY * .025, 15, 72);
+      updateCamera();
+    }, { passive: false });
+
+    // Pinch zoom for touch devices.
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (pinchDistance > 0 && joy.id === null) {
+          if (followCam) camSph.dist = THREE.MathUtils.clamp(camSph.dist + (pinchDistance - distance) * .018, 5.5, 15);
+          else orbit.radius = THREE.MathUtils.clamp(orbit.radius + (pinchDistance - distance) * .018, 15, 72);
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      gamePointerUp(event);
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    // -------------------------------------------------------------------------
+    // UI and keyboard controls
+    // -------------------------------------------------------------------------
+
+    let paused = false;
+    let resetPressed = false;
+
+    window.addEventListener("keydown", event => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        paused = !paused;
+        syncPauseBadge();
+      }
+      if (event.key.toLowerCase() === "r") {
+        resetPressed = true;
+      }
+    });
+
+    window.addEventListener("blur", () => {
+      orbit.dragging = false;
+      activePointers.clear();
+      pinchDistance = 0;
+    });
+
+    function resetView() {
+      orbit.theta = initialOrbit.theta;
+      orbit.phi = initialOrbit.phi;
+      orbit.radius = initialOrbit.radius;
+      orbit.target.copy(initialOrbit.target);
+      updateCamera();
+    }
+
+    if (resetPressed) resetView();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      const elapsed = clock.getElapsedTime();
+      const delta = Math.min(clock.getDelta(), .05);
+
+      if (!paused) {
+        flames.forEach((flame, i) => {
+          const flicker = 1 + Math.sin(elapsed * 9 + i * 2.3) * .18 + Math.sin(elapsed * 15 + i) * .08;
+          flame.scale.set(1, flicker, 1);
+          flame.rotation.y = elapsed * 1.8 + i;
+          fireLight.intensity = 2.1 + Math.sin(elapsed * 7.5) * .35 + Math.sin(elapsed * 11) * .15;
+        });
+
+        flags.forEach(flag => {
+          flag.flag.rotation.y = Math.sin(elapsed * 2.2 + flag.phase) * .18;
+          flag.flag.rotation.z = Math.sin(elapsed * 3.1 + flag.phase) * .05;
+          flag.group.rotation.z = Math.sin(elapsed * 1.4 + flag.phase) * .018;
+        });
+
+        smoke.forEach(puff => {
+          const life = (elapsed * puff.speed + puff.phase) % 1;
+          puff.object.position.set(
+            Math.cos(puff.phase) * (life * 1.2),
+            .5 + life * 3.2,
+            Math.sin(puff.phase) * (life * .9)
+          );
+          puff.object.scale.setScalar(.4 + life * 1.4);
+          puff.object.material.opacity = Math.sin(life * Math.PI) * .18;
+        });
+
+        fireflies.forEach(firefly => {
+          const angle = elapsed * firefly.speed + firefly.phase;
+          firefly.sprite.position.set(
+            firefly.base.x + Math.cos(angle) * 1.4,
+            firefly.base.y + Math.sin(angle * 2) * .55,
+            firefly.base.z + Math.sin(angle) * 1.2
+          );
+          firefly.sprite.material.opacity = .55 + Math.sin(angle * 2.4) * .25;
+        });
+
+        animated.forEach(item => {
+          item.object.rotation.z = Math.sin(elapsed * .65 + item.phase) * item.amplitude;
+          item.object.rotation.x = Math.cos(elapsed * .48 + item.phase) * item.amplitude * .6;
+        });
+      }
+
+      
+      gameTick(elapsed);
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    gameSampleFrame();
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
