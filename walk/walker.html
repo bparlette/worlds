@@ -47,6 +47,49 @@
     width: 120px; height: 2px; margin: 14px auto 0;
     background: linear-gradient(90deg, transparent, var(--amber), transparent);
   }
+  #titlecard .whisper {
+    margin-top: 12px; font-size: clamp(11px, 1.5vw, 14px);
+    letter-spacing: .3em; text-transform: uppercase; color: var(--amber);
+    opacity: .95;
+  }
+
+  /* Relic signal dot (pulse rate is driven from JS by distance) */
+  #status .relics { margin-top: 5px; font-size: 13px; letter-spacing: .14em; }
+  #status .relics b { color: var(--amber); }
+  #signalRow {
+    margin-top: 6px; display: flex; align-items: center; gap: 8px;
+    font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; opacity: .9;
+  }
+  #signalDot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--amber); box-shadow: 0 0 10px var(--amber), 0 0 22px rgba(243,183,68,.6);
+    flex: none;
+  }
+  #signalRow.found { opacity: .45; }
+  #signalRow.found #signalDot { background: #8a7a52; box-shadow: none; }
+
+  /* Walker's Journal panel */
+  #journalPanel {
+    position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
+    width: min(500px, 92vw); max-height: 76vh; overflow-y: auto;
+    z-index: 25; display: none; pointer-events: auto;
+    background: var(--ink); border: 1px solid rgba(245, 230, 189, .35);
+    border-radius: 12px; padding: 16px 18px; backdrop-filter: blur(6px);
+    text-shadow: 0 1px 4px #000;
+  }
+  #journalPanel.open { display: block; }
+  #journalPanel .jhead { font-size: 16px; letter-spacing: .14em; margin-bottom: 10px; }
+  #journalPanel .jrow {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 6px 0; border-top: 1px solid rgba(245, 230, 189, .14);
+    font-size: 13px; letter-spacing: .06em;
+  }
+  #journalPanel .jid { color: var(--amber); flex: none; }
+  #journalPanel .jworld { flex: none; }
+  #journalPanel .jrelic { flex: 1; text-align: right; opacity: .55; }
+  #journalPanel .jrelic.got { opacity: 1; color: var(--amber); }
+  #journalPanel .jmark { flex: none; width: 20px; text-align: center; }
+  #journalPanel .jfoot { margin-top: 10px; font-size: 10.5px; letter-spacing: .12em; opacity: .7; text-transform: uppercase; }
 
   /* Bottom-left status */
   #status {
@@ -114,16 +157,26 @@
     <div class="big"><span class="num" id="tcNum">#001</span> · <span id="tcTitle">ADVENTURE</span></div>
     <div class="sub" id="tcSub">Castles &amp; Mazes</div>
     <div class="rule"></div>
+    <div class="whisper" id="tcWhisper"></div>
   </div>
 
   <div id="status" class="hud">
     <div class="where">World <b id="stIdx">#--- / -</b> · <span id="stName">—</span></div>
-    <div class="hint">WASD / stick to walk · drag to look · walk into a rift to travel · P photo mode</div>
+    <div class="relics">🏆 Relics <b id="stRelics">0 / 0</b></div>
+    <div id="signalRow"><span id="signalDot"></span><span id="signalText">Relic signal</span></div>
+    <div class="hint">WASD / stick to walk · drag to look · walk into a rift to travel · P photo mode · J journal</div>
   </div>
 
   <div id="buttons" class="hud">
+    <button id="journalBtn" type="button">📖 Journal</button>
     <button id="photoBtn" type="button">📷 Photo</button>
     <button id="snapBtn" type="button">💾 Snap</button>
+  </div>
+
+  <div id="journalPanel" class="hud">
+    <div class="jhead">📖 Walker's Journal</div>
+    <div id="journalList"></div>
+    <div class="jfoot">J or 📖 to close · relics persist between visits</div>
   </div>
 
   <div id="riftflash"></div>
@@ -176,7 +229,10 @@
     // ---------------------------------------------------------------------
     const el = id => document.getElementById(id);
     const titlecard = el("titlecard"), tcNum = el("tcNum"), tcTitle = el("tcTitle"), tcSub = el("tcSub");
-    const stIdx = el("stIdx"), stName = el("stName");
+    const tcWhisper = el("tcWhisper");
+    const stIdx = el("stIdx"), stName = el("stName"), stRelics = el("stRelics");
+    const signalRow = el("signalRow"), signalDot = el("signalDot"), signalText = el("signalText");
+    const journalPanel = el("journalPanel"), journalList = el("journalList");
     const flashEl = el("riftflash");
     const joyEl = el("joy"), joyNub = el("joyNub");
 
@@ -234,6 +290,17 @@
         rec.group.add(portal.group);
         rec.portals.push(portal);
       }
+      // The world's relic (if the module declares one): walker-owned prop
+      // riding inside the world group, so it streams and disposes with the
+      // world. Already-found relics never respawn.
+      if (inst.relic) {
+        const gy = sampleGround(rec, inst.relic.x, inst.relic.z, 40, 15);
+        rec.relicGroundY = gy === null ? 0 : gy;
+        rec.relicProp = makeRelicProp();
+        rec.relicProp.group.position.set(inst.relic.x, rec.relicGroundY + 1.05, inst.relic.z);
+        rec.relicProp.group.visible = !relicFound(id);
+        rec.group.add(rec.relicProp.group);
+      }
       rec.group.visible = false;
       scene.add(rec.group);
       instances.set(id, rec);
@@ -267,6 +334,70 @@
       for (const id of [...instances.keys()]) {
         if (!allowed.has(id)) disposeWorld(id);
       }
+    }
+
+    // ---------------------------------------------------------------------
+    // Walker's Journal + relic hunt state (persisted in localStorage)
+    // ---------------------------------------------------------------------
+    const JOURNAL_KEY = "backroms-journal-v1";
+    let journal = {};
+    try {
+      const raw = JSON.parse(localStorage.getItem(JOURNAL_KEY) || "{}");
+      if (raw && typeof raw === "object") journal = raw;
+    } catch (e) { journal = {}; }
+
+    function journalSave() {
+      try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal)); } catch (e) {}
+    }
+    function relicFound(id) { return !!(journal[id] && journal[id].found); }
+    function foundCount() { return defs.filter(d => relicFound(d.id)).length; }
+    function updateRelicCounter() { stRelics.textContent = `${foundCount()} / ${defs.length}`; }
+
+    function renderJournal() {
+      journalList.innerHTML = defs.map(d => {
+        const got = relicFound(d.id);
+        const name = got ? (journal[d.id].name || "Relic") : "· · · hidden";
+        return `<div class="jrow"><span class="jid">#${d.id}</span>` +
+          `<span class="jworld">${d.title}</span>` +
+          `<span class="jrelic ${got ? "got" : ""}">${got ? "✦ " : "✧ "}${name}</span>` +
+          `<span class="jmark">${got ? "🏆" : "—"}</span></div>`;
+      }).join("");
+    }
+
+    function toggleJournal() {
+      const open = journalPanel.classList.toggle("open");
+      el("journalBtn").classList.toggle("on", open);
+      if (open) renderJournal();
+    }
+    el("journalBtn").addEventListener("click", toggleJournal);
+
+    // ---------------------------------------------------------------------
+    // Relic prop — PURE 3D GEOMETRY ONLY (hard constraint: no sprites, no
+    // textured planes/billboards, no glow quads, no transparent textures —
+    // nothing that can read as a square halo around it). The "glow" is an
+    // emissive material plus a real (invisible) PointLight, nothing else.
+    // A golden core inside two crossing rings reads "relic" in any world.
+    // ---------------------------------------------------------------------
+    function makeRelicProp() {
+      const g = new THREE.Group();
+      const coreMat = new THREE.MeshStandardMaterial({
+        color: 0xd9a43b, emissive: 0xffae2e, emissiveIntensity: 0.9,
+        metalness: 0.65, roughness: 0.3
+      });
+      const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 0), coreMat);
+      g.add(core);
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: 0xf3d27a, emissive: 0xcc8a1e, emissiveIntensity: 0.55,
+        metalness: 0.8, roughness: 0.25
+      });
+      const ringA = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.045, 10, 44), ringMat);
+      g.add(ringA);
+      const ringB = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.045, 10, 44), ringMat);
+      ringB.rotation.x = Math.PI / 2;
+      g.add(ringB);
+      const light = new THREE.PointLight(0xffbe4a, 7, 10, 1.8);
+      g.add(light);
+      return { group: g, core, ringA, ringB, light };
     }
 
     // ---------------------------------------------------------------------
@@ -410,8 +541,13 @@
       if (MOVE_KEYS.includes(e.code)) { keys.add(e.code); e.preventDefault(); }
       if (e.code === "ShiftLeft" || e.code === "ShiftRight") keys.add("Shift");
       if (e.code === "KeyP") togglePhoto();
+      if (e.code === "KeyJ") toggleJournal();
       if (e.code === "Enter" && document.body.classList.contains("photo")) snap();
-      if (e.code === "Escape") document.body.classList.remove("photo");
+      if (e.code === "Escape") {
+        document.body.classList.remove("photo");
+        journalPanel.classList.remove("open");
+        el("journalBtn").classList.remove("on");
+      }
     });
     window.addEventListener("keyup", e => {
       keys.delete(e.code);
@@ -481,6 +617,9 @@
       tcNum.textContent = "#" + def.id;
       tcTitle.textContent = def.title;
       tcSub.textContent = `${def.sub} · ${def.system}`;
+      tcWhisper.textContent = current && current.inst.relic
+        ? (relicFound(def.id) ? "✦ Relic found" : "✧ A relic is hidden here")
+        : "";
       stIdx.textContent = `#${def.id} / ${defs.length}`;
       stName.textContent = def.title;
       titlecard.classList.add("show");
@@ -501,6 +640,8 @@
       if (current) current.group.visible = false;
       current = rec;
       rec.group.visible = true;
+      if (rec.relicProp) rec.relicProp.group.visible = !relicFound(rec.id);
+      glitchVisitReset();
       applyEnv(rec.inst.env);
       if (spawnOverride) {
         player.x = spawnOverride.x; player.z = spawnOverride.z;
@@ -553,6 +694,242 @@
     }
 
     // ---------------------------------------------------------------------
+    // THE GLITCH — one entity for the whole walk, walker-owned.
+    // PURE 3D GEOMETRY ONLY (same discipline as the relic: no sprites, no
+    // textured planes or billboards — the body is boxes, the eyes are two
+    // tiny emissive spheres). Near-black primitives read as a silhouette
+    // in every world.
+    //
+    // THE RULE (Cherie's mechanic): while it is OBSERVED — inside the
+    // camera frustum AND within 70 units — it NEVER moves, not a
+    // millimeter. When the player looks away and sees it again, it has
+    // silently halved the distance: 40 → 20 → 10 → 5 … If a halving would
+    // take it inside 2.4 units, it instead waits at 2.4 for one frozen
+    // observed beat — and the next time it leaves the frustum it is GONE
+    // in a glitch-burst. It also dissolves if stared at continuously for
+    // 6 s (nerve rewarded). It never touches the player, and crossing a
+    // rift ends any encounter.
+    //
+    // SCHEDULE — it does NOT haunt every room. A room-visit counter ticks
+    // on every world entry (boot or rift). At walk start, and again after
+    // each finished encounter, the next haunting is rolled uniformly from
+    // {3, 4, 5}: the Glitch can only materialize in the room whose visit
+    // number matches the roll, and there only 30–60 s into that visit
+    // (never in a visit's first 20 s). Every other room: nothing, ever.
+    // ---------------------------------------------------------------------
+    const GLITCH_SPAWN_MIN = 30, GLITCH_SPAWN_MAX = 60; // s into the haunted room
+    const GLITCH_OBSERVE_DIST = 70;
+    const GLITCH_FINAL_DIST = 2.4;
+    const GLITCH_STARE_LIMIT = 6;
+    const HAUNT_GAP = () => 3 + Math.floor(Math.random() * 3); // uniform {3,4,5}
+
+    const glitch = {
+      group: null, mats: [],
+      active: false, state: "idle", // idle | approach | finale | fading
+      observed: false,
+      encounters: 0, burstFired: 0, lastBurstAt: 0, burstUntil: 0,
+      visits: 0,                                    // room entries so far
+      hauntVisit: 3 + Math.floor(Math.random() * 3), // rolled at walk start
+      visitTime: 0, spawnDelay: 45, spawnedThisVisit: false,
+      wasObserved: false, unobservedTime: 0, stareTime: 0, fadeT: 0
+    };
+
+    function makeGlitch() {
+      const g = new THREE.Group();
+      const bodyMat = new THREE.MeshBasicMaterial({ color: 0x060607 });
+      const limbMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0d });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd6dcea });
+      const add = (geo, mat, x, y, z) => {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(x, y, z);
+        g.add(m);
+        return m;
+      };
+      // Legs — too long.
+      add(new THREE.BoxGeometry(0.15, 1.45, 0.15), limbMat, -0.14, 0.725, 0);
+      add(new THREE.BoxGeometry(0.15, 1.45, 0.15), limbMat, 0.14, 0.725, 0);
+      // Torso — stretched.
+      add(new THREE.BoxGeometry(0.52, 1.1, 0.24), bodyMat, 0, 2.0, 0);
+      // Arms — hanging past the knees; the left one is longer. Wrong.
+      const armL = add(new THREE.BoxGeometry(0.11, 1.6, 0.11), limbMat, -0.37, 1.72, 0);
+      armL.rotation.z = 0.05;
+      const armR = add(new THREE.BoxGeometry(0.11, 1.38, 0.11), limbMat, 0.37, 1.83, 0);
+      armR.rotation.z = -0.05;
+      // Head — tall, tilted a few degrees off true.
+      const head = new THREE.Group();
+      head.position.y = 2.55;
+      head.rotation.z = 0.07;
+      g.add(head);
+      const skull = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.55, 0.3), bodyMat);
+      skull.position.y = 0.28;
+      head.add(skull);
+      // Eyes — geometry only: two faint pale spheres.
+      for (const s of [-1, 1]) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), eyeMat);
+        eye.position.set(s * 0.08, 0.34, 0.16);
+        head.add(eye);
+      }
+      g.userData.mats = [bodyMat, limbMat, eyeMat];
+      return g;
+    }
+
+    function glitchFacePlayer() {
+      if (!glitch.group) return;
+      glitch.group.lookAt(player.x, glitch.group.position.y, player.z);
+    }
+
+    function glitchGroundY(x, z) {
+      if (!current) return player.groundY;
+      const gy = sampleGround(current, x, z, 40, 15);
+      return gy === null ? player.groundY : gy;
+    }
+
+    function spawnGlitch(dist = 40, exact = false) {
+      if (!current) return;
+      if (!glitch.group) { glitch.group = makeGlitch(); glitch.mats = glitch.group.userData.mats; }
+      if (!glitch.group.parent) scene.add(glitch.group);
+      const jitter = exact ? 0 : (Math.random() - 0.5) * 0.6;
+      const ang = player.yaw + jitter;
+      const fx = -Math.sin(ang), fz = -Math.cos(ang); // forward for yaw (0 faces -Z)
+      const x = player.x + fx * dist, z = player.z + fz * dist;
+      glitch.group.position.set(x, glitchGroundY(x, z), z);
+      for (const m of glitch.mats) { m.transparent = false; m.opacity = 1; }
+      glitch.group.visible = true;
+      glitchFacePlayer();
+      glitch.active = true;
+      glitch.state = "approach";
+      glitch.wasObserved = false;
+      glitch.observed = false;
+      glitch.unobservedTime = 0;
+      glitch.stareTime = 0;
+      glitch.fadeT = 0;
+      glitch.encounters++;
+    }
+
+    function endGlitch() {
+      glitch.active = false;
+      glitch.state = "idle";
+      glitch.observed = false;
+      glitch.wasObserved = false;
+      if (glitch.group) glitch.group.visible = false;
+    }
+
+    // Roll the next haunting: 3–5 room entries after the current one.
+    function scheduleNextHaunt() {
+      glitch.hauntVisit = glitch.visits + HAUNT_GAP();
+    }
+
+    function glitchBurst() {
+      glitch.burstFired++;
+      glitch.lastBurstAt = performance.now();
+      glitch.burstUntil = glitch.lastBurstAt + 150;
+    }
+
+    // One look-away cycle: silently halve the distance to the player — or,
+    // from the finale distance, vanish in a burst.
+    function glitchRelocate() {
+      if (!glitch.active || !glitch.group || glitch.state === "fading") return;
+      const p = glitch.group.position;
+      const dx = p.x - player.x, dz = p.z - player.z;
+      const dist = Math.hypot(dx, dz);
+      if (glitch.state === "finale" || dist === 0) {
+        endGlitch();
+        glitchBurst();
+        scheduleNextHaunt();
+        return;
+      }
+      if (dist / 2 < GLITCH_FINAL_DIST) {
+        const s = GLITCH_FINAL_DIST / dist;
+        p.set(player.x + dx * s, 0, player.z + dz * s);
+        glitch.state = "finale";
+      } else {
+        p.set((p.x + player.x) / 2, 0, (p.z + player.z) / 2);
+      }
+      p.y = glitchGroundY(p.x, p.z);
+      glitchFacePlayer();
+      glitch.wasObserved = false;
+      glitch.unobservedTime = 0;
+    }
+
+    // Called on every world entry (boot or rift): the room-visit counter
+    // ticks, any live encounter ends, and the in-room clock restarts.
+    function glitchVisitReset() {
+      const fledEncounter = glitch.active;
+      if (glitch.active) endGlitch();
+      glitch.visits++;
+      glitch.visitTime = 0;
+      glitch.spawnedThisVisit = false;
+      glitch.stareTime = 0;
+      glitch.unobservedTime = 0;
+      glitch.wasObserved = false;
+      glitch.observed = false;
+      // Fleeing an encounter counts as finishing it; rushing through the
+      // haunted room before it materialized spends the haunting too.
+      // Either way the next one is rolled 3–5 rooms out.
+      if (fledEncounter || glitch.visits > glitch.hauntVisit) scheduleNextHaunt();
+      // If THIS room is the haunted one, roll when it will materialize:
+      // 30–60 s in (which also honors "never in the first 20 s").
+      glitch.spawnDelay = GLITCH_SPAWN_MIN + Math.random() * (GLITCH_SPAWN_MAX - GLITCH_SPAWN_MIN);
+    }
+
+    const _glitchFrustum = new THREE.Frustum();
+    const _glitchMat4 = new THREE.Matrix4();
+    const _glitchPoint = new THREE.Vector3();
+
+    // Runs once per frame after the camera is placed.
+    function updateGlitch(dt) {
+      // Spawn scheduling — ONLY in the haunted room (this visit's number
+      // matches the roll), and only 30–60 s into that visit.
+      if (!glitch.active && !glitch.spawnedThisVisit && current &&
+          glitch.visits === glitch.hauntVisit) {
+        glitch.visitTime += dt;
+        if (glitch.visitTime >= glitch.spawnDelay) {
+          glitch.spawnedThisVisit = true;
+          spawnGlitch(35 + Math.random() * 10);
+        }
+      }
+      if (!glitch.active || !glitch.group) { glitch.observed = false; return; }
+
+      // Observed = inside the camera frustum AND within 70 units.
+      const p = glitch.group.position;
+      const dist = Math.hypot(player.x - p.x, player.z - p.z);
+      camera.updateMatrixWorld();
+      _glitchMat4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      _glitchFrustum.setFromProjectionMatrix(_glitchMat4);
+      _glitchPoint.set(p.x, p.y + 1.7, p.z);
+      glitch.observed = dist <= GLITCH_OBSERVE_DIST && _glitchFrustum.containsPoint(_glitchPoint);
+
+      if (glitch.state === "fading") {
+        glitch.fadeT += dt;
+        const o = Math.max(0, 1 - glitch.fadeT / 0.45);
+        for (const m of glitch.mats) m.opacity = o;
+        if (glitch.fadeT >= 0.45) { endGlitch(); scheduleNextHaunt(); }
+        return;
+      }
+
+      if (glitch.observed) {
+        // Observed: it NEVER moves. Only the stare clock runs.
+        glitch.wasObserved = true;
+        glitch.unobservedTime = 0;
+        glitch.stareTime += dt;
+        if (glitch.stareTime >= GLITCH_STARE_LIMIT) {
+          // Nerve rewarded: a continuous 6 s stare dissolves it.
+          glitch.state = "fading";
+          glitch.fadeT = 0;
+          for (const m of glitch.mats) m.transparent = true;
+        }
+      } else {
+        glitch.stareTime = 0;
+        if (glitch.wasObserved) {
+          glitch.unobservedTime += dt;
+          // It left the frustum after being seen: by the time it is seen
+          // again it will be half as far away.
+          if (glitch.unobservedTime > 0.03) glitchRelocate();
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
     // Photo mode + snapshot
     // ---------------------------------------------------------------------
     function togglePhoto() {
@@ -580,11 +957,58 @@
     el("snapBtn").addEventListener("click", snap);
 
     // ---------------------------------------------------------------------
+    // Relic pickup + hot/cold signal (visual only — the walker has no
+    // audio system and none is added for this)
+    // ---------------------------------------------------------------------
+    let signalPhase = 0;
+
+    function collectRelic() {
+      const r = current.inst.relic;
+      journal[current.id] = { found: true, name: r.name, at: Date.now() };
+      journalSave();
+      if (current.relicProp) current.relicProp.group.visible = false;
+      updateRelicCounter();
+      if (journalPanel.classList.contains("open")) renderJournal();
+      // Pickup flash — a gold pulse over the rift-flash layer.
+      flashEl.style.setProperty("--flash", "#f3b744");
+      flashEl.style.transition = "none";
+      flashEl.style.opacity = "0.8";
+      requestAnimationFrame(() => {
+        flashEl.style.transition = "opacity .55s ease";
+        flashEl.style.opacity = "0";
+      });
+    }
+
+    function updateRelicSignal(dt) {
+      const has = current && current.inst.relic && !relicFound(current.id);
+      if (!has) {
+        signalRow.classList.add("found");
+        signalText.textContent = current && current.inst.relic ? "Relic found" : "No relic here";
+        signalDot.style.opacity = "0.3";
+        signalDot.style.transform = "scale(0.75)";
+        return;
+      }
+      signalRow.classList.remove("found");
+      signalText.textContent = "Relic signal";
+      const r = current.inst.relic;
+      const d = Math.hypot(player.x - r.x, player.z - r.z);
+      if (d < 1.6) { collectRelic(); return; }
+      // Pulse rate climbs steeply inside ~45 units: hot/cold.
+      const prox = THREE.MathUtils.clamp(1 - d / 45, 0, 1);
+      signalPhase += dt * (0.7 + prox * prox * 5.5);
+      const pulse = 0.5 + 0.5 * Math.sin(signalPhase * Math.PI * 2);
+      signalDot.style.opacity = String(0.3 + 0.7 * pulse);
+      signalDot.style.transform = `scale(${0.75 + (0.35 + prox * 0.65) * pulse})`;
+    }
+
+    // ---------------------------------------------------------------------
     // Main loop
     // ---------------------------------------------------------------------
     const clock = new THREE.Clock();
     let elapsed = 0;
     let preloadTimer = 0;
+    let burstWasActive = false;
+    let burstSkipFrame = false;
 
     function tick() {
       requestAnimationFrame(tick);
@@ -654,6 +1078,19 @@
         p.group.rotation.y = p.yaw;
       }
 
+      // --- relic prop animation (current world only) ---
+      if (current.relicProp && current.relicProp.group.visible) {
+        const rp = current.relicProp;
+        rp.core.rotation.y += worldDt * 1.4;
+        rp.core.rotation.x += worldDt * 0.5;
+        rp.ringA.rotation.z += worldDt * 0.9;
+        rp.ringA.rotation.x = Math.sin(elapsed * 0.7) * 0.5;
+        rp.ringB.rotation.y += worldDt * 0.7;
+        rp.ringB.rotation.z = Math.cos(elapsed * 0.6) * 0.4;
+        rp.group.position.y = current.relicGroundY + 1.05 + Math.sin(elapsed * 1.8) * 0.14;
+        rp.light.intensity = 6.5 + Math.sin(elapsed * 2.6) * 2.2;
+      }
+
       // --- fog drift (env may be mutated by the world's update) ---
       scene.fog.density = current.inst.env.fogDensity;
 
@@ -686,10 +1123,38 @@
           if (preloadTimer <= 0 && d < PRELOAD_DIST) ensureLoaded(p.destId);
         }
         if (preloadTimer <= 0) preloadTimer = 0.15;
+
+        // --- relic pickup + signal ---
+        updateRelicSignal(dt);
       }
 
       camera.position.set(player.x, player.groundY + EYE, player.z);
       camera.rotation.set(player.pitch, player.yaw, 0);
+
+      // --- the Glitch (never during a rift bend) ---
+      if (!transition) updateGlitch(dt);
+
+      // --- glitch-burst: 150 ms of invert/hue jolt, frame skips, FOV punch ---
+      const inBurst = now < glitch.burstUntil;
+      if (inBurst && !transition) {
+        cvs.style.filter = `invert(0.85) hue-rotate(${Math.round(Math.sin(now * 0.11) * 50)}deg) saturate(1.7)`;
+        if (Math.abs(camera.fov - (BASE_FOV + 3)) > 0.01) {
+          camera.fov = BASE_FOV + 3;
+          camera.updateProjectionMatrix();
+        }
+        burstWasActive = true;
+        burstSkipFrame = !burstSkipFrame;
+        if (burstSkipFrame) return; // dropped frame
+      } else if (burstWasActive) {
+        burstWasActive = false;
+        if (!transition) {
+          cvs.style.filter = "";
+          if (camera.fov !== BASE_FOV) {
+            camera.fov = BASE_FOV;
+            camera.updateProjectionMatrix();
+          }
+        }
+      }
 
       renderer.render(scene, camera);
     }
@@ -703,6 +1168,7 @@
       // hardcoded anywhere in this host; the manifest is the only source.
       defs.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
       defs.forEach(d => defById.set(d.id, d));
+      updateRelicCounter();
       const first = await ensureLoaded(defs[0].id);
       setCurrent(first, { ...first.inst.spawn });
       // Preload both neighbours so the first crossings are instant.
@@ -748,7 +1214,65 @@
           width: RIFT_W, height: RIFT_H,
           tint: "#" + p.membrane.material.color.getHexString()
         }));
-      }
+      },
+      relicInfo() {
+        if (!current || !current.inst.relic) return null;
+        const r = current.inst.relic;
+        return {
+          id: current.id, name: r.name, x: r.x, z: r.z,
+          found: relicFound(current.id),
+          distance: Math.hypot(player.x - r.x, player.z - r.z),
+          propVisible: current.relicProp ? current.relicProp.group.visible : false,
+          propPos: current.relicProp
+            ? { x: current.relicProp.group.position.x, y: current.relicProp.group.position.y, z: current.relicProp.group.position.z }
+            : null
+        };
+      },
+      relicCount() { return { found: foundCount(), total: defs.length }; },
+      journal() { return JSON.parse(JSON.stringify(journal)); },
+      setYaw(yaw) { player.yaw = yaw; }
+    };
+
+    // ---------------------------------------------------------------------
+    // Glitch test hooks
+    // ---------------------------------------------------------------------
+    window.__glitch = {
+      get active() { return glitch.active; },
+      get state() { return glitch.state; },
+      get observed() { return glitch.observed; },
+      get encounters() { return glitch.encounters; },
+      get burstFired() { return glitch.burstFired; },
+      get lastBurstAt() { return glitch.lastBurstAt; },
+      // Haunting schedule: room entries so far, and how many more room
+      // entries until the haunted room (0 = THIS room is the haunted one).
+      get visits() { return glitch.visits; },
+      get roomsUntil() { return glitch.hauntVisit - glitch.visits; },
+      get nextHauntIn() { return glitch.hauntVisit - glitch.visits; },
+      get hauntedNow() { return glitch.visits === glitch.hauntVisit; },
+      get timeInRoom() { return glitch.visitTime; },
+      // Test-only: force the roll — the haunted room becomes the one
+      // reached after n more room entries (0 = the current room).
+      forceRoomsUntil(n) {
+        glitch.hauntVisit = glitch.visits + Math.max(0, Math.floor(Number(n) || 0));
+        if (glitch.hauntVisit === glitch.visits) glitch.spawnedThisVisit = false;
+      },
+      // Test-only: fast-forward the in-room clock (the spawn check runs
+      // against it exactly as if those seconds of frames had elapsed).
+      debugAdvance(seconds) {
+        glitch.visitTime += Math.max(0, Number(seconds) || 0);
+        updateGlitch(0);
+      },
+      distance() {
+        if (!glitch.active || !glitch.group) return -1;
+        return Math.hypot(player.x - glitch.group.position.x, player.z - glitch.group.position.z);
+      },
+      position() {
+        if (!glitch.active || !glitch.group) return null;
+        const p = glitch.group.position;
+        return { x: p.x, y: p.y, z: p.z };
+      },
+      forceSpawn(dist = 40) { spawnGlitch(dist, true); },
+      forceLookCycle() { glitchRelocate(); }
     };
   </script>
 </body>

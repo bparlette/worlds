@@ -101,7 +101,7 @@ export function createWorld(THREE) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.domElement.setAttribute("aria-label", "Interactive 3D military base");
-    document.body.appendChild(renderer.domElement);
+    if (renderer.domElement && renderer.domElement.nodeType === 1) document.body.appendChild(renderer.domElement); // Back Roms fix: dummy renderer has no real canvas to attach
 
     const hemi = new THREE.HemisphereLight(0xb8e8e8, 0x17211d, 1.7);
     scene.add(hemi);
@@ -879,7 +879,7 @@ export function createWorld(THREE) {
 
     requestAnimationFrame(() => {
       document.getElementById("loading").classList.add("hidden");
-      setTimeout(() => document.getElementById("loading").remove(), 600);
+      setTimeout(() => document.getElementById("loading")?.remove(), 600);
     });
   
 

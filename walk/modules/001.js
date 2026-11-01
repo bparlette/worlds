@@ -13,6 +13,9 @@
 //   prev — at the maze / enchanted-grove altar clearing (maze at (-18,-23)).
 //          Door at (-17, -17.2), on the clearing's south approach.
 // Spawn: start of the winding path, looking toward the castle.
+// Relic: the Enchanted Chalice hides BEHIND the castle at (20, -43), in the
+//        north woods — well off both door beelines; you have to circle the
+//        castle to find it. (Deliberately NOT the maze altar.)
 // ============================================================================
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -665,11 +668,11 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: -21, z: 25, yaw: -0.6 },
-    relic: { name: "Enchanted Chalice", x: -21, z: 39 },
     env: { background: 0x17120d, fogColor: 0x17120d, fogDensity: 0.025 },
     doors: {
       next: { x: 13.1, z: -20.7 },
       prev: { x: -17, z: -17.2 }
-    }
+    },
+    relic: { name: "Enchanted Chalice", x: 20, z: -43 }
   };
 }

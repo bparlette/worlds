@@ -15,6 +15,9 @@
 //   next — in front of the eastern cave mouth at (8.8, 8.5); door (8.8, 5.0).
 //   prev — in front of the western cave mouth at (-6.7, 7.2); door (-6.7, 3.8).
 // Spawn: south clearing, looking north across the jungle floor.
+// Relic: the Golden Idol waits in the deep jungle at the far north-west
+//        corner (-13.5, -12.5) — a full trek past the pit, away from both
+//        cave doors in the south.
 // ============================================================================
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -528,11 +531,11 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0, z: 13, yaw: 0 },
-    relic: { name: "Golden Idol", x: 0, z: 27 },
     env: { background: 0x17110d, fogColor: 0x271c13, fogDensity: 0.018 },
     doors: {
       next: { x: 8.8, z: 5.0 },
       prev: { x: -6.7, z: 3.8 }
-    }
+    },
+    relic: { name: "Golden Idol", x: -13.5, z: -12.5 }
   };
 }

@@ -19,6 +19,9 @@
 //   next — the north end of the river run, mesas ahead: door at (0, -33).
 //   prev — the south end of the river run: door at (0, 37).
 // Spawn: east bank of the river at the south end, facing up-canyon.
+// Relic: Ace's Medal lies in the open desert on the WEST bank at
+//        (-22, -26), mid-canyon — across the river from the spawn bank
+//        and far from both river-end doors.
 // ============================================================================
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -455,11 +458,11 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 7, z: 30, yaw: 0 },
-    relic: { name: "Refueling Depot Core", x: 7, z: 44 },
     env: { background: 0x9d5c2e, fogColor: 0x9d5c2e, fogDensity: 0.016 },
     doors: {
       next: { x: 0, z: -33 },
       prev: { x: 0, z: 37 }
-    }
+    },
+    relic: { name: "Ace's Medal", x: -22, z: -26 }
   };
 }

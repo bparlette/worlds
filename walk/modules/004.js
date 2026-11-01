@@ -27,6 +27,9 @@
 //          facing the shield-barrier run.
 //   prev — at the far south end of the corridor, past the last shield
 //          barrier (z=23); door at (0, 31).
+// Relic: the Zorlon Core hums at the far north end of the field at
+//        (-10.5, -40), off the road among the antennas — past the entrance
+//        arch and the whole shield-barrier run.
 // Spawn: on the road at the south end, facing the entrance arch.
 // ============================================================================
 
@@ -461,11 +464,11 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0, z: 24, yaw: 0 },
-    relic: { name: "Zorlon Cannon Cell", x: 0, z: 38 },
     env: { background: 0x070b18, fogColor: 0x081027, fogDensity: 0.022 },
     doors: {
       next: { x: 0, z: -14.8 },
       prev: { x: 0, z: 31 }
-    }
+    },
+    relic: { name: "Zorlon Core", x: -10.5, z: -40 }
   };
 }

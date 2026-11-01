@@ -93,7 +93,7 @@ export function createWorld(THREE) {
     renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(renderer.domElement);
+    if (renderer.domElement && renderer.domElement.nodeType === 1) document.body.appendChild(renderer.domElement); // Back Roms fix: dummy renderer has no real canvas to attach
 
     // scene redirect
     scene.background = new THREE.Color(0x081121);
@@ -482,7 +482,7 @@ export function createWorld(THREE) {
     const resetButton = document.querySelector("#reset");
     const jumpButton = document.querySelector("#jump");
 
-    resetButton.addEventListener("click", () => {
+    resetButton?.addEventListener("click", () => {
       orbit.theta = 0.72;
       orbit.phi = 1.18;
       orbit.radius = 24;
@@ -490,7 +490,7 @@ export function createWorld(THREE) {
       updateCamera();
     });
 
-    jumpButton.addEventListener("click", () => {
+    jumpButton?.addEventListener("click", () => {
       demoActive = true;
       demoTimer = 0;
       jumpButton.textContent = "Demo Active";
@@ -742,8 +742,8 @@ export function createWorld(THREE) {
 
     animate();
     requestAnimationFrame(() => {
-      loading.classList.add("hidden");
-      setTimeout(() => loading.remove(), 600);
+      loading?.classList.add("hidden");
+      setTimeout(() => loading?.remove(), 600);
     });
   
 

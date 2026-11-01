@@ -95,7 +95,7 @@ export function createWorld(THREE) {
     renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(renderer.domElement);
+    if (renderer.domElement && renderer.domElement.nodeType === 1) document.body.appendChild(renderer.domElement); // Back Roms fix: dummy renderer has no real canvas to attach
 
     // scene redirect
     scene.background = new THREE.Color(0x050911);
@@ -1108,8 +1108,8 @@ export function createWorld(THREE) {
     // Remove loader after the first rendered frame.
     requestAnimationFrame(() => {
       const loading = document.getElementById("loading");
-      loading.classList.add("hidden");
-      setTimeout(() => loading.remove(), 900);
+      loading?.classList.add("hidden");
+      setTimeout(() => loading?.remove(), 900);
     });
   
 

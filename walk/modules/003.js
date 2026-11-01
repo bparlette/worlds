@@ -22,6 +22,9 @@
 //   prev — in the graveyard east of the mansion, by the tombstones.
 //          Door at (13.5, -4).
 // Spawn: south lawn, facing the mansion front.
+// Relic: the Crystal Urn sits behind the mansion at (-1.5, -13), against
+//        its north wall — you must leave the front lawn and circle the
+//        house to reach it.
 // ============================================================================
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -584,11 +587,11 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0, z: 14, yaw: 0 },
-    relic: { name: "Master Urn Piece", x: 0, z: 28 },
     env,
     doors: {
       next: { x: -1.5, z: 9.6 },
       prev: { x: 13.5, z: -4 }
-    }
+    },
+    relic: { name: "Crystal Urn", x: -1.5, z: -13 }
   };
 }

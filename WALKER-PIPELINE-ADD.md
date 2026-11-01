@@ -42,7 +42,8 @@ export function createWorld(THREE) {
     spawn: { x: 0, z: 14, yaw: 0 },              // walkable start, faces the hero view
     env:   { background: 0x17120d, fogColor: 0x17120d, fogDensity: 0.025 },
     doors: { next: { x: 13.1, z: -20.7 },        // exit landmark
-             prev: { x: -17,  z: -17.2 } }       // secondary landmark
+             prev: { x: -17,  z: -17.2 } },      // secondary landmark
+    relic: { name: "Enchanted Chalice", x: 20, z: -43 }  // hidden, off the beeline (R8)
   };
 }
 ```
@@ -71,6 +72,14 @@ export function createWorld(THREE) {
 - **R7 — Real ground.** Terrain must be actual meshes inside the group —
   Back Roms floors the player by raycasting down. No invisible or
   merged-away ground planes.
+- **R8 — Relic.** Every world hides exactly one relic: `createWorld` also
+  returns `relic: { name, x, z }` — the world's one iconic object (the
+  chalice, the idol, the urn…). The point must be walkable ground (R7
+  applies) and clear of the spawn→door beeline — a detour, not a toll
+  booth: somewhere a walker only finds by exploring (behind the castle,
+  across the river, at the far end of the field). Back Roms renders the
+  relic itself — a golden core-and-rings prop, walker-owned — so the
+  module supplies only the name and the coordinates.
 
 ## 3. Manifest step (same script)
 
@@ -90,7 +99,8 @@ here, never by editing Walker code.
 
 1. The module parses and imports cleanly.
 2. `createWorld(THREE)` runs headlessly and returns every required key,
-   with finite numbers in `spawn`, `env`, `doors`.
+   with finite numbers in `spawn`, `env`, `doors`, and a `relic` whose
+   `name` is a non-empty string and whose `x`/`z` are finite.
 3. `group` contains at least one mesh.
 4. `update(0, 0.016)` and `update(1, 0.016)` run without throwing.
 
