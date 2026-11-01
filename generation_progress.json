@@ -6,7 +6,8 @@
     "platform": "Atari 2600",
     "filename": "001_adventure_castles_mazes.html",
     "verified_working": false,
-    "generated_at": "2026-11-01 12:11:44"
+    "generated_at": "2026-11-01 12:11:44",
+    "updated_at": "2026-11-01 17:56 EST"
   },
   "2": {
     "id": 2,
@@ -15,7 +16,8 @@
     "platform": "Atari 2600",
     "filename": "002_pitfall_ii_lost_caverns_vertical_subterranean_labyrinths_rivers.html",
     "verified_working": true,
-    "generated_at": "2026-11-01 12:18:05"
+    "generated_at": "2026-11-01 12:18:05",
+    "updated_at": "2026-11-01 17:56 EST"
   },
   "3": {
     "id": 3,
@@ -24,6 +26,7 @@
     "platform": "Atari 2600",
     "filename": "003_h_e_r_o_level_12.html",
     "verified_working": false,
-    "generated_at": "2026-11-01 12:23:45"
+    "generated_at": "2026-11-01 12:23:45",
+    "updated_at": "2026-11-01 17:56 EST"
   }
 }

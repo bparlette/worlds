@@ -290,6 +290,9 @@ def update_gallery(specs: list, progress: dict):
                 </div>'''
             else:
                 footer_html = f'<a class="play-btn" href="scenes/{filename}" target="_blank">Launch 3D World ➔</a>'
+            stamp = info.get("updated_at") or info.get("generated_at", "")
+            if stamp:
+                footer_html += f'<div class="updated-at">Updated {stamp}</div>'
         else:
             status_badge = '<span class="badge coming-soon" title="Queued in Qwen3.5-3D-Coder synthesis pipeline">⏳ Coming Soon</span>'
             card_extra_cls = "card-coming-soon"
@@ -529,6 +532,12 @@ def update_gallery(specs: list, progress: dict):
         .play-btn:hover {{
             opacity: 0.9;
         }}
+        .updated-at {{
+            margin-top: 6px;
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }}
         .play-btn.disabled-btn {{
             background: rgba(255, 255, 255, 0.06);
             color: var(--text-muted);
@@ -649,7 +658,8 @@ def post_process_and_publish(spec: dict, filename: str, filepath: str, specs: li
         "platform": spec["platform"],
         "filename": filename,
         "verified_working": is_verified,
-        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "updated_at": time.strftime("%Y-%m-%d %H:%M %Z")
     }
     save_progress(progress)
 
