@@ -223,5 +223,14 @@
     "filename": "025_earthbound_beginnings_magicant.html",
     "verified_working": false,
     "generated_at": "2026-11-01 04:06:35"
+  },
+  "26": {
+    "id": 26,
+    "game": "Final Fantasy",
+    "target": "Flying Fortress",
+    "platform": "NES",
+    "filename": "026_final_fantasy_flying_fortress.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 04:23:39"
   }
 }
