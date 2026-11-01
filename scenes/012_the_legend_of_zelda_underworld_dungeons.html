@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Underworld Dungeons — Three.js</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f4e4bd;
+      --muted: #bca978;
+      --panel: rgba(17, 12, 8, 0.76);
+      --line: rgba(244, 228, 189, 0.22);
+      --accent: #e8a73b;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080706;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 45%, rgba(0,0,0,.38) 100%),
+        linear-gradient(to bottom, rgba(5,4,3,.12), transparent 30%, rgba(0,0,0,.2));
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: var(--ink);
+    }
+
+    .title {
+      position: absolute;
+      top: 28px;
+      left: 32px;
+      max-width: min(520px, calc(100vw - 64px));
+    }
+
+    .eyebrow {
+      margin-bottom: 8px;
+      color: var(--accent);
+      font: 700 11px/1.2 system-ui, sans-serif;
+      letter-spacing: .24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 58px);
+      font-weight: 500;
+      line-height: .95;
+      letter-spacing: -.035em;
+      text-shadow: 0 3px 22px rgba(0,0,0,.8);
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font: 13px/1.55 system-ui, sans-serif;
+    }
+
+    .panel {
+      position: absolute;
+      top: 28px;
+      right: 28px;
+      width: 248px;
+      padding: 17px 18px 15px;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(42,31,19,.86), rgba(13,9,6,.72));
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      box-shadow: 0 16px 45px rgba(0,0,0,.32);
+      backdrop-filter: blur(12px);
+    }
+
+    .panel-title {
+      margin-bottom: 12px;
+      color: var(--accent);
+      font: 700 10px/1.2 system-ui, sans-serif;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .quest {
+      margin: 11px 0;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.055);
+      font: 12px/1.45 system-ui, sans-serif;
+    }
+
+    .quest strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #f7e9c5;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .quest span {
+      color: var(--muted);
+    }
+
+    .hint {
+      position: absolute;
+      left: 32px;
+      bottom: 28px;
+      color: rgba(244,228,189,.72);
+      font: 11px/1.5 system-ui, sans-serif;
+      text-shadow: 0 2px 10px #000;
+    }
+
+    .hint b {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .badge {
+      position: absolute;
+      right: 30px;
+      bottom: 28px;
+      color: var(--accent);
+      font: 700 10px/1.3 system-ui, sans-serif;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px #000;
+    }
+
+    @media (max-width: 700px) {
+      .title { top: 20px; left: 20px; }
+      .subtitle { max-width: 310px; }
+      .panel {
+        top: auto;
+        right: 16px;
+        bottom: 58px;
+        width: 220px;
+        padding: 12px;
+      }
+      .hint { left: 20px; bottom: 20px; }
+      .badge { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div class="vignette"></div>
+
+  <div class="hud">
+    <header class="title">
+      <div class="eyebrow">The Legend of Zelda · NES Remake</div>
+      <h1>Underworld Dungeons</h1>
+      <p class="subtitle">
+        Explore the Sunken Ruins of Hyrule. Follow the glowing path,
+        solve ancient puzzles, and recover the power of the Sacred Seal.
+      </p>
+    </header>
+
+    <aside class="panel">
+      <div class="panel-title">Quest Journal</div>
+      <div class="quest">
+        <strong>01 · The Sunken Temple</strong>
+        <span>Descend into the underground cavern and locate the sealed chamber.</span>
+      </div>
+      <div class="quest">
+        <strong>02 · The Gloom Grotto</strong>
+        <span>Pass the shadow trial and retrieve the first shard of light.</span>
+      </div>
+      <div class="quest">
+        <strong>03 · The Crystal Cavern</strong>
+        <span>Align the prism shards to awaken the Sacred Seal.</span>
+      </div>
+      <div class="quest">
+        <strong>04 · The Final Chamber</strong>
+        <span>Face the Dark Stalger and restore the light to Hyrule.</span>
+      </div>
+    </aside>
+
+    <div class="hint"><b>Drag</b> to orbit · <b>Scroll</b> to zoom · <b>Click</b> to interact</div>
+    <div class="badge">Dungeons Unsealed</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x100d09);
+    scene.fog = new THREE.FogExp2(0x17130f, 0.028);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 150);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement: document.body.appendChild(renderer.domElement);
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const mat = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x4a4338, roughness: 0.93, metalness: 0.02
+      }),
+      darkStone: new THREE.MeshStandardMaterial({
+        color: 0x211d18, roughness: 0.96, metalness: 0.01
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x342f29, roughness: 0.88, metalness: 0.04
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x5a5043, roughness: 0.95, metalness: 0.01
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x3b352e, roughness: 1, flatShading: true
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd9a84b, roughness: 0.36, metalness: 0.78
+      }),
+      glow: new THREE.MeshStandardMaterial({
+        color: 0xffd98a, emissive: 0xffa83d, emissiveIntensity: 3.1,
+        roughness: 0.35
+      }),
+      blueGlow: new THREE.MeshStandardMaterial({
+        color: 0x8edfff, emissive: 0x328dff, emissiveIntensity: 2.2,
+        roughness: 0.25
+      }),
+      redGlow: new THREE.MeshStandardMaterial({
+        color: 0xff6a45, emissive: 0xa31c12, emissiveIntensity: 2.4,
+        roughness: 0.4
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x503423, roughness: 0.95
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x4e6340, roughness: 0.95, flatShading: true
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x251c15, roughness: 1
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x173f4a, roughness: 0.25, metalness: 0.18,
+        transparent: true, opacity: 0.78
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x030303, roughness: 1
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x86775f, 0x17100b, 1.15));
+
+    const sun = new THREE.DirectionalLight(0xffd6a0, 3.0);
+    sun.position.set(12, 22, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -22;
+    sun.shadow.camera.right = 22;
+    sun.shadow.camera.top = 22;
+    sun.shadow.camera.bottom = -22;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 60;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const caveLight = new THREE.PointLight(0xff9e48, 28, 24, 2);
+    caveLight.position.set(0, 5, 2);
+    scene.add(caveLight);
+
+    const blueLight = new THREE.PointLight(0x428dff, 20, 20, 2);
+    blueLight.position.set(-8, 4, -6);
+    scene.add(blueLight);
+
+    const redLight = new THREE.PointLight(0xff4d25, 16, 18, 2);
+    redLight.position.set(7, 3, 7);
+    scene.add(redLight);
+
+    // -------------------------------------------------------------------------
+    // Procedural terrain helpers
+    // -------------------------------------------------------------------------
+    function makeBox(w, h, d, material, x, y, z, parent = world) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function makeCylinder(radius, height, material, x, y, z, segments = 12, parent = world) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius * 1.08, height, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function makeRock(x, y, z, scale = 1, parent = world) {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), mat.rock);
+      rock.position.set(x, y, z);
+      rock.scale.set(scale * 1.4, scale * 0.85, scale);
+      rock.rotation.set(Math.random(), Math.random(), Math.random());
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      parent.add(rock);
+      return rock;
+    }
+
+    function makeTree(x, z, scale = 1, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      const trunk = makeCylinder(0.28, 2.5, mat.wood, 0, 1.25, 0, 8, group);
+      trunk.rotation.z = 0.08;
+
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(1.25, 3.1, 8), mat.leaf);
+      crown.position.y = 3.25;
+      crown.rotation.y = Math.random() * Math.PI;
+      crown.castShadow = true;
+      group.add(crown);
+
+      const crown2 = new THREE.Mesh(new THREE.ConeGeometry(0.85, 2.5, 8), mat.leaf);
+      crown2.position.set(0.45, 4.05, 0.15);
+      crown2.rotation.y = Math.PI / 2;
+      crown2.castShadow = true;
+      group.add(crown2);
+
+      return group;
+    }
+
+    function makeStatue(x, z, facing = 0, color = 0x8b6f35, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = facing;
+      parent.add(group);
+
+      const pedestal = makeBox(1.7, 0.35, 1.7, mat.darkStone, 0, 0.18, 0, group);
+      makeBox(1.15, 0.45, 1.15, mat.stone, 0, 0.58, 0, group);
+
+      const torso = makeCylinder(0.38, 1.1, new THREE.MeshStandardMaterial({
+        color, roughness: 0.75, metalness: 0.2
+      }), 0, 1.28, 0, 10, group);
+      torso.castShadow = true;
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), new THREE.MeshStandardMaterial({
+        color: 0x9a7b49, roughness: 0.8
+      }));
+      head.position.y = 2.05;
+      head.castShadow = true;
+      group.add(head);
+
+      const staff = makeCylinder(0.055, 1.65, mat.gold, 0.48, 1.6, 0, 8, group);
+      staff.rotation.z = -0.12;
+
+      return group;
+    }
+
+    function makeLamp(x, z, glowMaterial = mat.glow, intensity = 24) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      makeCylinder(0.12, 0.2, mat.darkStone, 0, 0.1, 0, 8, group);
+      makeCylinder(0.25, 0.42, mat.gold, 0, 0.38, 0, 8, group);
+
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 10, 8),
+        glowMaterial
+      );
+      bulb.position.y = 0.67;
+      group.add(bulb);
+
+      const light = new THREE.PointLight(0xffa43c, intensity, 9, 2);
+      light.position.y = 0.75;
+      group.add(light);
+
+      return group;
+    }
+
+    function makeBridge(x, z, width = 3.2, length = 5.5, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      world.add(group);
+
+      for (let i = 0; i < 9; i++) {
+        const bridgeStone = makeBox(
+          width, 0.38, 0.52, mat.stone,
+          -length / 2 + i * (length / 8), 0.35, 0,
+          group
+        );
+        bridgeStone.rotation.y = Math.sin(i * 1.7) * 0.018;
+      }
+
+      for (const side of [-1, 1]) {
+        makeBox(0.22, 0.8, length, mat.wood, side * width * 0.5, 0.9, 0, group);
+        for (let i = 0; i < 5; i++) {
+          makeBox(width + 0.4, 0.13, 0.16, mat.wood, 0, 1.25, -length / 2 + i * length / 4, group);
+        }
+      }
+
+      return group;
+    }
+
+    function makeWaterPuddle(x, z, radius = 2.2) {
+      const water = new THREE.Mesh(new THREE.CircleGeometry(radius, 48), mat.water);
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(x, 0.025, z);
+      water.receiveShadow = true;
+      world.add(water);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(radius * 0.92, radius * 1.02, 64),
+        new THREE.MeshBasicMaterial({
+          color: 0x76d5df, transparent: true, opacity: 0.25, side: THREE.DoubleSide
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(x, 0.045, z);
+      world.add(ring);
+    }
+
+    // -------------------------------------------------------------------------
+    // Overworld and entrance
+    // -------------------------------------------------------------------------
+    const overworld = new THREE.Group();
+    world.add(overworld);
+
+    makeBox(72, 2.4, 72, mat.soil, 0, -1.3, 0, overworld);
+
+    for (let i = 0; i < 34; i++) {
+      const x = (Math.random() - 0.5) * 68;
+      const z = (Math.random() - 0.5) * 68;
+      if (Math.abs(x) < 4 && Math.abs(z) < 4) continue;
+      makeRock(x, 0.18, z, 0.45 + Math.random() * 1.1, overworld);
+    }
+
+    for (let i = 0; i < 12; i++) {
+      makeTree((Math.random() - 0.5) * 48, (Math.random() - 0.5) * 48, 0.75 + Math.random() * 0.65, overworld);
+    }
+
+    // Entrance arch.
+    const entrance = new THREE.Group();
+    entrance.position.set(0, 0, 8);
+    overworld.add(entrance);
+
+    makeBox(7.5, 0.45, 2.2, mat.stone, 0, 0.22, 0, entrance);
+    makeBox(3.3, 6.8, 2.2, mat.stone, -2.4, 3.4, 0, entrance);
+    makeBox(3.3, 6.8, 2.2, mat.stone, 2.4, 3.4, 0, entrance);
+    makeBox(7.8, 0.65, 2.4, mat.stone, 0, 6.55, 0, entrance);
+    makeBox(4.7, 0.22, 2.6, mat.gold, 0, 5.95, 0, entrance);
+    makeBox(0.18, 5.7, 0.18, mat.gold, 0, 3.0, 1.2, entrance);
+
+    const entranceGlow = new THREE.PointLight(0xffb84d, 18, 15, 2);
+    entranceGlow.position.set(0, 4.5, 1.5);
+    entrance.add(entranceGlow);
+
+    // Path into the dungeons.
+    makeBox(4.8, 0.16, 14, mat.floor, 0, 0.05, -1.5, overworld);
+
+    for (let i = 0; i < 18; i++) {
+      const lamp = makeLamp(-2.25, -4.5 - i * 0.72, i % 3 === 0 ? mat.blueGlow : mat.glow, 12 + (i % 3) * 4);
+      lamp.position.x = -2.25;
+    }
+
+    makeStatue(-8, -12, 0.35, 0x8a6c38, overworld);
+    makeStatue(8, -12, -0.35, 0x8a6c38, overworld);
+
+    // -------------------------------------------------------------------------
+    // Dungeons
+    // -------------------------------------------------------------------------
+    const dungeons = new THREE.Group();
+    world.add(dungeons);
+
+    // Main cavern floor.
+    makeBox(34, 0.25, 30, mat.floor, 0, 0.08, -8, dungeons);
+
+    // Back and side walls.
+    makeBox(34, 11, 1.2, mat.wall, 0, 5.5, -23, dungeons);
+    makeBox(1.2, 11, 30, mat.wall, -16, 5.5, -8, dungeons);
+    makeBox(1.2, 11, 30, mat.wall, 16, 5.5, -8, dungeons);
+
+    // Irregular rock columns and ceiling fragments.
+    for (let i = 0; i < 24; i++) {
+      const x = -14 + Math.random() * 28;
+      const z = -21 + Math.random() * 28;
+      if (Math.abs(x) < 5 && z > -17) continue;
+      makeRock(x, 2.2 + Math.random() * 5, z, 0.65 + Math.random() * 1.2, dungeons);
+    }
+
+    for (let i = 0; i < 12; i++) {
+      const x = -13 + Math.random() * 26;
+      const z = -20 + Math.random() * 18;
+      const rock = makeRock(x, 8 + Math.random() * 2, z, 0.7 + Math.random() * 0.8, dungeons);
+      rock.scale.y *= 0.45;
+    }
+
+    // Hanging crystals.
+    const crystals = [];
+
+    function makeCrystal(x, y, z, color, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      dungeons.add(group);
+
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.55,
+        roughness: 0.2,
+        metalness: 0.15,
+        transparent: true,
+        opacity: 0.88
+      });
+
+      const lower = makeCylinder(0.22, 0.85, material, 0, 0, 0, 8, group);
+      lower.rotation.z = 0.08;
+
+      const upper = makeCylinder(0.14, 1.5, material, 0, 1.05, 0, 8, group);
+      upper.rotation.z = -0.12;
+
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.65, 8), material);
+      tip.position.y = 1.95;
+      group.add(tip);
+
+      crystals.push(group);
+      return group;
+    }
+
+    makeCrystal(-7, 6.8, -16, 0x55c9ff, 1.1);
+    makeCrystal(2, 7.3, -18, 0xffc05c, 0.9);
+    makeCrystal(8, 6.5, -15, 0x8b6cff, 1.25);
+    makeCrystal(-12, 5.7, 1, 0xff6577, 0.8);
+    makeCrystal(12, 5.7, 1, 0x55e6ff, 0.9);
+
+    // Water pools.
+    makeWaterPuddle(-5, -15, 2.5);
+    makeWaterPuddle(5, -16, 2.1);
+    makeWaterPuddle(-5, 7, 2.4);
+    makeWaterPuddle(5, 8, 2.0);
+
+    // Bridges.
+    makeBridge(0, -10, 3.0, 5.5, 0.04);
+    makeBridge(-8, 4, 2.7, 4.0, -0.12);
+    makeBridge(8, 4, 2.7, 4.0, 0.12);
+
+    // Ancient pillars and braziers.
+    for (let i = 0; i < 8; i++) {
+      const x = -11 + i * 3.2;
+      const z = 13 - (i % 2) * 2.5;
+      makeCylinder(0.55, 3.2, mat.stone, x, 1.6, z, 12, dungeons);
+      makeCylinder(0.72, 0.25, mat.darkStone, x, 0.12, z, 12, dungeons);
+      makeCylinder(0.48, 0.3, mat.gold, x, 3.35, z, 12, dungeons);
+    }
+
+    for (let i = 0; i < 6; i++) {
+      const x = -12 + i * 6;
+      const z = 16;
+      makeCylinder(0.58, 0.45, mat.wood, x, 0.25, z, 10, dungeons);
+      makeCylinder(0.16, 0.65, mat.wood, x, 0.75, z, 8, dungeons);
+      const flame = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.35, 1),
+        mat.redGlow
+      );
+      flame.position.set(x, 1.25, z);
+      flame.scale.y = 1.5;
+      dungeons.add(flame);
+
+      const light = new THREE.PointLight(0xff6a28, 9, 6, 2);
+      light.position.set(x, 1.3, z);
+      dungeons.add(light);
+    }
+
+    // Central sealed chamber.
+    const sealedChamber = new THREE.Group();
+    sealedChamber.position.set(0, 0, -17);
+    dungeons.add(sealedChamber);
+
+    makeBox(9, 0.25, 7, mat.floor, 0, 0.12, 0, sealedChamber);
+    makeBox(9, 5, 0.8, mat.wall, 0, 2.5, -3.4, sealedChamber);
+    makeBox(0.8, 5, 7, mat.wall, -4.4, 2.5, 0, sealedChamber);
+    makeBox(0.8, 5, 7, mat.wall, 4.4, 2.5, 0, sealedChamber);
+    makeBox(9.4, 0.8, 7.4, mat.stone, 0, 5.1, 0, sealedChamber);
+
+    makeBox(4.2, 0.22, 4.2, mat.gold, 0, 0.32, 0, sealedChamber);
+    makeBox(2.5, 2.5, 0.35, mat.gold, 0, 1.65, 0, sealedChamber);
+    makeBox(0.22, 2.2, 0.22, mat.gold, 0, 1.65, 0.2, sealedChamber);
+
+    const sealGlow = new THREE.PointLight(0xffa83f, 32, 13, 2);
+    sealGlow.position.set(0, 2.5, 1.5);
+    sealedChamber.add(sealGlow);
+
+    // First shard, in the gloom grotto.
+    const shardGroup = new THREE.Group();
+    shardGroup.position.set(-3.7, 0.1, 2.0);
+    shardGroup.rotation.y = 0.35;
+    dungeons.add(shardGroup);
+
+    makeBox(3.0, 0.25, 2.4, mat.darkStone, 0, 0.12, 0, shardGroup);
+    makeBox(1.1, 2.2, 1.1, mat.stone, 0, 1.25, 0, shardGroup);
+
+    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.62, 0), mat.blueGlow);
+    shard.position.set(0, 2.55, 0);
+    shard.scale.y = 1.5;
+    shardGroup.add(shard);
+
+    const shardLight = new THREE.PointLight(0x54b9ff, 22, 8, 2);
+    shardLight.position.set(0, 2.6, 0);
+    shardGroup.add(shardLight);
+
+    // Crystal alignment platform.
+    const prismPlatform = new THREE.Group();
+    prismPlatform.position.set(0, 0, 10);
+    dungeons.add(prismPlatform);
+
+    makeBox(12, 0.2, 9, mat.darkStone, 0, 0.1, 0, prismPlatform);
+    makeBox(13, 0.4, 10, mat.stone, 0, 0.42, 0, prismPlatform);
+
+    const prismShards = [];
+
+    function makePrismShard(x, z, color, targetX, targetY, targetZ) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.85, z);
+      group.rotation.y = Math.random() * Math.PI;
+      prismPlatform.add(group);
+
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 1.3,
+        roughness: 0.18,
+        metalness: 0.35
+      });
+
+      const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), material);
+      shard.castShadow = true;
+      group.add(shard);
+
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 3, 6),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 })
+      );
+      beam.position.y = 1.5;
+      group.add(beam);
+
+      prismShards.push({ group, target: new THREE.Vector3(targetX, targetY, targetZ) });
+      return group;
+    }
+
+    makePrismShard(-3.6, -1.6, 0x72dcff, -3.6, 3.0, -1.6);
+    makePrismShard(0, -2.0, 0xffc05c, 0, 3.0, -2.0);
+    makePrismShard(3.6, -1.6, 0xff6677, 3.6, 3.0, -1.6);
+
+    const prismLight = new THREE.PointLight(0x72dcff, 18, 12, 2);
+    prismLight.position.set(0, 2.5, 1.5);
+    prismPlatform.add(prismLight);
+
+    // Final chamber.
+    const finalChamber = new THREE.Group();
+    finalChamber.position.set(0, 0, 19);
+    dungeons.add(finalChamber);
+
+    makeBox(13, 0.25, 10, mat.floor, 0, 0.12, 0, finalChamber);
+    makeBox(13, 7, 0.8, mat.wall, 0, 3.5, -4.5, finalChamber);
+    makeBox(0.8, 7, 10, mat.wall, -6.2, 3.5, 0, finalChamber);
+    makeBox(0.8, 7, 10, mat.wall, 6.2, 3.5, 0, finalChamber);
+    makeBox(13.5, 0.9, 10.5, mat.stone, 0, 7.1, 0, finalChamber);
+
+    makeBox(5.2, 0.25, 5.2, mat.gold, 0, 0.35, 0, finalChamber);
+    makeBox(2.2, 2.8, 0.35, mat.gold, 0, 1.7, 0, finalChamber);
+    makeBox(0.2, 2.5, 0.2, mat.gold, 0, 1.7, 0.2, finalChamber);
+
+    makeStatue(0, 1.4, Math.PI, 0x9b7438, finalChamber);
+
+    const finalFlame = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.7, 1),
+      mat.redGlow
+    );
+    finalFlame.position.set(0, 3.0, 0);
+    finalFlame.scale.y = 1.8;
+    finalChamber.add(finalFlame);
+
+    const finalLight = new THREE.PointLight(0xff7b32, 40, 17, 2);
+    finalLight.position.set(0, 3.5, 0);
+    finalChamber.add(finalLight);
+
+    // Stalger.
+    const stalger = new THREE.Group();
+    stalger.position.set(0, 0, 2.0);
+    finalChamber.add(stalger);
+
+    const stalgerBody = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.15, 1),
+      new THREE.MeshStandardMaterial({
+        color: 0x160d09, roughness: 0.95, flatShading: true
+      })
+    );
+    stalgerBody.position.y = 1.4;
+    stalgerBody.castShadow = true;
+    stalger.add(stalgerBody);
+
+    const stalgerHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.48, 12, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x342118, roughness: 0.95, flatShading: true
+      })
+    );
+    stalgerHead.position.y = 2.55;
+    stalgerHead.castShadow = true;
+    stalger.add(stalgerHead);
+
+    const stalgerEye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 8, 6),
+      mat.redGlow
+    );
+    stalgerEye.position.set(0, 2.63, 0.43);
+    stalger.add(stalgerEye);
+
+    const stalgerHorn = new THREE.Mesh(
+      new THREE.ConeGeometry(0.16, 1.2, 8),
+      mat.wood
+    );
+    stalgerHorn.position.set(-0.55, 3.15, 0);
+    stalgerHorn.rotation.z = 0.8;
+    stalger.add(stalgerHorn);
+
+    // Floating dust particles.
+    const dustCount = 420;
+    const dustPositions = new Float32Array(dustCount * 3);
+    const dustSpeeds = new Float32Array(dustCount);
+
+    for (let i = 0; i < dustCount; i++) {
+      dustPositions[i * 3] = (Math.random() - 0.5) * 36;
+      dustPositions[i * 3 + 1] = 0.5 + Math.random() * 11;
+      dustPositions[i * 3 + 2] = -24 + Math.random() * 34;
+      dustSpeeds[i] = 0.025 + Math.random() * 0.07;
+    }
+
+    scene.userData.dustGeometry = new THREE.BufferGeometry();
+    scene.userData.dustGeometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+    scene.userData.dustCount = dustCount;
+
+    const dust = new THREE.Points(
+      scene.userData.dustGeometry,
+      new THREE.PointsMaterial({
+        color: 0xf0c77d,
+        size: 0.045,
+        transparent: true,
+        opacity: 0.38,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    scene.add(dust);
+
+    // -------------------------------------------------------------------------
+    // Camera controls: native orbit, zoom, touch, and click interaction
+    // -------------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 2.0, -4),
+      radius: 19,
+      theta: Math.PI * 0.28,
+      phi: 1.18,
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+      activePointers: new Map(),
+      pinchDistance: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    function clampControls() {
+      controls.phi = THREE.MathUtils.clamp(controls.phi, 0.28, Math.PI * 0.49);
+      controls.radius = THREE.MathUtils.clamp(controls.radius, 6.5, 38);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      renderer.domElement.setPointerCapture(event.pointerId);
+      controls.activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (controls.activePointers.size === 1) {
+        controls.dragging = true;
+        controls.lastX = event.clientX;
+        controls.lastY = event.clientY;
+      } else if (controls.activePointers.size === 2) {
+        const points = [...controls.activePointers.values()];
+        controls.pinchDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.activePointers.has(event.pointerId)) return;
+
+      controls.activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (controls.activePointers.size === 2) {
+        const points = [...controls.activePointers.values()];
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (controls.pinchDistance > 0) {
+          controls.radius *= controls.pinchDistance / Math.max(distance, 1);
+          clampControls();
+        }
+        controls.pinchDistance = distance;
+        updateCamera();
+        return;
+      }
+
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.005;
+      controls.phi -= dy * 0.0045;
+      clampControls();
+      updateCamera();
+    });
+
+    function endPointer(event) {
+      controls.activePointers.delete(event.pointerId);
+      if (controls.activePointers.size < 2) controls.pinchDistance = 0;
+      if (controls.activePointers.size === 0) controls.dragging = false;
+    }
+
+    renderer.domElement.addEventListener("pointerup", endPointer);
+    renderer.domElement.addEventListener("pointercancel", endPointer);
+    renderer.domElement.addEventListener("pointerleave", (event) => {
+      if (event.buttons === 0) endPointer(event);
+    });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius *= Math.exp(event.deltaY * 0.001);
+      clampControls();
+      updateCamera();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("dblclick", () => {
+      controls.target.set(0, 2.2, -4);
+      controls.radius = 19;
+      controls.theta = Math.PI * 0.28;
+      controls.phi = 1.18;
+      updateCamera();
+    });
+
+    // Clickable hotspots and collectibles.
+    const interactive = [];
+
+    function registerInteractive(mesh, callback) {
+      mesh.userData.interactive = true;
+      interactive.push({ mesh, callback });
+    }
+
+    const collectible = new THREE.Mesh(new THREE.OctahedronGeometry(0.45, 0), mat.blueGlow);
+    collectible.position.set(-3.7, 2.55, 2.0);
+    collectible.scale.y = 1.4;
+    dungeons.add(collectible);
+    registerInteractive(collectible, () => {
+      collectible.visible = false;
+      shardGroup.visible = true;
+      shardLight.intensity = 22;
+      alert("The first shard of light has been recovered!");
+    });
+
+    const seal = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), mat.gold);
+    seal.position.set(0, 2.55, 0);
+    seal.scale.y = 1.4;
+    sealedChamber.add(seal);
+    registerInteractive(seal, () => {
+      seal.visible = false;
+      finalFlame.visible = true;
+      finalLight.intensity = 40;
+      alert("The Sacred Seal has been awakened!");
+    });
+
+    const shrine = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), mat.redGlow);
+    shrine.position.set(0, 3.0, 0);
+    shrine.scale.y = 1.5;
+    finalChamber.add(shrine);
+    registerInteractive(shrine, () => {
+      shrine.visible = false;
+      stalger.visible = false;
+      alert("The Dark Stalger has been vanquished. Hyrule is restored.");
+    });
+
+    const hotspots = [
+      { mesh: collectible, point: new THREE.Vector3(-3.7, 2.55, 2.0) },
+      { mesh: seal, point: new THREE.Vector3(0, 2.55, 0) },
+      { mesh: shrine, point: new THREE.Vector3(0, 3.0, 0) }
+    ];
+
+    for (const item of hotspots) {
+      item.mesh.userData.hotspot = item.point;
+    }
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      if (event.button !== 0) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(interactive, false);
+      if (hits.length) {
+        const item = hits[0].object.userData.hotspot;
+        if (item) {
+          item.mesh.visible = false;
+          alert(item.mesh === collectible ? "The first shard of light has been recovered!" :
+                item.mesh === seal ? "The Sacred Seal has been awakened!" :
+                "The Dark Stalger has been vanquished. Hyrule is restored.");
+        }
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle environmental motion.
+      crystals.forEach((crystal, i) => {
+        crystal.rotation.y = elapsed * (0.18 + i * 0.025) + i;
+        crystal.rotation.z = Math.sin(elapsed * 0.35 + i) * 0.035;
+        crystal.position.y = crystal.userData.baseY ?? 0;
+      });
+
+      for (let i = 0; i < prismShards.length; i++) {
+        const shard = prismShards[i];
+        const pulse = 1 + Math.sin(elapsed * 2.1 + i * 1.7) * 0.08;
+        shard.group.scale.setScalar(pulse);
+        shard.group.rotation.y = elapsed * 0.28 + i;
+        shard.group.position.y = 0.85 + Math.sin(elapsed * 1.4 + i) * 0.06;
+      }
+
+      stalger.position.y = Math.sin(elapsed * 1.25) * 0.08;
+      stalger.rotation.y = Math.sin(elapsed * 0.72) * 0.12;
+      stalgerHead.rotation.y = Math.sin(elapsed * 0.9) * 0.2;
+      stalgerEye.material.emissiveIntensity = 1.8 + Math.sin(elapsed * 3.2) * 0.8;
+
+      collectible.rotation.y = elapsed * 0.65;
+      collectible.rotation.z = Math.sin(elapsed * 0.7) * 0.12;
+
+      finalFlame.rotation.y = elapsed * 0.7;
+      finalFlame.scale.set(1 + Math.sin(elapsed * 2.2) * 0.08,
+                            1.65 + Math.sin(elapsed * 2.8) * 0.12,
+                            1 + Math.cos(elapsed * 2.1) * 0.06);
+
+      seal.rotation.y = elapsed * 0.3;
+      seal.rotation.z = Math.sin(elapsed * 0.7) * 0.1;
+
+      dust.rotation.y = elapsed * 0.008;
+      dust.position.y = Math.sin(elapsed * 0.18) * 0.15;
+
+      caveLight.intensity = 27 + Math.sin(elapsed * 1.1) * 3;
+      blueLight.intensity = 18 + Math.sin(elapsed * 0.8 + 1) * 3;
+      redLight.intensity = 14 + Math.sin(elapsed * 1.3 + 2) * 2;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

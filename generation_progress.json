@@ -97,5 +97,14 @@
     "filename": "011_super_mario_bros_3_dark_land_airships.html",
     "verified_working": true,
     "generated_at": "2026-11-01 01:36:26"
+  },
+  "12": {
+    "id": 12,
+    "game": "The Legend of Zelda",
+    "target": "Underworld Dungeons",
+    "platform": "NES",
+    "filename": "012_the_legend_of_zelda_underworld_dungeons.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 01:52:02"
   }
 }
