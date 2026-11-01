@@ -39,9 +39,11 @@ CRITICAL CONSTRAINTS:
 5. Create recognizable landmarks, atmospheric lighting/fog, and animated elements.
 6. RELIC (required): Include the world's hidden treasure relic object:
    - name: this game's single most iconic treasure object (proper name in quotes, e.g. Adventure's chalice, Pitfall's golden idol).
-   - x, z: a point on WALKABLE ground in this world, at least 10 units from spawn and at least 6 units from doors/landmarks, off the direct beeline.
+   - x, z: a point on WALKABLE ground in this world, at least 6 units from spawn and at least 3 units from doors/landmarks, off the direct beeline.
 7. HYGIENE (required): Do NOT create any object, variable, or group named 'glitch' (case-insensitive) to prevent collision with the Back Roms host entity.
-8. Output ONLY executable HTML inside ```html ... ```."""
+8. SCALE (required): Build SMALL, dense worlds — about half the size of a typical sprawling scene. The entire playable layout must fit within a 30 x 30 unit footprint (X span and Z span each at most 30 units) and at most 12 units of height. Make one rich, compact room/area, not a sprawling field: bring landmarks close and keep walking distances short.
+9. FOUR WALLS (required): Give the world a clear outer boundary made of four walls — north, east, south, and west — using whatever fits the theme (walls, cliffs, hedges, cave rock, fences, or a water's edge), forming a compact rectangular layout. The Back Roms host turns each entire wall into a passage, so keep the boundary walls plain, solid, and continuous, with no essential landmark built into or against them. Do NOT place a freestanding portal, rift, gate, doorway, or travel hole anywhere in the room — the walls are the exits, and the host draws the passage effect on them.
+10. Output ONLY executable HTML inside ```html ... ```."""
 
 
 def load_progress() -> dict:

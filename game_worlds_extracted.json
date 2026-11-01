@@ -9,7 +9,15 @@
   "description": "Castles & Mazes, Adventure (Atari 2600). A vivid classic environment representing Castles & Mazes from Adventure.",
   "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Castles & Mazes' from Adventure (Atari 2600). World brief: Castles & Mazes, Adventure (Atari 2600). A vivid classic environment representing Castles & Mazes from Adventure. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
   "brief": "Castles & Mazes, Adventure (Atari 2600). A vivid classic environment representing Castles & Mazes from Adventure.",
-  "page_title": "Adventure"
+  "page_title": "Adventure",
+  "image_url": "https://vgmaps.com/Atlas/Atari2600/Adventure-Variation1.png",
+  "image_kind": "map",
+  "image_urls": [
+   "https://vgmaps.com/Atlas/Atari2600/Adventure-Variation1.png"
+  ],
+  "image_kinds": [
+   "map"
+  ]
  },
  {
   "id": 2,
@@ -96,10 +104,14 @@
   "description_raw": "The story of Berzerk is a bit chilling. As the player of the game, you are forced to wander forever in a maze full of enemy robots, destroying as many as you can and moving from room to room until the robots ultimately defeat you. There is no escape, only the will to live.",
   "brief": "Electrified Neon Maze, Berzerk (Atari 2600). The story of Berzerk is a bit chilling. There is no escape, only the will to live.",
   "page_title": "Berzerk",
-  "image_url": null,
-  "image_kind": null,
-  "image_urls": [],
-  "image_kinds": []
+  "image_url": "https://cdn.wikimg.net/en/strategywiki/images/5/53/Berzerk_screen.png",
+  "image_kind": "screenshot",
+  "image_urls": [
+   "https://cdn.wikimg.net/en/strategywiki/images/5/53/Berzerk_screen.png"
+  ],
+  "image_kinds": [
+   "screenshot"
+  ]
  },
  {
   "id": 9,
@@ -109,12 +121,12 @@
   "url": "https://strategywiki.org/wiki/Warlords_(1980)",
   "section_count": 0,
   "description": "Quadrant Fortresses, Warlords (Atari 2600). It features the use of paddle controllers instead of joysticks. It featuredmultiplayerplay through wireless. Warlordsis anarcadegame released byAtariin1980.",
-  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Quadrant Fortresses' from Warlords (Atari 2600). The attached reference imagery is the primary guide: match its layout, landmarks, colors and mood. World brief: Quadrant Fortresses, Warlords (Atari 2600). It features the use of paddle controllers instead of joysticks. It featuredmultiplayerplay through wireless. Warlordsis anarcadegame released byAtariin1980. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
+  "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Quadrant Fortresses' from Warlords (Atari 2600). World brief: Quadrant Fortresses, Warlords (Atari 2600). It features the use of paddle controllers instead of joysticks. It featuredmultiplayerplay through wireless. Warlordsis anarcadegame released byAtariin1980. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls.",
   "description_raw": "Warlordsis anarcadegame released byAtariin1980. A version was also released for theAtari 2600console in1981. It features the use of paddle controllers instead of joysticks. The 2600 version of Warlords is often cited as one of the more popular Atari 2600 titles by classic video gamers, and was voted the 25th greatest video game in the 100th issue of Game Informer (Aug 2001 issue). A port of this game, including a new \"remix\" version, is included inRetro Atari Classicsfor theNintendo DS. It featuredmultiplayerplay through wireless. The game was released on theXbox 360viaXbox Live Arcadeon May 28,2008, featuring a new special HD mode and Xbox Live Vision Camera support.",
   "brief": "Quadrant Fortresses, Warlords (Atari 2600). It features the use of paddle controllers instead of joysticks. It featuredmultiplayerplay through wireless. Warlordsis anarcadegame released byAtariin1980.",
   "page_title": "Warlords",
-  "image_url": null,
-  "image_kind": null,
+  "image_url": "",
+  "image_kind": "",
   "image_urls": [],
   "image_kinds": []
  },

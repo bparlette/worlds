@@ -112,6 +112,9 @@
   #buttons button:hover { border-color: var(--amber); color: var(--amber); }
   #buttons button.on { background: rgba(243, 183, 68, .25); border-color: var(--amber); color: var(--amber); }
 
+  /* Favorite star — one big touch target in the top-right cluster */
+  #favBtn { font-size: 22px; line-height: 1; min-width: 48px; min-height: 44px; padding: 9px 11px; }
+
   /* Rift transition flash (tinted by destination fog color via JS) */
   #riftflash {
     position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0;
@@ -164,11 +167,13 @@
     <div class="where">World <b id="stIdx">#--- / -</b> · <span id="stName">—</span></div>
     <div class="relics">🏆 Relics <b id="stRelics">0 / 0</b></div>
     <div id="signalRow"><span id="signalDot"></span><span id="signalText">Relic signal</span></div>
-    <div class="hint">WASD / stick to walk · drag to look · walk into a rift to travel · P photo mode · J journal</div>
+    <div class="hint">WASD / stick to walk · drag to look · walk into a rift to travel · ☆ favorite · P photo mode · J journal</div>
   </div>
 
   <div id="buttons" class="hud">
+    <button id="favBtn" type="button" aria-label="Favorite this world" title="Favorite this world">☆</button>
     <button id="journalBtn" type="button">📖 Journal</button>
+    <button id="mapBtn" type="button">🗺 Map</button>
     <button id="photoBtn" type="button">📷 Photo</button>
     <button id="snapBtn" type="button">💾 Snap</button>
   </div>
@@ -199,6 +204,10 @@
     const RIFT_W = 2.2;
     const RIFT_H = 3.0;
     const RIFT_DEFAULT_TINT = 0x7a6cff;
+    // Whole-wall passages (Cherie, 2026-11-01): the Walker skins each
+    // assigned boundary wall with a host-drawn membrane (see makeWallRift).
+    const WALL_INSET = 0.3;     // membrane sits this far inside the wall plane
+    const WALL_ARM_DEPTH = 1.0; // a wall portal arms once the player is this far inside it
 
     // ---------------------------------------------------------------------
     // Renderer / scene / camera
@@ -247,8 +256,50 @@
     let disposeCount = 0;
 
     const idxOf = id => defs.findIndex(d => d.id === id);
-    const nextId = id => defs[(idxOf(id) + 1) % defs.length].id;
-    const prevId = id => defs[(idxOf(id) - 1 + defs.length) % defs.length].id;
+    // Traversal ring (Lane A): canonical manifest order by default. When a
+    // custom route is active, the ring IS that route's world order and rift
+    // destinations follow it. ringIds is settled at boot and on every route
+    // change, BEFORE any world is (re)built — portals bake their destination
+    // at build time (see applyRingChange). A world outside the ring gets
+    // rifts to the ring's ends, so resuming outside a route still walks.
+    let ringIds = null; // null = canonical (defs order)
+    function ringOrder() { return ringIds || defs.map(d => d.id); }
+    // The active route's world list, or null for the canonical ring.
+    // activeRoute's primary form (Lane B writes it) is an integer index
+    // into save.routes; a raw [ids] array, a numeric string, and a route
+    // name are all tolerated.
+    function activeRouteWorlds() {
+      const ar = save.activeRoute;
+      if (ar === null || ar === undefined) return null;
+      if (Array.isArray(ar)) return ar;
+      let idx = null;
+      if (typeof ar === "number" && Number.isInteger(ar)) idx = ar;
+      else if (typeof ar === "string" && ar.trim() !== "" && Number.isInteger(Number(ar))) idx = Number(ar);
+      else if (typeof ar === "string") {
+        const i = save.routes.findIndex(r => r.name === ar);
+        if (i !== -1) idx = i;
+      }
+      if (idx === null || !save.routes[idx]) return null;
+      return save.routes[idx].worlds;
+    }
+    function computeRing() {
+      const worlds = activeRouteWorlds();
+      if (Array.isArray(worlds)) {
+        const ids = [...new Set(worlds.filter(id => defById.has(id)))];
+        if (ids.length >= 1) return ids;
+      }
+      return null;
+    }
+    const nextId = id => {
+      const r = ringOrder();
+      const i = r.indexOf(id);
+      return i === -1 ? r[0] : r[(i + 1) % r.length];
+    };
+    const prevId = id => {
+      const r = ringOrder();
+      const i = r.indexOf(id);
+      return i === -1 ? r[r.length - 1] : r[(i - 1 + r.length) % r.length];
+    };
     function allowedIds(id) { return new Set([id, nextId(id), prevId(id)]); }
 
     async function loadModule(id) {
@@ -276,17 +327,27 @@
       // Ground raycasts only ever test real meshes (sprites/points excluded —
       // sprite raycasting also requires a camera on the raycaster).
       inst.group.traverse(o => { if (o.isMesh) rec.meshes.push(o); });
-      // Portals are built after the group exists; ground-sample the door
-      // spots first (raycast this world's own meshes).
+      // Portals are built after the group exists. Each door anchor picks
+      // its boundary wall from the group's bounds (assignWalls) and the
+      // Walker skins that whole wall with a membrane; if the bounds are
+      // unusable, the legacy point rift at the door anchor is kept.
+      const bounds = worldBounds(rec);
+      const wallMap = bounds ? assignWalls(rec, bounds) : null;
       for (const side of ["next", "prev"]) {
         const door = inst.doors[side];
-        const gy = sampleGround(rec, door.x, door.z, 40, 15);
         const destId = side === "next" ? nextId(id) : prevId(id);
-        const portal = makeRift(defById.get(destId), destId);
-        portal.group.position.set(door.x, gy === null ? 0 : gy, door.z);
+        let portal = null;
+        if (wallMap && wallMap[side]) {
+          portal = makeWallRift(defById.get(destId), destId, wallMap[side], bounds);
+        }
+        if (!portal) {
+          const gy = sampleGround(rec, door.x, door.z, 40, 15);
+          portal = makeRift(defById.get(destId), destId);
+          portal.group.position.set(door.x, gy === null ? 0 : gy, door.z);
+          portal.armed = true;
+        }
         portal.side = side;
         portal.destId = destId;
-        portal.armed = true;
         rec.group.add(portal.group);
         rec.portals.push(portal);
       }
@@ -337,26 +398,217 @@
     }
 
     // ---------------------------------------------------------------------
-    // Walker's Journal + relic hunt state (persisted in localStorage)
+    // Back Roms save v2 (persisted in localStorage) — Lane A.
+    //
+    // ONE store for everything durable: the Walker's Journal (found
+    // relics) plus position resume, visited worlds, star favorites and
+    // custom routes. It lives under the ORIGINAL journal key
+    // ("backroms-journal-v1"), and the stored value carries BOTH
+    // representations, kept consistent on every write:
+    //   - the v2 schema fields (below), and
+    //   - the v1 per-world relic map { "<id>": { found, name, at } }.
+    // Readers of either shape (Lane B reads relics as v2 relics[] union
+    // v1 found entries) stay correct, v1 entries are never deleted, and a
+    // legacy v1-only value is migrated forward on first load.
+    //
+    // Schema: { v: 2, world, pos: [x, groundY, z], yaw, relics: [ids],
+    //           relicMeta: { id: { name, at } }, visited: [ids],
+    //           favorites: [ids], routes: [{ name, worlds: [ids] }],
+    //           activeRoute: null | integer index into routes (primary,
+    //           Lane B's form) | [ids] (tolerated raw form) }
+    //
+    // Field ownership: the walker owns world/pos/yaw/visited/favorites/
+    // relics; Lane B owns routes/activeRoute and writes them with its own
+    // read-modify-write. saveNow() therefore syncs FROM storage first
+    // (adoptStored) so this page's throttled snapshots can never clobber
+    // a fresher map write — and picks up outside relic entries the same
+    // way. BackRomsState.set() persists through persistSave() directly,
+    // so a patch is never stomped by its own sync.
     // ---------------------------------------------------------------------
-    const JOURNAL_KEY = "backroms-journal-v1";
-    let journal = {};
-    try {
-      const raw = JSON.parse(localStorage.getItem(JOURNAL_KEY) || "{}");
-      if (raw && typeof raw === "object") journal = raw;
-    } catch (e) { journal = {}; }
+    const SAVE_KEY = "backroms-journal-v1";
+    const SAVE_VERSION = 2;
+    const SAVE_FIELDS = new Set([
+      "v", "world", "pos", "yaw", "relics", "relicMeta",
+      "visited", "favorites", "routes", "activeRoute"
+    ]);
+    let pendingRingRebuild = false;
 
-    function journalSave() {
-      try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal)); } catch (e) {}
+    function defaultSave() {
+      return {
+        v: SAVE_VERSION,
+        world: null, pos: null, yaw: 0,
+        relics: [], relicMeta: {},
+        visited: [], favorites: [],
+        routes: [], activeRoute: null
+      };
     }
-    function relicFound(id) { return !!(journal[id] && journal[id].found); }
+
+    function normalizeRoutes(list) {
+      if (!Array.isArray(list)) return [];
+      return list
+        .filter(r => r && typeof r === "object" && Array.isArray(r.worlds))
+        .map(r => ({ ...r, name: String(r.name || "Route"),
+                     worlds: r.worlds.filter(x => typeof x === "string") }));
+    }
+
+    function normalizeActiveRoute(v) {
+      if (v === null || v === undefined) return null;
+      if (Array.isArray(v)) return v.filter(x => typeof x === "string");
+      if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v);
+      if (typeof v === "string") {
+        const t = v.trim();
+        if (t !== "" && Number.isInteger(Number(t))) return Number(t);
+        return v; // a route name — resolved against routes at ring time
+      }
+      if (typeof v === "object" && Number.isInteger(v.index)) return v.index;
+      return null;
+    }
+
+    // The v1 per-world relic entries riding inside the stored object:
+    // any non-schema key whose value has the { found: bool, ... } shape.
+    function extractLegacyEntries(raw) {
+      const out = {};
+      for (const [k, val] of Object.entries(raw)) {
+        if (SAVE_FIELDS.has(k)) continue;
+        if (val && typeof val === "object" && typeof val.found === "boolean") out[k] = val;
+      }
+      return out;
+    }
+
+    function loadSave() {
+      const s = defaultSave();
+      let raw = null;
+      try { raw = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (e) { raw = null; }
+      if (!raw || typeof raw !== "object") return { save: s, legacy: {} };
+      const legacy = extractLegacyEntries(raw);
+      if (raw.v === SAVE_VERSION) {
+        if (typeof raw.world === "string") s.world = raw.world;
+        if (Array.isArray(raw.pos) && raw.pos.length === 3 && raw.pos.every(n => Number.isFinite(n))) {
+          s.pos = raw.pos.slice();
+        }
+        if (Number.isFinite(raw.yaw)) s.yaw = raw.yaw;
+        for (const k of ["relics", "visited", "favorites"]) {
+          if (Array.isArray(raw[k])) s[k] = raw[k].filter(x => typeof x === "string");
+        }
+        if (raw.relicMeta && typeof raw.relicMeta === "object") {
+          for (const [id, m] of Object.entries(raw.relicMeta)) {
+            if (m && typeof m === "object") {
+              s.relicMeta[id] = { name: String(m.name || "Relic"), at: Number(m.at) || 0 };
+            }
+          }
+        }
+        s.routes = normalizeRoutes(raw.routes);
+        s.activeRoute = normalizeActiveRoute(raw.activeRoute);
+      }
+      // Relics are the UNION of the v2 list and v1 found entries, for
+      // both stored shapes — a v1-only value migrates through this loop.
+      for (const [id, e] of Object.entries(legacy)) {
+        if (e.found && !s.relics.includes(id)) {
+          s.relics.push(id);
+          if (!s.relicMeta[id]) s.relicMeta[id] = { name: e.name || "Relic", at: e.at || 0 };
+        }
+      }
+      return { save: s, legacy };
+    }
+
+    const _loaded = loadSave();
+    const save = _loaded.save;
+    const legacyEntries = _loaded.legacy; // v1 per-world entries, kept verbatim
+
+    // Merge a stored object into the in-memory save: Lane-B-owned fields
+    // (routes/activeRoute) are adopted wholesale; relics union in from
+    // every representation; relicMeta fills gaps. Session-owned scalar
+    // state (world/pos/yaw/visited/favorites) is NOT adopted — this page
+    // is its only writer.
+    function adoptStored(stored) {
+      if (Array.isArray(stored.routes)) save.routes = normalizeRoutes(stored.routes);
+      if ("activeRoute" in stored) save.activeRoute = normalizeActiveRoute(stored.activeRoute);
+      if (Array.isArray(stored.relics)) {
+        for (const id of stored.relics) {
+          if (typeof id === "string" && !save.relics.includes(id)) save.relics.push(id);
+        }
+      }
+      if (stored.relicMeta && typeof stored.relicMeta === "object") {
+        for (const [id, m] of Object.entries(stored.relicMeta)) {
+          if (!save.relicMeta[id] && m && typeof m === "object") {
+            save.relicMeta[id] = { name: String(m.name || "Relic"), at: Number(m.at) || 0 };
+          }
+        }
+      }
+      for (const [id, e] of Object.entries(extractLegacyEntries(stored))) {
+        legacyEntries[id] = e;
+        if (e.found && !save.relics.includes(id)) {
+          save.relics.push(id);
+          if (!save.relicMeta[id]) save.relicMeta[id] = { name: e.name || "Relic", at: e.at || 0 };
+        }
+      }
+    }
+
+    // Read storage and adopt what other writers changed. If adopting
+    // changed the effective ring, schedule a portal rebuild for the next
+    // calm frame (tick performs it). Returns the stored object (or null).
+    function syncFromStorage() {
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (e) { stored = null; }
+      if (!stored || typeof stored !== "object") return null;
+      const before = (defs.length && current) ? JSON.stringify(ringOrder()) : null;
+      adoptStored(stored);
+      if (before !== null &&
+          JSON.stringify(computeRing() || defs.map(d => d.id)) !== before) {
+        pendingRingRebuild = true;
+      }
+      return stored;
+    }
+
+    // Serialize the save with BOTH representations: unknown stored keys
+    // ride along, schema fields come from memory, and every found relic
+    // is (re)written as a v1 per-world entry next to the v2 fields.
+    function persistSave(stored) {
+      try {
+        const out = {};
+        if (stored && typeof stored === "object") {
+          for (const [k, v] of Object.entries(stored)) {
+            if (!SAVE_FIELDS.has(k) && !(k in legacyEntries)) out[k] = v;
+          }
+        }
+        Object.assign(out, save);
+        for (const [id, e] of Object.entries(legacyEntries)) out[id] = e;
+        for (const id of save.relics) {
+          const m = save.relicMeta[id] || {};
+          out[id] = { found: true, name: m.name || "Relic", at: m.at || 0 };
+        }
+        localStorage.setItem(SAVE_KEY, JSON.stringify(out));
+      } catch (e) {}
+    }
+
+    function saveNow() { persistSave(syncFromStorage()); }
+    // Kept name for the existing journal call sites.
+    function journalSave() { saveNow(); }
+    function relicFound(id) { return save.relics.includes(id); }
+
+    // Snapshot the live position into the save and persist it. Runs on
+    // every world entry (boot / rift crossing / travel), on a ~5 s throttle
+    // while playing, and on pagehide — so the worst case after a crash is
+    // a few seconds of walking lost, never a corrupted save.
+    function snapshotSave() {
+      if (!current) return;
+      save.world = current.id;
+      save.pos = [player.x, player.groundY, player.z];
+      save.yaw = player.yaw;
+      saveNow();
+    }
+
+    function markVisited(id) {
+      if (!save.visited.includes(id)) save.visited.push(id);
+    }
+    function isFavorite(id) { return save.favorites.includes(id); }
     function foundCount() { return defs.filter(d => relicFound(d.id)).length; }
     function updateRelicCounter() { stRelics.textContent = `${foundCount()} / ${defs.length}`; }
 
     function renderJournal() {
       journalList.innerHTML = defs.map(d => {
         const got = relicFound(d.id);
-        const name = got ? (journal[d.id].name || "Relic") : "· · · hidden";
+        const name = got ? ((save.relicMeta[d.id] || {}).name || "Relic") : "· · · hidden";
         return `<div class="jrow"><span class="jid">#${d.id}</span>` +
           `<span class="jworld">${d.title}</span>` +
           `<span class="jrelic ${got ? "got" : ""}">${got ? "✦ " : "✧ "}${name}</span>` +
@@ -370,6 +622,26 @@
       if (open) renderJournal();
     }
     el("journalBtn").addEventListener("click", toggleJournal);
+
+    // ---------------------------------------------------------------------
+    // Star favorite (Lane A) — ONE button, top-right, big touch target.
+    // Filled ★ + .on when the current world is a favorite, ☆ otherwise.
+    // No thumbs, no other rating UI (Cherie's call, 2026-11-01).
+    // ---------------------------------------------------------------------
+    const favBtn = el("favBtn");
+    function refreshStar() {
+      const on = !!current && isFavorite(current.id);
+      favBtn.textContent = on ? "★" : "☆";
+      favBtn.classList.toggle("on", on);
+    }
+    function toggleFavorite() {
+      if (!current) return;
+      const i = save.favorites.indexOf(current.id);
+      if (i === -1) save.favorites.push(current.id); else save.favorites.splice(i, 1);
+      saveNow();
+      refreshStar();
+    }
+    favBtn.addEventListener("click", toggleFavorite);
 
     // ---------------------------------------------------------------------
     // Relic prop — PURE 3D GEOMETRY ONLY (hard constraint: no sprites, no
@@ -512,6 +784,127 @@
     }
 
     // ---------------------------------------------------------------------
+    // Whole-wall passages (Cherie, 2026-11-01) — HOST-LAYERED membranes.
+    // Qwen builds plain solid boundary walls (generator rule 9 / spec R5);
+    // the passage surface is drawn by the Walker, exactly the way the
+    // relic prop and the old oval rift are host-drawn: for each neighbor
+    // (ring next/prev, or route neighbors), the door anchor's direction
+    // from the bounds centre picks one of the four boundary walls, and
+    // that wall's segment — corner to corner from the module group's
+    // bounds — is skinned with a membrane inset WALL_INSET inside the
+    // wall plane. Unassigned walls get no membrane and no trigger.
+    // Travel = crossing the wall plane within the span (see tick).
+    // ---------------------------------------------------------------------
+    function worldBounds(rec) {
+      const finite = b => [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z].every(Number.isFinite);
+      const whole = new THREE.Box3().setFromObject(rec.group);
+      if (!whole.isEmpty() && finite(whole)) return whole;
+      // A NaN-poisoned object (seen in the wild) must not poison the box:
+      // fall back to a per-mesh union that skips non-finite boxes.
+      const acc = new THREE.Box3(); const tmp = new THREE.Box3();
+      for (const m of rec.meshes) {
+        tmp.setFromObject(m);
+        if (!tmp.isEmpty() && finite(tmp)) acc.union(tmp);
+      }
+      return acc.isEmpty() || !finite(acc) ? null : acc;
+    }
+
+    function assignWalls(rec, bounds) {
+      const cx = (bounds.min.x + bounds.max.x) / 2;
+      const cz = (bounds.min.z + bounds.max.z) / 2;
+      if (!(bounds.max.x - bounds.min.x > 0) || !(bounds.max.z - bounds.min.z > 0)) return null;
+      // sign: inside-positive direction — sd = sign * (coord - plane) is
+      // the player's depth inside the wall (positive = inside the world).
+      const walls = {
+        E: { axis: "x", plane: bounds.max.x, sign: -1, a0: bounds.min.z, a1: bounds.max.z },
+        W: { axis: "x", plane: bounds.min.x, sign: 1, a0: bounds.min.z, a1: bounds.max.z },
+        N: { axis: "z", plane: bounds.max.z, sign: -1, a0: bounds.min.x, a1: bounds.max.x },
+        S: { axis: "z", plane: bounds.min.z, sign: 1, a0: bounds.min.x, a1: bounds.max.x }
+      };
+      const doors = ["next", "prev"].map(side => {
+        const d = rec.inst.doors[side];
+        const vx = d.x - cx, vz = d.z - cz;
+        const len = Math.hypot(vx, vz) || 1;
+        const ux = vx / len, uz = vz / len;
+        const score = { E: ux, W: -ux, N: uz, S: -uz };
+        return { side, score, best: Math.max(ux, -ux, uz, -uz) };
+      });
+      // The more confident door picks first, so the two neighbors never
+      // land on the same wall.
+      doors.sort((a, b) => b.best - a.best);
+      const used = new Set(); const out = {};
+      for (const d of doors) {
+        const pick = ["E", "W", "N", "S"]
+          .sort((a, b) => d.score[b] - d.score[a])
+          .find(w => !used.has(w));
+        used.add(pick);
+        out[d.side] = walls[pick];
+      }
+      return out;
+    }
+
+    function makeWallRift(destDef, destId, wall, bounds) {
+      const spanLen = wall.a1 - wall.a0;
+      const height = bounds.max.y - bounds.min.y;
+      if (!(spanLen > 0) || !(height > 0)) return null;
+      const cy = (bounds.min.y + bounds.max.y) / 2;
+      const mid = (wall.a0 + wall.a1) / 2;
+      const g = new THREE.Group();
+
+      const membraneGeo = new THREE.PlaneGeometry(spanLen, height);
+      const membraneMat = new THREE.MeshBasicMaterial({
+        color: RIFT_DEFAULT_TINT, transparent: true, opacity: 0.5,
+        side: THREE.DoubleSide, depthWrite: false
+      });
+      const membrane = new THREE.Mesh(membraneGeo, membraneMat);
+      membrane.userData = { rift: true, shape: "wall", width: spanLen, height, dest: destId };
+      g.add(membrane);
+
+      const coreGeo = new THREE.PlaneGeometry(spanLen * 0.96, height * 0.92);
+      const coreMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.28,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+      });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      core.position.z = 0.02;
+      g.add(core);
+
+      const rimGeo = new THREE.PlaneGeometry(spanLen + 0.35, height + 0.35);
+      const rimMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.9,
+        side: THREE.DoubleSide, depthWrite: false
+      });
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.position.z = -0.02;
+      g.add(rim);
+
+      const label = makeLabelSprite(`#${destDef.id} · ${destDef.title}`);
+      label.position.set(0, height / 2 + 0.85, 0);
+      g.add(label);
+
+      // Local +Z points into the world; the segment is skinned
+      // WALL_INSET inside the wall plane so it never z-fights the
+      // scene's own boundary wall.
+      const inset = wall.plane + wall.sign * WALL_INSET;
+      if (wall.axis === "z") {
+        g.position.set(mid, cy, inset);
+        g.rotation.y = wall.sign > 0 ? 0 : Math.PI;
+      } else {
+        g.position.set(inset, cy, mid);
+        g.rotation.y = wall.sign > 0 ? Math.PI / 2 : -Math.PI / 2;
+      }
+      return {
+        group: g, membrane, core, rim, label,
+        memWobble: wobbleBase(membraneGeo),
+        rimWobble: wobbleBase(rimGeo),
+        phase: Math.random() * Math.PI * 2,
+        yaw: g.rotation.y,
+        wall, wallWidth: spanLen, wallHeight: height,
+        armed: false // arms once the player is seen WALL_ARM_DEPTH inside
+      };
+    }
+
+    // ---------------------------------------------------------------------
     // Ground sampling: highest mesh surface at (x,z) not above refY + cap.
     // ---------------------------------------------------------------------
     function sampleGround(rec, x, z, originLift, cap) {
@@ -650,6 +1043,12 @@
         const gy = sampleGround(rec, player.x, player.z, 40, 15);
         player.groundY = gy === null ? 0 : gy;
       }
+      // Lane A: every entry (boot, rift swap, travel, ring rebuild) marks
+      // the world visited, refreshes the star, and snapshots the position —
+      // this one hook is what "save on portal crossing" hangs off.
+      markVisited(rec.id);
+      refreshStar();
+      snapshotSave();
       showTitle(rec.def);
       sweepLoaded();
     }
@@ -964,7 +1363,8 @@
 
     function collectRelic() {
       const r = current.inst.relic;
-      journal[current.id] = { found: true, name: r.name, at: Date.now() };
+      if (!save.relics.includes(current.id)) save.relics.push(current.id);
+      save.relicMeta[current.id] = { name: r.name, at: Date.now() };
       journalSave();
       if (current.relicProp) current.relicProp.group.visible = false;
       updateRelicCounter();
@@ -1007,6 +1407,8 @@
     const clock = new THREE.Clock();
     let elapsed = 0;
     let preloadTimer = 0;
+    let saveTimer = 0;
+    const lastSnap = { x: Infinity, z: Infinity, yaw: Infinity };
     let burstWasActive = false;
     let burstSkipFrame = false;
 
@@ -1018,6 +1420,18 @@
       elapsed += dt;
 
       if (!current) { renderer.render(scene, camera); return; }
+
+      // --- saved state: snapshot ~every 5 s, only when actually moved ---
+      saveTimer -= dt;
+      if (saveTimer <= 0) {
+        saveTimer = 5;
+        if (Math.abs(player.x - lastSnap.x) > 0.05 ||
+            Math.abs(player.z - lastSnap.z) > 0.05 ||
+            Math.abs(player.yaw - lastSnap.yaw) > 0.01) {
+          lastSnap.x = player.x; lastSnap.z = player.z; lastSnap.yaw = player.yaw;
+          snapshotSave();
+        }
+      }
 
       // --- transition state (time-bend) ---
       // Progress accumulates frame time, so the bend lasts ~0.6s of screen
@@ -1059,12 +1473,23 @@
         }
       }
 
+      if (!transition && pendingRingRebuild) {
+        pendingRingRebuild = false;
+        applyRingChange();
+      }
+
       // --- current world ambient animation ---
       current.t += worldDt;
       current.inst.update(current.t, worldDt);
 
       // --- rift animation: wobble, shimmer, gentle Y billboard ---
       for (const p of current.portals) {
+        if (p.wall) {
+          // Wall membranes are fixed skins: no wobble, no billboard —
+          // just a breathing shimmer on the membrane itself.
+          p.membrane.material.opacity = 0.44 + 0.08 * Math.sin(elapsed * 2.2 + p.phase);
+          continue;
+        }
         applyWobble(p.membrane.geometry, p.memWobble, elapsed, p.phase, 0.05);
         applyWobble(p.rim.geometry, p.rimWobble, elapsed, p.phase + 0.7, 0.07);
         p.core.scale.set(RIFT_W / 2 * (1 + 0.08 * Math.sin(elapsed * 3.1 + p.phase)),
@@ -1117,6 +1542,20 @@
         // --- portal arming, preload, triggers ---
         preloadTimer -= dt;
         for (const p of current.portals) {
+          if (p.wall) {
+            // Whole-wall passage: sd is the player's depth inside the
+            // wall plane (positive = inside); travel fires on CROSSING
+            // the plane (sd <= 0) anywhere within the wall's span.
+            const w = p.wall;
+            const coord = w.axis === "x" ? player.x : player.z;
+            const along = w.axis === "x" ? player.z : player.x;
+            const sd = w.sign * (coord - w.plane);
+            const within = along >= w.a0 && along <= w.a1;
+            if (!p.armed && sd > WALL_ARM_DEPTH) p.armed = true;
+            if (p.armed && sd <= 0 && within) { beginTransition(p.side); break; }
+            if (preloadTimer <= 0 && within && Math.abs(sd) < PRELOAD_DIST) ensureLoaded(p.destId);
+            continue;
+          }
           const d = Math.hypot(player.x - p.group.position.x, player.z - p.group.position.z);
           if (!p.armed && d > REARM_DIST) p.armed = true;
           if (p.armed && d < TRIGGER_DIST) { beginTransition(p.side); break; }
@@ -1169,8 +1608,31 @@
       defs.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
       defs.forEach(d => defById.set(d.id, d));
       updateRelicCounter();
-      const first = await ensureLoaded(defs[0].id);
-      setCurrent(first, { ...first.inst.spawn });
+      // Ring before any world is built: portal destinations bake at build
+      // time, so the active route must be settled first (Lane A).
+      ringIds = computeRing();
+      // Resume (Lane A): return to the saved world when it still exists.
+      // The exact spot is restored only if the ground is still there and
+      // within ±4 units of the saved height — worlds get regenerated, and
+      // a stale save falls back to the world's normal spawn with relics,
+      // visited and favorites intact. A stale save never soft-locks.
+      let startId = defs[0].id;
+      let spawnOverride = null;
+      if (save.world && defById.has(save.world)) {
+        startId = save.world;
+        if (Array.isArray(save.pos)) {
+          const sx = save.pos[0], sy = save.pos[1], sz = save.pos[2];
+          if (Number.isFinite(sx) && Number.isFinite(sz)) {
+            const probe = await ensureLoaded(startId);
+            const gy = sampleGround(probe, sx, sz, 40, 15);
+            if (gy !== null && (!Number.isFinite(sy) || Math.abs(gy - sy) <= 4)) {
+              spawnOverride = { x: sx, z: sz, yaw: Number.isFinite(save.yaw) ? save.yaw : 0 };
+            }
+          }
+        }
+      }
+      const first = await ensureLoaded(startId);
+      setCurrent(first, spawnOverride || { ...first.inst.spawn });
       // Preload both neighbours so the first crossings are instant.
       ensureLoaded(nextId(first.id));
       ensureLoaded(prevId(first.id));
@@ -1182,12 +1644,100 @@
       el("loading").lastElementChild.textContent = "Failed to load — " + err.message;
     });
 
+    // Persist on the way out (Lane A): pagehide is the reliable mobile
+    // signal; visibilitychange covers tab kills that never fire pagehide.
+    window.addEventListener("pagehide", snapshotSave);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") snapshotSave();
+    });
+
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     });
+
+    // ---------------------------------------------------------------------
+    // BackRomsState — Lane B's (map) interface to this save (Lane A owns
+    // the store; the map reads/writes through here, never around it).
+    //   get()          -> deep copy of the v2 save (storage-synced first)
+    //   set(patch)     -> merge durable fields (favorites, visited, routes,
+    //                     activeRoute) and persist; returns a Promise that
+    //                     resolves after any ring rebuild. world/pos/yaw/
+    //                     relics are walker-owned and ignored in patches.
+    //   travelTo(id)   -> jump the player to a world now, arriving at its
+    //                     normal spawn; Promise<boolean> success.
+    // activeRoute's primary form is an integer index into routes (or
+    // null); a raw [ids] list is tolerated. A route change — including
+    // editing the ACTIVE route's world list — rebuilds every built world
+    // so baked portal destinations follow the new ring; if a rift bend is
+    // in flight the rebuild is deferred to the first frame after it, and
+    // routes written directly to storage by the map are adopted (and the
+    // ring rebuilt) on the walker's next save sync.
+    // ---------------------------------------------------------------------
+    async function applyRingChange() {
+      if (!defs.length) return;
+      ringIds = computeRing();
+      const curId = current ? current.id : null;
+      for (const id of [...instances.keys()]) disposeWorld(id);
+      const targetId = curId && defById.has(curId) ? curId
+        : (ringIds && ringIds.length ? ringIds[0] : defs[0].id);
+      const rec = await ensureLoaded(targetId);
+      if (targetId === curId) {
+        setCurrent(rec, { x: player.x, z: player.z, yaw: player.yaw });
+      } else {
+        setCurrent(rec, { ...rec.inst.spawn });
+      }
+      ensureLoaded(nextId(targetId));
+      ensureLoaded(prevId(targetId));
+    }
+
+    window.BackRomsState = {
+      get() {
+        syncFromStorage();
+        return JSON.parse(JSON.stringify(save));
+      },
+      async set(patch) {
+        if (!patch || typeof patch !== "object") return;
+        if (Array.isArray(patch.favorites)) {
+          save.favorites = patch.favorites.filter(x => typeof x === "string");
+        }
+        if (Array.isArray(patch.visited)) {
+          save.visited = patch.visited.filter(x => typeof x === "string");
+        }
+        if (Array.isArray(patch.routes)) save.routes = normalizeRoutes(patch.routes);
+        if ("activeRoute" in patch) save.activeRoute = normalizeActiveRoute(patch.activeRoute);
+        // Persist the patch BEFORE any storage sync, so the sync inside
+        // later saveNow() calls can never stomp it with older stored data.
+        persistSave(null);
+        refreshStar();
+        if (defs.length) {
+          const eff = JSON.stringify(computeRing() || defs.map(d => d.id));
+          if (eff !== JSON.stringify(ringOrder())) {
+            if (transition) pendingRingRebuild = true;
+            else await applyRingChange();
+          }
+        }
+      },
+      async travelTo(id) {
+        if (!defById.has(id) || transition) return false;
+        if (current && current.id === id) return true;
+        const rec = await ensureLoaded(id);
+        if (transition) return false;
+        setCurrent(rec, { ...rec.inst.spawn });
+        ensureLoaded(nextId(id));
+        ensureLoaded(prevId(id));
+        return true;
+      }
+    };
+
+    // Lane B (map overlay) host wiring: a map tap on a visited world
+    // rifts the player there via the walker's own travelTo. BackRomsMap
+    // reads onTravel at tap time; mapview.js loads at end of body.
+    if (window.BackRomsMap) {
+      window.BackRomsMap.onTravel = (id) => { window.BackRomsState.travelTo(id); };
+    }
 
     // ---------------------------------------------------------------------
     // Test hooks
@@ -1210,8 +1760,8 @@
       portalInfo() {
         if (!current) return [];
         return current.portals.map(p => ({
-          side: p.side, dest: p.destId, shape: "oval",
-          width: RIFT_W, height: RIFT_H,
+          side: p.side, dest: p.destId, shape: p.wall ? "wall" : "oval",
+          width: p.wall ? p.wallWidth : RIFT_W, height: p.wall ? p.wallHeight : RIFT_H,
           tint: "#" + p.membrane.material.color.getHexString()
         }));
       },
@@ -1229,7 +1779,17 @@
         };
       },
       relicCount() { return { found: foundCount(), total: defs.length }; },
-      journal() { return JSON.parse(JSON.stringify(journal)); },
+      // Legacy v1-shaped view (existing tests/tools): found relics only.
+      journal() {
+        const out = {};
+        for (const id of save.relics) {
+          const m = save.relicMeta[id] || {};
+          out[id] = { found: true, name: m.name || "Relic", at: m.at || 0 };
+        }
+        return out;
+      },
+      save() { return JSON.parse(JSON.stringify(save)); },
+      ring() { return ringOrder().slice(); },
       setYaw(yaw) { player.yaw = yaw; }
     };
 
@@ -1275,5 +1835,6 @@
       forceLookCycle() { glitchRelocate(); }
     };
   </script>
+  <script src="mapview.js"></script>
 </body>
 </html>

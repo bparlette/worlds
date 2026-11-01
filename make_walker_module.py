@@ -11,21 +11,37 @@ Follows the exact module contract and verification gate:
 - R5: Doors { next: {x, z}, prev: {x, z} }
 - R6: Env { background, fogColor, fogDensity }
 - §4: Headless Node.js validation gate before entering walk/worlds.json
+- R9: Top-down map thumbnail baked to walk/thumbs/<id>.png after a module
+  validates (headless Chrome, bounds-framed orthographic render, 512x512).
+  Decorative only: a bake failure logs a warning and never fails conversion.
 """
 
 import os
 import re
+import sys
 import json
+import base64
+import shutil
+import struct
+import tempfile
+import threading
+import functools
 import subprocess
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
-WORLDS_DIR = "/Users/braidpairlette/worlds"
+WORLDS_DIR = os.environ.get("WORLDS_DIR", "/Users/braidpairlette/worlds")
 SCENES_DIR = os.path.join(WORLDS_DIR, "scenes")
 WALK_DIR = os.path.join(WORLDS_DIR, "walk")
 MODULES_DIR = os.path.join(WALK_DIR, "modules")
+THUMBS_DIR = os.path.join(WALK_DIR, "thumbs")
 MANIFEST_PATH = os.path.join(WALK_DIR, "worlds.json")
 REGISTRY_PATH = os.path.join(WORLDS_DIR, "game_worlds_extracted.json")
 
 os.makedirs(MODULES_DIR, exist_ok=True)
+os.makedirs(THUMBS_DIR, exist_ok=True)
+
+# R9 master switch; the CLI flag --no-thumbs turns it off for a run.
+BAKE_THUMBS_ENABLED = True
 
 
 def parse_scene_to_walker(html_content: str, spec: dict) -> str:
@@ -274,6 +290,265 @@ try {{
         return {"valid": False, "error": str(e)}
 
 
+# ---------------------------------------------------------------------------
+# R9: Top-down map thumbnails (walk/thumbs/<id>.png)
+#
+# After a module validates, render it once in headless Chrome from an
+# orthographic camera directly overhead, framed on the world group's own
+# bounds, and save a 512x512 PNG for the Back Roms map overview. The bake
+# page contains ONLY the module's group in a bare scene: modules hold no
+# HUD/DOM (R2) and the Walker draws rift/relic props itself, so the frame
+# is pure world and there is nothing to hide. Fog is left off for the
+# survey view; the world's own env.background becomes the tile background.
+#
+# A bake failure must NEVER fail a conversion: every failure path logs a
+# warning and returns None. Modules are the product; thumbnails are not.
+# ---------------------------------------------------------------------------
+
+THUMB_SIZE = 512
+THUMB_MARGIN = 1.08  # frustum half-extent = max(bounds x/z span) / 2 * this
+# Cherie's 80% rule (2026-11-01): the survey clips at 80% of the world's
+# height, so enclosed worlds (caves, roofed interiors) render their
+# INTERIOR — the camera effectively sits inside the roof — instead of
+# the roof shell. Implemented as the ortho camera's near plane.
+THUMB_CUT_FRACTION = 0.8
+
+_BAKE_HTML = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#000}canvas{display:block}</style></head>
+<body>
+<script type="module">
+import * as THREE from "./three.module.min.js";
+import { createWorld } from "./module_bake.js";
+// Bounds that survive NaN-poisoned objects: a single object with NaN
+// vertices/transform makes Box3.setFromObject(group) return NaN bounds
+// (seen in the wild: world 007's crystals go NaN after one update tick).
+// Fall back to a per-object union that simply skips non-finite boxes.
+function finiteBox(b) {
+  return [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z].every(Number.isFinite);
+}
+function worldBounds(group) {
+  const whole = new THREE.Box3().setFromObject(group);
+  if (finiteBox(whole)) return whole;
+  const acc = new THREE.Box3();
+  const tmp = new THREE.Box3();
+  group.traverse(o => {
+    if (o.isMesh || o.isPoints || o.isLine) {
+      tmp.setFromObject(o);
+      if (finiteBox(tmp)) acc.union(tmp);
+    }
+  });
+  return acc;
+}
+const out = document.createElement('pre');
+out.id = 'bake-out';
+try {
+  const world = createWorld(THREE);
+  const scene = new THREE.Scene();
+  if (world.env && typeof world.env.background === 'number') {
+    scene.background = new THREE.Color(world.env.background);
+  }
+  scene.add(world.group);
+  if (typeof world.update === 'function') { try { world.update(0, 0.016); } catch (e) {} }
+  scene.updateMatrixWorld(true);
+  const box = worldBounds(world.group);
+  if (box.isEmpty()) throw new Error('empty world bounds');
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const span = Math.max(size.x, size.z);
+  const half = Math.max(span / 2, 1) * 1.08;
+  const camY = box.max.y + Math.max(size.y, 1) + span + 10;
+  // 80% height rule: clip away everything above cutY via the near plane,
+  // so the survey sees the highest surface BELOW 80% of the world's
+  // height in each column (interior floors under roofs/cave shells).
+  // Near-flat worlds (no real height to be inside of) skip the cut.
+  const cutY = box.min.y + size.y * 0.8;
+  const near = size.y > span * 0.02 ? Math.max(camY - cutY, 0.1) : 0.1;
+  const cam = new THREE.OrthographicCamera(-half, half, half, -half, near, 100000);
+  cam.up.set(0, 0, -1);
+  cam.position.set(center.x, camY, center.z);
+  cam.lookAt(center.x, box.min.y, center.z);
+  cam.updateProjectionMatrix();
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setSize(512, 512);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  document.body.appendChild(renderer.domElement);
+  renderer.render(scene, cam);
+  // Reject a background-only frame (world out of frame / failed to draw):
+  // sample an 8x8 grid; a real world shows more than one distinct color.
+  const gl = renderer.getContext();
+  const px = new Uint8Array(4);
+  const seen = new Set();
+  for (let gy = 0; gy < 8; gy++) {
+    for (let gx = 0; gx < 8; gx++) {
+      gl.readPixels(Math.floor((gx + 0.5) * 512 / 8), Math.floor((gy + 0.5) * 512 / 8), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      seen.add(px.join(','));
+    }
+  }
+  if (seen.size < 2) throw new Error('frame is a single flat color (world not visible)');
+  out.textContent = renderer.domElement.toDataURL('image/png');
+  out.setAttribute('data-min', box.min.toArray().join(','));
+  out.setAttribute('data-max', box.max.toArray().join(','));
+} catch (e) {
+  out.textContent = 'BAKE_ERROR: ' + (e && e.message ? e.message : String(e));
+}
+document.body.appendChild(out);
+</script>
+</body>
+</html>
+"""
+
+
+class _QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+
+def _find_chrome():
+    """Locate a Chrome/Chromium binary for the R9 bake. None if unavailable."""
+    for env_key in ("THUMB_CHROME_BIN", "CHROME_BIN"):
+        candidate = os.environ.get(env_key)
+        if candidate and os.path.exists(candidate):
+            return candidate
+    for name in ("google-chrome", "chromium", "chromium-browser", "chrome"):
+        found = shutil.which(name)
+        if found:
+            return found
+    for path in (
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ):
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _vendored_three_path():
+    """A local three module build the bake can use offline, if one exists."""
+    for path in (
+        os.path.join(WALK_DIR, "three.module.min.js"),
+        os.path.join(WORLDS_DIR, "node_modules", "three", "build", "three.module.js"),
+        os.path.join(WORLDS_DIR, "node_modules", "three", "build", "three.module.min.js"),
+    ):
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _png_dimensions(png: bytes):
+    if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return struct.unpack(">II", png[16:24])
+
+
+def bake_thumbnail(module_path: str, formatted_id: str):
+    """R9: bake walk/thumbs/<id>.png for a validated module. Never raises.
+
+    Returns the thumbnail path on success, None (with a logged warning) on
+    any failure — the conversion that called us is unaffected either way.
+    """
+    thumb_path = os.path.join(THUMBS_DIR, f"{formatted_id}.png")
+    try:
+        chrome = _find_chrome()
+        if not chrome:
+            print(f"[Walker Thumbs] ⚠ World #{formatted_id}: no Chrome/Chromium binary found; thumbnail skipped.")
+            return None
+
+        with open(module_path, "r", encoding="utf-8") as f:
+            module_js = f.read()
+
+        tmp = tempfile.mkdtemp(prefix=f"thumb-bake-{formatted_id}-")
+        try:
+            # Drive the bake from a vendored three build when one is on disk
+            # (offline-safe); otherwise leave the module's R1 CDN import for
+            # Chrome to fetch.
+            three_src = _vendored_three_path()
+            if three_src:
+                shutil.copy(three_src, os.path.join(tmp, "three.module.min.js"))
+                module_js = re.sub(
+                    r"import\s+\*\s+as\s+THREE\s+from\s+[^;]+;?",
+                    'import * as THREE from "./three.module.min.js";',
+                    module_js,
+                    count=1,
+                )
+            with open(os.path.join(tmp, "module_bake.js"), "w", encoding="utf-8") as f:
+                f.write(module_js)
+            with open(os.path.join(tmp, "bake.html"), "w", encoding="utf-8") as f:
+                f.write(_BAKE_HTML)
+
+            handler = functools.partial(_QuietHandler, directory=tmp)
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                url = f"http://127.0.0.1:{server.server_address[1]}/bake.html"
+                cmd = [chrome]
+                if "headless" not in os.path.basename(chrome):
+                    cmd.append("--headless=new")
+                cmd += [
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--use-gl=angle",
+                    "--use-angle=swiftshader",
+                    "--enable-unsafe-swiftshader",
+                    "--virtual-time-budget=30000",
+                    "--dump-dom",
+                    url,
+                ]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            finally:
+                server.shutdown()
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+        match = re.search(r'<pre id="bake-out"[^>]*>(data:image/png;base64,[^<]+)</pre>', proc.stdout or "")
+        if not match:
+            err = re.search(r"BAKE_ERROR: ([^<]+)", proc.stdout or "")
+            detail = err.group(1).strip() if err else "no bake output in page"
+            print(f"[Walker Thumbs] ⚠ World #{formatted_id}: bake failed ({detail}); thumbnail skipped.")
+            return None
+
+        png = base64.b64decode(match.group(1).split(",", 1)[1])
+        dims = _png_dimensions(png)
+        if dims != (THUMB_SIZE, THUMB_SIZE) or len(png) < 4000:
+            print(f"[Walker Thumbs] ⚠ World #{formatted_id}: bake produced an invalid PNG (dims={dims}, {len(png)} bytes); thumbnail skipped.")
+            return None
+
+        with open(thumb_path, "wb") as f:
+            f.write(png)
+        print(f"[Walker Thumbs] ✓ World #{formatted_id}: walk/thumbs/{formatted_id}.png baked ({len(png)} bytes).")
+        return thumb_path
+    except Exception as e:
+        print(f"[Walker Thumbs] ⚠ World #{formatted_id}: bake exception ({e}); thumbnail skipped.")
+        return None
+
+
+def bake_all_thumbs(only_ids=None) -> list:
+    """(Re)bake thumbnails for modules already registered in walk/worlds.json.
+
+    Covers the handcrafted modules (001-005), which conversion deliberately
+    skips, and backfills thumbs after pipeline changes. Never raises.
+    """
+    results = []
+    try:
+        with open(MANIFEST_PATH) as f:
+            entries = json.load(f)
+    except Exception as e:
+        print(f"[Walker Thumbs] ⚠ Cannot read manifest {MANIFEST_PATH}: {e}")
+        return results
+    for entry in entries:
+        formatted_id = entry.get("id", "")
+        if only_ids and formatted_id not in only_ids:
+            continue
+        module_path = os.path.join(WALK_DIR, entry.get("module", ""))
+        if not os.path.exists(module_path):
+            print(f"[Walker Thumbs] ⚠ World #{formatted_id}: module {entry.get('module')} missing; skipped.")
+            continue
+        baked = bake_thumbnail(module_path, formatted_id)
+        results.append({"id": formatted_id, "thumb": baked})
+    return results
+
+
 def update_walker_manifest(new_entry: dict):
     """Upserts world entry into walk/worlds.json using tools/build-walk-manifest.mjs."""
     try:
@@ -313,7 +588,10 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
             }
             update_walker_manifest(manifest_entry)
             print(f"[Walker Bridge] ✓ World #{formatted_id} ({spec['game']}) validated ({val.get('meshCount')} meshes) & registered in walk/worlds.json!")
-            return {"status": "registered", "id": formatted_id}
+            # R9: bake the top-down map thumbnail. Decorative only — a bake
+            # failure returns None here and never affects registration.
+            thumb = bake_thumbnail(module_path, formatted_id) if BAKE_THUMBS_ENABLED else None
+            return {"status": "registered", "id": formatted_id, "thumb": thumb}
         else:
             # Remove invalid module so build-walk-manifest.mjs remains clean
             if os.path.exists(module_path):
@@ -329,6 +607,25 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
 
 if __name__ == "__main__":
     import glob
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Convert scenes to Walker modules (with R9 thumbnail bake).")
+    parser.add_argument("--no-thumbs", action="store_true",
+                        help="Skip the R9 top-down thumbnail bake after conversion.")
+    parser.add_argument("--bake-thumbs", action="store_true",
+                        help="Only (re)bake thumbnails for modules already in walk/worlds.json, then exit.")
+    parser.add_argument("--ids", nargs="*", default=None,
+                        help="With --bake-thumbs, limit to these world ids (e.g. --ids 001 007).")
+    args = parser.parse_args()
+
+    if args.no_thumbs:
+        BAKE_THUMBS_ENABLED = False
+
+    if args.bake_thumbs:
+        only = {f"{int(i):03d}" for i in args.ids} if args.ids else None
+        bake_all_thumbs(only)
+        sys.exit(0)
+
     with open(REGISTRY_PATH) as f:
         specs = {s["id"]: s for s in json.load(f)}
 
