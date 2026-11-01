@@ -30,6 +30,9 @@ CRITICAL CONSTRAINTS:
 2. Must properly close all functions, add the animation loop (requestAnimationFrame), and close </script></body></html>. NEVER leave code unfinished or cut off mid-function.
 3. Use only Three.js core ES module:
    https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js
+   Use renderer.toneMapping = THREE.ACESFilmicToneMapping; (do NOT use sRGB for toneMapping).
+   Always append renderer.domElement: document.body.appendChild(renderer.domElement).
+   Never create inline canvas gradients inside CanvasTexture. Use standard Three.js materials.
 4. Implement native drag-to-orbit camera controls directly in JS.
 5. Create recognizable landmarks, atmospheric lighting/fog, and animated elements.
 6. Output ONLY executable HTML inside ```html ... ```."""
@@ -371,6 +374,23 @@ def main():
             print(f"[Auto-Linter] Syntax verified clean for {filename}")
         elif lint_report.get("status") == "syntax_error":
             print(f"[Auto-Linter] Warning: Unresolved syntax error: {lint_report.get('errors')}")
+
+        # Automated Headless Chrome WebGL & Runtime Healer
+        try:
+            from scene_healer import automated_rule_based_patch, test_scene_runtime_in_chrome
+            with open(filepath, "r", encoding="utf-8") as f:
+                c = f.read()
+            patched_c = automated_rule_based_patch(c)
+            if patched_c != c:
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(patched_c)
+            t_res = test_scene_runtime_in_chrome(filepath)
+            if t_res["clean"]:
+                print(f"[Chrome Verifier] ✓ {filename} renders with 0 console errors!")
+            else:
+                print(f"[Chrome Verifier] ⚠ Runtime warning: {t_res['errors'][:2]}")
+        except Exception as e:
+            print(f"[Chrome Verifier] Check exception: {e}")
 
         progress[s_id] = {
             "id": spec["id"],
