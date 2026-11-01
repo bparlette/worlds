@@ -22,5 +22,13 @@
     "platform": "Atari 2600",
     "filename": "003_haunted_house_ghost_mansion.html",
     "generated_at": "2026-10-31 22:28:22"
+  },
+  "4": {
+    "id": 4,
+    "game": "Yars' Revenge",
+    "target": "Neutral Zone & Shield",
+    "platform": "Atari 2600",
+    "filename": "004_yars_revenge_neutral_zone_shield.html",
+    "generated_at": "2026-10-31 22:37:26"
   }
 }

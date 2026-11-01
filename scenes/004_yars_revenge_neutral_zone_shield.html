@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neutral Zone & Shield — Yars' Revenge</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080a12;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #f5f7ff;
+      text-shadow: 0 0 12px rgba(235, 238, 255, 0.55);
+    }
+
+    #hud .title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      padding: 12px 16px;
+      border: 1px solid rgba(190, 220, 255, 0.35);
+      border-left: 3px solid #89d9ff;
+      background: linear-gradient(90deg, rgba(7, 14, 30, 0.88), rgba(7, 14, 30, 0.25));
+      backdrop-filter: blur(8px);
+    }
+
+    #hud .title h1 {
+      margin: 0 0 4px;
+      font-size: clamp(18px, 2.4vw, 30px);
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #hud .title p {
+      margin: 0;
+      color: #a9c4ff;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    #hud .status {
+      position: absolute;
+      right: 24px;
+      bottom: 22px;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.7;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #hud .status strong {
+      color: #8de7ff;
+      font-weight: 700;
+    }
+
+    #hud .help {
+      position: absolute;
+      left: 28px;
+      bottom: 22px;
+      color: rgba(220, 235, 255, 0.65);
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    #scanlines {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.16;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 3px,
+        rgba(255, 255, 255, 0.08) 4px
+      );
+      mix-blend-mode: screen;
+    }
+
+    #vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 45%, rgba(2, 4, 12, 0.48) 100%),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025), transparent 15%);
+    }
+
+    @media (max-width: 600px) {
+      #hud .title {
+        top: 14px;
+        left: 14px;
+        right: 14px;
+      }
+
+      #hud .help {
+        left: 14px;
+        bottom: 14px;
+      }
+
+      #hud .status {
+        right: 14px;
+        bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="title">
+      <h1>Neutral Zone & Shield</h1>
+      <p>Yars' Revenge · Atari 2600</p>
+    </div>
+    <div class="help">
+      Drag to orbit · Scroll to zoom<br />
+      Arrow keys to move · R to reset
+    </div>
+    <div class="status">
+      <strong>YAR</strong> STATUS: READY<br />
+      <strong>ARMOR</strong> 128 / 128<br />
+      <strong>SHIELD</strong> 100%
+    </div>
+  </div>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b18);
+    scene.fog = new THREE.FogExp2(0x081027, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(
+      46,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.prepend(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      terrain: new THREE.MeshStandardMaterial({
+        color: 0x192238,
+        roughness: 0.96,
+        metalness: 0.05
+      }),
+      road: new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.88,
+        metalness: 0.12
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x71809b,
+        roughness: 0.78,
+        metalness: 0.28
+      }),
+      wallDark: new THREE.MeshStandardMaterial({
+        color: 0x33455f,
+        roughness: 0.82,
+        metalness: 0.3
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd8aa58,
+        roughness: 0.42,
+        metalness: 0.72
+      }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x72dfff,
+        emissive: 0x1b8ea6,
+        emissiveIntensity: 1.4,
+        roughness: 0.35,
+        metalness: 0.35
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x558cff,
+        emissive: 0x14366b,
+        emissiveIntensity: 1.1,
+        roughness: 0.45,
+        metalness: 0.4
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xe5f0ff,
+        emissive: 0x8eb8ff,
+        emissiveIntensity: 0.65,
+        roughness: 0.5
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xff5c65,
+        emissive: 0x8a1520,
+        emissiveIntensity: 0.8,
+        roughness: 0.55
+      })
+    };
+
+    function mesh(geometry, material, position, rotation = null, castShadow = true) {
+      const object = new THREE.Mesh(geometry, material);
+      if (position) object.position.set(...position);
+      if (rotation) object.rotation.set(...rotation);
+      object.castShadow = castShadow;
+      object.receiveShadow = true;
+      world.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, x, y, z, rotation = null) {
+      return mesh(
+        new THREE.BoxGeometry(w, h, d),
+        material,
+        [x, y, z],
+        rotation
+      );
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, segments = 16, rotation = null) {
+      return mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material,
+        [x, y, z],
+        rotation
+      );
+    }
+
+    // Lighting: cool moonlight, warm rim light, and subtle atmospheric glow.
+    scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x14100d, 1.25));
+
+    const keyLight = new THREE.DirectionalLight(0xb9dcff, 2.4);
+    keyLight.position.set(-24, 34, 18);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.camera.left = -42;
+    keyLight.shadow.camera.right = 42;
+    keyLight.shadow.camera.top = 42;
+    keyLight.shadow.camera.bottom = -42;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 100;
+    keyLight.shadow.bias = -0.0004;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x4d8cff, 1.5);
+    rimLight.position.set(22, 15, -28);
+    scene.add(rimLight);
+
+    const warmLight = new THREE.PointLight(0xff9b55, 28, 42, 2);
+    warmLight.position.set(-15, 7, -8);
+    scene.add(warmLight);
+
+    // Procedural terrain with a grid of low-poly islands, roads, and barriers.
+    const terrain = mesh(
+      new THREE.PlaneGeometry(110, 110, 30, 30),
+      materials.terrain,
+      [0, -0.35, 0],
+      [-Math.PI / 2, 0, 0],
+      false
+    );
+    terrain.receiveShadow = true;
+
+    const road = box(112, 0.08, 7.5, materials.road, 0, -0.16, 0);
+    road.receiveShadow = true;
+
+    // Road lane markers.
+    const laneMaterial = new THREE.MeshBasicMaterial({
+      color: 0x9db5cf,
+      transparent: true,
+      opacity: 0.38
+    });
+
+    for (let z = -46; z <= 46; z += 7) {
+      box(0.12, 0.025, 3.2, laneMaterial, 0, -0.105, z, [0, 0, 0]);
+    }
+
+    // Entrance arch and neutral zone.
+    const entrance = new THREE.Group();
+    entrance.position.set(0, 0, -18);
+    world.add(entrance);
+
+    box(11, 6.5, 0.8, materials.wallDark, 0, 3.25, 0, [0, 0, 0]);
+    box(11.8, 0.7, 1.1, materials.gold, 0, 6.55, 0);
+    box(1.1, 0.7, 1.1, materials.gold, -5.9, 6.55, 0);
+    box(1.1, 0.7, 1.1, materials.gold, 5.9, 6.55, 0);
+
+    for (const x of [-4.55, 4.55]) {
+      box(0.35, 5.8, 0.35, materials.wall, x, 2.9, 0.5);
+      box(0.7, 0.35, 0.7, materials.gold, x, 1.1, 0.5);
+    }
+
+    const entranceSign = box(5.2, 0.75, 0.18, materials.gold, 0, 5.45, 0.65);
+    entranceSign.rotation.x = -0.08;
+
+    // Shield barriers along the road.
+    for (let z = -10; z <= 28; z += 11) {
+      const barrier = new THREE.Group();
+      barrier.position.set(0, 0, z);
+      world.add(barrier);
+
+      box(8.5, 1.15, 0.75, materials.wallDark, 0, 0.58, 0);
+      box(8.8, 0.22, 0.95, materials.gold, 0, 1.18, 0);
+
+      for (const x of [-4.25, 4.25]) {
+        box(0.55, 1.35, 0.6, materials.wall, x, 0.68, 0);
+        box(0.85, 0.25, 0.8, materials.gold, x, 0.2, 0);
+      }
+
+      box(0.8, 0.55, 0.16, materials.cyan, -2.8, 1.55, 0.45);
+      box(0.8, 0.55, 0.16, materials.cyan, 2.8, 1.55, 0.45);
+    }
+
+    // Side barriers and colored signal towers.
+    for (let z = -35; z <= 36; z += 8) {
+      const side = Math.sin(z * 0.17) > 0 ? -1 : 1;
+      box(0.7, 2.2, 4.2, materials.wallDark, side * 7.2, 1.1, z, [0, 0, 0]);
+      box(0.95, 0.3, 4.5, materials.gold, side * 7.2, 2.3, z);
+    }
+
+    const signalTowers = [];
+
+    for (let i = 0; i < 6; i++) {
+      const z = -30 + i * 11;
+      const side = i % 2 === 0 ? -1 : 1;
+      const tower = new THREE.Group();
+      tower.position.set(side * 8.7, 0, z);
+      world.add(tower);
+
+      cylinder(0.35, 0.55, 3.5, materials.wallDark, 0, 1.75, 0, 8);
+      cylinder(0.65, 0.65, 0.25, materials.gold, 0, 3.6, 0, 8);
+      cylinder(0.78, 0.78, 0.18, materials.wall, 0, 4.05, 0, 8);
+
+      const lamp = cylinder(
+        0.34,
+        0.34,
+        0.32,
+        i % 2 === 0 ? materials.red : materials.cyan,
+        0,
+        4.4,
+        0,
+        12
+      );
+
+      signalTowers.push(lamp);
+    }
+
+    // Rooftop details and antennas.
+    for (let i = 0; i < 18; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const z = -44 + Math.floor(i / 2) * 9;
+      const x = side * 8.8;
+
+      box(0.12, 5.5, 0.12, materials.wallDark, x, 2.75, z);
+      box(0.18, 0.18, 1.1, materials.gold, x, 5.45, z);
+      box(0.18, 0.18, 0.18, materials.cyan, x, 5.95, z);
+    }
+
+    // Animated energy pylons.
+    const energyPylons = [];
+
+    for (let i = 0; i < 4; i++) {
+      const z = -22 + i * 14;
+      const side = i % 2 === 0 ? -1 : 1;
+      const pylon = new THREE.Group();
+      pylon.position.set(side * 10.5, 0, z);
+      world.add(pylon);
+
+      cylinder(0.18, 0.3, 4.2, materials.wallDark, 0, 2.1, 0, 8);
+      cylinder(0.55, 0.55, 0.25, materials.gold, 0, 4.25, 0, 8);
+
+      const ring = mesh(
+        new THREE.TorusGeometry(0.85, 0.08, 8, 24),
+        materials.cyan,
+        [0, 4.75, 0],
+        [0, 0, 0],
+        false
+      );
+
+      const core = mesh(
+        new THREE.SphereGeometry(0.28, 12, 12),
+        materials.cyan,
+        [0, 4.75, 0],
+        [0, 0, 0],
+        false
+      );
+
+      energyPylons.push({ ring, core, z, side, phase: i * 1.7 });
+    }
+
+    // Animated sky particles / stars.
+    const starCount = 550;
+    const starPositions = new Float32Array(starCount * 3);
+    const starSpeeds = new Float32Array(starCount);
+
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3] = (Math.random() - 0.5) * 110;
+      starPositions[i * 3 + 1] = 8 + Math.random() * 55;
+      starPositions[i * 3 + 2] = (Math.random() - 0.5) * 110;
+      starSpeeds[i] = 0.15 + Math.random() * 0.45;
+    }
+
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(starPositions, 3)
+    );
+
+    const stars = new THREE.Points(
+      starGeometry,
+      new THREE.PointsMaterial({
+        color: 0x9dc9ff,
+        size: 0.12,
+        transparent: true,
+        opacity: 0.75,
+        depthWrite: false,
+        fog: false
+      })
+    );
+    scene.add(stars);
+
+    // Floating motes.
+    const moteCount = 120;
+    const motePositions = new Float32Array(moteCount * 3);
+    const moteSpeeds = new Float32Array(moteCount);
+
+    for (let i = 0; i < moteCount; i++) {
+      motePositions[i * 3] = (Math.random() - 0.5) * 70;
+      motePositions[i * 3 + 1] = 1 + Math.random() * 18;
+      motePositions[i * 3 + 2] = (Math.random() - 0.5) * 70;
+      moteSpeeds[i] = 0.15 + Math.random() * 0.4;
+    }
+
+    const moteGeometry = new THREE.BufferGeometry();
+    moteGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(motePositions, 3)
+    );
+
+    const motes = new THREE.Points(
+      moteGeometry,
+      new THREE.PointsMaterial({
+        color: 0x9edcff,
+        size: 0.09,
+        transparent: true,
+        opacity: 0.45,
+        depthWrite: false
+      })
+    );
+    world.add(motes);
+
+    // Animated distant flying vehicles / drones.
+    const drones = [];
+
+    for (let i = 0; i < 7; i++) {
+      const drone = new THREE.Group();
+      const x = (i % 2 === 0 ? -1 : 1) * (18 + (i % 3) * 7);
+      const z = -35 + i * 11;
+      drone.position.set(x, 7 + (i % 3) * 3, z);
+      world.add(drone);
+
+      const body = mesh(
+        new THREE.ConeGeometry(0.55, 1.5, 4),
+        materials.blue,
+        [0, 0, 0],
+        [Math.PI / 2, 0, 0]
+      );
+      body.rotation.z = Math.PI;
+
+      const wing = box(1.8, 0.08, 0.45, materials.gold, 0, 0.15, 0);
+      wing.rotation.y = Math.PI / 2;
+
+      const light = mesh(
+        new THREE.SphereGeometry(0.12, 8, 8),
+        materials.cyan,
+        [0, -0.45, 0],
+        null,
+        false
+      );
+
+      drones.push({
+        group: drone,
+        baseX: x,
+        baseZ: z,
+        phase: i * 1.3,
+        light
+      });
+    }
+
+    // Animated rotating warning beacon.
+    const beacon = new THREE.Group();
+    beacon.position.set(0, 0, -39);
+    world.add(beacon);
+
+    cylinder(0.7, 0.9, 1.2, materials.wallDark, 0, 0.6, 0, 12);
+    cylinder(1.05, 1.05, 0.25, materials.gold, 0, 1.3, 0, 12);
+    cylinder(0.5, 0.5, 0.25, materials.red, 0, 1.58, 0, 12);
+
+    const beaconRing = mesh(
+      new THREE.TorusGeometry(0.65, 0.055, 8, 24),
+      materials.red,
+      [0, 1.75, 0],
+      [0, 0, 0],
+      false
+    );
+
+    // Small environmental details.
+    for (let i = 0; i < 28; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const z = -48 + Math.floor(i / 2) * 9;
+      const x = side * (5.5 + Math.random() * 2.5);
+
+      const rock = mesh(
+        new THREE.DodecahedronGeometry(0.35 + Math.random() * 0.55, 0),
+        materials.wallDark,
+        [x, 0.1, z],
+        [Math.random(), Math.random(), Math.random()],
+        false
+      );
+      rock.scale.y = 0.65;
+    }
+
+    // Custom orbit controls with pointer, touch, keyboard, and inertia.
+    const controls = {
+      target: new THREE.Vector3(0, 1.5, 0),
+      radius: 31,
+      theta: Math.PI * 0.22,
+      phi: Math.PI * 0.47,
+      targetRadius: 31,
+      targetTheta: Math.PI * 0.22,
+      targetPhi: Math.PI * 0.47,
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      velocity: new THREE.Vector3()
+    };
+
+    const initialCamera = {
+      radius: 31,
+      theta: Math.PI * 0.22,
+      phi: Math.PI * 0.47
+    };
+
+    function updateCamera() {
+      const ease = 0.085;
+
+      controls.targetRadius +=
+        (controls.targetRadius - controls.radius) * ease;
+      controls.targetTheta +=
+        (controls.targetTheta - controls.theta) * ease;
+      controls.targetPhi +=
+        (controls.targetPhi - controls.phi) * ease;
+
+      controls.theta = controls.targetTheta;
+      controls.phi = controls.targetPhi;
+      controls.radius = controls.targetRadius;
+
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.pointerX;
+      const dy = event.clientY - controls.pointerY;
+
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+
+      controls.targetTheta -= dx * 0.006;
+      controls.targetPhi = THREE.MathUtils.clamp(
+        controls.targetPhi - dy * 0.005,
+        0.18,
+        Math.PI * 0.82
+      );
+
+      controls.velocity.set(dx * 0.0015, dy * 0.0015, 0);
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        controls.targetRadius = THREE.MathUtils.clamp(
+          controls.targetRadius + event.deltaY * 0.018,
+          14,
+          62
+        );
+      },
+      { passive: false }
+    );
+
+    addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+
+      if (key === "r") {
+        controls.targetRadius = initialCamera.radius;
+        controls.targetTheta = initialCamera.theta;
+        controls.targetPhi = initialCamera.phi;
+      }
+
+      if (key === "arrowleft") {
+        controls.targetTheta -= 0.12;
+      }
+      if (key === "arrowright") {
+        controls.targetTheta += 0.12;
+      }
+      if (key === "arrowup") {
+        controls.targetPhi = Math.max(0.18, controls.targetPhi - 0.08);
+      }
+      if (key === "arrowdown") {
+        controls.targetPhi = Math.min(Math.PI * 0.82, controls.targetPhi + 0.08);
+      }
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+
+    const clock2 = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock2.getElapsedTime();
+
+      // Gentle environmental motion.
+      motes.rotation.y = elapsed * 0.012;
+      motes.position.y = Math.sin(elapsed * 0.22) * 0.25;
+
+      for (const pylon of energyPylons) {
+        pylon.rotation.y = elapsed * 0.45 + pylon.phase;
+        pylon.scale.setScalar(1 + Math.sin(elapsed * 2.2 + pylon.phase) * 0.08);
+
+        pylon.ring.rotation.z = elapsed * 1.2 + pylon.phase;
+        pylon.ring.scale.setScalar(1 + Math.sin(elapsed * 2.4 + pylon.phase) * 0.12);
+
+        pylon.core.material.emissiveIntensity =
+          1.1 + Math.sin(elapsed * 3.2 + pylon.phase) * 0.45;
+      }
+
+      for (const drone of drones) {
+        drone.group.position.x =
+          drone.baseX + Math.sin(elapsed * 0.35 + drone.phase) * 4.5;
+        drone.group.position.z =
+          drone.baseZ + Math.cos(elapsed * 0.28 + drone.phase) * 2.5;
+        drone.group.position.y =
+          7 + (drone.baseX > 0 ? 3 : 0) + Math.sin(elapsed * 0.55 + drone.phase) * 1.2;
+        drone.group.rotation.y = Math.sin(elapsed * 0.4 + drone.phase) * 0.7;
+        drone.group.rotation.z = Math.sin(elapsed * 0.7 + drone.phase) * 0.08;
+      }
+
+      beaconRing.rotation.z = elapsed * 1.7;
+      beaconRing.scale.setScalar(1 + Math.sin(elapsed * 3) * 0.08);
+      beaconRing.material.emissiveIntensity =
+        1.1 + Math.sin(elapsed * 3.2) * 0.45;
+
+      for (const star of stars.children) {
+        star.rotation.y = elapsed * 0.003;
+      }
+
+      updateCamera();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
