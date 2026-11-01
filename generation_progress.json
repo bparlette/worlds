@@ -178,5 +178,14 @@
     "filename": "020_bionic_commando_neutral_area_military_base.html",
     "verified_working": true,
     "generated_at": "2026-11-01 02:52:06"
+  },
+  "21": {
+    "id": 21,
+    "game": "DuckTales",
+    "target": "The Moon Base",
+    "platform": "NES",
+    "filename": "021_ducktales_the_moon_base.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 03:04:46"
   }
 }

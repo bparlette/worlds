@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Moon Base — DuckTales</title>
+  <style>
+    :root {
+      --cream: #fff3c2;
+      --orange: #ff9d3d;
+      --blue: #247cff;
+      --green: #78ef9a;
+      --red: #ff4d67;
+      --panel: rgba(12, 19, 39, 0.78);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050a18;
+      color: var(--cream);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active { cursor: grabbing; }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .title-card {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: min(360px, calc(100vw - 48px));
+      padding: 18px 20px;
+      border: 1px solid rgba(255, 243, 194, 0.25);
+      border-radius: 16px;
+      background: linear-gradient(145deg, rgba(255, 243, 194, 0.13), var(--panel));
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(14px);
+    }
+
+    .eyebrow {
+      margin-bottom: 6px;
+      color: var(--orange);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(25px, 4vw, 38px);
+      line-height: 1;
+      letter-spacing: -0.035em;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: rgba(255, 243, 194, 0.72);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      border: 1px solid rgba(255, 243, 194, 0.2);
+      border-radius: 12px;
+      background: var(--panel);
+      color: rgba(255, 243, 194, 0.75);
+      font-size: 12px;
+      backdrop-filter: blur(12px);
+    }
+
+    .controls b { color: var(--cream); }
+
+    .status {
+      position: absolute;
+      left: 24px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 13px;
+      border-radius: 10px;
+      background: rgba(36, 124, 255, 0.2);
+      color: #b9dcff;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 12px var(--green);
+    }
+
+    .retro-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.22;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 24px,
+          rgba(255, 255, 255, 0.035) 25px
+        ),
+        repeating-linear-gradient(
+          to right,
+          transparent 0,
+          transparent 24px,
+          rgba(255, 255, 255, 0.025) 25px
+        );
+      pointer-events: none;
+    }
+
+    @media (max-width: 650px) {
+      .title-card {
+        top: 14px;
+        left: 14px;
+        width: calc(100vw - 28px);
+        padding: 14px 16px;
+      }
+
+      .subtitle { display: none; }
+      .controls { right: 14px; bottom: 14px; }
+      .status { left: 14px; bottom: 68px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div class="retro-grid"></div>
+
+  <div class="hud">
+    <section class="title-card">
+      <div class="eyebrow">DuckTales NES · Lunar Safari</div>
+      <h1>The Moon Base</h1>
+      <p class="subtitle">
+        Beneath the lunar crust lies the Green Cheese of Longevity.
+        Help Scrooge McDuck and Huey, Dewey, and Louie defeat the Moon Rat and free the aliens' valuable trinket.
+      </p>
+    </section>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      <span>Three adventurers online</span>
+    </div>
+
+    <div class="controls">
+      <span><b>Drag</b> to orbit</span>
+      <span>·</span>
+      <span><b>Scroll</b> to zoom</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050a18);
+    scene.fog = new THREE.FogExp2(0x080d24, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement: document.body.appendChild(renderer.domElement);
+
+    clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      rock: new THREE.MeshStandardMaterial({ color: 0x77738a, roughness: 0.95, metalness: 0.05 }),
+      rockDark: new THREE.MeshStandardMaterial({ color: 0x34394a, roughness: 1 }),
+      rockLight: new THREE.MeshStandardMaterial({ color: 0x9a92a4, roughness: 0.95 }),
+      cave: new THREE.MeshStandardMaterial({ color: 0x242839, roughness: 1 }),
+      cheese: new THREE.MeshStandardMaterial({
+        color: 0x78ef9a,
+        emissive: 0x246a25,
+        emissiveIntensity: 0.75,
+        roughness: 0.65
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xffd77b,
+        emissive: 0x7a3c00,
+        emissiveIntensity: 0.35,
+        roughness: 0.25,
+        metalness: 0.7
+      }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x247cff, roughness: 0.35, metalness: 0.25 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xff4d67, roughness: 0.45 }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xffc943, roughness: 0.4 }),
+      skin: new THREE.MeshStandardMaterial({ color: 0xd9a56d, roughness: 0.7 }),
+      suit: new THREE.MeshStandardMaterial({ color: 0x173b63, roughness: 0.5, metalness: 0.25 }),
+      helmet: new THREE.MeshStandardMaterial({ color: 0xf2f4ff, roughness: 0.25, metalness: 0.25 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x101420, roughness: 0.65 })
+    };
+
+    function roundedBox(w, h, d, mat, x, y, z, bevel = 0.08) {
+      const geometry = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      if (bevel) mesh.geometry.toNonIndexed();
+      return mesh;
+    }
+
+    function cylinder(r1, r2, h, mat, x, y, z, segments = 16) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(r1, r2, h, segments),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function sphere(radius, mat, x, y, z, widthSegments = 16) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, widthSegments, Math.max(8, widthSegments / 2)),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function beamBetween(a, b, radius, mat, radialSegments = 8) {
+      const start = new THREE.Vector3(...a);
+      const end = new THREE.Vector3(...b);
+      const direction = end.clone().sub(start);
+      const midpoint = start.clone().add(end).multiplyScalar(0.5);
+      const mesh = cylinder(
+        radius * 0.45,
+        radius,
+        direction.length(),
+        mat,
+        midpoint.x,
+        midpoint.y,
+        midpoint.z,
+        radialSegments
+      );
+      mesh.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+      );
+      return mesh;
+    }
+
+    // Lighting
+    scene.add(new THREE.HemisphereLight(0x8aa7ff, 0x160b18, 1.35));
+
+    const sun = new THREE.DirectionalLight(0xffe3b0, 3.2);
+    sun.position.set(-28, 38, 22);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -45;
+    sun.shadow.camera.right = 45;
+    sun.shadow.camera.top = 45;
+    sun.shadow.camera.bottom = -45;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 100;
+    sun.shadow.bias = -0.0003;
+    scene.add(sun);
+
+    const caveLight = new THREE.PointLight(0x78ef9a, 45, 28, 2);
+    caveLight.position.set(0, 6.5, 3);
+    scene.add(caveLight);
+
+    const blueLight = new THREE.PointLight(0x247cff, 35, 24, 2);
+    blueLight.position.set(-18, 8, 8);
+    scene.add(blueLight);
+
+    const redLight = new THREE.PointLight(0xff4d67, 28, 18, 2);
+    redLight.position.set(16, 5, -8);
+    scene.add(redLight);
+
+    // Moon surface: irregular cratered disk
+    const moon = new THREE.Mesh(
+      new THREE.SphereGeometry(42, 80, 48),
+      materials.rock
+    );
+    moon.position.y = -3.5;
+    moon.receiveShadow = true;
+    world.add(moon);
+
+    // Procedural crater decals
+    const craterData = [
+      [-20, 13, 5.4, 0.22], [-15, -10, 3.2, 0.18], [18, 18, 6.2, 0.2],
+      [24, -12, 4.1, 0.16], [-25, -18, 3.8, 0.15], [8, 24, 4.6, 0.18],
+      [-8, -24, 5.8, 0.21], [29, 18, 2.8, 0.13], [-29, 5, 3.4, 0.14]
+    ];
+
+    for (const [x, z, radius, depth] of craterData) {
+      const crater = new THREE.Mesh(
+        new THREE.CircleGeometry(radius, 32),
+        new THREE.MeshBasicMaterial({ color: 0x4a4957, side: THREE.DoubleSide })
+      );
+      crater.rotation.x = -Math.PI / 2;
+      crater.position.set(x, 0.12, z);
+      crater.scale.y = depth / radius;
+      world.add(crater);
+    }
+
+    // Cracked lunar crust over the entrance
+    const crust = new THREE.Group();
+    world.add(crust);
+
+    const floor = roundedBox(31, 0.8, 20, materials.rockDark, 0, 0.2, 0, 0.16);
+    crust.add(floor);
+
+    const backWall = roundedBox(32, 18, 4, materials.rock, 0, 8.5, -7.2, 0.22);
+    crust.add(backWall);
+
+    const leftWall = roundedBox(3, 18, 22, materials.rock, -13.6, 8.5, 0, 0.18);
+    crust.add(leftWall);
+
+    const rightWall = roundedBox(3, 18, 22, materials.rock, 13.6, 8.5, 0, 0.18);
+    crust.add(rightWall);
+
+    // Jagged rocks around the entrance
+    const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2;
+      const radius = 10.5 + (i % 4) * 1.25;
+      const size = 0.65 + (i % 3) * 0.38;
+      const rock = new THREE.Mesh(
+        rockGeometry,
+        i % 3 === 0 ? materials.rockLight : materials.rock
+      );
+      rock.position.set(
+        Math.cos(angle) * radius,
+        size * 0.45,
+        Math.sin(angle) * radius
+      );
+      rock.scale.set(size, size * (0.55 + (i % 2) * 0.2), size * 0.85);
+      rock.rotation.set(i * 0.4, i * 0.7, i * 0.25);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      crust.add(rock);
+    }
+
+    // Broken wall fragments
+    for (let i = 0; i < 14; i++) {
+      const fragment = roundedBox(
+        0.8 + (i % 3) * 0.25,
+        1.2 + (i % 4) * 0.35,
+        1.1 + (i % 2) * 0.3,
+        i % 2 ? materials.rock : materials.rockLight,
+        (i % 2 ? 1 : -1) * (8.5 + (i % 3) * 0.8),
+        0.8 + (i % 3) * 0.35,
+        -5 + Math.floor(i / 3) * 1.4,
+        0.08
+      );
+      crust.add(fragment);
+    }
+
+    // Green Cheese of Longevity: glowing mound and cage
+    const cheese = new THREE.Group();
+    cheese.position.set(0, 4.2, 3.4);
+    crust.add(cheese);
+
+    const cheeseCore = sphere(2.4, materials.cheese, 0, 0, 0, 28);
+    cheese.add(cheeseCore);
+
+    const cheeseHalo = sphere(2.75, materials.cheese, 0, 0, 0, 24);
+    cheeseHalo.scale.set(1, 0.55, 1);
+    cheese.add(cheeseHalo);
+
+    const cage = new THREE.Group();
+    cage.position.y = 1.1;
+    cheese.add(cage);
+
+    for (const x of [-2.4, 2.4]) {
+      for (const z of [-2.4, 2.4]) {
+        beamBetween([x, 0, z], [x, 3.6, z], 0.09, materials.gold, 8);
+      }
+    }
+    for (const y of [0.45, 1.8, 3.25]) {
+      beamBetween([-2.4, y, -2.4], [2.4, y, -2.4], 0.075, materials.gold, 8);
+      beamBetween([-2.4, y, 2.4], [2.4, y, 2.4], 0.075, materials.gold, 8);
+      beamBetween([-2.4, y, -2.4], [-2.4, y, 2.4], 0.075, materials.gold, 8);
+      beamBetween([2.4, y, -2.4], [2.4, y, 2.4], 0.075, materials.gold, 8);
+    }
+
+    // Chains around the cheese
+    for (let i = 0; i < 3; i++) {
+      const chain = new THREE.Mesh(
+        new THREE.TorusGeometry(2.55, 0.055, 6, 32),
+        materials.gold
+      );
+      chain.rotation.x = Math.PI / 2;
+      chain.rotation.z = (i / 3) * Math.PI;
+      chain.position.y = 0.25 + i * 0.3;
+      cheese.add(chain);
+    }
+
+    // Ancient runes around the cheese
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const rune = new THREE.Mesh(
+        new THREE.TorusGeometry(3.25, 0.045, 5, 18, 0.55),
+        materials.cheese
+      );
+      rune.rotation.y = angle;
+      rune.position.set(
+        Math.cos(angle) * 3.3,
+        0.1,
+        Math.sin(angle) * 3.3
+      );
+      cheese.add(rune);
+    }
+
+    // Aliens' spaceship, partially embedded in the side of the cave
+    const ship = new THREE.Group();
+    ship.position.set(-16, 4.4, -2);
+    ship.rotation.y = -0.18;
+    world.add(ship);
+
+    const shipBody = roundedBox(8.5, 3.2, 4.2, materials.blue, 0, 0, 0, 0.3);
+    ship.add(shipBody);
+
+    const shipTop = roundedBox(6.6, 1.25, 3.4, materials.blue, 0, 2.1, 0, 0.18);
+    ship.add(shipTop);
+
+    const shipNose = sphere(1.25, materials.blue, 0, 1.8, 3.7, 20);
+    shipNose.scale.set(0.65, 1, 0.8);
+    ship.add(shipNose);
+
+    const windowMat = new THREE.MeshStandardMaterial({
+      color: 0x9edfff,
+      emissive: 0x167dff,
+      emissiveIntensity: 1.2,
+      roughness: 0.15,
+      metalness: 0.4
+    });
+
+    for (let i = 0; i < 4; i++) {
+      const windowMesh = sphere(0.48, windowMat, -2.5 + i * 1.75, 2.0, 2.0, 14);
+      windowMesh.scale.set(1, 0.7, 0.45);
+      ship.add(windowMesh);
+    }
+
+    const shipDoor = roundedBox(1.1, 1.7, 0.12, materials.gold, 0, 0.1, 2.16, 0.08);
+    ship.add(shipDoor);
+
+    const shipAntenna = cylinder(0.035, 0.035, 2.2, materials.gold, 2.8, 3.2, -0.8, 8);
+    ship.add(shipAntenna);
+    const antennaTip = sphere(0.13, materials.red, 2.8, 4.35, -0.8, 10);
+    ship.add(antennaTip);
+
+    const shipThruster = cylinder(0.42, 0.55, 1.1, materials.red, 0, -1.8, 0, 12);
+    shipThruster.rotation.x = Math.PI / 2;
+    ship.add(shipThruster);
+
+    // Alien trinket: glowing crystal in a case on the ship
+    const trinketCase = roundedBox(1.7, 1.1, 1.1, materials.gold, 1.7, 0.7, 1.2, 0.12);
+    ship.add(trinketCase);
+
+    const trinket = sphere(0.48, materials.cheese, 1.7, 1.35, 1.2, 18);
+    trinket.scale.y = 1.35;
+    ship.add(trinket);
+
+    const trinketGlow = sphere(0.72, materials.cheese, 1.7, 1.35, 1.2, 18);
+    trinketGlow.scale.set(0.65, 1.15, 0.65);
+    ship.add(trinketGlow);
+
+    // A small control console
+    const consoleGroup = new THREE.Group();
+    consoleGroup.position.set(7.5, 1.2, 5.5);
+    consoleGroup.rotation.y = -0.2;
+    crust.add(consoleGroup);
+
+    const consoleBody = roundedBox(2.2, 1.25, 1.4, materials.black, 0, 0, 0, 0.15);
+    consoleGroup.add(consoleBody);
+
+    const screen = roundedBox(1.45, 0.65, 0.08, materials.blue, 0, 0.68, 0.72, 0.08);
+    consoleGroup.add(screen);
+
+    // Three DuckTales adventurers
+    function createAdventurer(x, z, rotation, accent, suitColor = materials.suit) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.45, z);
+      group.rotation.y = rotation;
+      world.add(group);
+
+      const boots = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 0.22, 0.48),
+        materials.black
+      );
+      boots.position.y = 0.11;
+      group.add(boots);
+
+      const legs = [
+        [-0.16, 0.42, 0],
+        [0.16, 0.42, 0]
+      ];
+      for (const [lx, ly] of legs) {
+        const leg = cylinder(0.16, 0.2, 0.75, suitColor, lx, ly, 0, 10);
+        group.add(leg);
+      }
+
+      const torso = roundedBox(0.9, 0.85, 0.55, suitColor, 0, 1.05, 0, 0.12);
+      group.add(torso);
+
+      const vest = roundedBox(0.66, 0.6, 0.58, accent, 0, 1.05, 0.02, 0.08);
+      group.add(vest);
+
+      const head = sphere(0.34, materials.skin, 0, 1.8, 0, 14);
+      group.add(head);
+
+      const helmet = sphere(0.39, materials.helmet, 0, 1.83, -0.02, 16);
+      helmet.scale.set(1, 0.85, 1);
+      group.add(helmet);
+
+      const visor = roundedBox(0.55, 0.18, 0.05, materials.blue, 0, 1.84, 0.34, 0.05);
+      group.add(visor);
+
+      const arm = cylinder(0.13, 0.16, 0.7, suitColor, -0.5, 1.02, 0, 10);
+      arm.rotation.z = -0.35;
+      group.add(arm);
+
+      const otherArm = cylinder(0.13, 0.16, 0.7, suitColor, 0.5, 1.02, 0, 10);
+      otherArm.rotation.z = 0.35;
+      group.add(otherArm);
+
+      return group;
+    }
+
+    const scrooge = createAdventurer(-3.1, 5.4, 0.45, materials.red);
+    scrooge.scale.setScalar(1.05);
+
+    const huey = createAdventurer(3.0, 5.2, -0.35, materials.blue);
+    huey.scale.setScalar(0.93);
+
+    const dewey = createAdventurer(-0.7, 6.2, 0.1, materials.yellow);
+    dewey.scale.setScalar(0.9);
+
+    const louie = createAdventurer(0.5, 6.8, -0.1, materials.orange || new THREE.MeshStandardMaterial({ color: 0xff9d3d }));
+    louie.scale.setScalar(0.88);
+
+    // Animated environmental elements
+    const particles = [];
+    const particleMat = new THREE.PointsMaterial({
+      color: 0x78ef9a,
+      size: 0.11,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 120; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 5 + Math.random() * 25;
+      const particle = new THREE.Points(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(
+            Math.cos(angle) * radius,
+            1 + Math.random() * 14,
+            Math.sin(angle) * radius
+          )
+        ]),
+        particleMat
+      );
+      world.add(particle);
+      particles.push({
+        point: particle,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.12 + Math.random() * 0.25
+      });
+    }
+
+    const floatingDust = new THREE.Points(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-10, 7, 4),
+        new THREE.Vector3(8, 10, -4),
+        new THREE.Vector3(12, 4, 7)
+      ]),
+      new THREE.PointsMaterial({
+        color: 0x8eb8ff,
+        size: 0.16,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false
+      })
+    );
+    world.add(floatingDust);
+
+    // Animated warning beacon
+    const beacon = new THREE.Group();
+    beacon.position.set(-12.2, 6.3, -4.5);
+    crust.add(beacon);
+
+    const beaconBase = cylinder(0.25, 0.35, 0.45, materials.black, 0, 0, 0, 12);
+    beacon.add(beaconBase);
+
+    const beaconLamp = sphere(0.24, materials.red, 0, 0.45, 0, 12);
+    beacon.add(beaconLamp);
+
+    // Small crates and barrels
+    function crate(x, y, z, size = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      world.add(group);
+
+      const body = roundedBox(size, size * 0.75, size * 0.85, materials.wood || materials.rockLight, 0, 0, 0, 0.08);
+      group.add(body);
+
+      const band = roundedBox(size * 1.01, 0.08, size * 0.88, materials.wood, 0, size * 0.18, 0, 0.025);
+      group.add(band);
+
+      return group;
+    }
+
+    crate(-8.5, 0.45, 3.2, 1.05);
+    crate(9.3, 0.45, 3.7, 0.85);
+    crate(-10.5, 0.45, -2.5, 0.75);
+
+    const barrel = cylinder(0.55, 0.55, 1.2, materials.wood, 10, 1, -3.5, 14);
+    const barrelBand = cylinder(0.57, 0.57, 0.1, materials.rockDark, 10, 0.65, -3.5, 14);
+    world.add(barrel, barrelBand);
+
+    // Cave stalactites
+    for (let i = 0; i < 18; i++) {
+      const length = 1.2 + (i % 5) * 0.55;
+      const stalactite = cylinder(
+        0.08,
+        0.18,
+        length,
+        materials.rockLight,
+        -10 + (i % 3) * 2.2,
+        15 - (i % 4) * 0.45,
+        3.5 + Math.floor(i / 3) * 1.5,
+        7
+      );
+      stalactite.rotation.z = (i % 2 ? 1 : -1) * (0.08 + (i % 3) * 0.06);
+      crust.add(stalactite);
+    }
+
+    // Hanging mineral crystals
+    const crystalMat = new THREE.MeshStandardMaterial({
+      color: 0x78ef9a,
+      emissive: 0x246a25,
+      emissiveIntensity: 0.8,
+      roughness: 0.25,
+      metalness: 0.15
+    });
+
+    for (let i = 0; i < 7; i++) {
+      const crystal = cylinder(
+        0.1,
+        0.38,
+        1.2 + (i % 3) * 0.4,
+        crystalMat,
+        -7 + i * 2.1,
+        10,
+        -2.5 + (i % 2) * 1.2,
+        8
+      );
+      crystal.rotation.z = (i % 2 ? 1 : -1) * 0.12;
+      crust.add(crystal);
+    }
+
+    // Lunar rover
+    const rover = new THREE.Group();
+    rover.position.set(10, 0.45, 4.5);
+    rover.rotation.y = -0.35;
+    world.add(rover);
+
+    const roverBody = roundedBox(3.2, 1.15, 1.65, materials.gold, 0, 0.75, 0, 0.15);
+    rover.add(roverBody);
+
+    const roverWindow = roundedBox(1.8, 0.55, 0.08, windowMat, 0, 1.05, 0.85, 0.08);
+    rover.add(roverWindow);
+
+    const roverWheel = cylinder(0.55, 0.55, 0.32, materials.black, 0, 0.55, 1.2, 16);
+    roverWheel.rotation.z = Math.PI / 2;
+    rover.add(roverWheel);
+
+    const roverAntenna = cylinder(0.025, 0.025, 0.8, materials.gold, -1.05, 1.55, -0.2, 6);
+    roverAntenna.rotation.z = -0.4;
+    rover.add(roverAntenna);
+
+    // Stars / moon dust motes
+    const starPositions = [];
+    for (let i = 0; i < 260; i++) {
+      starPositions.push(
+        (Math.random() - 0.5) * 100,
+        8 + Math.random() * 55,
+        (Math.random() - 0.5) * 100
+      );
+    }
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute("position", new THREE.Float32BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(
+      starGeometry,
+      new THREE.PointsMaterial({
+        color: 0xb9d9ff,
+        size: 0.18,
+        transparent: true,
+        opacity: 0.72,
+        depthWrite: false
+      })
+    );
+    stars.position.y = -4;
+    scene.add(stars);
+
+    // Camera controls implemented directly
+    const controls = {
+      target: new THREE.Vector3(0, 4.5, 0),
+      radius: 25,
+      theta: 0.65,
+      phi: 1.18,
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+      minRadius: 10,
+      maxRadius: 45,
+      minPhi: 0.45,
+      maxPhi: 1.48
+    };
+
+    function updateCamera() {
+      controls.phi = THREE.MathUtils.clamp(controls.phi, controls.minPhi, controls.maxPhi);
+      controls.radius = THREE.MathUtils.clamp(controls.radius, controls.minRadius, controls.maxRadius);
+
+      camera.position.set(
+        controls.target.x + controls.radius * Math.sin(controls.phi) * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * Math.sin(controls.phi) * Math.cos(controls.theta)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      controls.theta -= dx * 0.006;
+      controls.phi -= dy * 0.005;
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("lostpointercapture", () => { controls.dragging = false; });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius += event.deltaY * 0.012;
+      updateCamera();
+    }, { passive: false });
+
+    updateCamera();
+
+    // Animation
+    const clock = new THREE.Clock();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      cheeseCore.rotation.y = elapsed * 0.22;
+      cheeseHalo.material.emissiveIntensity = 0.65 + Math.sin(elapsed * 1.7) * 0.18;
+      trinketGlow.material.emissiveIntensity = 0.7 + Math.sin(elapsed * 2.1) * 0.2;
+      beaconLamp.material.emissiveIntensity = 1.5 + Math.sin(elapsed * 4.2) * 1.2;
+
+      for (const item of particles) {
+        item.point.position.x = Math.cos(elapsed * item.speed + item.phase) * (5 + (item.phase % 1) * 20);
+        item.point.position.z = Math.sin(elapsed * item.speed * 0.7 + item.phase) * (5 + (item.phase % 1) * 20);
+        item.point.position.y = 1 + ((elapsed * item.speed * 0.65 + item.phase) % 1) * 14;
+      }
+
+      floatingDust.rotation.y = elapsed * 0.08;
+      stars.rotation.y = elapsed * 0.004;
+
+      scrooge.position.x = -3.1 + Math.sin(elapsed * 0.8) * 0.12;
+      scrooge.position.z = 5.4 + Math.cos(elapsed * 0.65) * 0.08;
+      scrooge.rotation.y = 0.45 + Math.sin(elapsed * 0.8) * 0.08;
+
+      huey.position.x = 3.0 + Math.sin(elapsed * 0.9 + 1) * 0.1;
+      huey.position.z = 5.2 + Math.cos(elapsed * 0.7 + 1) * 0.08;
+      huey.rotation.y = -0.35 + Math.sin(elapsed * 0.9 + 1) * 0.08;
+
+      dewey.position.x = -0.7 + Math.sin(elapsed * 1.1 + 1.5) * 0.08;
+      dewey.position.z = 6.2 + Math.cos(elapsed * 0.85 + 1.5) * 0.06;
+      dewey.rotation.y = 0.1 + Math.sin(elapsed * 1.1 + 1.5) * 0.08;
+
+      louie.position.x = 0.5 + Math.sin(elapsed * 1.3 + 2) * 0.08;
+      louie.position.z = 6.8 + Math.cos(elapsed * 0.9 + 2) * 0.06;
+      louie.rotation.y = -0.1 + Math.sin(elapsed * 1.3 + 2) * 0.08;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>
