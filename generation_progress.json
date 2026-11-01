@@ -14,5 +14,13 @@
     "platform": "Atari 2600",
     "filename": "002_pitfall_jungle_underworld.html",
     "generated_at": "2026-10-31 22:17:06"
+  },
+  "3": {
+    "id": 3,
+    "game": "Haunted House",
+    "target": "Ghost Mansion",
+    "platform": "Atari 2600",
+    "filename": "003_haunted_house_ghost_mansion.html",
+    "generated_at": "2026-10-31 22:28:22"
   }
 }
