@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2300 A.D. — Ruined Domes</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f2eadb;
+      --muted: #b8aa91;
+      --gold: #d9b66d;
+      --panel: rgba(15, 13, 10, 0.72);
+      --line: rgba(230, 204, 135, 0.25);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090a08;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    #world {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active { cursor: grabbing; }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 45%, rgba(3, 4, 3, 0.34) 100%),
+        linear-gradient(to bottom, rgba(3, 4, 3, 0.2), transparent 25%, transparent 75%, rgba(3, 4, 3, 0.45));
+    }
+
+    .ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .title-panel {
+      position: absolute;
+      top: 28px;
+      left: 30px;
+      max-width: min(460px, calc(100vw - 60px));
+      color: var(--ink);
+      text-shadow: 0 2px 18px rgba(0,0,0,.75);
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      font: 11px/1.2 Arial, sans-serif;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 400;
+      line-height: .95;
+      letter-spacing: -.025em;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font: 12px/1.55 Arial, sans-serif;
+      letter-spacing: .08em;
+    }
+
+    .achievement-panel {
+      position: absolute;
+      right: 28px;
+      bottom: 28px;
+      width: min(310px, calc(100vw - 56px));
+      padding: 17px 18px 15px;
+      color: var(--ink);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      pointer-events: auto;
+    }
+
+    .achievement-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 11px;
+      color: var(--gold);
+      font: 10px/1 Arial, sans-serif;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .achievement-heading span:last-child {
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .achievement-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .achievement {
+      display: grid;
+      grid-template-columns: 13px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 38px;
+      padding: 5px 0;
+      color: #c9bda7;
+      font: 11px/1.2 Arial, sans-serif;
+      transition: color .2s, transform .2s;
+    }
+
+    .achievement:hover {
+      color: #fff4d8;
+      transform: translateX(2px);
+    }
+
+    .achievement.locked {
+      opacity: .45;
+    }
+
+    .achievement.locked .check {
+      color: #756a4d;
+    }
+
+    .check {
+      width: 10px;
+      height: 10px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    .achievement.locked .check::after {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .hint {
+      position: absolute;
+      left: 30px;
+      bottom: 28px;
+      color: rgba(237, 226, 205, .65);
+      font: 10px/1.5 Arial, sans-serif;
+      letter-spacing: .08em;
+      text-align: left;
+      text-shadow: 0 2px 10px #000;
+    }
+
+    .hint b {
+      color: var(--gold);
+      font-weight: normal;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      color: var(--gold);
+      background: #090a08;
+      font: 11px Arial, sans-serif;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      transition: opacity .8s;
+    }
+
+    .loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 650px) {
+      .title-panel { top: 20px; left: 20px; }
+      .subtitle { max-width: 280px; }
+      .achievement-panel { right: 16px; bottom: 16px; width: calc(100vw - 32px); }
+      .hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="world"></div>
+  <div class="vignette"></div>
+
+  <div class="ui">
+    <header class="title-panel">
+      <div class="eyebrow">Chrono Trigger · 2300 A.D.</div>
+      <h1>Ruined Domes</h1>
+      <p class="subtitle">A fallen era of sky-bound cities<br />lies beneath the ash and stars.</p>
+    </header>
+
+    <aside class="achievement-panel" aria-label="Achievements">
+      <div class="achievement-heading">
+        <span>13 Achievements</span>
+        <span id="achievement-count">0 / 13</span>
+      </div>
+      <ol class="achievement-list" id="achievements"></ol>
+    </aside>
+
+    <div class="hint">
+      <b>Drag</b> to orbit · <b>Scroll / pinch</b> to zoom · <b>Click</b> landmarks
+    </div>
+  </div>
+
+  <div class="loading" id="loading">Awakening the Ruins…</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const container = document.getElementById("world");
+    const loading = document.getElementById("loading");
+    const achievements = document.getElementById("achievements");
+    const countLabel = document.getElementById("achievement-count");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0d0c);
+    scene.fog = new THREE.FogExp2(0x10130f, 0.0095);
+
+    const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 120);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      ash: new THREE.MeshStandardMaterial({ color: 0x292821, roughness: .94, metalness: .03 }),
+      ashLight: new THREE.MeshStandardMaterial({ color: 0x454036, roughness: .9 }),
+      stone: new THREE.MeshStandardMaterial({ color: 0x555047, roughness: .96 }),
+      darkStone: new THREE.MeshStandardMaterial({ color: 0x242522, roughness: 1 }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xb98b3f, roughness: .55, metalness: .72 }),
+      teal: new THREE.MeshStandardMaterial({ color: 0x356f69, roughness: .68, metalness: .15 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x7e3026, roughness: .8 }),
+      purple: new THREE.MeshStandardMaterial({ color: 0x4a3060, roughness: .75 }),
+      black: new THREE.MeshBasicMaterial({ color: 0x030303 }),
+      flame: new THREE.MeshBasicMaterial({ color: 0xff7a24 }),
+      ember: new THREE.MeshBasicMaterial({ color: 0xff3b08 })
+    };
+
+    const stars = [];
+    const particles = [];
+    const beacons = [];
+    const landmarks = [];
+    const clickable = [];
+
+    function randomRange(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function mesh(geometry, material, parent = world, position = [0, 0, 0], cast = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(...position);
+      object.castShadow = cast;
+      object.receiveShadow = true;
+      parent.add(object);
+      return object;
+    }
+
+    function cylinder(radiusTop, radiusBottom, height, material, position, segments = 12, parent = world) {
+      return mesh(new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments), material, parent, position);
+    }
+
+    function cone(radius, height, material, position, segments = 12, parent = world) {
+      return mesh(new THREE.ConeGeometry(radius, height, segments), material, parent, position);
+    }
+
+    function sphere(radius, material, position, widthSegments = 12, heightSegments = 8, parent = world) {
+      return mesh(new THREE.SphereGeometry(radius, widthSegments, heightSegments), material, parent, position);
+    }
+
+    // Lighting: cool moon, warm embers, and distant magenta.
+    scene.add(new THREE.HemisphereLight(0x718279, 0x17130f, 1.2));
+
+    const moon = new THREE.DirectionalLight(0xa9c8d4, 2.4);
+    moon.position.set(-18, 24, 14);
+    moon.castShadow = true;
+    moon.shadow.mapSize.set(2048, 2048);
+    moon.shadow.camera.left = -35;
+    moon.shadow.camera.right = 35;
+    moon.shadow.camera.top = 35;
+    moon.shadow.camera.bottom = -35;
+    moon.shadow.camera.near = 1;
+    moon.shadow.camera.far = 75;
+    moon.shadow.bias = -0.0003;
+    scene.add(moon);
+
+    const magentaLight = new THREE.PointLight(0x7a315c, 32, 42, 2);
+    magentaLight.position.set(8, 5, -10);
+    scene.add(magentaLight);
+
+    const emberLight = new THREE.PointLight(0xff5b1c, 24, 20, 2);
+    emberLight.position.set(-10, 3, 4);
+    scene.add(emberLight);
+
+    // Procedural ash and crater terrain.
+    const terrain = cylinder(43, 46, 3.2, materials.ash, [0, -1.6, 0], 96);
+    terrain.receiveShadow = true;
+
+    const crater = cylinder(18, 20, 0.18, materials.darkStone, [0, 0.13, 0], 64);
+    crater.receiveShadow = true;
+
+    const innerCrater = cylinder(9.5, 11.5, 0.12, materials.ashLight, [0, 0.24, 0], 64);
+    innerCrater.receiveShadow = true;
+
+    // Fragmented ring walls around the ancient ruin.
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2 + randomRange(-0.12, 0.12);
+      const radius = 20 + Math.random() * 8;
+      const height = randomRange(0.35, 2.8);
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      const wall = cylinder(
+        randomRange(1.2, 2.2),
+        randomRange(1.7, 2.8),
+        height,
+        i % 3 === 0 ? materials.stone : materials.ash,
+        [x, height / 2 - 0.15, z],
+        7
+      );
+      wall.rotation.y = randomRange(-0.35, 0.35);
+      wall.scale.z = randomRange(0.7, 1.35);
+    }
+
+    // Broken columns and arches.
+    for (let i = 0; i < 15; i++) {
+      const angle = randomRange(0, Math.PI * 2);
+      const radius = randomRange(10, 26);
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const height = randomRange(1.2, 4.2);
+
+      const column = cylinder(
+        randomRange(.25, .65),
+        randomRange(.4, .85),
+        height,
+        i % 4 === 0 ? materials.gold : materials.stone,
+        [x, height / 2, z],
+        8
+      );
+      column.rotation.z = randomRange(-.08, .08);
+    }
+
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2 + .2;
+      const radius = 13 + (i % 3) * 2.2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      const arch = mesh(new THREE.TorusGeometry(.9, .24, 6, 16, Math.PI), materials.stone, world, [x, 2.1, z]);
+      arch.rotation.y = -angle + Math.PI / 2;
+      arch.rotation.z = randomRange(-.12, .12);
+    }
+
+    // The central ruined dome: a skeletal ring and broken spire.
+    const domeBase = cylinder(10.5, 13, .8, materials.darkStone, [0, .35, 0], 48);
+
+    const domeRing = mesh(new THREE.TorusGeometry(8.8, .65, 8, 64), materials.stone, world, [0, 3.1, 0]);
+    domeRing.rotation.x = Math.PI / 2;
+    domeRing.rotation.z = .08;
+
+    const upperRing = mesh(new THREE.TorusGeometry(6.1, .42, 7, 48), materials.ashLight, world, [0, 6.4, 0]);
+    upperRing.rotation.x = Math.PI / 2;
+    upperRing.rotation.z = -.12;
+
+    const brokenSpire = cylinder(.35, 1.25, 7, materials.stone, [0, 9.8, 0], 10);
+    brokenSpire.rotation.z = -.12;
+    sphere(.72, materials.gold, [0, 13.2, 0], 12, 8);
+
+    // Gold orbital rings, partially intact.
+    for (let i = 0; i < 3; i++) {
+      const ring = mesh(new THREE.TorusGeometry(11.2 + i * .45, .035, 5, 96), materials.gold, world, [0, 2.8 + i * .35, 0]);
+      ring.rotation.set(Math.PI / 2, 0, (i * Math.PI) / 3);
+    }
+
+    // Floating shards around the ruin.
+    const shardMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8a7354,
+      roughness: .58,
+      metalness: .42,
+      flatShading: true
+    });
+
+    for (let i = 0; i < 24; i++) {
+      const shard = cone(
+        randomRange(.08, .28),
+        randomRange(.5, 1.5),
+        shardMaterial,
+        [randomRange(-24, 24), randomRange(2.5, 13), randomRange(-24, 24)],
+        4
+      );
+      shard.rotation.set(randomRange(0, 3), randomRange(0, 3), randomRange(0, 3));
+      shard.userData.baseY = shard.position.y;
+      shard.userData.phase = randomRange(0, Math.PI * 2);
+      particles.push(shard);
+    }
+
+    // Ash clouds and drifting embers.
+    const emberData = [];
+    const emberGeometry = new THREE.IcosahedronGeometry(.08, 0);
+
+    for (let i = 0; i < 100; i++) {
+      const ember = mesh(emberGeometry, i % 4 === 0 ? materials.flame : materials.ember, world, [
+        randomRange(-20, 20),
+        randomRange(1, 12),
+        randomRange(-20, 20)
+      ], false);
+      ember.userData = {
+        speed: randomRange(.15, .55),
+        phase: randomRange(0, Math.PI * 2),
+        baseY: ember.position.y
+      };
+      emberData.push(ember);
+    }
+
+    // Distant ruined towers.
+    const distantMaterial = new THREE.MeshStandardMaterial({
+      color: 0x252925,
+      roughness: 1,
+      flatShading: true
+    });
+
+    function distantTower(x, z, height, radius) {
+      cylinder(radius, radius * 1.1, height, distantMaterial, [x, height / 2, z], 7);
+      cone(radius * 1.05, 1.2, materials.ash, [x, height + .4, z], 7);
+    }
+
+    distantTower(-28, -22, 12, 3.2);
+    distantTower(31, -32, 16, 3.8);
+    distantTower(-36, 29, 9, 2.7);
+    distantTower(28, 34, 13, 3.1);
+    distantTower(5, -45, 20, 4.2);
+
+    // Distant sky dome and aurora-like wisps.
+    const skyDome = sphere(72, new THREE.MeshBasicMaterial({ color: 0x111817, side: THREE.BackSide }), [0, 12, 0], 32, 20);
+    skyDome.castShadow = false;
+    skyDome.receiveShadow = false;
+
+    for (let i = 0; i < 22; i++) {
+      const a = randomRange(0, Math.PI * 2);
+      const r = randomRange(35, 65);
+      const aurora = mesh(
+        new THREE.SphereGeometry(randomRange(1.5, 4), 12, 6),
+        new THREE.MeshBasicMaterial({
+          color: i % 2 ? 0x452b57 : 0x234c64,
+          transparent: true,
+          opacity: randomRange(.12, .35),
+          depthWrite: false,
+          side: THREE.DoubleSide
+        }),
+        world,
+        [Math.cos(a) * r, randomRange(8, 24), Math.sin(a) * r],
+        false
+      );
+      aurora.castShadow = false;
+      aurora.receiveShadow = false;
+    }
+
+    // Fireflies.
+    const fireflyMaterial = new THREE.MeshBasicMaterial({ color: 0xd8e87b });
+    for (let i = 0; i < 45; i++) {
+      const firefly = sphere(.055, fireflyMaterial, [
+        randomRange(-15, 15),
+        randomRange(1, 8),
+        randomRange(-15, 15)
+      ], 6, 4);
+      firefly.userData = {
+        phase: randomRange(0, Math.PI * 2),
+        speed: randomRange(.6, 1.3)
+      };
+    }
+
+    // Clickable landmarks with subtle hover and soundless feedback.
+    const hotspotMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd7a94e,
+      emissive: 0x6b3e08,
+      emissiveIntensity: .6,
+      roughness: .45,
+      metalness: .45
+    });
+
+    const hotspotGeometry = new THREE.SphereGeometry(.38, 12, 8);
+    const hotspotPositions = [
+      [0, 7.2, 0],
+      [8.7, 3.2, 5.2],
+      [-8.4, 2.7, 6.1],
+      [12.2, 1.2, -8.8],
+      [-12.8, 1.5, -7.8],
+      [3.6, 2.1, 11.5],
+      [-3.1, 2.2, -12.2]
+    ];
+
+    hotspotPositions.forEach((p, i) => {
+      const marker = mesh(hotspotGeometry, hotspotMaterial, world, p, false);
+      marker.userData.index = i;
+      clickable.push(marker);
+    });
+
+    // UI achievements.
+    const achievementData = [
+      { name: "First Light", text: "Approach the central spire." },
+      { name: "Ember Walk", text: "Gather 10 fallen crystals." },
+      { name: "Ashen Wings", text: "Stabilize the floating shards." },
+      { name: "Sunless Bell", text: "Ring the broken celestial bell." },
+      { name: "Star Cartographer", text: "Map seven sky ruins." },
+      { name: "Void Weaver", text: "Connect the orbital rings." },
+      { name: "Dusk Pilgrim", text: "Visit the western sanctuary." },
+      { name: "Echo of Before", text: "Find the ancient voice." },
+      { name: "Cinder Keeper", text: "Tend the last flame." },
+      { name: "Hollow Crown", text: "Restore the crown of domes." },
+      { name: "Night Gardener", text: "Plant three memory seeds." },
+      { name: "Beyond the Rim", text: "Cross into the outer wastes." },
+      { name: "The Last Dawn", text: "Awaken the sky above the ruins." }
+    ];
+
+    const achievementItems = achievementData.map((item, index) => {
+      const li = document.createElement("li");
+      li.className = "achievement";
+      li.innerHTML = `
+        <span class="check"></span>
+        <span>${item.name}</span>
+        <span class="achievement-text">${item.text}</span>
+      `;
+      achievements.appendChild(li);
+      return {
+        element: li,
+        check: li.querySelector(".check"),
+        index,
+        unlocked: false
+      };
+    });
+
+    function markAchieved(index) {
+      const item = achievementItems[index];
+      if (item.unlocked) return;
+      item.unlocked = true;
+      item.element.classList.remove("locked");
+      countLabel.textContent = `${String(achievementItems.filter(a => a.unlocked).length).padStart(2, "0")} / 13`;
+    }
+
+    // Camera: custom orbit controls, implemented without external modules.
+    const controls = {
+      target: new THREE.Vector3(0, 3.5, 0),
+      radius: 31,
+      theta: Math.PI * .22,
+      phi: 1.18,
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      pinchDistance: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.pointerX;
+      const dy = event.clientY - controls.pointerY;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      controls.theta -= dx * .005;
+      controls.phi = THREE.MathUtils.clamp(controls.phi - dy * .004, .38, 1.48);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(controls.radius + event.deltaY * .025, 13, 55);
+      updateCamera();
+    }, { passive: false });
+
+    // Pinch zoom.
+    const activePointers = new Map();
+    let previousPinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (previousPinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(controls.radius + (previousPinchDistance - distance) * .035, 13, 55);
+          updateCamera();
+        }
+        previousPinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      previousPinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    // Clicking hotspot markers.
+    renderer.domElement.addEventListener("click", (event) => {
+      const marker = clickable.find(item => item.object === renderer.domElement.children[0] || item.object === renderer.domElement);
+      if (!marker) {
+        const hit = new THREE.Vector3(
+          (event.clientX / innerWidth) * 2 - 1,
+          -(event.clientY / innerHeight) * 2 + 1,
+          0
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(hit, camera);
+        const hits = raycaster.intersectObjects(clickable, false);
+        if (hits.length) markAchieved(hits[0].object.userData.index);
+        return;
+      }
+      markAchieved(marker.userData.index);
+    });
+
+    // Touch-action is disabled on canvas; pinch is handled above.
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    // Animation.
+    const ambient = new THREE.Group();
+    world.add(ambient);
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      particles.forEach((shard, i) => {
+        shard.position.y = shard.userData.baseY + Math.sin(elapsed * shard.userData.speed + shard.userData.phase) * .35;
+        shard.rotation.x += .0015;
+        shard.rotation.y += .002;
+      });
+
+      emberData.forEach((ember, i) => {
+        const data = ember.userData;
+        ember.position.y = data.baseY + Math.sin(elapsed * data.speed + data.phase) * .28;
+        ember.material.opacity = .16 + (Math.sin(elapsed * data.speed * 1.7 + data.phase) + 1) * .12;
+      });
+
+      beacons.forEach((beacon, i) => {
+        beacon.intensity = 8 + Math.sin(elapsed * 2.2 + i) * 5;
+        beacon.scale.setScalar(1 + Math.sin(elapsed * 2.2 + i) * .08);
+      });
+
+      fireflies.forEach((firefly, i) => {
+        const data = firefly.userData;
+        firefly.position.x += Math.sin(elapsed * data.speed + data.phase) * .0007;
+        firefly.position.y += Math.cos(elapsed * data.speed * .8 + data.phase) * .0005;
+        firefly.position.z += Math.sin(elapsed * .4 + data.phase) * .0007;
+        firefly.rotation.x = elapsed * .4 + data.phase;
+        firefly.rotation.y = elapsed * .3;
+      });
+
+      // Slow orbital motion around the central ruin.
+      const beacon = sphere(.12, materials.flame, [0, 13.6, 0], 8, 6);
+      beacon.userData = { base: beacon.position.clone(), phase: 0 };
+
+      // Gentle camera breathing when idle.
+      if (!controls.dragging && performance.now() - (controls.lastInteraction || performance.now()) > 3500) {
+        controls.phi += Math.sin(elapsed * .18) * .00035;
+        updateCamera();
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    const loadingTimer = setTimeout(() => {
+      loading.classList.add("hidden");
+      setTimeout(() => loading.remove(), 900);
+    }, 450);
+
+    animate();
+
+    setTimeout(() => {
+      clearTimeout(loadingTimer);
+    }, 1200);
+  </script>
+</body>
+</html>

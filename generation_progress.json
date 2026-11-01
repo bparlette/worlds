@@ -331,5 +331,14 @@
     "filename": "037_super_metroid_maridia_submerged_depths.html",
     "verified_working": false,
     "generated_at": "2026-11-01 07:24:53"
+  },
+  "38": {
+    "id": 38,
+    "game": "Chrono Trigger",
+    "target": "2300 A.D. Ruined Domes",
+    "platform": "SNES",
+    "filename": "038_chrono_trigger_2300_a_d_ruined_domes.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 07:35:07"
   }
 }
