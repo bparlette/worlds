@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forest of Illusion — Three.js</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #07121d;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #fff8e8;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, .75);
+    }
+
+    .title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      max-width: min(420px, calc(100vw - 56px));
+    }
+
+    .eyebrow {
+      margin-bottom: 7px;
+      color: #ffc95c;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 46px);
+      line-height: .95;
+      letter-spacing: -.04em;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: rgba(255, 248, 232, .72);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .legend {
+      position: absolute;
+      right: 24px;
+      bottom: 22px;
+      padding: 12px 15px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 12px;
+      background: rgba(10, 24, 36, .55);
+      backdrop-filter: blur(12px);
+      color: rgba(255, 255, 255, .75);
+      font-size: 11px;
+      line-height: 1.65;
+    }
+
+    .legend strong {
+      color: #ffc95c;
+      font-weight: 700;
+    }
+
+    .hint {
+      position: absolute;
+      left: 26px;
+      bottom: 24px;
+      color: rgba(255, 255, 255, .58);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background: #07121d;
+      color: #ffc95c;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      transition: opacity .6s ease;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 650px) {
+      .title { top: 18px; left: 18px; }
+      .subtitle { max-width: 280px; }
+      .legend { right: 14px; bottom: 14px; }
+      .hint { left: 16px; bottom: 18px; max-width: 125px; line-height: 1.5; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div id="hud">
+    <div class="title">
+      <div class="eyebrow">Super Mario World · SNES</div>
+      <h1>Forest of<br />Illusion</h1>
+      <p class="subtitle">
+        Two distinct parts. Slippery terrain, sneaky Koopas, sneaky Rexes,
+        icy blocks, and a guarded mystery.
+      </p>
+    </div>
+
+    <div class="hint">Drag to orbit · Scroll to zoom</div>
+
+    <div class="legend">
+      <strong>Level 7</strong><br />
+      Slippery ground · Rexes can be stomped<br />
+      ? Block is guarded by a Shiny Shell Koopa
+    </div>
+  </div>
+
+  <div id="loading">Loading the forest…</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+
+    const container = document.getElementById("scene");
+    const loading = document.getElementById("loading");
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a1825);
+    scene.fog = new THREE.FogExp2(0x0b2231, 0.027);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      120
+    );
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+
+    const materials = {
+      trunk: new THREE.MeshStandardMaterial({
+        color: 0x6f321c,
+        roughness: 0.92
+      }),
+      barkDark: new THREE.MeshStandardMaterial({
+        color: 0x3d2115,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x287b43,
+        roughness: 0.88
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x3d9a55,
+        roughness: 0.85
+      }),
+      leafDark: new THREE.MeshStandardMaterial({
+        color: 0x174c32,
+        roughness: 0.95
+      }),
+      mushroom: new THREE.MeshStandardMaterial({
+        color: 0xf2d45d,
+        roughness: 0.78
+      }),
+      mushroomRed: new THREE.MeshStandardMaterial({
+        color: 0xd93535,
+        roughness: 0.72
+      }),
+      shell: new THREE.MeshStandardMaterial({
+        color: 0xe8b845,
+        roughness: 0.48,
+        metalness: 0.08
+      }),
+      shellDark: new THREE.MeshStandardMaterial({
+        color: 0x9a6d28,
+        roughness: 0.65
+      }),
+      ice: new THREE.MeshStandardMaterial({
+        color: 0x8ed9ed,
+        roughness: 0.25,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.86
+      }),
+      iceDark: new THREE.MeshStandardMaterial({
+        color: 0x4e91a8,
+        roughness: 0.4,
+        metalness: 0.12
+      }),
+      ground: new THREE.MeshStandardMaterial({
+        color: 0x4b6850,
+        roughness: 0.94
+      }),
+      groundWet: new THREE.MeshStandardMaterial({
+        color: 0x334b43,
+        roughness: 0.22,
+        metalness: 0.05
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x6e7470,
+        roughness: 0.95
+      }),
+      pipe: new THREE.MeshStandardMaterial({
+        color: 0xd7a932,
+        roughness: 0.58
+      }),
+      pipeDark: new THREE.MeshStandardMaterial({
+        color: 0x8c6820,
+        roughness: 0.72
+      }),
+      flower: new THREE.MeshStandardMaterial({
+        color: 0xf2a65a,
+        emissive: 0x7d2600,
+        emissiveIntensity: 0.25,
+        roughness: 0.7
+      }),
+      glow: new THREE.MeshBasicMaterial({
+        color: 0xffd86a
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x8fc6df, 0x17251c, 1.35));
+
+    const moonLight = new THREE.DirectionalLight(0x9bc8e8, 2.4);
+    moonLight.position.set(-18, 28, 15);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.set(2048, 2048);
+    moonLight.shadow.camera.left = -30;
+    moonLight.shadow.camera.right = 30;
+    moonLight.shadow.camera.top = 30;
+    moonLight.shadow.camera.bottom = -30;
+    moonLight.shadow.camera.near = 1;
+    moonLight.shadow.camera.far = 80;
+    moonLight.shadow.bias = -0.0005;
+    scene.add(moonLight);
+
+    const warmFill = new THREE.PointLight(0xffb45c, 35, 28, 2);
+    warmFill.position.set(5, 4, 7);
+    scene.add(warmFill);
+
+    const blueFill = new THREE.PointLight(0x4ea8ff, 28, 30, 2);
+    blueFill.position.set(-12, 6, -8);
+    scene.add(blueFill);
+
+    // ---------------------------------------------------------------------
+    // Geometry helpers
+    // ---------------------------------------------------------------------
+
+    function mesh(geometry, material, position, rotation = null, castShadow = true, receiveShadow = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.copy(position);
+      if (rotation) object.rotation.set(rotation.x, rotation.y, rotation.z);
+      object.castShadow = castShadow;
+      object.receiveShadow = receiveShadow;
+      scene.add(object);
+      return object;
+    }
+
+    function cylinderBetween(a, b, radius, material, radialSegments = 10) {
+      const direction = new THREE.Vector3().subVectors(b, a);
+      const length = direction.length();
+      const object = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius * 1.05, length, radialSegments),
+        material
+      );
+      object.position.copy(a).add(b).multiplyScalar(0.5);
+      object.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+      );
+      object.castShadow = true;
+      object.receiveShadow = true;
+      scene.add(object);
+      return object;
+    }
+
+    function branchBetween(a, b, radius, material) {
+      return cylinderBetween(a, b, radius, material, 8);
+    }
+
+    // ---------------------------------------------------------------------
+    // Terrain: two parts, with a transition
+    // ---------------------------------------------------------------------
+
+    const terrain = new THREE.Mesh(
+      new THREE.PlaneGeometry(70, 70, 120, 120),
+      materials.ground
+    );
+    terrain.rotation.x = -Math.PI / 2;
+    terrain.receiveShadow = true;
+    scene.add(terrain);
+
+    const heightData = [];
+    const partLength = 27;
+
+    for (let i = 0; i <= 120; i++) {
+      const x = (i / 120 - 0.5) * 60;
+      const part = Math.floor((x + 13.5) / partLength);
+      const local = (x + 13.5) % partLength;
+      const edge = Math.max(0, 1 - local / partLength);
+      const noise = Math.sin(x * 0.83 + part * 1.7) * 0.28 +
+                   Math.sin(x * 1.71 - part * 0.7) * 0.13;
+      const slip = part === 1 ? 0.48 : 0.08;
+      const y = -0.7 + noise * edge + slip * edge;
+      heightData.push(y);
+    }
+
+    const terrainPositions = [];
+    const terrainIndices = [];
+    const vertexColors = [];
+
+    for (let i = 0; i < heightData.length; i++) {
+      const y = heightData[i];
+      terrainPositions.push((i % 2) * 0.12, y, Math.floor(i / 2) * 0.12);
+
+      const color = new THREE.Color();
+      if (part === 1) {
+        color.setHSL(0.43, 0.43, 0.23 + Math.sin(i * 0.7) * 0.035);
+      } else {
+        color.setHSL(0.34, 0.34, 0.25 + Math.sin(i * 0.53) * 0.035);
+      }
+      vertexColors.push(color.r, color.g, color.b);
+    }
+
+    const terrainGeometry = new THREE.BufferGeometry();
+    terrainGeometry.setAttribute("position", new THREE.Float32BufferAttribute(terrainPositions, 3));
+    terrainGeometry.setAttribute("color", new THREE.Float32BufferAttribute(vertexColors, 3));
+    terrainGeometry.setIndex(terrainIndices);
+    terrainGeometry.computeVertexNormals();
+
+    const terrainMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.96,
+      metalness: 0
+    });
+
+    const terrainMesh = new THREE.Mesh(terrainGeometry, terrainMaterial);
+    terrainMesh.receiveShadow = true;
+    scene.add(terrainMesh);
+
+    // Wet, reflective-looking patches in the first part.
+    const wetPatches = [
+      [-5, 0.2, 4], [3, 0.5, 5], [8, 0.15, 4],
+      [-10, 0.1, 3], [12, 0.18, 3.5], [17, 0.1, 2.5]
+    ];
+
+    for (const [x, y, radius] of wetPatches) {
+      const patch = new THREE.Mesh(
+        new THREE.CircleGeometry(radius, 32),
+        materials.groundWet
+      );
+      patch.rotation.x = -Math.PI / 2;
+      patch.position.set(x, y, 0);
+      patch.scale.y = 0.45;
+      patch.receiveShadow = true;
+      scene.add(patch);
+    }
+
+    // ---------------------------------------------------------------------
+    // Trees
+    // ---------------------------------------------------------------------
+
+    const trees = [];
+    const trunkGeometry = new THREE.CylinderGeometry(0.12, 0.2, 1, 7);
+    const crownGeometry = new THREE.ConeGeometry(0.8, 1.6, 8);
+
+    function createTree(x, z, scale = 1, variant = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, -0.4, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      const trunk = new THREE.Mesh(trunkGeometry, materials.barkDark);
+      trunk.position.y = 0.65;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      group.add(trunk);
+
+      const crown = new THREE.Mesh(crownGeometry, materials.leaf);
+      crown.position.y = 2.1;
+      crown.rotation.y = variant * 0.37;
+      crown.scale.set(0.85, 1.15, 0.85);
+      crown.castShadow = true;
+      crown.receiveShadow = true;
+      group.add(crown);
+
+      const crown2 = new THREE.Mesh(crownGeometry, materials.leafLight);
+      crown2.position.set(0.42, 2.65, -0.15);
+      crown2.scale.set(0.52, 0.72, 0.52);
+      crown2.castShadow = true;
+      group.add(crown2);
+
+      trees.push({ group, crown, crown2, phase: variant * 1.7 });
+    }
+
+    [
+      [-13, -12, 1.15], [-8, -16, 0.9], [-16, -5, 1.25],
+      [12, -15, 1.1], [16, -8, 1.3], [10, 2, 0.85],
+      [-15, 7, 1.1], [-8, 12, 0.75], [5, 16, 1.2],
+      [15, 12, 0.9], [-18, -21, 1.35], [19, -22, 1.2]
+    ].forEach((args, i) => createTree(args[0], args[1], args[2], i));
+
+    // ---------------------------------------------------------------------
+    // Bushes and flowers
+    // ---------------------------------------------------------------------
+
+    const bushMaterial = new THREE.MeshStandardMaterial({
+      color: 0x347d45,
+      roughness: 0.95
+    });
+
+    for (let i = 0; i < 24; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = side * (8 + (i % 5) * 4.4);
+      const z = -22 + Math.floor(i / 5) * 5.2;
+      const bush = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.45 + (i % 3) * 0.09, 1),
+        bushMaterial
+      );
+      bush.position.set(x, 0.15, z);
+      bush.scale.y = 0.65;
+      bush.castShadow = true;
+      bush.receiveShadow = true;
+      scene.add(bush);
+    }
+
+    const flowerStems = [];
+
+    function createFlower(x, z, colorMaterial) {
+      const group = new THREE.Group();
+      group.position.set(x, heightData[Math.floor((x + 13.5) / partLength) * 120 % heightData.length] || 0, z);
+      scene.add(group);
+
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.025, 0.42, 6),
+        materials.leafDark
+      );
+      stem.position.y = 0.2;
+      stem.castShadow = true;
+      group.add(stem);
+
+      const petal = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 8, 5),
+        colorMaterial
+      );
+      petal.scale.set(1.25, 0.35, 0.8);
+      petal.position.y = 0.43;
+      petal.castShadow = true;
+      group.add(petal);
+
+      const center = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 8, 5),
+        materials.flower
+      );
+      center.position.y = 0.47;
+      group.add(center);
+
+      flowerStems.push({ group, phase: Math.random() * Math.PI * 2 });
+    }
+
+    createFlower(-4, -3, materials.flower);
+    createFlower(1, -6, materials.flower);
+    createFlower(6, 3, materials.flower);
+    createFlower(-9, 8, materials.flower);
+    createFlower(12, 10, materials.flower);
+    createFlower(-15, 15, materials.flower);
+
+    // ---------------------------------------------------------------------
+    // Pipes
+    // ---------------------------------------------------------------------
+
+    function createPipe(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      const top = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.48, 0.48, 0.28, 16),
+        materials.pipe
+      );
+      top.position.y = 0.42;
+      top.castShadow = true;
+      top.receiveShadow = true;
+      group.add(top);
+
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.49, 0.065, 8, 18),
+        materials.pipeDark
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.3;
+      ring.castShadow = true;
+      group.add(ring);
+
+      for (let i = 0; i < 4; i++) {
+        const stripe = new THREE.Mesh(
+          new THREE.TorusGeometry(0.495, 0.018, 5, 18, Math.PI * 0.65),
+          materials.pipeDark
+        );
+        stripe.rotation.x = Math.PI / 2;
+        stripe.rotation.z = i * Math.PI * 0.16;
+        stripe.position.y = 0.3;
+        group.add(stripe);
+      }
+    }
+
+    createPipe(-8, -13, 0.1);
+    createPipe(4, -18, -0.2);
+    createPipe(13, -4, 0.3);
+    createPipe(-13, 7, -0.15);
+    createPipe(8, 15, 0.1);
+
+    // ---------------------------------------------------------------------
+    // Rocks
+    // ---------------------------------------------------------------------
+
+    const rocks = [];
+
+    function createRock(x, z, scale = 1) {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.45, 0),
+        materials.rock
+      );
+      rock.position.set(x, 0.12, z);
+      rock.scale.set(scale, scale * 0.7, scale * 0.85);
+      rock.rotation.set(0.2, Math.random() * Math.PI, -0.15);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      scene.add(rock);
+      rocks.push(rock);
+    }
+
+    [
+      [-11, -8, 1.1], [-6, -14, 0.8], [2, -15, 1.2],
+      [9, -10, 0.7], [-17, -1, 0.9], [17, 2, 1.1],
+      [-10, 12, 0.8], [3, 17, 1], [12, 19, 0.75]
+    ].forEach(args => createRock(...args));
+
+    // ---------------------------------------------------------------------
+    // Koopas
+    // ---------------------------------------------------------------------
+
+    const koopas = [];
+    const shellObjects = [];
+
+    function createKoopa(x, z, rotation = 0, shiny = false) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.34, 14, 10),
+        shiny ? materials.shell : materials.shellDark
+      );
+      body.scale.set(1, 0.75, 0.9);
+      body.position.y = 0.31;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.23, 12, 9),
+        shiny ? materials.shell : materials.shellDark
+      );
+      head.position.set(0, 0.52, 0.18);
+      head.castShadow = true;
+      group.add(head);
+
+      const snout = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.3, 8),
+        shiny ? materials.shell : materials.shellDark
+      );
+      snout.rotation.x = Math.PI / 2;
+      snout.position.set(0, 0.52, 0.38);
+      group.add(snout);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.045, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0x242424 })
+      );
+      eye.position.set(0.12, 0.66, 0.31);
+      group.add(eye);
+
+      const eye2 = eye.clone();
+      eye2.position.x = -0.12;
+      group.add(eye2);
+
+      const legs = [];
+      for (const side of [-1, 1]) {
+        const leg = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.075, 0.18, 3, 7),
+          shiny ? materials.shell : materials.shellDark
+        );
+        leg.position.set(side * 0.23, 0.08, -0.03);
+        leg.rotation.z = side * 0.25;
+        leg.castShadow = true;
+        group.add(leg);
+        legs.push(leg);
+      }
+
+      const shell = new THREE.Mesh(
+        new THREE.SphereGeometry(0.38, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.67),
+        shiny ? materials.shell : materials.shellDark
+      );
+      shell.scale.set(1, 0.85, 0.95);
+      shell.position.y = 0.1;
+      shell.castShadow = true;
+      shell.receiveShadow = true;
+      group.add(shell);
+
+      koopas.push({
+        group,
+        legs,
+        shell,
+        phase: Math.random() * Math.PI * 2,
+        shiny
+      });
+    }
+
+    createKoopa(-3.5, -9, 0.2, false);
+    createKoopa(5.5, -11, -0.35, false);
+    createKoopa(-10, 2, 0.5, true);
+    createKoopa(10, 5, -0.2, false);
+    createKoopa(-5, 12, 0.1, false);
+    createKoopa(14, -15, 0.4, true);
+
+    // ---------------------------------------------------------------------
+    // Rexes
+    // ---------------------------------------------------------------------
+
+    const rexes = [];
+
+    function createRex(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.46, 14, 10),
+        materials.barkDark
+      );
+      body.scale.set(1.15, 0.75, 0.9);
+      body.position.y = 0.4;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.31, 12, 9),
+        materials.barkDark
+      );
+      head.position.set(0, 0.68, 0.22);
+      head.castShadow = true;
+      group.add(head);
+
+      const snout = new THREE.Mesh(
+        new THREE.ConeGeometry(0.15, 0.35, 8),
+        materials.barkDark
+      );
+      snout.rotation.x = Math.PI / 2;
+      snout.position.set(0, 0.68, 0.43);
+      group.add(snout);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.045, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0x111111 })
+      );
+      eye.position.set(0.15, 0.8, 0.34);
+      group.add(eye);
+
+      const eye2 = eye.clone();
+      eye2.position.x = -0.15;
+      group.add(eye2);
+
+      const horns = [];
+      for (const side of [-1, 1]) {
+        const horn = new THREE.Mesh(
+          new THREE.ConeGeometry(0.045, 0.38, 7),
+          materials.barkDark
+        );
+        horn.position.set(side * 0.1, 1.03, 0.02);
+        horn.rotation.z = side * -0.45;
+        group.add(horn);
+        horns.push(horn);
+      }
+
+      const legs = [];
+      for (const side of [-1, 1]) {
+        const leg = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.09, 0.22, 3, 7),
+          materials.barkDark
+        );
+        leg.position.set(side * 0.28, 0.08, -0.03);
+        leg.rotation.z = side * 0.2;
+        leg.castShadow = true;
+        group.add(leg);
+        legs.push(leg);
+      }
+
+      rexes.push({
+        group,
+        legs,
+        horns,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    createRex(-12, -5, 0.4);
+    createRex(8, 1, -0.35);
+    createRex(-7, 15, 0.25);
+    createRex(14, -8, 0.15);
+
+    // ---------------------------------------------------------------------
+    // Mystery ? block guarded by a Shiny Shell Koopa
+    // ---------------------------------------------------------------------
+
+    const mysteryPosition = new THREE.Vector3(1.2, 0, 17.5);
+    const mysteryRotation = new THREE.Euler(0, -0.45, 0.08);
+
+    const mysteryBlock = new THREE.Group();
+    mysteryBlock.position.copy(mysteryPosition);
+    mysteryBlock.rotation.copy(mysteryRotation);
+    scene.add(mysteryBlock);
+
+    const blockBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.72, 0.72, 0.72),
+      materials.mushroom
+    );
+    blockBody.position.y = 0.36;
+    blockBody.castShadow = true;
+    blockBody.receiveShadow = true;
+    mysteryBlock.add(blockBody);
+
+    const blockTop = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.08, 0.5),
+      materials.mushroomRed
+    );
+    blockTop.position.y = 0.73;
+    blockTop.castShadow = true;
+    mysteryBlock.add(blockTop);
+
+    const mysteryGuard = createKoopa(
+      mysteryPosition.x + 0.7,
+      mysteryPosition.z + 0.7,
+      0.65,
+      true
+    );
+
+    // ---------------------------------------------------------------------
+    // Ice blocks in the second part
+    // ---------------------------------------------------------------------
+
+    const iceBlocks = [];
+
+    function createIceBlock(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(1.05, 0.55, 1.05),
+        materials.ice
+      );
+      block.position.y = 0.28;
+      block.castShadow = true;
+      block.receiveShadow = true;
+      group.add(block);
+
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.55, 0.14, 6),
+        materials.iceDark
+      );
+      cap.position.y = 0.61;
+      cap.castShadow = true;
+      group.add(cap);
+
+      const crystal = new THREE.Mesh(
+        new THREE.ConeGeometry(0.16, 0.55, 6),
+        materials.ice
+      );
+      crystal.position.y = 0.95;
+      crystal.castShadow = true;
+      group.add(crystal);
+
+      iceBlocks.push({ group, block, cap, crystal, phase: Math.random() * Math.PI * 2 });
+    }
+
+    createIceBlock(-10, 25, 0.15);
+    createIceBlock(4, 27, -0.2);
+    createIceBlock(15, 24, 0.35);
+    createIceBlock(-17, 29, -0.1);
+
+    // ---------------------------------------------------------------------
+    // Small environmental details
+    // ---------------------------------------------------------------------
+
+    const butterflies = [];
+
+    function createButterfly(x, y, z, color) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      scene.add(group);
+
+      const left = new THREE.Mesh(
+        new THREE.CircleGeometry(0.1, 10),
+        new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.8 })
+      );
+      left.rotation.y = Math.PI;
+      group.add(left);
+
+      const right = left.clone();
+      group.add(right);
+
+      const antenna = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.22, 5),
+        materials.barkDark
+      );
+      antenna.position.y = 0.16;
+      group.add(antenna);
+
+      butterflies.push({
+        group,
+        left,
+        right,
+        antenna,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.55 + Math.random() * 0.45
+      });
+    }
+
+    createButterfly(-4, 2.2, 5, 0xf4c35b);
+    createButterfly(6, 2.7, -4, 0xe95f78);
+    createButterfly(11, 2.1, 10, 0x75c7ff);
+    createButterfly(-14, 2.5, -10, 0xf4c35b);
+
+    // Fireflies.
+    const fireflies = [];
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffdd77,
+      transparent: true,
+      opacity: 0.85
+    });
+
+    for (let i = 0; i < 22; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = side * (5 + (i % 7) * 4);
+      const z = -24 + Math.floor(i / 7) * 5;
+      const firefly = new THREE.Mesh(
+        new THREE.SphereGeometry(0.035, 6, 4),
+        fireflyMaterial
+      );
+      firefly.position.set(x, 1.2 + (i % 4) * 0.55, z);
+      scene.add(firefly);
+      fireflies.push({
+        mesh: firefly,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.7 + Math.random() * 0.5
+      });
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: orbit, pan-free rotation, wheel zoom, touch pinch
+    // ---------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 0.4, 0),
+      radius: 22,
+      theta: 0.72,
+      phi: 1.18,
+      minRadius: 9,
+      maxRadius: 38,
+      minPhi: 0.38,
+      maxPhi: 1.48
+    };
+
+    const initialCamera = {
+      target: controls.target.clone(),
+      radius: controls.radius,
+      theta: controls.theta,
+      phi: controls.phi
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    let dragging = false;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 1) {
+        dragging = true;
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        renderer.domElement.setPointerCapture(event.pointerId);
+      } else if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (pinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(
+            controls.radius * (pinchDistance / Math.max(distance, 1)),
+            controls.minRadius,
+            controls.maxRadius
+          );
+        }
+        pinchDistance = distance;
+        updateCamera();
+      } else if (dragging) {
+        const deltaX = event.clientX - lastPointerX;
+        const deltaY = event.clientY - lastPointerY;
+
+        controls.theta -= deltaX * 0.006;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - deltaY * 0.005,
+          controls.minPhi,
+          controls.maxPhi
+        );
+
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        updateCamera();
+      }
+    });
+
+    function endPointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+      if (activePointers.size === 0) dragging = false;
+    }
+
+    renderer.domElement.addEventListener("pointerup", endPointer);
+    renderer.domElement.addEventListener("pointercancel", endPointer);
+    renderer.domElement.addEventListener("contextmenu", event => event.preventDefault());
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius * Math.exp(event.deltaY * 0.001),
+        controls.minRadius,
+        controls.maxRadius
+      );
+      updateCamera();
+    }, { passive: false });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // ---------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+    let elapsed = 0;
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      elapsed += delta;
+
+      // Gentle tree sway.
+      for (const tree of trees) {
+        const t = elapsed * 0.55 + tree.phase;
+        tree.crown.rotation.z = Math.sin(t) * 0.025;
+        tree.crown.rotation.x = Math.cos(t * 0.8) * 0.018;
+        tree.group.position.y = Math.sin(t * 0.7 + tree.phase) * 0.018;
+      }
+
+      // Flower movement.
+      for (const flower of flowerStems) {
+        flower.group.rotation.z = Math.sin(elapsed * 0.8 + flower.phase) * 0.045;
+        flower.group.rotation.x = Math.cos(elapsed * 0.65 + flower.phase) * 0.03;
+      }
+
+      // Koopa idle and kick animations.
+      for (const koopa of koopas) {
+        const t = elapsed * 1.25 + koopa.phase;
+        const legMotion = Math.sin(t * 2.2) * 0.12;
+
+        koopa.legs[0].rotation.z = -0.2 + legMotion;
+        koopa.legs[1].rotation.z = 0.2 - legMotion;
+
+        if (koopa.shiny) {
+          const guardDistance = Math.sin(t * 1.6) * 0.42;
+          koopa.group.position.x = mysteryPosition.x + guardDistance;
+          koopa.group.position.z = mysteryPosition.z + 0.7;
+          koopa.group.rotation.y = 0.65;
+        }
+      }
+
+      // Rex idle and stomp animations.
+      for (const rex of rexes) {
+        const t = elapsed * 1.05 + rex.phase;
+        const legMotion = Math.sin(t * 1.7) * 0.11;
+
+        rex.legs[0].rotation.z = -0.18 + legMotion;
+        rex.legs[1].rotation.z = 0.18 - legMotion;
+
+        const stomp = Math.pow(Math.max(0, Math.sin(t * 1.4)), 8);
+        rex.group.position.y = stomp * 0.16;
+        rex.group.rotation.y = 0.2 + Math.sin(t * 0.6) * 0.12;
+      }
+
+      // Ice crystals bob and glow.
+      for (const ice of iceBlocks) {
+        ice.group.position.y = Math.sin(elapsed * 1.1 + ice.phase) * 0.045;
+        ice.crystal.rotation.y = elapsed * 0.45 + ice.phase;
+        ice.crystal.scale.setScalar(1 + Math.sin(elapsed * 1.4 + ice.phase) * 0.08);
+      }
+
+      // Butterflies flutter.
+      for (const butterfly of butterflies) {
+        const t = elapsed * butterfly.speed + butterfly.phase;
+        butterfly.group.position.x = Math.sin(t) * 0.22;
+        butterfly.group.position.y = Math.cos(t * 1.3) * 0.12;
+        butterfly.left.rotation.z = Math.sin(t * 1.7) * 0.45;
+        butterfly.right.rotation.z = -Math.sin(t * 1.7) * 0.45;
+        butterfly.antenna.rotation.z = Math.sin(t) * 0.18;
+      }
+
+      // Fireflies drift.
+      for (const firefly of fireflies) {
+        const t = elapsed * firefly.speed + firefly.phase;
+        firefly.mesh.position.x += Math.sin(t) * delta * 0.22;
+        firefly.mesh.position.y += Math.cos(t * 1.4) * delta * 0.16;
+        firefly.mesh.material.opacity = 0.55 + (Math.sin(t * 2) + 1) * 0.2;
+      }
+
+      // Warm and cool lights subtly shift.
+      warmFill.intensity = 30 + Math.sin(elapsed * 0.8) * 4;
+      blueFill.intensity = 26 + Math.sin(elapsed * 0.55 + 1) * 5;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    requestAnimationFrame(() => {
+      loading.classList.add("hidden");
+      setTimeout(() => loading.remove(), 700);
+    });
+  </script>
+</body>
+</html>
