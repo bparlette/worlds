@@ -1,597 +1,821 @@
-// ============================================================================
-// @world {"id":"003","title":"HAUNTED HOUSE","sub":"Ghost Mansion","system":"Atari 2600"}
-// World 003 — HAUNTED HOUSE · Ghost Mansion (Atari 2600)
-// Converted from scenes/003_haunted_house_ghost_mansion.html into a World
-// Walker module. The original added its content directly to the scene (no
-// world group); the conversion creates the group and points the original
-// helpers' default parent at it. All geometry/materials/lights and ambient
-// animation preserved; renderer/orbit camera/jump/HUD removed.
-//
-// Conversion notes:
-//  * The original's ghost arm-wave read `ghost.userData?.arms`, but the arms
-//    were stored on the wrapper object, so the wave never ran and the loop
-//    skipped it. This module wires the arms correctly (the intended effect).
-//  * The original animated scene.fog.density; here update() writes the
-//    drift into env.fogDensity, which the host applies every frame.
-//  * The firefly opacity expression from the original is kept verbatim
-//    (it evaluates to a constant — preserved as authored).
-//
-// Door choices:
-//   next — the mansion's front gate: aligned with the front door, just
-//          outside the low fence. Door at (-1.5, 9.6).
-//   prev — in the graveyard east of the mansion, by the tombstones.
-//          Door at (13.5, -4).
-// Spawn: south lawn, facing the mansion front.
-// Relic: the Crystal Urn sits behind the mansion at (-1.5, -13), against
-//        its north wall — you must leave the front lawn and circle the
-//        house to reach it.
-// ============================================================================
+// @world {"id": "003", "title": "H.E.R.O.", "sub": "Level 12", "system": "Atari 2600"}
+// Converted from  into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
 
 export function createWorld(THREE) {
   const group = new THREE.Group();
 
-  const env = { background: 0x17100f, fogColor: 0x17100f, fogDensity: 0.027 };
-
-  // -------------------------------------------------------------------------
-  // Materials
-  // -------------------------------------------------------------------------
-  const materials = {
-    brick: new THREE.MeshStandardMaterial({ color: 0x7b2f38, roughness: .95 }),
-    darkBrick: new THREE.MeshStandardMaterial({ color: 0x4d1d26, roughness: 1 }),
-    trim: new THREE.MeshStandardMaterial({ color: 0xf1c777, roughness: .88 }),
-    white: new THREE.MeshStandardMaterial({ color: 0xf0e4bd, roughness: .95 }),
-    black: new THREE.MeshStandardMaterial({ color: 0x080706, roughness: 1 }),
-    window: new THREE.MeshStandardMaterial({
-      color: 0x243642,
-      emissive: 0x16232b,
-      emissiveIntensity: 1.5,
-      roughness: .35,
-      metalness: .1
-    }),
-    windowWarm: new THREE.MeshStandardMaterial({
-      color: 0xffd98b,
-      emissive: 0xffa63d,
-      emissiveIntensity: 2.2,
-      roughness: .45
-    }),
-    porch: new THREE.MeshStandardMaterial({ color: 0x30251f, roughness: .95 }),
-    grass: new THREE.MeshStandardMaterial({ color: 0x263d27, roughness: 1 }),
-    grassLight: new THREE.MeshStandardMaterial({ color: 0x34512b, roughness: 1 }),
-    wood: new THREE.MeshStandardMaterial({ color: 0x4a241d, roughness: .95 }),
-    metal: new THREE.MeshStandardMaterial({ color: 0x343331, roughness: .65, metalness: .55 }),
-    purple: new THREE.MeshStandardMaterial({
-      color: 0x6f246f,
-      emissive: 0x28072b,
-      emissiveIntensity: .55,
-      roughness: .85
-    })
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
   };
 
-  // -------------------------------------------------------------------------
-  // Lighting
-  // -------------------------------------------------------------------------
-  group.add(new THREE.HemisphereLight(0x657785, 0x24120e, 1.25));
+  let updateHook = null;
 
-  const moon = new THREE.DirectionalLight(0x8eaaff, 2.4);
-  moon.position.set(-15, 22, 10);
-  moon.castShadow = true;
-  moon.shadow.mapSize.set(2048, 2048);
-  moon.shadow.camera.left = -25;
-  moon.shadow.camera.right = 25;
-  moon.shadow.camera.top = 25;
-  moon.shadow.camera.bottom = -25;
-  moon.shadow.camera.near = 1;
-  moon.shadow.camera.far = 65;
-  moon.shadow.bias = -.0003;
-  group.add(moon);
-
-  const porchLight = new THREE.PointLight(0xffa33d, 3.2, 12, 2);
-  porchLight.position.set(0, 4.5, 3.5);
-  group.add(porchLight);
-
-  const windowGlow = new THREE.PointLight(0xff8b35, 2.1, 8, 2);
-  windowGlow.position.set(0, 4.5, -1.3);
-  group.add(windowGlow);
-
-  const purpleGlow = new THREE.PointLight(0x6b217b, 1.1, 10, 2);
-  purpleGlow.position.set(0, 2.5, 8);
-  group.add(purpleGlow);
-
-  // -------------------------------------------------------------------------
-  // Geometry helpers (original default parent was the scene; now the group)
-  // -------------------------------------------------------------------------
-  function box(w, h, d, material, x, y, z, parent = group) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
   }
 
-  function cylinder(rt, rb, h, material, x, y, z, parent = group, segments = 12) {
-    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
+  function dummyCamera() {
+    return {
+      position: { set: () => {}, copy: () => {} },
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
   }
 
-  function sphere(r, material, x, y, z, parent = group, widthSegments = 16, heightSegments = 12) {
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, widthSegments, heightSegments), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
-  }
-
-  function makeTextSprite(text, color = "#f4df9b", bg = "#24171c") {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 128;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, 512, 128);
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, 512, 128);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 8;
-    ctx.strokeRect(8, 8, 496, 112);
-    ctx.fillStyle = color;
-    ctx.font = "bold 54px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 256, 64);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    const mat = new THREE.SpriteMaterial({
-      map: texture,
-      transparent: true,
-      depthWrite: false
-    });
-    const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(5, 1.25, 1);
-    return sprite;
-  }
-
-  // -------------------------------------------------------------------------
-  // Ground, lawn, path, and surroundings
-  // -------------------------------------------------------------------------
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(90, 90),
-    new THREE.MeshStandardMaterial({ color: 0x18211b, roughness: 1 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -.12;
-  ground.receiveShadow = true;
-  group.add(ground);
-
-  const lawn = new THREE.Mesh(
-    new THREE.CircleGeometry(18, 64),
-    materials.grass
-  );
-  lawn.rotation.x = -Math.PI / 2;
-  lawn.position.y = -.08;
-  lawn.receiveShadow = true;
-  group.add(lawn);
-
-  // Curved path made from alternating stone slabs.
-  for (let i = 0; i < 18; i++) {
-    const angle = i * 0.32;
-    const radius = 5.5 + i * 0.78;
-    const slab = box(
-      1.25,
-      .12,
-      .62,
-      i % 2 ? materials.trim : materials.porch,
-      Math.cos(angle) * radius,
-      .025,
-      Math.sin(angle) * radius
-    );
-    slab.rotation.y = -angle + Math.PI / 2;
-  }
-
-  // Low fence.
-  for (let x = -12; x <= 12; x += 2) {
-    cylinder(.055, .055, 1.15, materials.wood, x, .55, 7.2);
-    box(.75, .12, .12, materials.wood, x, 1.0, 7.2);
-  }
-  for (const y of [.45, .9]) {
-    box(24, .08, .08, materials.wood, 0, y, 7.2);
-  }
-
-  // Graveyard to the right.
-  const graveyard = new THREE.Group();
-  graveyard.position.set(10, 0, -2);
-  group.add(graveyard);
-
-  function makeGrave(x, z, scale = 1) {
-    const g = new THREE.Group();
-    g.position.set(x, 0, z);
-    g.scale.setScalar(scale);
-    graveyard.add(g);
-
-    cylinder(.42, .52, .25, materials.black, 0, .14, 0, g, 9);
-    const crossG = new THREE.Group();
-    crossG.position.y = .32;
-    g.add(crossG);
-    box(.12, .72, .12, materials.trim, 0, .36, 0, crossG);
-    box(.52, .12, .12, materials.trim, 0, .68, 0, crossG);
-    return g;
-  }
-
-  makeGrave(-2.2, 0, 1.1);
-  makeGrave(2.3, .5, .85);
-  makeGrave(3.4, -1.2, 1.25);
-  makeGrave(-3.6, -1.1, .9);
-
-  // Small tombstone.
-  const tombstone = new THREE.Mesh(
-    new THREE.CylinderGeometry(.16, .34, 1.8, 4),
-    materials.trim
-  );
-  tombstone.rotation.y = Math.PI / 4;
-  tombstone.position.set(5.2, .9, -3.4);
-  tombstone.castShadow = true;
-  graveyard.add(tombstone);
-
-  const tombText = makeTextSprite("R.I.P", "#d99075", "#24151a");
-  tombText.position.set(5.2, 1.75, -3.4);
-  tombText.scale.set(1.6, .4, 1);
-  graveyard.add(tombText);
-
-  // -------------------------------------------------------------------------
-  // Mansion
-  // -------------------------------------------------------------------------
-  const mansion = new THREE.Group();
-  mansion.position.set(-1.5, 0, -1.5);
-  group.add(mansion);
-
-  box(14, .5, 16, materials.darkBrick, 0, .25, 0, mansion);
-  box(12.8, 9.5, 14.8, materials.brick, 0, 5.2, 0, mansion);
-
-  // Roof.
-  const roof = cylinder(8.2, 8.2, 3.1, materials.darkBrick, 0, 12.2, 0, mansion, 12);
-  roof.scale.z = .72;
-  roof.rotation.z = Math.PI / 2;
-
-  for (let i = 0; i < 7; i++) {
-    const angle = (i / 6) * Math.PI * 2;
-    const ridge = box(
-      .16,
-      3.25,
-      .18,
-      materials.darkBrick,
-      Math.cos(angle) * 7.8,
-      12.2,
-      Math.sin(angle) * 5.6,
-      mansion
-    );
-    ridge.rotation.y = -angle;
-  }
-
-  // Front facade details.
-  box(14.3, .35, .4, materials.trim, 0, 9.75, 7.45, mansion);
-  box(13.6, .3, .35, materials.trim, 0, .75, 7.35, mansion);
-
-  for (let x = -5.5; x <= 5.5; x += 2.75) {
-    box(.18, 9.6, .28, materials.darkBrick, x, 5.2, 7.38, mansion);
-  }
-
-  // Windows.
-  const windowPositions = [
-    [-4.6, 6.7, 7.55, .95],
-    [0, 6.7, 7.55, 1.1],
-    [4.6, 6.7, 7.55, .95],
-    [-3.3, 3.2, 7.55, .78],
-    [0, 3.2, 7.55, .82],
-    [3.3, 3.2, 7.55, .78],
-    [-5.45, 1.25, 7.45, .6],
-    [5.45, 1.25, 7.45, .6]
-  ];
-
-  for (const [x, y, z, w] of windowPositions) {
-    box(w + .35, 1.55, .22, materials.black, x, y, z, mansion);
-    box(w, 1.35, .08, materials.windowWarm, x, y, z + .15, mansion);
-    box(w + .08, .08, .1, materials.trim, x, y, z + .2, mansion);
-    box(.08, 1.35, .1, materials.trim, x, y, z + .2, mansion);
-  }
-
-  // Front door.
-  box(2.05, 3.65, .25, materials.wood, 0, 2.15, 7.62, mansion);
-  box(2.25, .2, .3, materials.trim, 0, 4.02, 7.68, mansion);
-  box(2.25, .2, .3, materials.trim, 0, .3, 7.68, mansion);
-  const doorKnob = sphere(.13, materials.metal, 1.0, 2.2, 7.82, mansion);
-  doorKnob.scale.z = .45;
-
-  // Porch.
-  box(7.4, .28, 4.6, materials.porch, 0, .45, 3.15, mansion);
-  for (const x of [-3.1, 3.1]) {
-    box(.35, .35, 4.5, materials.trim, x, 1.35, 3.15, mansion);
-  }
-  for (const x of [-3.3, 3.3]) {
-    for (const z of [1.15, 5.15]) {
-      cylinder(.13, .16, 1.25, materials.wood, x, .85, z, mansion, 8);
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
     }
-  }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
 
-  // Hanging lanterns.
-  const lanterns = [];
-  function makeLantern(x, y, z, color = 0xffa33d) {
-    const lanternGroup = new THREE.Group();
-    lanternGroup.position.set(x, y, z);
-    mansion.add(lanternGroup);
+  // --- Scoped Diorama Build Code ---
 
-    cylinder(.018, .018, .8, materials.black, 0, .35, 0, lanternGroup, 6);
-    const glass = new THREE.Mesh(
-      new THREE.CylinderGeometry(.18, .23, .48, 8),
-      new THREE.MeshStandardMaterial({
-        color,
-        emissive: color,
-        emissiveIntensity: 2.2,
-        transparent: true,
-        opacity: .82,
-        roughness: .3
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0x080d0d);
+    scene.fog = new THREE.FogExp2(0x080d0d, 0.035);
+
+    camera = dummyCamera();
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const clamp = THREE.MathUtils.clamp;
+    const rand = (a, b) => a + (b - a) * Math.random();
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2;
+
+    // Lighting: cool overhead, warm practical lamps, and a soft blue fill.
+    scene.add(new THREE.HemisphereLight(0x8bb8bd, 0x16130f, 1.15));
+
+    const keyLight = new THREE.DirectionalLight(0xffd7a0, 2.4);
+    keyLight.position.set(3, 9, 4);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -13;
+    keyLight.shadow.camera.right = 13;
+    keyLight.shadow.camera.top = 13;
+    keyLight.shadow.camera.bottom = -13;
+    keyLight.shadow.bias = -0.0008;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x66b8c9, 1.15);
+    rimLight.position.set(-7, 5, -8);
+    scene.add(rimLight);
+
+    // Materials.
+    const mats = {
+      wall: new THREE.MeshStandardMaterial({ color: 0x242b29, roughness: .92, metalness: .08 }),
+      wallAlt: new THREE.MeshStandardMaterial({ color: 0x303835, roughness: .9, metalness: .08 }),
+      floor: new THREE.MeshStandardMaterial({ color: 0x252b27, roughness: .95, metalness: .05 }),
+      floorDark: new THREE.MeshStandardMaterial({ color: 0x171d1b, roughness: .95, metalness: .05 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x78241d, roughness: .75, metalness: .15 }),
+      redDark: new THREE.MeshStandardMaterial({ color: 0x3f1715, roughness: .85, metalness: .12 }),
+      metal: new THREE.MeshStandardMaterial({ color: 0x66736f, roughness: .48, metalness: .68 }),
+      darkMetal: new THREE.MeshStandardMaterial({ color: 0x293331, roughness: .58, metalness: .62 }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xd6a43c, roughness: .32, metalness: .78 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x4f6556, roughness: .92, metalness: .08 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xc4c6b9, roughness: .68, metalness: .18 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x080b0a, roughness: .9, metalness: .08 })
+    };
+
+    function box(w, h, d, material, x, y, z, parent = world, cast = true, receive = true) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function cyl(rt, rb, h, material, x, y, z, parent = world, segments = 12) {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function pipe(x, y, z, rx, rz, material, parent = world) {
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(rx, rz, 7, 20), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ---------------------------------------------------------------------
+    // Compact Level 12 layout, derived from the reference section.
+    // The entire layout fits [-14.5, 14.5] x [-14.5, 14.5], y [0, 12].
+    // Four continuous walls form the boundary.
+    // ---------------------------------------------------------------------
+
+    const floorY = 0;
+    const worldWidth = 29;
+    const outer = 14.5;
+
+    // Ground slab and central reactor platform.
+    box(worldWidth, .28, worldWidth, mats.floor, 0, floorY - .16, 0, world, false, true);
+
+    const platform = new THREE.Group();
+    world.add(platform);
+    box(6.7, .35, 5.8, mats.floorDark, 0, .18, 0, platform);
+    box(5.2, .12, 4.4, mats.black, 0, .43, 0, platform);
+
+    // Four continuous outer walls, with subtle panel seams but no doors/holes.
+    box(worldWidth, 11.5, .45, mats.wall, 0, 5.75, -14.25);
+    box(worldWidth, 11.5, .45, mats.wall, 0, 5.75, 14.25);
+    box(.45, 11.5, worldWidth, mats.wall, -14.25, 5.75, 0);
+    box(.45, 11.5, worldWidth, mats.wall, 14.25, 5.75, 0);
+
+    // Wall panel seams.
+    for (let x = -12.5; x <= 12.5; x += 2.5) {
+      box(.035, 10.6, .04, mats.darkMetal, x, 5.7, -14.49);
+      box(.035, 10.6, .04, mats.darkMetal, x, 5.7, 14.49);
+    }
+    for (let z = -12.5; z <= 12.5; z += 2.5) {
+      box(.04, 10.6, .035, mats.darkMetal, -14.49, 5.7, z);
+      box(.04, 10.6, .035, mats.darkMetal, 14.49, 5.7, z);
+    }
+
+    // Main rear corridor and side rooms, preserving the map's orthogonal rooms.
+    const corridor = new THREE.Group();
+    world.add(corridor);
+
+    // Long rear room.
+    box(22.7, .16, 3.3, mats.floorDark, -1.2, .03, -10.5, corridor);
+    box(22.7, .16, 3.3, mats.floorDark, -1.2, .03, 10.5, corridor);
+
+    // Left side room.
+    box(3.4, .16, 12.7, mats.floorDark, -10.5, .03, -1.2, corridor);
+    box(3.4, .16, 12.7, mats.floorDark, 10.5, .03, -1.2, corridor);
+
+    // Central junction.
+    box(3.2, .16, 3.2, mats.floorDark, -1.2, .03, -1.2, corridor);
+    box(3.2, .16, 3.2, mats.floorDark, 10.5, .03, -1.2, corridor);
+
+    // Warm wall lamps.
+    function lamp(x, y, z, color = 0xffc879, intensity = 1.2) {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      world.add(g);
+
+      const shade = new THREE.Mesh(new THREE.ConeGeometry(.42, .55, 12, 1, true), mats.darkMetal);
+      shade.rotation.z = Math.PI;
+      shade.position.y = .2;
+      g.add(shade);
+
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 8), new THREE.MeshBasicMaterial({ color }));
+      bulb.position.y = .31;
+      g.add(bulb);
+
+      const light = new THREE.PointLight(color, intensity, 5.5, 2);
+      light.position.set(0, .35, 0);
+      g.add(light);
+      return g;
+    }
+
+    lamp(-10.5, 2.1, -11.8);
+    lamp(-10.5, 2.1, -5.5);
+    lamp(-10.5, 2.1, 5.5);
+    lamp(-10.5, 2.1, 11.8);
+    lamp(10.5, 2.1, -11.8);
+    lamp(10.5, 2.1, -5.5);
+    lamp(10.5, 2.1, 5.5);
+    lamp(10.5, 2.1, 11.8);
+
+    // Tall rear wall machinery.
+    const rearMachinery = new THREE.Group();
+    world.add(rearMachinery);
+
+    box(6.8, 4.3, .55, mats.darkMetal, -1.2, 2.35, -13.85, rearMachinery);
+    box(6.0, 3.5, .68, mats.wallAlt, -1.2, 2.35, -13.62, rearMachinery);
+    box(5.8, .22, .72, mats.metal, -1.2, 4.15, -13.5, rearMachinery);
+
+    for (let x = -4.1; x <= 1.9; x += 1.05) {
+      pipe(x, 3.2, -13.28, .35, .08, mats.metal, rearMachinery);
+      pipe(x, 2.1, -13.28, .28, .08, mats.metal, rearMachinery);
+    }
+
+    // Circular reactor at the rear.
+    const reactor = new THREE.Group();
+    reactor.position.set(-1.2, 0, -10.3);
+    world.add(reactor);
+
+    cyl(.95, .95, .28, mats.metal, 0, .38, 0, reactor);
+    cyl(.78, .78, .16, mats.darkMetal, 0, .61, 0, reactor);
+    cyl(.56, .56, .12, mats.black, 0, .78, 0, reactor);
+
+    const reactorRing = new THREE.Mesh(new THREE.TorusGeometry(.64, .09, 10, 32), mats.gold);
+    reactorRing.rotation.x = Math.PI / 2;
+    reactorRing.position.y = .88;
+    reactor.add(reactorRing);
+
+    // Animated reactor core.
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(.32, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0x75f4ff })
+    );
+    core.position.y = .96;
+    reactor.add(core);
+
+    const coreHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(.48, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x46cfe5, transparent: true, opacity: .18, side: THREE.DoubleSide })
+    );
+    coreHalo.position.y = .96;
+    reactor.add(coreHalo);
+
+    // Side wall control panels.
+    for (const z of [-10.5, 10.5]) {
+      for (const x of [-11.7, 11.7]) {
+        box(.58, .9, .12, mats.darkMetal, x, 2.2, z, corridor);
+        box(.38, .12, .04, mats.metal, x, 2.38, z + (z < 0 ? .08 : -.08), corridor);
+        for (let i = 0; i < 3; i++) {
+          box(.055, .055, .04, i === 0 ? mats.red : mats.green, x + .12, 2.05 + i * .23, z + (z < 0 ? .08 : -.08), corridor);
+        }
+      }
+    }
+
+    // Central reactor pedestal and glowing rings.
+    const pedestal = new THREE.Group();
+    pedestal.position.set(-1.2, 0, -10.3);
+    world.add(pedestal);
+
+    cyl(1.45, 1.65, .25, mats.metal, 0, .28, 0, pedestal);
+    cyl(1.25, 1.25, .12, mats.darkMetal, 0, .48, 0, pedestal);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const wedge = new THREE.Mesh(
+        new THREE.ConeGeometry(.14, .55, 3),
+        mats.metal
+      );
+      wedge.position.set(Math.cos(angle) * 1.25, .73, Math.sin(angle) * 1.25);
+      wedge.rotation.z = Math.cos(angle) * .3;
+      wedge.rotation.x = Math.sin(angle) * .3;
+      pedestal.add(wedge);
+    }
+
+    // Pipes and conduits.
+    for (const y of [1.05, 2.2, 3.35]) {
+      box(23.8, .12, .12, mats.darkMetal, -.5, y, -13.5, corridor);
+    }
+    for (const z of [-12.5, -7.5, -2.5]) {
+      box(.12, 3.2, .12, mats.darkMetal, -11.7, 1.8, z, corridor);
+      box(.12, 3.2, .12, mats.darkMetal, 11.7, 1.8, z, corridor);
+    }
+
+    // Tall industrial columns.
+    for (const x of [-11.7, 11.7]) {
+      for (const z of [-12.5, 12.5]) {
+        box(.38, 4.6, .38, mats.darkMetal, x, 2.3, z, corridor);
+        box(.58, .22, .58, mats.metal, x, 4.68, z, corridor);
+      }
+    }
+
+    // Pipes and conduits.
+    for (const y of [1.05, 2.2, 3.35]) {
+      box(23.8, .12, .12, mats.darkMetal, -.5, y, -13.5, corridor);
+    }
+    for (const z of [-12.5, -7.5, -2.5]) {
+      box(.12, 3.2, .12, mats.darkMetal, -11.7, 1.8, z, corridor);
+      box(.12, 3.2, .12, mats.darkMetal, 11.7, 1.8, z, corridor);
+    }
+
+    // Tall industrial columns.
+    for (const x of [-11.7, 11.7]) {
+      for (const z of [-12.5, 12.5]) {
+        box(.38, 4.6, .38, mats.darkMetal, x, 2.3, z, corridor);
+        box(.58, .22, .58, mats.metal, x, 4.68, z, corridor);
+      }
+    }
+
+    // Repeated wall vents.
+    for (let x = -12.5; x <= 12.5; x += 2.5) {
+      box(.9, .55, .12, mats.darkMetal, x, 4.15, -13.75, corridor);
+      for (let i = 0; i < 4; i++) {
+        box(.08, .38, .04, mats.black, x - .28 + i * .2, 4.15, -13.63, corridor);
+      }
+    }
+
+    // Low hedges / planters along the outer walls.
+    function planter(x, z, w = 1.2) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      world.add(g);
+
+      box(w, .35, .7, mats.wallAlt, 0, .18, 0, g);
+      const hedge = new THREE.Mesh(new THREE.BoxGeometry(w, .65, .48), mats.green);
+      hedge.position.y = .58;
+      hedge.castShadow = true;
+      g.add(hedge);
+      return g;
+    }
+
+    planter(-13.7, -12.8, 1.4);
+    planter(13.7, 12.8, 1.4);
+    planter(-12.8, 13.7, 1.4);
+    planter(12.8, -13.7, 1.4);
+
+    // Small mechanical drones in the room.
+    const drones = [];
+    function drone(x, y, z, color) {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      world.add(g);
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(.18, .24, .42, 8), mats.darkMetal);
+      body.rotation.z = Math.PI / 2;
+      g.add(body);
+
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(.65, .08, .28), mats.metal);
+      wing.rotation.y = Math.PI / 2;
+      g.add(wing);
+
+      const light = new THREE.Mesh(
+        new THREE.SphereGeometry(.07, 8, 6),
+        new THREE.MeshBasicMaterial({ color })
+      );
+      g.add(light);
+
+      drones.push({ group: g, light, phase: rand(0, 6), speed: rand(.55, .95) });
+      return g;
+    }
+
+    drone(-8.7, 1.25, 4.5, 0xffb347);
+    drone(8.4, 1.05, -4.8, 0x65d6df);
+    drone(-5.5, 1.0, 8.2, 0xffb347);
+
+    // Hanging lamps.
+    function hangingLamp(x, z, color = 0xffc66f, intensity = 1.2) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      world.add(g);
+
+      cyl(.035, .035, 2.2, mats.darkMetal, 0, 1.1, 0, g, 6);
+      const shade = new THREE.Mesh(new THREE.ConeGeometry(.34, .42, 10, 1, true), mats.darkMetal);
+      shade.rotation.z = Math.PI;
+      shade.position.y = 2.2;
+      g.add(shade);
+
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(.12, 10, 8),
+        new THREE.MeshBasicMaterial({ color })
+      );
+      bulb.position.y = 2.35;
+      g.add(bulb);
+
+      const light = new THREE.PointLight(color, intensity, 5, 2);
+      light.position.set(0, 2.35, 0);
+      g.add(light);
+      return g;
+    }
+
+    hangingLamp(-11.8, -3.2);
+    hangingLamp(11.8, 3.2);
+    hangingLamp(-3.2, 11.8);
+
+    // Wall-mounted fans.
+    function fan(x, y, z, facing = 1) {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      g.rotation.y = facing > 0 ? 0 : Math.PI;
+      world.add(g);
+
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.48, .065, 8, 20), mats.metal);
+      g.add(ring);
+
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, .18, 10), mats.darkMetal);
+      hub.rotation.x = Math.PI / 2;
+      g.add(hub);
+
+      const blades = new THREE.Group();
+      for (let i = 0; i < 3; i++) {
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(.22, .055, .05), mats.metal);
+        blade.rotation.z = (i / 3) * Math.PI * 2;
+        blades.add(blade);
+      }
+      g.add(blades);
+      return { group: g, blades };
+    }
+
+    const fans = [
+      fan(-9.8, 3.5, -13.55, 1),
+      fan(9.8, 3.5, -13.55, 1),
+      fan(-9.8, 3.5, 13.55, -1),
+      fan(9.8, 3.5, 13.55, -1)
+    ];
+
+    // Scattered crates and barrels.
+    const crates = [];
+    function crate(x, z, w = .75, h = .55, d = .75, mat = mats.redDark) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      world.add(g);
+      box(w, h, d, mat, 0, h / 2, 0, g);
+      box(w + .04, .055, d + .04, mats.metal, 0, h * .55, 0, g);
+      crates.push(g);
+      return g;
+    }
+
+    crate(-8.8, 8.7, .85, .65, .85);
+    crate(-8.0, 8.9, .65, .48, .65, mats.wallAlt);
+    crate(8.8, -8.7, .8, .6, .8);
+    crate(8.1, -8.9, .65, .45, .65, mats.redDark);
+    crate(-12.2, -2.2, .65, .5, .65, mats.wallAlt);
+    crate(12.2, 2.2, .65, .5, .65, mats.wallAlt);
+
+    // Barrel.
+    const barrel = cyl(.38, .38, 1.0, mats.metal, 7.2, .55, 7.2, world, 16);
+    const barrelBand1 = new THREE.Mesh(new THREE.TorusGeometry(.385, .035, 6, 18), mats.darkMetal);
+    barrelBand1.rotation.x = Math.PI / 2;
+    barrelBand1.position.set(7.2, .65, 7.2);
+    world.add(barrelBand1);
+    const barrelBand2 = barrelBand1.clone();
+    barrelBand2.position.y = .95;
+    world.add(barrelBand2);
+
+    // Small wall sconces.
+    for (const x of [-6.2, 6.2]) {
+      for (const z of [-13.55, 13.55]) {
+        const sconce = new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffc66f }));
+        sconce.position.set(x, 2.4, z);
+        world.add(sconce);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // The single iconic relic: the "Heart of the Reactor" — a pure 3D
+    // faceted gem on a small plinth, positioned off the main path.
+    // ---------------------------------------------------------------------
+
+    const relic = new THREE.Group();
+    relic.position.set(5.5, 0, 2.3);
+    world.add(relic);
+
+    box(1.45, .22, 1.45, mats.darkMetal, 0, .12, 0, relic);
+    box(1.1, .2, 1.1, mats.black, 0, .34, 0, relic);
+
+    const relicCore = new THREE.Mesh(
+      new THREE.OctahedronGeometry(.48, 0),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xffd27a,
+        emissive: 0x7b3500,
+        emissiveIntensity: 1.5,
+        roughness: .18,
+        metalness: .45,
+        flatShading: true
       })
     );
-    glass.position.y = .62;
-    glass.castShadow = false;
-    lanternGroup.add(glass);
-    const cap = new THREE.Mesh(
-      new THREE.ConeGeometry(.3, .22, 8),
-      materials.metal
+    relicCore.position.y = .7;
+    relic.add(relicCore);
+
+    const relicHalo = new THREE.Mesh(
+      new THREE.OctahedronGeometry(.72, 0),
+      new THREE.MeshBasicMaterial({
+        color: 0xffa53d,
+        transparent: true,
+        opacity: .18,
+        wireframe: true,
+        depthWrite: false
+      })
     );
-    cap.position.y = .9;
-    lanternGroup.add(cap);
-    lanterns.push(glass);
-  }
+    relicHalo.position.y = .7;
+    relic.add(relicHalo);
 
-  makeLantern(-2.55, 4.8, 7.95);
-  makeLantern(2.55, 4.8, 7.95);
-  makeLantern(0, 3.65, 7.95, 0x7228a2);
+    const relicLight = new THREE.PointLight(0xffa53d, 2.2, 4.5, 2);
+    relicLight.position.set(0, .85, 0);
+    relic.add(relicLight);
 
-  // Cross above door.
-  const cross = new THREE.Group();
-  cross.position.set(0, 10.15, 7.55);
-  mansion.add(cross);
-  box(.12, 1.2, .14, materials.trim, 0, .6, 0, cross);
-  box(.95, .12, .14, materials.trim, 0, 1.2, 0, cross);
+    // A small flag / marker on the relic plinth.
+    const flag = new THREE.Group();
+    flag.position.set(0, .45, 0);
+    relic.add(flag);
+    const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .75, 6), mats.metal);
+    flagPole.rotation.z = -.12;
+    flag.add(flagPole);
+    const flagCloth = new THREE.Mesh(
+      new THREE.PlaneGeometry(.48, .48, 4, 4),
+      new THREE.MeshStandardMaterial({ color: 0xd6a43c, side: THREE.DoubleSide, roughness: .7 })
+    );
+    flagCloth.position.x = .25;
+    flagCloth.rotation.y = -.15;
+    flag.add(flagCloth);
 
-  // Sign.
-  const sign = makeTextSprite("GHOST MANSION", "#ffb347", "#351b25");
-  sign.position.set(0, 5.35, 7.72);
-  sign.scale.set(3.2, .8, 1);
-  mansion.add(sign);
+    // ---------------------------------------------------------------------
+    // Decorative floor tiles and route markers.
+    // ---------------------------------------------------------------------
 
-  // Side windows and balcony.
-  for (const side of [-1, 1]) {
-    for (const y of [3.3, 7.1]) {
-      const wx = side * 6.65;
-      box(.2, 1.45, .8, materials.black, wx, y, 0.2, mansion);
-      const pane = box(.08, 1.25, .65, materials.windowWarm, wx + side * .12, y, .2, mansion);
-      pane.rotation.y = side * .12;
+    for (const x of [-11.6, -7.2, -2.8, 1.6, 6.0, 10.4]) {
+      box(.65, .035, .65, mats.wallAlt, x, .12, 0, corridor, false, true);
     }
 
-    const balcony = box(2.8, .25, 2.8, materials.porch, side * 6.6, 8.2, 0, mansion);
-    balcony.rotation.y = side * .08;
-    for (let i = 0; i < 5; i++) {
-      const rail = box(.08, 1.15, .08, materials.wood, side * (5.25 + i * .65), 8.85, 0, mansion);
-      rail.rotation.y = side * .08;
-    }
-  }
+    // Small in-world signs, all constructed from primitives.
+    function sign(x, z, text) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      world.add(g);
 
-  // Porch plants.
-  const plantPot = new THREE.Mesh(
-    new THREE.CylinderGeometry(.3, .25, .45, 10),
-    materials.purple
-  );
-  plantPot.position.set(-4.7, 1.0, 5.35);
-  mansion.add(plantPot);
+      box(.18, .65, .18, mats.darkMetal, 0, .32, 0, g);
+      box(.72, .38, .12, mats.metal, 0, .9, 0, g);
 
-  const plant = sphere(.48, materials.purple, -4.7, 1.55, 5.35, mansion);
-  plant.scale.set(.75, 1.25, .75);
-  const plant2 = sphere(.38, materials.purple, -4.45, 1.75, 5.35, mansion);
-  plant2.scale.set(.8, .9, .8);
-
-  // -------------------------------------------------------------------------
-  // Animated environmental elements
-  // -------------------------------------------------------------------------
-  const fireflies = [];
-  const fireflyMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffd875,
-    transparent: true,
-    opacity: .85,
-    depthWrite: false
-  });
-
-  for (let i = 0; i < 24; i++) {
-    const p = new THREE.Mesh(new THREE.SphereGeometry(.065, 6, 4), fireflyMaterial);
-    const side = i % 2 ? 1 : -1;
-    p.position.set(side * (8 + Math.random() * 12), 2 + Math.random() * 7, -7 + Math.random() * 15);
-    group.add(p);
-    fireflies.push({
-      mesh: p,
-      base: p.position.clone(),
-      phase: Math.random() * Math.PI * 2,
-      speed: .35 + Math.random() * .45
-    });
-  }
-
-  const butterflies = [];
-  for (let i = 0; i < 8; i++) {
-    const butterfly = new THREE.Group();
-    const wingL = new THREE.Mesh(new THREE.CircleGeometry(.13, 8), materials.purple);
-    const wingR = new THREE.Mesh(new THREE.CircleGeometry(.13, 8), materials.purple);
-    wingL.rotation.z = Math.PI;
-    butterfly.add(wingL, wingR);
-    butterfly.position.set((Math.random() - .5) * 20, 2 + Math.random() * 8, (Math.random() - .5) * 18);
-    group.add(butterfly);
-    butterflies.push({
-      group: butterfly,
-      base: butterfly.position.clone(),
-      phase: Math.random() * Math.PI * 2,
-      speed: .3 + Math.random() * .35
-    });
-  }
-
-  // Windsock / flag on roof.
-  cylinder(.045, .055, 4.5, materials.wood, 4.8, 13.3, 1.2, mansion, 8);
-  const flag = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.4, .75, 4, 2),
-    new THREE.MeshStandardMaterial({
-      color: 0x7d2473,
-      emissive: 0x26062b,
-      emissiveIntensity: .45,
-      side: THREE.DoubleSide,
-      roughness: .9
-    })
-  );
-  flag.position.set(6.35, 15.2, 1.2);
-  flag.rotation.y = -.15;
-  mansion.add(flag);
-
-  // -------------------------------------------------------------------------
-  // Ghosts
-  // -------------------------------------------------------------------------
-  const ghosts = [];
-
-  function makeGhost(color, scale = 1) {
-    const ghostGroup = new THREE.Group();
-    ghostGroup.scale.setScalar(scale);
-    group.add(ghostGroup);
-
-    const bodyMaterial = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: .58,
-      depthWrite: false
-    });
-
-    const body = sphere(.62, bodyMaterial, 0, 0, 0, ghostGroup);
-    body.scale.set(.75, 1.15, .75);
-
-    const head = sphere(.38, bodyMaterial, 0, .75, 0, ghostGroup);
-    head.scale.set(.8, 1.05, .8);
-
-    const eyes = new THREE.Mesh(
-      new THREE.SphereGeometry(.055, 8, 6),
-      new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: .95 })
-    );
-    eyes.position.set(-.15, .78, .31);
-    eyes.scale.z = .25;
-    ghostGroup.add(eyes);
-
-    const mouth = new THREE.Mesh(
-      new THREE.SphereGeometry(.055, 8, 6),
-      new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: .95 })
-    );
-    mouth.position.set(0, .64, .31);
-    mouth.scale.z = .25;
-    ghostGroup.add(mouth);
-
-    const arms = [];
-    for (const side of [-1, 1]) {
-      const arm = sphere(.18, bodyMaterial, side * .45, .05, 0, ghostGroup);
-      arm.scale.set(.55, 1.5, .55);
-      arms.push(arm);
+      const canvasTexture = new THREE.CanvasTexture(document.createElement("canvas"));
+      canvasTexture.colorSpace = THREE.SRGBColorSpace;
+      canvasTexture.minFilter = THREE.NearestFilter;
+      const face = new THREE.Mesh(
+        new THREE.PlaneGeometry(.62, .25),
+        new THREE.MeshBasicMaterial({ map: canvasTexture })
+      );
+      face.position.set(0, .9, .066);
+      g.add(face);
+      return g;
     }
 
-    ghostGroup.userData = { body, head, eyes, mouth, arms };
-    ghosts.push({
-      group: ghostGroup,
-      baseY: 0,
-      phase: Math.random() * Math.PI * 2,
-      speed: .55 + Math.random() * .35,
-      arms,
-      bob: 0
+    sign(-11.5, -11.8, "LEVEL 12");
+    sign(11.5, 11.8, "CORE");
+
+    // ---------------------------------------------------------------------
+    // Animated environmental elements.
+    // ---------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+    const particles = [];
+
+    function addParticle(x, y, z, color, size = .05) {
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .75 });
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 6, 4), mat);
+      mesh.position.set(x, y, z);
+      world.add(mesh);
+      particles.push({ mesh, speed: rand(.35, .8), phase: rand(0, 6.28) });
+    }
+
+    for (let i = 0; i < 28; i++) {
+      addParticle(rand(-12, 12), rand(.4, 4.5), rand(-13, 13), pick([0x75e7ef, 0xffb347, 0x62aeb5]), rand(.025, .08));
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: custom orbit, zoom, touch, click relic, and reset.
+    // No external controls module is used.
+    // ---------------------------------------------------------------------
+
+    const defaultCamera = {
+      x: 8.2,
+      y: 8.6,
+      z: 10.4,
+      target: new THREE.Vector3(-.4, 1.3, -.4)
+    };
+
+    const cameraState = {
+      x: defaultCamera.x,
+      y: defaultCamera.y,
+      z: defaultCamera.z,
+      target: defaultCamera.target.clone(),
+      azimuth: defaultCamera.x - defaultCamera.target.x,
+      polar: defaultCamera.y - defaultCamera.target.y,
+      distance: Math.hypot(defaultCamera.x - defaultCamera.target.x, defaultCamera.y - defaultCamera.target.y, defaultCamera.z - defaultCamera.target.z)
+    };
+
+    function updateCamera() {
+      cameraState.azimuth = cameraState.x - cameraState.target.x;
+      cameraState.polar = cameraState.y - cameraState.target.y;
+      cameraState.distance = Math.hypot(cameraState.x - cameraState.target.x, cameraState.y - cameraState.target.y, cameraState.z - cameraState.target.z);
+
+      camera.position.set(
+        cameraState.target.x + cameraState.distance * Math.sin(cameraState.polar) * Math.sin(cameraState.azimuth),
+        cameraState.target.y + cameraState.distance * Math.cos(cameraState.polar),
+        cameraState.target.z + cameraState.distance * Math.sin(cameraState.polar) * Math.cos(cameraState.azimuth)
+      );
+      camera.lookAt(cameraState.target);
+    }
+
+    updateCamera();
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let pointerId = null;
+    let pointerCapture = false;
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    function resetCamera() {
+      cameraState.x = defaultCamera.x;
+      cameraState.y = defaultCamera.y;
+      cameraState.z = defaultCamera.z;
+      cameraState.target.copy(defaultCamera.target);
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      dragging = true;
+      pointerId = event.pointerId;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(pointerId);
+      renderer.domElement.style.cursor = "grabbing";
     });
-  }
 
-  makeGhost(0x8f31b3, .85);
-  makeGhost(0x7b2c91, .62);
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!dragging || event.pointerId !== pointerId) return;
 
-  // -------------------------------------------------------------------------
-  // Atmospheric particles
-  // -------------------------------------------------------------------------
-  const particleMaterial = new THREE.PointsMaterial({
-    color: 0x9eb7c4,
-    size: .055,
-    transparent: true,
-    opacity: .45,
-    depthWrite: false
-  });
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
 
-  const particleGeometry = new THREE.BufferGeometry();
-  const particlePositions = new Float32Array(450 * 3);
-  for (let i = 0; i < 450; i++) {
-    particlePositions[i * 3] = (Math.random() - .5) * 45;
-    particlePositions[i * 3 + 1] = Math.random() * 18;
-    particlePositions[i * 3 + 2] = (Math.random() - .5) * 35;
-  }
-  particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
-  group.add(new THREE.Points(particleGeometry, particleMaterial));
+      cameraState.azimuth -= dx * .006;
+      cameraState.polar = clamp(cameraState.polar - dy * .005, .22, Math.PI * .48);
+      updateCamera();
+    });
 
-  // -------------------------------------------------------------------------
-  // Animation — the original scene's per-frame expressions, moved here.
-  // -------------------------------------------------------------------------
+    function endDrag(event) {
+      if (!dragging || event.pointerId !== pointerId) return;
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (pointerCapture) {
+        try { renderer.domElement.releasePointerCapture(pointerId); } catch (_) {}
+      }
+      pointerId = null;
+    }
 
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      cameraState.distance = clamp(cameraState.distance + event.deltaY * .008, 4.2, 23);
+      updateCamera();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("dblclick", resetCamera);
+
+    renderer.domElement.addEventListener("click", event => {
+      if (dragging && event.pointerId === pointerId) return;
+
+      pointer.x = (event.clientX / innerWidth) * 2 - 1;
+      pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      const hit = raycaster.intersectObject(relic, false)[0];
+      if (hit) {
+        relic.group.traverse(object => {
+          if (object.isMesh && object.material) {
+            object.material.emissive?.set(0x3a1600);
+          }
+        });
+        relicLight.intensity = 4.5;
+        relicCore.rotation.y += .35;
+        relicCore.rotation.x += .1;
+      }
+    });
+
+    window.addEventListener("keydown", event => {
+      if (event.key === "Escape" || event.key === "0") resetCamera();
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // ---------------------------------------------------------------------
+    // Animation loop.
+    // ---------------------------------------------------------------------
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+
+      const t = clock.getElapsedTime();
+
+      core.rotation.x = t * 1.35;
+      core.rotation.y = t * 1.7;
+      coreHalo.rotation.x = t * .8;
+      coreHalo.rotation.y = t * .55;
+      core.scale.setScalar(1 + Math.sin(t * 3.1) * .08);
+      relicHalo.rotation.x = t * .5;
+      relicHalo.rotation.y = t * .35;
+      relicCore.rotation.x += .008;
+      relicCore.rotation.y += .012;
+
+      for (const item of drones) {
+        item.group.position.y += Math.sin(t * item.speed + item.phase) * .0025;
+        item.group.rotation.y += .015;
+        item.light.intensity = 1.2 + Math.sin(t * 4 + item.phase) * .35;
+      }
+
+      for (const fan of fans) {
+        fan.blades.rotation.z += .08;
+      }
+
+      for (const item of particles) {
+        item.mesh.position.y += item.speed * .016;
+        item.mesh.rotation.x += .008;
+        if (item.mesh.position.y > 5.5) {
+          item.mesh.position.y = .35;
+          item.mesh.position.x = rand(-12, 12);
+          item.mesh.position.z = rand(-13, 13);
+        }
+      }
+
+      relicLight.intensity = 2.0 + Math.sin(t * 2.2) * .35;
+      relicCore.material.emissiveIntensity = 1.35 + Math.sin(t * 3.1) * .35;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+  
+
+  // --- Walker Update Protocol ---
   function update(t, dt) {
-    const elapsed = t;
-
-    // Gentle porch light pulse.
-    porchLight.intensity = 3.0 + Math.sin(elapsed * 1.7) * .25;
-    windowGlow.intensity = 2.0 + Math.sin(elapsed * 1.1 + 1) * .25;
-
-    // Ghosts drift and bob (arm wave wired to the real arms — see header).
-    for (const ghost of ghosts) {
-      ghost.group.position.y = ghost.baseY + Math.sin(elapsed * ghost.speed + ghost.phase) * .35;
-      ghost.group.rotation.y = Math.sin(elapsed * ghost.speed * .7 + ghost.phase) * .16;
-      ghost.group.rotation.z = Math.sin(elapsed * ghost.speed * .9 + ghost.phase) * .08;
-
-      const arms = ghost.arms || [];
-      if (!arms.length) continue;
-      arms[0].rotation.z = Math.sin(elapsed * 3.2 + ghost.phase) * .55;
-      arms[1].rotation.z = -Math.sin(elapsed * 3.2 + ghost.phase) * .55;
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
     }
-
-    // Fireflies.
-    for (const f of fireflies) {
-      f.mesh.position.y = f.base.y + Math.sin(elapsed * f.speed + f.phase) * .35;
-      f.mesh.position.x = f.base.x + Math.cos(elapsed * f.speed * .8 + f.phase) * .25;
-      f.mesh.material.opacity = .55 + .35 * .5 + .45 * .5;
-    }
-
-    // Butterflies.
-    for (const b of butterflies) {
-      const bt = elapsed * b.speed + b.phase;
-      b.group.position.y = b.base.y + Math.sin(bt) * .45;
-      b.group.position.x = b.base.x + Math.cos(bt * .7) * .35;
-      b.group.rotation.y = Math.sin(bt) * .8;
-      b.group.scale.setScalar(1 + Math.sin(bt * 2) * .12);
-    }
-
-    // Flag wave (vertex expressions preserved verbatim from the original,
-    // including its index choices).
-    flag.geometry.attributes.position.array[1] = 15.2 + Math.sin(elapsed * 2.1) * .18;
-    flag.geometry.attributes.position.array[3] = 15.2 + Math.sin(elapsed * 2.1 + .6) * .18;
-    flag.geometry.computeVertexNormals();
-
-    // Subtle drifting fog (host applies env.fogDensity every frame).
-    env.fogDensity = .026 + Math.sin(elapsed * .18) * .0015;
   }
 
   return {
     group,
     update,
-    spawn: { x: 0, z: 14, yaw: 0 },
-    env,
+    spawn: { x: -0.4, z: 13.6, yaw: 0 },
+    relic: { name: "H.E.R.O. Relic", x: -10.4, z: -12.4 },
+    env:   { background: 0x080d0d, fogColor: 0x080d0d, fogDensity: 0.035 },
     doors: {
-      next: { x: -1.5, z: 9.6 },
-      prev: { x: 13.5, z: -4 }
-    },
-    relic: { name: "Crystal Urn", x: -1.5, z: -13 }
+      next: { x: 11.6, z: -10.4 },
+      prev: { x: -12.4, z: 9.6 }
+    }
   };
 }

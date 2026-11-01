@@ -89,6 +89,9 @@ def parse_scene_to_walker(html_content: str, spec: dict) -> str:
     clean_js = re.sub(r"\bconst\s+renderer\s*=", "renderer =", clean_js)
     clean_js = re.sub(r"\bconst\s+camera\s*=", "camera =", clean_js)
     clean_js = re.sub(r"renderer\.domElement:\s*document\.body\.appendChild[^;]+;?", "", clean_js)
+    # The module's renderer is a dummy; a real browser throws on appending its fake
+    # domElement (walker stalls, bake fails). Only Node's faked document tolerated it.
+    clean_js = re.sub(r"document\.body\.appendChild\(\s*renderer\.domElement\s*\);?", "", clean_js)
 
     spawn_z = tz + 14.0 if tz <= 0 else tz - 14.0
     door_next_x = tx + 12.0
@@ -572,8 +575,8 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
     with open(scene_path, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # Never overwrite handcrafted modules (001-005)
-    if world_id <= 5 and os.path.exists(module_path):
+    # Never overwrite handcrafted modules 004-005 (001-003 are regenerated, v5 reboot)
+    if world_id in (4, 5) and os.path.exists(module_path):
         return {"status": "skipped_handcrafted", "id": formatted_id}
 
     try:

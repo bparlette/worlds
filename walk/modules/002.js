@@ -1,541 +1,693 @@
-// ============================================================================
-// @world {"id":"002","title":"PITFALL!","sub":"Jungle & Underworld","system":"Atari 2600"}
-// World 002 — PITFALL! · Jungle & Underworld (Atari 2600)
-// Converted from scenes/002_pitfall_jungle_underworld.html into a World Walker
-// module. Geometry/materials/lights preserved; renderer/orbit camera/HUD and
-// the DOM score readout removed (the score never changed in the original —
-// it was decorative). Per-frame animation moved into update(t, dt).
-//
-// Conversion note: the original tried to pulse the cave-lamp glows by reading
-// world.children[16..18] and testing isPointLight — those children are groups,
-// so the pulse never ran. This module collects the lamp glow PointLights
-// directly and pulses them as the original intended.
-//
-// Door choices (the world's two caves are its natural portals):
-//   next — in front of the eastern cave mouth at (8.8, 8.5); door (8.8, 5.0).
-//   prev — in front of the western cave mouth at (-6.7, 7.2); door (-6.7, 3.8).
-// Spawn: south clearing, looking north across the jungle floor.
-// Relic: the Golden Idol waits in the deep jungle at the far north-west
-//        corner (-13.5, -12.5) — a full trek past the pit, away from both
-//        cave doors in the south.
-// ============================================================================
+// @world {"id": "002", "title": "Pitfall II: Lost Caverns", "sub": "Vertical Subterranean Labyrinths & Rivers", "system": "Atari 2600"}
+// Converted from  into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
 
 export function createWorld(THREE) {
   const group = new THREE.Group();
 
-  // -------------------------------------------------------------------------
-  // Materials
-  // -------------------------------------------------------------------------
-
-  const materials = {
-    bark: new THREE.MeshStandardMaterial({
-      color: 0x493020,
-      roughness: 0.95,
-      metalness: 0
-    }),
-    darkBark: new THREE.MeshStandardMaterial({
-      color: 0x241711,
-      roughness: 1
-    }),
-    leaf: new THREE.MeshStandardMaterial({
-      color: 0x3a6b2d,
-      roughness: 0.88,
-      side: THREE.DoubleSide
-    }),
-    leafLight: new THREE.MeshStandardMaterial({
-      color: 0x6b8f37,
-      roughness: 0.82,
-      side: THREE.DoubleSide
-    }),
-    vine: new THREE.MeshStandardMaterial({
-      color: 0x263d24,
-      roughness: 0.95
-    }),
-    rock: new THREE.MeshStandardMaterial({
-      color: 0x55504a,
-      roughness: 1
-    }),
-    ash: new THREE.MeshStandardMaterial({
-      color: 0x332b27,
-      roughness: 1
-    }),
-    gold: new THREE.MeshStandardMaterial({
-      color: 0xd6a84c,
-      roughness: 0.58,
-      metalness: 0.25
-    }),
-    red: new THREE.MeshStandardMaterial({
-      color: 0xa6241c,
-      roughness: 0.65
-    }),
-    black: new THREE.MeshStandardMaterial({
-      color: 0x100e0d,
-      roughness: 0.95
-    })
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
   };
 
-  // -------------------------------------------------------------------------
-  // Lighting
-  // -------------------------------------------------------------------------
+  let updateHook = null;
 
-  group.add(new THREE.HemisphereLight(0xb9d29b, 0x382117, 1.45));
-
-  const sun = new THREE.DirectionalLight(0xffd48a, 3.1);
-  sun.position.set(-18, 25, 12);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -28;
-  sun.shadow.camera.right = 28;
-  sun.shadow.camera.top = 28;
-  sun.shadow.camera.bottom = -28;
-  sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 70;
-  sun.shadow.bias = -0.0004;
-  group.add(sun);
-
-  const warmFill = new THREE.PointLight(0xff8a3d, 28, 45, 2);
-  warmFill.position.set(6, 8, -4);
-  group.add(warmFill);
-
-  const coolFill = new THREE.PointLight(0x73b9d8, 18, 40, 2);
-  coolFill.position.set(-12, 5, 14);
-  group.add(coolFill);
-
-  // -------------------------------------------------------------------------
-  // World helpers
-  // -------------------------------------------------------------------------
-
-  const world = group;
-
-  function addBox(parent, size, position, material, castShadow = true, receiveShadow = true) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
-    mesh.position.set(...position);
-    mesh.castShadow = castShadow;
-    mesh.receiveShadow = receiveShadow;
-    parent.add(mesh);
-    return mesh;
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
   }
 
-  function addCylinder(
-    parent,
-    radiusTop,
-    radiusBottom,
-    height,
-    position,
-    material,
-    segments = 12,
-    castShadow = true
-  ) {
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments),
-      material
-    );
-    mesh.position.set(...position);
-    mesh.castShadow = castShadow;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
+  function dummyCamera() {
+    return {
+      position: { set: () => {}, copy: () => {} },
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
   }
 
-  function addSphere(parent, radius, position, material, segments = 12) {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, segments, Math.max(6, segments / 2)),
-      material
-    );
-    mesh.position.set(...position);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
-  }
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
 
-  function makeTree(x, z, scale = 1, underground = false) {
-    const tree = new THREE.Group();
-    tree.position.set(x, underground ? -1.8 : 0, z);
-    tree.scale.setScalar(scale);
-    world.add(tree);
+  // --- Scoped Diorama Build Code ---
 
-    addCylinder(
-      tree,
-      0.22,
-      0.48,
-      5.2,
-      [0, 2.6, 0],
-      underground ? materials.darkBark : materials.bark,
-      9
-    );
+    
 
-    const crown = addSphere(tree, 2.05, [0, 5.2, 0], materials.leaf, 14);
-    crown.scale.set(1, 1.12, 0.92);
+    // scene redirect
+    scene.background = new THREE.Color(0x090c12);
+    scene.fog = new THREE.FogExp2(0x101722, 0.035);
 
-    addSphere(tree, 1.25, [-1.1, 4.45, 0.2], materials.leafLight, 10);
-    addSphere(tree, 1.1, [1.15, 4.65, -0.2], materials.leaf, 10);
+    camera = dummyCamera();
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
 
-    for (let i = 0; i < 4; i++) {
-      const branch = addCylinder(
-        tree,
-        0.07,
-        0.13,
-        1.8,
-        [
-          Math.cos((i / 4) * Math.PI * 2) * 0.8,
-          3.7 + (i % 2) * 0.35,
-          Math.sin((i / 4) * Math.PI * 2) * 0.8
-        ],
-        materials.bark,
-        7
-      );
-      branch.rotation.z = Math.cos((i / 4) * Math.PI * 2) * 0.5;
-      branch.rotation.x = Math.sin((i / 4) * Math.PI * 2) * 0.4;
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      floor: new THREE.MeshStandardMaterial({ color: 0x5a492b, roughness: 0.95 }),
+      floorDark: new THREE.MeshStandardMaterial({ color: 0x282118, roughness: 1 }),
+      floorEdge: new THREE.MeshStandardMaterial({ color: 0x302519, roughness: 1 }),
+      cliff: new THREE.MeshStandardMaterial({ color: 0x403327, roughness: 1 }),
+      cliffLight: new THREE.MeshStandardMaterial({ color: 0x69573e, roughness: 1 }),
+      rock: new THREE.MeshStandardMaterial({ color: 0x685b46, roughness: 1 }),
+      rockDark: new THREE.MeshStandardMaterial({ color: 0x302a24, roughness: 1 }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xf4c55b, roughness: 0.3, metalness: 0.72 }),
+      goldDark: new THREE.MeshStandardMaterial({ color: 0xb8781f, roughness: 0.4, metalness: 0.65 }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x173b54,
+        roughness: 0.22,
+        metalness: 0.25,
+        emissive: 0x071b2b,
+        emissiveIntensity: 0.6
+      }),
+      waterRim: new THREE.MeshStandardMaterial({ color: 0x365c72, roughness: 0.6 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x5b3820, roughness: 0.95 }),
+      woodLight: new THREE.MeshStandardMaterial({ color: 0x805532, roughness: 0.95 }),
+      rope: new THREE.MeshStandardMaterial({ color: 0xc5a064, roughness: 1 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x9d3328, roughness: 0.75 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x35462b, roughness: 1 }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x4c5b31, roughness: 1 }),
+      mushroom: new THREE.MeshStandardMaterial({ color: 0xd98a35, roughness: 0.85 }),
+      mushroomTop: new THREE.MeshStandardMaterial({ color: 0xe4a44c, roughness: 0.8 }),
+      lamp: new THREE.MeshStandardMaterial({
+        color: 0xffd36b,
+        emissive: 0xffa82b,
+        emissiveIntensity: 2.2,
+        roughness: 0.45
+      })
+    };
+
+    function mesh(geometry, material, position, parent = world) {
+      const m = new THREE.Mesh(geometry, material);
+      if (position) m.position.set(...position);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      parent.add(m);
+      return m;
     }
 
-    return tree;
-  }
-
-  function makeBush(x, y, z, scale = 1) {
-    const bush = new THREE.Group();
-    bush.position.set(x, y, z);
-    bush.scale.setScalar(scale);
-    world.add(bush);
-
-    addSphere(bush, 0.75, [0, 0, 0], materials.leaf, 10);
-    addSphere(bush, 0.55, [0.45, 0.3, 0.08], materials.leafLight, 9);
-    addSphere(bush, 0.48, [-0.4, 0.25, 0.1], materials.leaf, 9);
-    return bush;
-  }
-
-  function makeRock(x, y, z, scale = 1, underground = false) {
-    const rock = addSphere(world, 0.55 * scale, [x, y, z], materials.rock, 9);
-    rock.scale.set(1.4, 0.7, 1);
-    rock.rotation.set(0.2, x * 0.4, 0.1);
-
-    if (underground) {
-      const cranny = addCylinder(
-        world,
-        0.15,
-        0.3,
-        0.9,
-        [x + 0.3, y - 0.1, z],
-        materials.ash,
-        8
-      );
-      cranny.rotation.z = 0.25;
+    function box(w, h, d, material, x, y, z, parent = world) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, [x, y, z], parent);
     }
 
-    return rock;
-  }
-
-  function makeVine(parent, x, y, z, length = 2.2) {
-    const vine = new THREE.Group();
-    vine.position.set(x, y, z);
-    parent.add(vine);
-
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0.08, length * 0.35, 0.04),
-      new THREE.Vector3(-0.08, length * 0.7, -0.04),
-      new THREE.Vector3(0.04, length, 0.02)
-    ]);
-
-    const mesh = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 12, 0.045, 6, false),
-      materials.vine
-    );
-    mesh.castShadow = true;
-    vine.add(mesh);
-
-    for (let i = 0; i < 5; i++) {
-      const leaf = addSphere(
-        vine,
-        0.16,
-        [
-          curve.getPoint((i + 1) / 6).x,
-          curve.getPoint((i + 1) / 6).y,
-          curve.getPoint((i + 1) / 6).z
-        ],
-        i % 2 ? materials.leaf : materials.leafLight,
-        6
-      );
-      leaf.scale.set(0.45, 1.2, 0.25);
-      leaf.rotation.z = Math.PI / 2;
+    function cylinder(rt, rb, h, material, x, y, z, segments = 10, parent = world) {
+      return mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material, [x, y, z], parent);
     }
 
-    return vine;
-  }
-
-  function makeLog(x, y, z, rotation = 0) {
-    const log = new THREE.Group();
-    log.position.set(x, y, z);
-    log.rotation.y = rotation;
-    world.add(log);
-
-    addCylinder(log, 0.35, 0.42, 3.5, [0, 0, 0], materials.bark, 10);
-
-    for (let i = 0; i < 3; i++) {
-      const crack = addCylinder(
-        log,
-        0.025,
-        0.05,
-        0.8,
-        [0.18, 0.18, 0.5 + i * 0.25],
-        materials.ash,
-        5
-      );
-      crack.rotation.z = Math.PI / 2;
+    function torus(radius, tube, material, x, y, z, parent = world) {
+      return mesh(new THREE.TorusGeometry(radius, tube, 8, 24), material, [x, y, z], parent);
     }
 
-    return log;
-  }
-
-  function makeCave(x, z, width = 4, depth = 5) {
-    const cave = new THREE.Group();
-    cave.position.set(x, 0, z);
-    world.add(cave);
-
-    addBox(cave, [width, 0.5, depth], [0, 0.12, 0], materials.ash);
-
-    for (let i = 0; i < 2; i++) {
-      const side = addBox(
-        cave,
-        [0.35, 3.5, depth],
-        [-width / 2 + 0.25, 1.8, 0],
-        materials.darkBark
-      );
-      side.rotation.y = i === 0 ? -0.12 : 0.12;
+    function addLamp(x, y, z, parent = world) {
+      const stem = cylinder(0.035, 0.05, 0.55, materials.woodDark || materials.wood, x, y, z, 7, parent);
+      const cap = cylinder(0.12, 0.08, 0.16, materials.lamp, x, y + 0.29, z, 8, parent);
+      cap.castShadow = false;
+      return cap;
     }
 
-    const ceiling = addBox(
-      cave,
-      [width * 1.05, 0.35, depth],
-      [0, 3.55, 0],
-      materials.darkBark
-    );
-    ceiling.rotation.z = 0.03;
+    const levels = [
+      { y: 10.8, water: false },
+      { y: 8.7, water: true },
+      { y: 6.6, water: false },
+      { y: 4.5, water: true },
+      { y: 2.4, water: false },
+      { y: 0.3, water: true }
+    ];
 
-    for (let i = 0; i < 3; i++) {
-      const stalactite = addCylinder(
-        cave,
-        0.06,
-        0.22,
-        1.2 + i * 0.2,
-        [-width / 2 + 0.6 + i * 0.9, 3.1, -depth * 0.25],
-        materials.ash,
-        7
-      );
-      stalactite.rotation.z = (i - 1) * 0.12;
+    // Compact rectangular world, all within ±14.5 x/z and y 0..12.
+    const worldSize = 28;
+
+    // Main floor: a narrow central causeway winding through the cavern.
+    const floorSegments = [
+      { x: -11.5, z: 1.5, w: 5.8, d: 1.2 },
+      { x: -7.0, z: 1.5, w: 4.0, d: 1.2 },
+      { x: -2.5, z: 1.5, w: 5.0, d: 1.2 },
+      { x: 2.0, z: 1.5, w: 3.8, d: 1.2 },
+      { x: 6.0, z: 1.5, w: 5.0, d: 1.2 },
+      { x: 10.0, z: 1.5, w: 4.2, d: 1.2 }
+    ];
+    for (const s of floorSegments) {
+      box(s.w, 0.34, s.d, materials.floor, s.x, 0.17, s.z);
+      box(s.w + 0.15, 0.18, s.d + 0.12, materials.floorEdge, s.x, 0.08, s.z);
     }
 
-    const stalagmite = addCylinder(
-      cave,
-      0.2,
-      0.45,
-      1.1,
-      [width / 2 - 0.6, 0.45, depth * 0.2],
-      materials.ash,
-      8
-    );
-    stalagmite.rotation.z = 0.15;
+    // A second, shorter transverse landing on the lower water level.
+    box(13.2, 0.34, 1.25, materials.floor, -0.3, 0.17, 8.2);
+    box(13.4, 0.18, 1.4, materials.floorEdge, -0.3, 0.08, 8.2);
 
-    return cave;
-  }
+    // Four continuous outer walls, plain and solid.
+    box(worldSize, 12, 0.8, materials.cliff, 0, 6, -14.5);
+    box(worldSize, 12, 0.8, materials.cliff, 0, 6, 14.5);
+    box(0.8, 12, worldSize, materials.cliff, -14.5, 6, 0);
+    box(0.8, 12, worldSize, materials.cliff, 14.5, 6, 0);
+    box(worldSize + 0.8, 0.35, 0.35, materials.rockDark, 0, 12.1, -14.5);
+    box(worldSize + 0.8, 0.35, 0.35, materials.rockDark, 0, 12.1, 14.5);
+    box(0.35, 0.35, worldSize + 0.8, materials.rockDark, -14.5, 12.1, 0);
+    box(0.35, 0.35, worldSize + 0.8, materials.rockDark, 14.5, 12.1, 0);
 
-  const lampGlows = [];
+    // Water channels, following the reference map's prominent blue route.
+    box(12.8, 0.22, 1.25, materials.water, 0, 8.88, 1.5);
+    box(12.8, 0.22, 1.25, materials.water, 0, 4.58, 1.5);
+    box(12.8, 0.22, 1.25, materials.water, 0, 0.38, 1.5);
+    box(1.25, 0.22, 5.8, materials.water, -1.5, 8.88, 4.2);
+    box(1.25, 0.22, 5.8, materials.water, -1.5, 4.58, 4.2);
+    box(1.25, 0.22, 5.8, materials.water, -1.5, 0.38, 4.2);
+    box(5.8, 0.22, 1.25, materials.water, 4.2, 8.88, -1.5);
+    box(5.8, 0.22, 1.25, materials.water, 4.2, 4.58, -1.5);
+    box(5.8, 0.22, 1.25, materials.water, 4.2, 0.38, -1.5);
 
-  function makeLamp(x, y, z) {
-    const lamp = new THREE.Group();
-    lamp.position.set(x, y, z);
-    world.add(lamp);
+    // Water edges.
+    box(12.8, 0.08, 0.12, materials.waterRim, 0, 9.0, -0.08);
+    box(12.8, 0.08, 0.12, materials.waterRim, 0, 9.0, 3.08);
+    box(12.8, 0.08, 0.12, materials.waterRim, 0, 4.76, -0.08);
+    box(12.8, 0.08, 0.12, materials.waterRim, 0, 4.76, 3.08);
+    box(12.8, 0.08, 0.12, materials.waterRim, 0, 0.56, -0.08);
+    box(12.8, 0.08, 0.12, materials.waterRim, 0, 0.56, 3.08);
+    box(0.12, 0.08, 5.8, materials.waterRim, -0.08, 9.0, 4.2);
+    box(0.12, 0.08, 5.8, materials.waterRim, 0.08, 9.0, 4.2);
+    box(0.12, 0.08, 5.8, materials.waterRim, -0.08, 4.76, 4.2);
+    box(0.12, 0.08, 5.8, materials.waterRim, 0.08, 4.76, 4.2);
+    box(0.12, 0.08, 5.8, materials.waterRim, -0.08, 0.56, 4.2);
+    box(0.12, 0.08, 5.8, materials.waterRim, 0.08, 0.56, 4.2);
 
-    addCylinder(lamp, 0.05, 0.07, 1.6, [0, 0.8, 0], materials.ash, 7);
-    addCylinder(lamp, 0.34, 0.28, 0.32, [0, 1.65, 0], materials.gold, 8);
-    addSphere(lamp, 0.18, [0, 1.86, 0], materials.red, 8);
+    // Cliff masses and ceiling ledges.
+    const cliffMasses = [
+      [-12.8, 8.0, 2.3, 3.8, 4.2],
+      [-9.7, 6.0, 2.8, 3.3, 5.0],
+      [-6.8, 4.2, 2.6, 4.0, 4.4],
+      [-3.8, 2.6, 2.2, 3.6, 4.8],
+      [0.5, 1.1, 2.5, 4.0, 5.0],
+      [4.2, 3.2, 2.8, 3.6, 4.8],
+      [8.0, 6.0, 3.0, 4.0, 4.6],
+      [11.0, 8.8, 2.8, 3.4, 4.4],
+      [-12.8, 2.0, 2.4, 3.8, 4.8],
+      [12.8, 0.0, 2.5, 4.0, 5.0]
+    ];
+    for (const [x, y, w, h, d] of cliffMasses) {
+      const c = mesh(new THREE.BoxGeometry(w, h, d), materials.cliff, [x, y, 0]);
+      c.rotation.y = (Math.random() - 0.5) * 0.16;
+      const cap = mesh(new THREE.CylinderGeometry(1.3, 1.5, 0.25, 7), materials.rockDark, [x, y + h / 2, 0]);
+      cap.scale.set(w / 2.6, 1, d / 2.6);
+    }
 
-    const glow = new THREE.PointLight(0xff9c35, 8, 7, 2);
-    glow.position.set(0, 1.8, 0);
-    glow.userData.phase = Math.random() * Math.PI * 2;
-    lamp.add(glow);
-    lampGlows.push(glow);
-
-    return lamp;
-  }
-
-  // -------------------------------------------------------------------------
-  // Terrain
-  // -------------------------------------------------------------------------
-
-  const terrain = new THREE.Group();
-  world.add(terrain);
-
-  for (let z = -18; z < 16; z += 1.35) {
-    const y = Math.sin(z * 0.65) * 0.22 + Math.cos(z * 1.1) * 0.12;
-    addBox(
-      terrain,
-      [34, 0.45, 1.3],
-      [0, y, z],
-      z % 2.5 < 1 ? materials.ash : materials.darkBark
-    );
-  }
-
-  for (let x = -16; x <= 16; x += 2.7) {
-    const y = Math.sin(x * 0.55 + 1) * 0.18 + Math.cos(x * 1.15) * 0.08;
-    addBox(
-      terrain,
-      [1.4, 0.35, 34],
-      [x, y, 0],
-      Math.abs(x) % 3 > 1 ? materials.ash : materials.darkBark
-    );
-  }
-
-  // -------------------------------------------------------------------------
-  // Pitfall!
-  // -------------------------------------------------------------------------
-
-  const pitfall = new THREE.Group();
-  pitfall.position.set(5.7, 0.2, -7.5);
-  world.add(pitfall);
-
-  addBox(pitfall, [2.8, 0.35, 2.8], [0, 0, 0], materials.ash);
-
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2;
-    const x = Math.cos(angle) * 1.25;
-    const z = Math.sin(angle) * 1.25;
-
-    const spike = addCylinder(
-      pitfall,
-      0.075,
-      0.12,
-      0.7,
-      [x, 0.38, z],
-      materials.gold,
-      6
-    );
-    spike.rotation.z = Math.cos(angle) * 0.2;
-    spike.rotation.x = Math.sin(angle) * 0.2;
-  }
-
-  const pitHole = addCylinder(
-    pitfall,
-    1.15,
-    1.15,
-    0.12,
-    [0, -0.2, 0],
-    materials.black,
-    16
-  );
-  pitHole.rotation.x = Math.PI / 2;
-
-  // -------------------------------------------------------------------------
-  // Environmental placements
-  // -------------------------------------------------------------------------
-
-  makeTree(-7, -10, 1.05, false);
-  makeTree(-11, -3, 0.85, false);
-  makeTree(10, -12, 1.2, false);
-  makeTree(14, 3, 0.95, false);
-  makeTree(-13, 7, 0.8, false);
-  makeTree(12, 11, 1.05, false);
-
-  makeTree(3.8, -15, 0.72, true);
-  makeTree(-4.5, -16, 0.8, true);
-  makeTree(8.5, -15, 0.75, true);
-  makeTree(-9, -14, 0.7, true);
-
-  makeBush(-2.4, 0.15, -5.4, 1.1);
-  makeBush(0.7, 0.12, -4.8, 0.85);
-  makeBush(3.4, 0.15, -5.7, 1.0);
-  makeBush(-10.5, 0.15, 2.2, 1.15);
-  makeBush(9.8, 0.15, 1.6, 1.0);
-  makeBush(13.6, 0.15, -5.8, 0.85);
-
-  makeRock(-3.8, 0.1, 2.8, 1.15, false);
-  makeRock(1.8, 0.1, 3.5, 0.8, false);
-  makeRock(-9.5, 0.1, -2.8, 0.9, false);
-  makeRock(10.5, 0.1, -2.7, 0.85, false);
-  makeRock(-1.5, 0.1, 8.2, 0.75, false);
-  makeRock(7.5, 0.1, 7.8, 0.8, false);
-
-  makeCave(-6.7, 7.2, 4.2, 5.5);
-  makeCave(8.8, 8.5, 3.2, 4.5);
-
-  makeLog(-1.3, 0.18, 0.5, 0.2);
-  makeLog(3.1, 0.18, 1.1, -0.4);
-  makeLog(-8.7, 0.18, -5.1, 0.8);
-
-  makeVine(world, -2.7, 0.3, -3.6, 2.3);
-  makeVine(world, 1.2, 0.3, -4.2, 2.8);
-  makeVine(world, 4.5, 0.3, -3.9, 2.1);
-  makeVine(world, -7.5, 0.3, 1.2, 2.5);
-  makeVine(world, 9.1, 0.3, 2.3, 2.4);
-
-  makeLamp(-4.1, 0.15, 5.2);
-  makeLamp(6.5, 0.15, 5.5);
-  makeLamp(-8.6, 0.15, -5.2);
-
-  // Floating glowing spores.
-  const spores = [];
-  const sporeMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffd66b,
-    transparent: true,
-    opacity: 0.75,
-    depthWrite: false
-  });
-
-  for (let i = 0; i < 30; i++) {
-    const spore = new THREE.Mesh(new THREE.SphereGeometry(0.035 + Math.random() * 0.045, 6, 5), sporeMaterial);
-    spore.position.set(
-      (Math.random() - 0.5) * 24,
-      1 + Math.random() * 6,
-      (Math.random() - 0.5) * 22
-    );
-    world.add(spore);
-    spores.push({
-      mesh: spore,
-      speed: 0.25 + Math.random() * 0.35,
-      phase: Math.random() * Math.PI * 2
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Animation — original per-frame expressions; frame-locked increments
-  // rescaled to dt (originals assumed ~60 fps).
-  // -------------------------------------------------------------------------
-
-  function update(t, dt) {
-    const elapsed = t;
-
-    // Gentle ambient movement.
-    warmFill.intensity = 27 + Math.sin(elapsed * 1.4) * 2.2;
-    coolFill.intensity = 17 + Math.sin(elapsed * 0.9 + 1) * 1.4;
-
-    // Animate floating spores.
-    for (const spore of spores) {
-      spore.mesh.position.y += spore.speed * dt;
-      spore.mesh.rotation.y += 0.36 * dt;
-      spore.mesh.position.x += Math.sin(elapsed * 0.7 + spore.phase) * 0.054 * dt;
-
-      if (spore.mesh.position.y > 7.5) {
-        spore.mesh.position.y = 0.6;
+    // Ceiling slabs over the main causeway.
+    for (const z of [4.5, 1.5, -1.5]) {
+      for (const x of [-8.2, -4.4, -0.8, 3.0, 7.0]) {
+        box(1.25, 0.45, 1.25, materials.cliff, x, 11.1, z);
       }
     }
 
-    // Cave lamp glow variation (see header note).
-    for (const lamp of lampGlows) {
-      lamp.intensity = 7.5 + Math.sin(elapsed * 1.8 + lamp.userData.phase) * 0.8;
+    // Hanging vines and stalactites.
+    function addVine(x, y, z, length = 1.2) {
+      const stem = cylinder(0.025, 0.045, length, materials.leaf, x, y - length / 2, z, 6);
+      stem.rotation.z = (Math.random() - 0.5) * 0.25;
+      for (let i = 0; i < 3; i++) {
+        const leaf = mesh(new THREE.SphereGeometry(0.22 + Math.random() * 0.12, 7, 5), materials.leaf, [
+          x + (Math.random() - 0.5) * 0.35,
+          y - length * 0.45 - i * 0.28,
+          z + (Math.random() - 0.5) * 0.25
+        ]);
+        leaf.scale.set(1.6, 0.5, 0.8);
+      }
+    }
+
+    [
+      [-10.5, 10.2, -3.8], [-8.8, 9.0, -4.0], [-6.5, 7.8, -4.0],
+      [-4.0, 6.7, -4.0], [-1.5, 5.6, -4.0], [1.0, 4.5, -4.0],
+      [3.8, 3.4, -4.0], [6.5, 2.3, -4.0], [9.0, 1.2, -4.0],
+      [-10.2, 8.8, 3.8], [-8.5, 7.6, 3.8], [-6.8, 6.4, 3.8],
+      [-5.0, 5.2, 3.8], [-3.2, 4.0, 3.8], [-1.4, 2.8, 3.8],
+      [0.4, 1.6, 3.8], [2.2, 0.4, 3.8], [4.0, 9.0, -3.8],
+      [6.0, 7.8, -3.8], [8.0, 6.6, -3.8], [10.0, 5.4, -3.8]
+    ].forEach(v => addVine(...v));
+
+    function addStalactite(x, y, z, length = 1.2) {
+      const s = mesh(new THREE.ConeGeometry(0.18, length, 7), materials.rock, [x, y - length / 2, z]);
+      s.rotation.z = (Math.random() - 0.5) * 0.18;
+    }
+
+    [
+      [-11.5, 10.8, -2.5], [-9.8, 10.5, -2.4], [-8.1, 10.2, -2.4],
+      [-6.4, 9.9, -2.4], [-4.7, 9.6, -2.4], [-3.0, 9.3, -2.4],
+      [-1.3, 9.0, -2.4], [0.4, 8.7, -2.4], [2.1, 8.4, -2.4],
+      [3.8, 8.1, -2.4], [5.5, 7.8, -2.4], [7.2, 7.5, -2.4],
+      [8.9, 7.2, -2.4], [-10.0, 8.2, 2.7], [-8.3, 7.9, 2.7],
+      [-6.6, 7.6, 2.7], [-4.9, 7.3, 2.7], [-3.2, 7.0, 2.7],
+      [-1.5, 6.7, 2.7], [0.2, 6.4, 2.7], [1.9, 6.1, 2.7],
+      [3.6, 5.8, 2.7], [5.3, 5.5, 2.7], [7.0, 5.2, 2.7]
+    ].forEach(v => addStalactite(...v));
+
+    // Branching ledges and little platforms.
+    const ledges = [
+      [-11.0, 7.2, 4.8, 0.9, 0.9],
+      [-9.2, 5.5, 4.8, 0.8, 0.8],
+      [-7.4, 3.8, 4.8, 0.7, 0.7],
+      [-5.6, 2.1, 4.8, 0.6, 0.6],
+      [-3.8, 0.4, 4.8, 0.5, 0.5],
+      [-1.0, 7.0, 4.8, 0.65, 0.65],
+      [0.8, 5.3, 4.8, 0.55, 0.55],
+      [2.6, 3.6, 4.8, 0.45, 0.45],
+      [4.4, 1.9, 4.8, 0.35, 0.35],
+      [6.2, 0.2, 4.8, 0.4, 0.4],
+      [8.0, 7.0, 4.8, 0.55, 0.55],
+      [9.8, 5.3, 4.8, 0.45, 0.45],
+      [11.6, 3.6, 4.8, 0.35, 0.35]
+    ];
+    for (const [x, y, z, w, d] of ledges) {
+      box(w, 0.22, d, materials.floorEdge, x, y, z);
+      box(w, 0.1, d, materials.floor, x, y + 0.13, z);
+    }
+
+    // Stairs descending along the right wall.
+    for (let i = 0; i < 7; i++) {
+      const y = 10.3 - i * 1.25;
+      const z = 9.5 + Math.sin(i * 0.7) * 0.35;
+      box(1.25, 0.32, 0.72, materials.floor, 11.8, y, z);
+      box(1.42, 0.12, 0.88, materials.floorEdge, 11.8, y - 0.19, z);
+    }
+
+    // Lamps.
+    addLamp(-10.8, 8.2, -3.7);
+    addLamp(-8.7, 6.0, -3.7);
+    addLamp(-6.5, 3.8, -3.7);
+    addLamp(-4.2, 1.6, -3.7);
+    addLamp(-1.8, 7.1, -3.7);
+    addLamp(0.7, 5.0, -3.7);
+    addLamp(3.0, 3.0, -3.7);
+    addLamp(5.3, 1.0, -3.7);
+    addLamp(7.6, 6.4, -3.7);
+    addLamp(9.9, 4.6, -3.7);
+    addLamp(-10.5, 5.0, 3.7);
+    addLamp(-8.2, 3.0, 3.7);
+    addLamp(-6.0, 1.0, 3.7);
+    addLamp(10.0, 7.2, 3.7);
+
+    // Cave stalagmites and scattered rocks.
+    for (let i = 0; i < 18; i++) {
+      const x = -13.2 + Math.random() * 26.4;
+      const z = -13.2 + Math.random() * 26.4;
+      if (Math.abs(x) < 2.8 && Math.abs(z - 1.5) < 1.5) continue;
+      const h = 0.35 + Math.random() * 0.8;
+      const rock = mesh(new THREE.ConeGeometry(0.28 + Math.random() * 0.25, h, 7), materials.rock, [x, h / 2, z]);
+      rock.rotation.y = Math.random() * Math.PI;
+    }
+
+    // Mushrooms.
+    function addMushroom(x, y, z, scale = 1) {
+      const stem = cylinder(0.055 * scale, 0.075 * scale, 0.3 * scale, materials.mushroom, x, y + 0.15 * scale, z, 7);
+      const cap = mesh(new THREE.SphereGeometry(0.2 * scale, 8, 5), materials.mushroomTop, [x, y + 0.31 * scale, z]);
+      cap.scale.set(1.35, 0.6, 1);
+      cap.rotation.y = Math.random() * Math.PI;
+    }
+
+    [
+      [-12.0, 0.35, 3.2], [-11.4, 0.35, 4.0], [-10.8, 0.35, 4.8],
+      [-9.2, 0.35, 3.0], [-8.5, 0.35, 4.2], [-7.0, 0.35, 3.4],
+      [-5.5, 0.35, 4.0], [-4.0, 0.35, 3.2], [-2.5, 0.35, 4.0],
+      [-1.0, 0.35, 3.0], [0.5, 0.35, 4.2], [2.0, 0.35, 3.2],
+      [3.5, 0.35, 4.1], [5.0, 0.35, 3.0], [6.5, 0.35, 4.2],
+      [8.0, 0.35, 3.1], [9.5, 0.35, 4.0], [11.0, 0.35, 3.2],
+      [-12.0, 3.4, 3.0], [-11.4, 3.4, 4.0], [-10.8, 3.4, 4.8],
+      [-9.2, 3.4, 3.1], [-8.5, 3.4, 4.2], [-7.0, 3.4, 3.5],
+      [-5.5, 3.4, 4.1], [-4.0, 3.4, 3.2], [-2.5, 3.4, 4.0],
+      [-1.0, 3.4, 3.1], [0.5, 3.4, 4.2], [2.0, 3.4, 3.2],
+      [3.5, 3.4, 4.1], [5.0, 3.4, 3.1], [6.5, 3.4, 4.2],
+      [8.0, 3.4, 3.2], [9.5, 3.4, 4.0], [11.0, 3.4, 3.1]
+    ].forEach(v => addMushroom(...v));
+
+    // Small cave plants.
+    function addPlant(x, y, z, scale = 1) {
+      const pot = mesh(new THREE.CylinderGeometry(0.12 * scale, 0.16 * scale, 0.18 * scale, 7), materials.leaf, [x, y + 0.09 * scale, z]);
+      const leaves = [];
+      for (let i = 0; i < 4; i++) {
+        const leaf = mesh(new THREE.SphereGeometry(0.2 * scale, 7, 5), materials.leafLight, [
+          x + (Math.random() - 0.5) * 0.35,
+          y + (0.2 + i * 0.06) * scale,
+          z + (Math.random() - 0.5) * 0.25
+        ]);
+        leaf.scale.set(1.4, 0.55, 0.8);
+        leaves.push(leaf);
+      }
+      return leaves;
+    }
+
+    // Animated floating dust motes.
+    const moteMaterial = new THREE.MeshBasicMaterial({ color: 0xd7b866, transparent: true, opacity: 0.55 });
+    const motes = [];
+    for (let i = 0; i < 85; i++) {
+      const m = mesh(new THREE.SphereGeometry(0.025 + Math.random() * 0.035, 5, 4), moteMaterial, [
+        -13.5 + Math.random() * 27,
+        1.2 + Math.random() * 10.5,
+        -13.5 + Math.random() * 27
+      ]);
+      m.castShadow = false;
+      m.receiveShadow = false;
+      motes.push({ mesh: m, speed: 0.12 + Math.random() * 0.25, phase: Math.random() * Math.PI * 2 });
+    }
+
+    // Animated water surface: small translucent ripples using simple geometry.
+    const rippleMaterial = new THREE.MeshBasicMaterial({
+      color: 0x75b6d4,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false
+    });
+    const ripples = [];
+    for (let i = 0; i < 22; i++) {
+      const r = mesh(
+        new THREE.RingGeometry(0.12 + Math.random() * 0.25, 0.15 + Math.random() * 0.3, 12),
+        rippleMaterial,
+        [
+          -11 + Math.random() * 22,
+          9.02 + Math.random() * 0.01,
+          1.5 + (Math.random() - 0.5) * 0.2
+        ]
+      );
+      r.rotation.x = -Math.PI / 2;
+      r.castShadow = false;
+      r.receiveShadow = false;
+      ripples.push({ mesh: r, phase: Math.random() * Math.PI * 2, speed: 0.7 + Math.random() * 0.8 });
+    }
+
+    // The relic: Adventure's Chalice, built from pure Three.js primitives.
+    const relic = new THREE.Group();
+    relic.position.set(8.7, 2.25, 3.8);
+    relic.rotation.y = 0.45;
+    world.add(relic);
+
+    // Pedestal.
+    cylinder(0.62, 0.78, 0.22, materials.rockDark, 0, 0.11, 0, 12, relic);
+    cylinder(0.48, 0.56, 0.16, materials.rock, 0, 0.31, 0, 12, relic);
+
+    // Stem.
+    const chaliceStem = cylinder(0.15, 0.22, 0.78, materials.gold, 0, 0.72, 0, 14, relic);
+    chaliceStem.rotation.z = -0.08;
+
+    // Bowl.
+    const bowl = mesh(new THREE.SphereGeometry(0.48, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), materials.gold, [0, 1.15, 0], relic);
+    bowl.scale.y = 1.35;
+    bowl.rotation.z = -0.08;
+
+    // Rim.
+    torus(0.46, 0.085, materials.goldDark, 0, 1.39, 0, relic);
+
+    // Handle.
+    const handle = torus(0.27, 0.065, materials.goldDark, 0, 0.78, 0, relic);
+    handle.rotation.y = Math.PI / 2;
+
+    // Small gold cap and jewel.
+    cylinder(0.12, 0.12, 0.12, materials.goldDark, 0, 1.58, 0, 12, relic);
+    const jewel = mesh(new THREE.OctahedronGeometry(0.13, 0), materials.lamp, [0, 1.72, 0], relic);
+    jewel.scale.y = 1.4;
+
+    // A subtle halo ring around the relic.
+    const relicHalo = torus(0.82, 0.025, materials.lamp, 0, 0.48, 0, relic);
+    relicHalo.rotation.x = Math.PI / 2;
+
+    // Add a small path marker near the relic.
+    const marker = cylinder(0.12, 0.16, 0.35, materials.woodLight, 6.9, 0.28, 4.4, 8);
+    marker.rotation.z = 0.12;
+    const markerCap = cylinder(0.2, 0.2, 0.08, materials.wood, 6.9, 0.5, 4.4, 8);
+
+    // Lighting: warm point lights and cool ambient/cave illumination.
+    scene.add(new THREE.HemisphereLight(0x7186aa, 0x24170d, 0.62));
+
+    const caveLight = new THREE.PointLight(0xffc46b, 24, 24, 2);
+    caveLight.position.set(0, 6.5, 0);
+    scene.add(caveLight);
+
+    const coolFill = new THREE.PointLight(0x5b8ab0, 18, 28, 2);
+    coolFill.position.set(7, 4.5, -7);
+    scene.add(coolFill);
+
+    const relicLight = new THREE.PointLight(0xffb74f, 10, 6, 2);
+    relicLight.position.set(8.7, 2.5, 3.8);
+    scene.add(relicLight);
+
+    // Soft directional light from above.
+    const sun = new THREE.DirectionalLight(0xffd59a, 1.5);
+    sun.position.set(-5, 14, 7);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    scene.add(sun);
+
+    // Camera starts with a clear view of the central causeway and relic.
+    const target = new THREE.Vector3(0, 4.5, 0);
+    camera.position.set(15, 12.5, 18);
+    camera.lookAt(target);
+
+    // Custom orbit controls with pointer and touch, plus keyboard movement.
+    const orbit = {
+      theta: 0.67,
+      phi: 1.08,
+      radius: 25,
+      target: target.clone(),
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(orbit.phi);
+      camera.position.set(
+        orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+        orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+        orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
+      );
+      camera.lookAt(orbit.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      orbit.dragging = true;
+      orbit.lastX = event.clientX;
+      orbit.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!orbit.dragging) return;
+      const dx = event.clientX - orbit.lastX;
+      const dy = event.clientY - orbit.lastY;
+      orbit.lastX = event.clientX;
+      orbit.lastY = event.clientY;
+      orbit.theta -= dx * 0.006;
+      orbit.phi = THREE.MathUtils.clamp(orbit.phi - dy * 0.005, 0.35, 1.42);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      orbit.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      orbit.radius = THREE.MathUtils.clamp(orbit.radius + event.deltaY * 0.012, 10, 39);
+      updateCamera();
+    }, { passive: false });
+
+    const keys = new Set();
+    window.addEventListener("keydown", event => {
+      keys.add(event.key.toLowerCase());
+      if (event.key.toLowerCase() === "r") respawn();
+    });
+    window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
+    renderer.domElement.addEventListener("contextmenu", event => event.preventDefault());
+
+    function respawn() {
+      orbit.target.set(0, 4.5, 0);
+      orbit.theta = 0.67;
+      orbit.phi = 1.08;
+      orbit.radius = 25;
+      updateCamera();
+    }
+
+    // Touch pinch zoom.
+    const touches = new Map();
+    let pinchDistance = 0;
+    renderer.domElement.addEventListener("touchstart", event => {
+      for (const touch of event.changedTouches) touches.set(touch.identifier, {
+        x: touch.clientX,
+        y: touch.clientY
+      });
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchmove", event => {
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()];
+        const distance = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDistance > 0) {
+          orbit.radius = THREE.MathUtils.clamp(orbit.radius + (pinchDistance - distance) * 0.018, 10, 39);
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    }, { passive: true });
+
+    function removeTouch(event) {
+      touches.delete(event.pointerId);
+      if (touches.size < 2) pinchDistance = 0;
+    }
+    renderer.domElement.addEventListener("touchend", removeTouch);
+    renderer.domElement.addEventListener("touchleave", removeTouch);
+
+    // Animation.
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+
+      const t = clock.getElapsedTime();
+
+      if (orbit.dragging) {
+        const dx = event.clientX - orbit.lastX;
+        const dy = event.clientY - orbit.lastY;
+        orbit.lastX = event.clientX;
+        orbit.lastY = event.clientY;
+        orbit.theta -= dx * 0.006;
+        orbit.phi = THREE.MathUtils.clamp(orbit.phi - dy * 0.005, 0.35, 1.42);
+        updateCamera();
+      }
+
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+      const speed = 0.32;
+
+      if (keys.has("arrowleft")) orbit.target.addScaledVector(right, speed);
+      if (keys.has("arrowright")) orbit.target.addScaledVector(right, -speed);
+      if (keys.has("arrowup")) orbit.target.addScaledVector(forward, speed);
+      if (keys.has("arrowdown")) orbit.target.addScaledVector(forward, -speed);
+      orbit.target.x = THREE.MathUtils.clamp(orbit.target.x, -12, 12);
+      orbit.target.z = THREE.MathUtils.clamp(orbit.target.z, -12, 12);
+      orbit.target.y = THREE.MathUtils.clamp(orbit.target.y, 1.2, 9.5);
+
+      for (const mote of motes) {
+        mote.mesh.position.y += Math.sin(t * mote.speed + mote.phase) * 0.003;
+        mote.mesh.position.x += Math.cos(t * mote.speed * 0.7 + mote.phase) * 0.002;
+      }
+
+      for (const ripple of ripples) {
+        ripple.mesh.position.x += Math.sin(t * ripple.speed + ripple.phase) * 0.0007;
+        ripple.mesh.rotation.z = Math.sin(t * 1.3 + ripple.phase) * 0.08;
+        ripple.mesh.material.opacity = 0.16 + (Math.sin(t * 1.1 + ripple.phase) + 1) * 0.08;
+      }
+
+      relicHalo.rotation.z = t * 0.28;
+      relicHalo.rotation.x = Math.sin(t * 0.55) * 0.08;
+      jewel.rotation.y = t * 0.7;
+      jewel.rotation.x = Math.sin(t * 0.8) * 0.25;
+      relicLight.intensity = 9 + Math.sin(t * 2.1) * 1.4;
+      caveLight.intensity = 23 + Math.sin(t * 0.7) * 1.8;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    updateCamera();
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
     }
   }
 
   return {
     group,
     update,
-    spawn: { x: 0, z: 13, yaw: 0 },
-    env: { background: 0x17110d, fogColor: 0x271c13, fogDensity: 0.018 },
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { name: "Pitfall II: Lost Caverns Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x090c12, fogColor: 0x101722, fogDensity: 0.035 },
     doors: {
-      next: { x: 8.8, z: 5.0 },
-      prev: { x: -6.7, z: 3.8 }
-    },
-    relic: { name: "Golden Idol", x: -13.5, z: -12.5 }
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
   };
 }

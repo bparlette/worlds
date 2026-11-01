@@ -1,678 +1,615 @@
-// ============================================================================
-// @world {"id":"001","title":"ADVENTURE","sub":"Castles & Mazes","system":"Atari 2600"}
-// World 001 — ADVENTURE · Castles & Mazes (Atari 2600)
-// Converted from scenes/001_adventure_castles_mazes.html (Qwen3.5-3D-Coder
-// diorama) into a World Walker module. All geometry, materials, textures and
-// ambient animation from the original are preserved; the renderer / orbit
-// camera / HUD / animate-loop boilerplate was removed and the per-frame
-// animation expressions moved into update(t, dt).
-//
-// Door choices:
-//   next — in front of the castle gatehouse (castle at (15,-31), gate faces
-//          the winding path). Door at (13.1, -20.7), just outside the gate.
-//   prev — at the maze / enchanted-grove altar clearing (maze at (-18,-23)).
-//          Door at (-17, -17.2), on the clearing's south approach.
-// Spawn: start of the winding path, looking toward the castle.
-// Relic: the Enchanted Chalice hides BEHIND the castle at (20, -43), in the
-//        north woods — well off both door beelines; you have to circle the
-//        castle to find it. (Deliberately NOT the maze altar.)
-// ============================================================================
+// @world {"id": "001", "title": "Adventure", "sub": "Castles & Mazes", "system": "Atari 2600"}
+// Converted from  into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
 
 export function createWorld(THREE) {
   const group = new THREE.Group();
-  const animated = [];
 
-  // -------------------------------------------------------------------------
-  // Materials
-  // -------------------------------------------------------------------------
-
-  const materials = {
-    earth: new THREE.MeshStandardMaterial({ color: 0x3c2817, roughness: 1 }),
-    earthDark: new THREE.MeshStandardMaterial({ color: 0x21170f, roughness: 1 }),
-    path: new THREE.MeshStandardMaterial({ color: 0x9b7846, roughness: 1 }),
-    pathLight: new THREE.MeshStandardMaterial({ color: 0xb9955d, roughness: 1 }),
-    stone: new THREE.MeshStandardMaterial({ color: 0x665646, roughness: .96 }),
-    stoneLight: new THREE.MeshStandardMaterial({ color: 0x918068, roughness: .94 }),
-    stoneDark: new THREE.MeshStandardMaterial({ color: 0x39332d, roughness: 1 }),
-    gold: new THREE.MeshStandardMaterial({ color: 0xd9a43b, roughness: .55, metalness: .25 }),
-    leaf: new THREE.MeshStandardMaterial({ color: 0x345c2b, roughness: .95 }),
-    leafLight: new THREE.MeshStandardMaterial({ color: 0x527a35, roughness: .95 }),
-    leafDark: new THREE.MeshStandardMaterial({ color: 0x203c20, roughness: 1 }),
-    trunk: new THREE.MeshStandardMaterial({ color: 0x493220, roughness: 1 }),
-    moss: new THREE.MeshStandardMaterial({ color: 0x506736, roughness: 1 }),
-    water: new THREE.MeshStandardMaterial({
-      color: 0x173c45,
-      roughness: .25,
-      metalness: .15,
-      transparent: true,
-      opacity: .84
-    }),
-    candle: new THREE.MeshStandardMaterial({
-      color: 0xe2b969,
-      emissive: 0x7b3500,
-      emissiveIntensity: .8,
-      roughness: .65
-    }),
-    fire: new THREE.MeshBasicMaterial({ color: 0xff9b26 }),
-    glow: new THREE.MeshBasicMaterial({ color: 0xffc45c })
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
   };
 
-  // -------------------------------------------------------------------------
-  // Lighting (folded into the group so it streams/disposes with the world)
-  // -------------------------------------------------------------------------
+  let updateHook = null;
 
-  group.add(new THREE.HemisphereLight(0x7e8965, 0x24150d, 1.5));
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
 
-  const sun = new THREE.DirectionalLight(0xffc878, 3.1);
-  sun.position.set(25, 35, 18);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left = -35;
-  sun.shadow.camera.right = 35;
-  sun.shadow.camera.top = 35;
-  sun.shadow.camera.bottom = -35;
-  sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 90;
-  sun.shadow.bias = -.0004;
-  group.add(sun);
+  function dummyCamera() {
+    return {
+      position: { set: () => {}, copy: () => {} },
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
 
-  const rim = new THREE.DirectionalLight(0x6d879a, 1.25);
-  rim.position.set(-20, 15, -25);
-  group.add(rim);
-
-  const fireLight = new THREE.PointLight(0xff7a22, 2.4, 18, 2);
-  fireLight.position.set(0, 3.5, 0);
-  group.add(fireLight);
-
-  // -------------------------------------------------------------------------
-  // Procedural canvas textures
-  // -------------------------------------------------------------------------
-
-  function makeTexture(type) {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 256;
-    const ctx = canvas.getContext("2d");
-
-    if (type === "stone") {
-      ctx.fillStyle = "#71624c";
-      ctx.fillRect(0, 0, 256, 256);
-
-      for (let i = 0; i < 900; i++) {
-        const shade = 70 + Math.random() * 65;
-        ctx.fillStyle = `rgba(${shade},${shade - 8},${shade - 16},${.05 + Math.random()*.2})`;
-        ctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 3, 1 + Math.random() * 3);
-      }
-
-      ctx.strokeStyle = "rgba(35,28,22,.25)";
-      ctx.lineWidth = 2;
-      for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-          const x = col * 32 + (row % 2) * 16;
-          ctx.strokeRect(x, row * 32, 30, 30);
-        }
-      }
-    } else {
-      ctx.fillStyle = "#243a24";
-      ctx.fillRect(0, 0, 256, 256);
-
-      for (let i = 0; i < 1500; i++) {
-        const light = Math.random() > .55;
-        ctx.fillStyle = light ? "rgba(135,170,95,.12)" : "rgba(8,25,10,.18)";
-        const r = 1 + Math.random() * 4;
-        ctx.fillRect(Math.random() * 256, Math.random() * 256, r, r);
-      }
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
     }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  }
+  // --- Scoped Diorama Build Code ---
 
-  const stoneTexture = makeTexture("stone");
-  stoneTexture.repeat.set(3, 3);
-  materials.stone.map = stoneTexture;
 
-  const leafTexture = makeTexture("leaf");
-  leafTexture.repeat.set(12, 12);
-  materials.leaf.map = leafTexture;
-  materials.leafLight.map = leafTexture;
-  materials.leafDark.map = leafTexture;
 
-  // -------------------------------------------------------------------------
-  // Terrain and winding path
-  // -------------------------------------------------------------------------
+// scene redirect
+scene.background = new THREE.Color(0x080b14);
+scene.fog = new THREE.FogExp2(0x080b14, 0.024);
 
-  const terrainGeometry = new THREE.PlaneGeometry(110, 110, 110, 110);
-  terrainGeometry.rotateX(-Math.PI / 2);
+camera = dummyCamera();
+renderer = dummyRenderer();
+const canvas = renderer.domElement;
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  const terrainPosition = terrainGeometry.attributes.position;
-  const terrainColors = [];
 
-  for (let i = 0; i < terrainPosition.count; i++) {
-    const x = terrainPosition.getX(i);
-    const z = terrainPosition.getZ(i);
-    const edge = Math.max(Math.abs(x) / 48, Math.abs(z) / 48);
-    const noise = Math.sin(x * .24) * .35 + Math.cos(z * .21) * .35 + Math.sin((x+z)*.11)*.25;
-    const h = Math.max(-.5, Math.min(3.2, noise + edge * 1.4));
-    terrainPosition.setY(i, h);
+const world = new THREE.Group();
+world.position.y = 0.15;
+scene.add(world);
 
-    const color = new THREE.Color();
-    if (h > 2.2) color.set(0x34251a);
-    else if (h < -1.2) color.set(0x251b12);
-    else color.set(0x49331f);
-    terrainColors.push(color.r, color.g, color.b);
-  }
+const palette = {
+  stone: 0x59606a,
+  stoneDark: 0x303842,
+  stoneLight: 0x777b78,
+  gold: 0xd6a64b,
+  purple: 0x6b568c,
+  blue: 0x314c75,
+  green: 0x536b4d,
+  black: 0x101319,
+  red: 0x8e3237,
+  warm: 0xe3a55a
+};
 
-  terrainGeometry.setAttribute("color", new THREE.Float32BufferAttribute(terrainColors, 3));
-  terrainGeometry.computeVertexNormals();
+function mat(color, roughness = .8, metalness = 0) {
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness });
+}
+const M = {
+  stone: mat(palette.stone),
+  stoneDark: mat(palette.stoneDark),
+  stoneLight: mat(palette.stoneLight),
+  gold: mat(palette.gold, .38, .65),
+  purple: mat(palette.purple),
+  blue: mat(palette.blue),
+  green: mat(palette.green),
+  black: mat(palette.black),
+  red: mat(palette.red),
+  warm: mat(palette.warm)
+};
 
-  const terrain = new THREE.Mesh(
-    terrainGeometry,
-    new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 1
-    })
+function box(w, h, d, material, x = 0, y = 0, z = 0, parent = world) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+function cyl(rTop, rBottom, h, material, x = 0, y = 0, z = 0, parent = world, segments = 12) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, h, segments), material);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+
+const orbit = {
+  theta: 0.82,
+  phi: 1.03,
+  radius: 25,
+  target: new THREE.Vector3(0, 2.4, 0),
+  dragging: false,
+  lastX: 0,
+  lastY: 0
+};
+
+function updateCamera() {
+  const sinPhi = Math.sin(orbit.phi);
+  camera.position.set(
+    orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+    orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+    orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
   );
-  terrain.receiveShadow = true;
-  group.add(terrain);
+  camera.lookAt(orbit.target);
+}
+updateCamera();
 
-  // A hand-carved path through the forest, with gentle elevation.
-  const pathPoints = [
-    new THREE.Vector3(-23, 0, 28),
-    new THREE.Vector3(-14, 0, 20),
-    new THREE.Vector3(-7, 0, 13),
-    new THREE.Vector3(0, 0, 7),
-    new THREE.Vector3(7, 0, 0),
-    new THREE.Vector3(13, 0, -8),
-    new THREE.Vector3(18, 0, -18)
-  ];
+// Floor grid and central courtyard.
+box(29.5, .35, 29.5, M.stoneDark, 0, .05, 0);
+for (let z = -13.5; z <= 13.5; z += 1.5) {
+  box(28.8, .035, .07, M.stoneLight, 0, .25, z);
+}
+for (let x = -13.5; x <= 13.5; x += 1.5) {
+  box(.07, .035, 28.8, M.stoneLight, x, .25, 0);
+}
 
-  const pathCurve = new THREE.CatmullRomCurve3(pathPoints, false, "catmullrom", .45);
-  const pathSegments = 180;
-  const pathGeometry = new THREE.BufferGeometry();
-  const pathPositions = [];
-  const pathUVs = [];
+// Main room: central dais, winding stair, side halls, and four boundary walls.
+const floorY = .32;
+box(11.4, .45, 8.2, M.stone, 0, .25, -2.2);
+box(6.2, .45, 4.2, M.stoneDark, 0, .25, 5.5);
+box(2.0, .45, 10.4, M.stone, 0, .25, 1.8);
 
-  for (let i = 0; i <= pathSegments; i++) {
-    const t = i / pathSegments;
-    const p = pathCurve.getPoint(t);
-    const side = Math.sin(t * Math.PI * 3.2) * .5 + .5;
-    const width = .7 + side * 1.25;
-    const y = 0.02 + Math.sin(t * Math.PI * 2) * .12;
+// Outer walls, kept continuous and unadorned.
+box(29, 12.5, .75, M.stoneDark, 0, 6.2, -14.25);
+box(.75, 12.5, 29, M.stoneDark, -14.25, 6.2, 0);
+box(29, 12.5, .75, M.stoneDark, 0, 6.2, 14.25);
+box(.75, 12.5, 29, M.stoneDark, 14.25, 6.2, 0);
 
-    const left = p.clone().add(new THREE.Vector3(-width, 0, 0));
-    const right = p.clone().add(new THREE.Vector3(width, 0, 0));
-    pathPositions.push(left.x, y, left.z, right.x, y, right.z);
-    pathUVs.push(0, t * 12, 1, t * 12);
-  }
+// Wall cap stones.
+box(29.2, .35, .95, M.stoneLight, 0, 12.55, -14.25);
+box(.95, .35, 29.2, M.stoneLight, -14.25, 12.55, 0);
+box(29.2, .35, .95, M.stoneLight, 0, 12.55, 14.25);
+box(.95, .35, 29.2, M.stoneLight, 14.25, 12.55, 0);
 
-  pathGeometry.setAttribute("position", new THREE.Float32BufferAttribute(pathPositions, 3));
-  pathGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(pathUVs, 2));
-  pathGeometry.computeVertexNormals();
+// Central dais and steps.
+box(4.8, .35, 3.6, M.stoneLight, 0, .52, -2.1);
+for (let i = 0; i < 3; i++) {
+  box(5.2 - i * .28, .22, 1.05, M.stone, 0, .42 + i * .22, -3.25 - i * .62);
+}
+cyl(1.35, 1.55, .42, M.stoneLight, 0, .93, -2.1);
 
-  const path = new THREE.Mesh(
-    pathGeometry,
-    new THREE.MeshStandardMaterial({
-      color: 0xb58b50,
-      roughness: 1,
-      side: THREE.DoubleSide
-    })
+// Wizard's throne at the back.
+box(3.2, .45, 2.0, M.stoneDark, 0, 1.3, -4.65);
+box(2.45, .75, 1.25, M.blue, 0, 1.95, -4.65);
+box(2.8, .35, 1.45, M.purple, 0, 2.42, -4.65);
+box(1.25, .35, .65, M.gold, 0, 2.75, -4.65);
+cyl(.08, .08, 1.6, M.gold, -.88, 1.75, -4.65);
+cyl(.08, .08, 1.6, M.gold, .88, 1.75, -4.65);
+box(.28, .28, .75, M.gold, 0, 2.15, -4.65);
+box(.16, .16, 1.2, M.gold, 0, 2.15, -4.65);
+
+// Side alcoves.
+box(3.6, 3.0, 1.2, M.stoneDark, -6.3, 1.9, 2.7);
+box(3.6, 3.0, 1.2, M.stoneDark, 6.3, 1.9, 2.7);
+box(2.4, .45, 1.4, M.stone, -6.3, 3.55, 2.7);
+box(2.4, .45, 1.4, M.stone, 6.3, 3.55, 2.7);
+box(1.4, .7, 1.0, M.blue, -6.3, 3.9, 2.7);
+box(1.4, .7, 1.0, M.blue, 6.3, 3.9, 2.7);
+box(.22, .35, .65, M.gold, -6.3, 4.3, 2.7);
+box(.22, .35, .65, M.gold, 6.3, 4.3, 2.7);
+
+// Stair and central aisle.
+for (let i = 0; i < 5; i++) {
+  box(3.2, .18, .75, M.stoneLight, 0, .55 + i * .16, -7.4 - i * .72);
+}
+box(2.5, .18, 2.6, M.stone, 0, 1.15, -7.4);
+box(1.6, .18, 1.2, M.stoneLight, 0, 1.35, -7.4);
+
+// Wall sconces.
+for (const x of [-11.2, 11.2]) {
+  box(.65, .85, .28, M.stoneDark, x, 2.3, -13.75);
+  const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(.22, 12, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffd58a, emissive: 0xffa63d, emissiveIntensity: 1.4 })
   );
-  path.receiveShadow = true;
-  group.add(path);
+  lamp.position.set(x, 2.3, -13.5);
+  world.add(lamp);
+}
+for (const x of [-11.2, 11.2]) {
+  box(.65, .85, .28, M.stoneDark, x, 2.3, 13.75);
+  const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(.22, 12, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffd58a, emissive: 0xffa63d, emissiveIntensity: 1.4 })
+  );
+  lamp.position.set(x, 2.3, 13.5);
+  world.add(lamp);
+}
 
-  // -------------------------------------------------------------------------
-  // Castle
-  // -------------------------------------------------------------------------
+// Hanging chandelier.
+cyl(.18, .3, .25, M.gold, 0, 5.8, 1.4);
+cyl(.08, .1, .65, M.gold, 0, 6.1, 1.4);
+for (let i = 0; i < 6; i++) {
+  const a = i * Math.PI / 3;
+  const x = Math.cos(a) * 1.05;
+  const z = Math.sin(a) * 1.05;
+  const arm = cyl(.055, .055, .75, M.gold, x, 6.1, z);
+  arm.rotation.z = Math.cos(a) * .35;
+  arm.rotation.x = Math.sin(a) * .35;
+  const bulb = new THREE.Mesh(
+    new THREE.SphereGeometry(.18, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffd48a, emissive: 0xffa63d, emissiveIntensity: 1.8 })
+  );
+  bulb.position.set(x, 6.45, z);
+  world.add(bulb);
+}
 
-  const castle = new THREE.Group();
-  castle.position.set(15, 0, -31);
-  castle.rotation.y = -.18;
-  group.add(castle);
+// Crystal-like magical orb over the throne.
+const orb = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(.55, 2),
+  new THREE.MeshStandardMaterial({
+    color: 0x836cff,
+    emissive: 0x4b2dff,
+    emissiveIntensity: 2.2,
+    roughness: .2,
+    metalness: .25
+  })
+);
+orb.position.set(0, 4.2, -4.1);
+orb.rotation.y = .4;
+world.add(orb);
 
-  function castleBox(w, h, d, x, y, z, material = materials.stone) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    castle.add(mesh);
-    return mesh;
+const orbGlow = new THREE.PointLight(0x7a55ff, 1.7, 7, 2);
+orbGlow.position.copy(orb.position);
+world.add(orbGlow);
+
+// Crystal cluster.
+for (let i = 0; i < 7; i++) {
+  const h = .8 + (i % 3) * .28;
+  const crystal = cyl(.09, .24, h, M.purple, -1.4 + (i % 2) * .38, 1.6 + h / 2, -5.1);
+  crystal.rotation.z = (i - 3) * .12;
+  const tip = new THREE.Mesh(
+    new THREE.ConeGeometry(.17, .42, 6),
+    M.purple
+  );
+  tip.position.set(-1.4 + (i % 2) * .38, 1.6 + h + .18, -5.1);
+  tip.rotation.z = (i - 3) * .12;
+  world.add(tip);
+}
+
+// Relic: the "Moonward Crown", a recognizable treasure object.
+const relic = new THREE.Group();
+relic.position.set(3.45, .4, 3.85);
+world.add(relic);
+
+const crownBase = cyl(.55, .48, .28, M.gold, 0, .18, 0, relic, 16);
+crownBase.rotation.y = .12;
+const crownTop = cyl(.42, .62, .42, M.purple, 0, .58, 0, relic, 16);
+crownTop.rotation.y = -.18;
+const band = cyl(.49, .49, .12, M.gold, 0, .31, 0, relic, 16);
+band.rotation.y = .2;
+const moon = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(.38, 2),
+  new THREE.MeshStandardMaterial({
+    color: 0xe7f4ff,
+    emissive: 0x759bff,
+    emissiveIntensity: 1.25,
+    roughness: .25,
+    metalness: .35
+  })
+);
+moon.position.set(0, .86, 0);
+moon.rotation.y = .35;
+const moonHalo = new THREE.Mesh(
+  new THREE.TorusGeometry(.52, .045, 8, 24),
+  M.gold
+);
+moonHalo.position.set(0, .86, .04);
+moonHalo.rotation.x = Math.PI / 2;
+relic.add(moonHalo);
+const crownSpoke = cyl(.055, .055, 1.3, M.gold, 0, .58, 0, relic, 8);
+crownSpoke.rotation.z = .2;
+const gem = new THREE.Mesh(
+  new THREE.OctahedronGeometry(.25, 0),
+  new THREE.MeshStandardMaterial({
+    color: 0x65e6ff,
+    emissive: 0x2aa8ff,
+    emissiveIntensity: 1.5,
+    roughness: .18
+  })
+);
+gem.position.set(0, 1.25, 0);
+relic.add(gem);
+const relicGlow = new THREE.PointLight(0x70b9ff, 1.3, 5, 2);
+relicGlow.position.set(3.45, 1.3, 3.85);
+world.add(relicGlow);
+
+// Treasure pedestal.
+box(1.65, .22, 1.65, M.stoneLight, 3.45, .55, 3.85);
+box(1.25, .16, 1.25, M.stone, 3.45, .72, 3.85);
+
+// Low walls and pillars frame the room.
+for (const x of [-10.7, 10.7]) {
+  box(.75, 3.1, .75, M.stoneLight, x, 1.85, 7.3);
+  box(1.1, .28, 1.1, M.stone, x, 3.55, 7.3);
+}
+for (const z of [-8.8, 8.8]) {
+  box(.75, 3.1, .75, M.stoneLight, -10.7, 1.85, z);
+  box(.75, 3.1, .75, M.stoneLight, 10.7, 1.85, z);
+  box(1.1, .28, 1.1, M.stone, -10.7, 3.55, z);
+  box(1.1, .28, 1.1, M.stone, 10.7, 3.55, z);
+}
+
+// Decorative wall panels.
+for (const x of [-9.2, 9.2]) {
+  for (const z of [-13.7, 13.7]) {
+    box(.55, 1.55, .18, M.stoneDark, x, 3.0, z);
+    box(.32, .8, .2, M.blue, x, 3.1, z);
+    box(.2, .12, .23, M.gold, x, 3.1, z);
   }
+}
 
-  castleBox(12, 5, 12, 0, 2.5, 0);
-  castleBox(16, 1.2, 16, 0, 5.1, 0, materials.stoneLight);
-  castleBox(8, 4.5, 8, -4.2, 7.3, 1.3, materials.stone);
-  castleBox(8, 4.5, 8, 4.2, 7.3, 1.3, materials.stone);
-  castleBox(3.2, 2.8, 3.2, 0, 10.7, -1.2, materials.stoneLight);
-  castleBox(7, 2.1, 7, 0, 12.3, -1.2, materials.stoneLight);
+// Trees around the perimeter, kept within the 30x30 footprint.
+function tree(x, z, scale = 1) {
+  const group = new THREE.Group();
+  group.position.set(x, .3, z);
+  group.scale.setScalar(scale);
+  world.add(group);
 
-  // Towers and crenellations.
-  const towerPositions = [
-    [-7.2, 1.6, -4.4, 3.2],
-    [7.2, 1.6, -4.4, 3.2],
-    [-7.2, 1.6, 4.4, 3.2],
-    [7.2, 1.6, 4.4, 3.2]
-  ];
+  const trunk = cyl(.18, .27, 2.1, M.stoneDark, 0, 1.05, 0, group, 7);
+  trunk.rotation.z = (Math.random() - .5) * .15;
 
-  for (const [x, y, z, size] of towerPositions) {
-    const tower = new THREE.Mesh(new THREE.CylinderGeometry(size, size * 1.08, y * 2, 8), materials.stone);
-    tower.position.set(x, y, z);
-    tower.castShadow = true;
-    tower.receiveShadow = true;
-    castle.add(tower);
+  const foliage = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.35, 1),
+    M.green
+  );
+  foliage.position.y = 2.45;
+  foliage.scale.set(1, 1.12, .9);
+  foliage.castShadow = true;
+  foliage.receiveShadow = true;
+  group.add(foliage);
 
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2;
-      const merlon = new THREE.Mesh(new THREE.BoxGeometry(.55, .75, .55), materials.stoneLight);
-      merlon.position.set(
-        Math.cos(a) * (size * .72),
-        y * 2 + .35,
-        Math.sin(a) * (size * .72)
-      );
-      merlon.rotation.y = -a;
-      merlon.castShadow = true;
-      castle.add(merlon);
+  const crown = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(.9, 1),
+    M.green
+  );
+  crown.position.set(.45, 3.0, .15);
+  crown.scale.set(.8, 1.05, .8);
+  crown.castShadow = true;
+  group.add(crown);
+}
+tree(-11.8, -8.8, .9);
+tree(-11.6, 8.7, .85);
+tree(11.8, -8.7, .9);
+tree(11.7, 8.8, .8);
+tree(-11.9, 0, .7);
+tree(11.9, 0, .7);
+
+// Hanging banners.
+for (const x of [-8.3, 8.3]) {
+  const top = x, y = 4.3, z = -13.7;
+  const banner = box(1.15, 1.85, .12, M.blue, x, 3.4, -13.7);
+  banner.rotation.z = (x < 0 ? -.08 : .08);
+  box(.28, .28, .15, M.gold, x + .25, 2.43, -13.62);
+}
+
+// Small side tables and books.
+for (const x of [-8.2, 8.2]) {
+  box(1.3, .18, 1.3, M.stoneLight, x, 1.05, -6.1);
+  box(.18, 1.0, .18, M.stoneDark, x - .45, .55, -6.1);
+  box(.18, 1.0, .18, M.stoneDark, x + .45, .55, -6.1);
+  for (let i = 0; i < 4; i++) {
+    box(.34, .45, .22, i % 2 ? M.blue : M.purple, x, 1.45 + i * .1, -6.1);
+  }
+}
+
+// Floating motes.
+const moteMaterial = new THREE.MeshBasicMaterial({ color: 0xc5a9ff, transparent: true, opacity: .55 });
+const motes = [];
+for (let i = 0; i < 34; i++) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(.035 + Math.random() * .07, 6, 4), moteMaterial);
+  m.position.set((Math.random() - .5) * 21, .8 + Math.random() * 7, (Math.random() - .5) * 21);
+  m.userData.speed = .18 + Math.random() * .35;
+  m.userData.phase = Math.random() * Math.PI * 2;
+  world.add(m);
+  motes.push(m);
+}
+
+// Animated hanging crystals.
+const hangingCrystals = [];
+for (let i = 0; i < 5; i++) {
+  const crystal = cyl(.06, .16, .9 + (i % 2) * .25, M.purple, -7.2 + i * 1.5, 3.8, 9.1);
+  crystal.userData.phase = i * .7;
+  hangingCrystals.push(crystal);
+}
+
+// Animated orb pulse.
+const orbPulse = new THREE.Mesh(
+  new THREE.SphereGeometry(.58, 16, 12),
+  new THREE.MeshBasicMaterial({
+    color: 0x9b78ff,
+    transparent: true,
+    opacity: .18,
+    depthWrite: false
+  })
+);
+orbPulse.position.copy(orb.position);
+world.add(orbPulse);
+
+// Subtle light pulse.
+const chandelierLight = new THREE.PointLight(0xffbb66, 2.2, 13, 2);
+chandelierLight.position.set(0, 6.3, 1.4);
+world.add(chandelierLight);
+
+// Camera controls implemented directly, without addons.
+let pointerId = null;
+let moved = false;
+canvas.addEventListener("pointerdown", event => {
+  orbit.dragging = true;
+  pointerId = event.pointerId;
+  orbit.lastX = event.clientX;
+  orbit.lastY = event.clientY;
+  moved = true;
+  canvas.setPointerCapture(pointerId);
+  canvas.style.cursor = "grabbing";
+});
+
+canvas.addEventListener("pointermove", event => {
+  if (!orbit.dragging || event.pointerId !== pointerId) return;
+  const dx = event.clientX - orbit.lastX;
+  const dy = event.clientY - orbit.lastY;
+  orbit.lastX = event.clientX;
+  orbit.lastY = event.clientY;
+  orbit.theta -= dx * .006;
+  orbit.phi = THREE.MathUtils.clamp(orbit.phi - dy * .005, .38, 1.42);
+  updateCamera();
+});
+
+function endDrag(event) {
+  if (event.pointerId !== pointerId) return;
+  orbit.dragging = false;
+  canvas.style.cursor = "grab";
+  if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
+    canvas.releasePointerCapture(pointerId);
+  }
+  pointerId = null;
+}
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.style.cursor = "grab";
+
+canvas.addEventListener("wheel", event => {
+  event.preventDefault();
+  orbit.radius = THREE.MathUtils.clamp(orbit.radius + event.deltaY * .015, 12, 35);
+  updateCamera();
+}, { passive: false });
+
+// Touch pinch zoom.
+const touches = new Map();
+let pinchDistance = 0;
+canvas.addEventListener("touchstart", event => {
+  for (const touch of event.changedTouches) touches.set(touch.identifier, touch);
+  if (touches.size === 2) {
+    const [a, b] = [...touches.values()];
+    pinchDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
+}, { passive: true });
+canvas.addEventListener("touchmove", event => {
+  if (event.touches.length === 2) {
+    event.preventDefault();
+    const [a, b] = [...event.touches.values()];
+    const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    if (pinchDistance > 0) {
+      orbit.radius = THREE.MathUtils.clamp(orbit.radius + (pinchDistance - distance) * .025, 12, 35);
+      updateCamera();
     }
+    pinchDistance = distance;
+  }
+}, { passive: false });
+canvas.addEventListener("touchend", event => {
+  for (const touch of event.changedTouches) touches.delete(touch.identifier);
+});
+
+// Responsive renderer.
+function resize() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+}
+addEventListener("resize", resize);
+
+const clock = new THREE.Clock();
+let elapsed = 0;
+
+function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+
+  const dt = Math.min(clock.getDelta(), .05);
+  elapsed += dt;
+
+  orb.rotation.y += dt * .35;
+  orb.rotation.z = Math.sin(elapsed * .8) * .12;
+  orb.scale.setScalar(1 + Math.sin(elapsed * 1.7) * .08);
+  orbGlow.intensity = 1.55 + Math.sin(elapsed * 1.7) * .25;
+
+  orbPulse.scale.setScalar(1 + (Math.sin(elapsed * 1.7) * .5 + .5) * .55);
+  orbPulse.material.opacity = .12 + (Math.sin(elapsed * 1.7) * .5 + .5) * .14;
+
+  chandelierLight.intensity = 2.0 + Math.sin(elapsed * 1.25) * .18;
+
+  for (const crystal of hangingCrystals) {
+    crystal.rotation.z = Math.sin(elapsed * 1.05 + crystal.userData.phase) * .12;
+    crystal.rotation.x = Math.cos(elapsed * .9 + crystal.userData.phase) * .09;
   }
 
-  // Arched windows.
-  function archWindow(x, y, z, width = 1.2) {
-    const group2 = new THREE.Group();
-    group2.position.set(x, y, z);
-
-    const dark = new THREE.Mesh(new THREE.BoxGeometry(width, width * .65, .12), materials.earthDark);
-    dark.position.y = width * .25;
-    group2.add(dark);
-
-    const arch = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape()), materials.stoneDark);
-    const shape = new THREE.Shape();
-    shape.moveTo(-width / 2, 0);
-    shape.lineTo(width / 2, 0);
-    shape.lineTo(width / 2, width * .35);
-    shape.absarc(0, width * .35, width / 2, 0, Math.PI, false);
-    shape.lineTo(-width / 2, 0);
-    arch.position.y = width * .35;
-    group2.add(arch);
-
-    const glowDisc = new THREE.Mesh(new THREE.CircleGeometry(width * .22, 16), materials.glow);
-    glowDisc.position.set(0, width * .25, .09);
-    group2.add(glowDisc);
-
-    group2.traverse(o => { if (o.isMesh) o.castShadow = true; });
-    castle.add(group2);
+  for (const mote of motes) {
+    mote.position.y += mote.userData.speed * dt;
+    mote.rotation.x += dt * .25;
+    mote.rotation.y += dt * .2;
+    if (mote.position.y > 7.8) mote.position.y = .6;
   }
 
-  archWindow(-3.6, 3.3, 6.07, 1.2);
-  archWindow(3.6, 3.3, 6.07, 1.2);
-  archWindow(-7.2, 2.5, 0, 1.4);
-  archWindow(7.2, 2.5, 0, 1.4);
-  archWindow(0, 11.7, 4.67, 1.4);
-  archWindow(0, 11.7, -6.61, 1.4);
+  const t = elapsed * .75;
+  relic.rotation.y = Math.sin(t * .35) * .08;
+  gem.rotation.x = t * .55;
+  gem.rotation.y = t * .4;
 
-  // Gatehouse.
-  const gate = new THREE.Group();
-  gate.position.set(0, 0, 7.4);
-  castle.add(gate);
+  
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+}
+animate();
 
-  const gatePillars = [
-    new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.4, 2.2), materials.stoneLight),
-    new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.4, 2.2), materials.stoneLight)
-  ];
-  gatePillars.forEach(m => {
-    m.position.x = m === gatePillars[0] ? -1.05 : 1.05;
-    m.castShadow = true;
-    m.receiveShadow = true;
-    gate.add(m);
-  });
 
-  const gateLintel = new THREE.Mesh(new THREE.BoxGeometry(4.4, .8, 2.6), materials.stoneLight);
-  gateLintel.position.set(0, 5.3, 0);
-  gateLintel.castShadow = true;
-  gate.add(gateLintel);
-
-  const gateSign = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.2, .65),
-    new THREE.MeshBasicMaterial({ color: 0x9b6b25, side: THREE.DoubleSide })
-  );
-  gateSign.position.set(0, 4.85, .03);
-  gate.add(gateSign);
-
-  // -------------------------------------------------------------------------
-  // Maze / enchanted grove
-  // -------------------------------------------------------------------------
-
-  const maze = new THREE.Group();
-  maze.position.set(-18, 0, -23);
-  maze.rotation.y = .22;
-  group.add(maze);
-
-  function mazeWall(x, z, w, d, material = materials.leafDark) {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2 + Math.random() * .5, d), material);
-    wall.position.set(x, .55, z);
-    wall.rotation.y = (Math.random() - .5) * .18;
-    wall.castShadow = true;
-    wall.receiveShadow = true;
-    maze.add(wall);
-    return wall;
-  }
-
-  // Curved maze walls around the central clearing.
-  mazeWall(-6, -2, 5.2, 1.1);
-  mazeWall(-1.8, -2, 4.2, 1.1);
-  mazeWall(2.5, -2, 5.2, 1.1);
-  mazeWall(6.2, -2, 4.2, 1.1);
-  mazeWall(-6, 2, 5.2, 1.1);
-  mazeWall(-1.8, 2, 4.2, 1.1);
-  mazeWall(2.5, 2, 5.2, 1.1);
-  mazeWall(6.2, 2, 4.2, 1.1);
-
-  // Inner maze.
-  mazeWall(-2.5, -3.5, 3.5, .8);
-  mazeWall(-.5, -3.5, 2.8, .8);
-  mazeWall(1.5, -3.5, 3.5, .8);
-  mazeWall(3.5, -3.5, 2.8, .8);
-  mazeWall(-2.5, 3.5, 3.5, .8);
-  mazeWall(-.5, 3.5, 2.8, .8);
-  mazeWall(1.5, 3.5, 3.5, .8);
-  mazeWall(3.5, 3.5, 2.8, .8);
-
-  // Central altar.
-  const altar = new THREE.Group();
-  altar.position.set(0, 0, 0);
-  maze.add(altar);
-
-  const altarBase = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.5, .55, 8), materials.stoneDark);
-  altarBase.position.y = .25;
-  altarBase.castShadow = true;
-  altar.add(altarBase);
-
-  const altarStem = new THREE.Mesh(new THREE.CylinderGeometry(.38, .55, 2.2, 8), materials.stoneLight);
-  altarStem.position.y = 1.45;
-  altarStem.castShadow = true;
-  altar.add(altarStem);
-
-  const altarBowl = new THREE.Mesh(new THREE.CylinderGeometry(1.0, .45, .35, 12), materials.gold);
-  altarBowl.position.y = 2.7;
-  altarBowl.castShadow = true;
-  altar.add(altarBowl);
-
-  // Candle flames.
-  const flames = [];
-  for (let i = 0; i < 5; i++) {
-    const angle = (i / 5) * Math.PI * 2;
-    const x = Math.cos(angle) * .62;
-    const z = Math.sin(angle) * .62;
-
-    const candle = new THREE.Mesh(
-      new THREE.CylinderGeometry(.055, .065, .55, 8),
-      materials.candle
-    );
-    candle.position.set(x, 3.05, z);
-    altar.add(candle);
-
-    const flame = new THREE.Mesh(new THREE.SphereGeometry(.12, 8, 8), materials.fire);
-    flame.scale.y = 1.8;
-    flame.position.set(x, 3.43, z);
-    altar.add(flame);
-    flames.push(flame);
-  }
-
-  // -------------------------------------------------------------------------
-  // Trees
-  // -------------------------------------------------------------------------
-
-  const trunkGeometry = new THREE.CylinderGeometry(.22, .38, 1, 7);
-  const crownGeometry = new THREE.IcosahedronGeometry(1, 1);
-
-  function createTree(x, z, scale = 1, variant = 0) {
-    const tree = new THREE.Group();
-    tree.position.set(x, 0, z);
-    tree.rotation.y = Math.random() * Math.PI * 2;
-    tree.scale.setScalar(scale);
-
-    const trunk = new THREE.Mesh(trunkGeometry, materials.trunk);
-    trunk.position.y = .55;
-    trunk.castShadow = true;
-    trunk.receiveShadow = true;
-    tree.add(trunk);
-
-    const crown = new THREE.Mesh(crownGeometry, variant % 2 ? materials.leaf : materials.leafLight);
-    crown.position.y = 2.25;
-    crown.scale.set(1.25, 1.55, 1.15);
-    crown.rotation.set(Math.random(), Math.random(), Math.random());
-    crown.castShadow = true;
-    crown.receiveShadow = true;
-    tree.add(crown);
-
-    const lowerCrown = new THREE.Mesh(crownGeometry, materials.leafDark);
-    lowerCrown.position.set(.35, 1.65, -.1);
-    lowerCrown.scale.set(.85, 1.05, .85);
-    lowerCrown.castShadow = true;
-    tree.add(lowerCrown);
-
-    group.add(tree);
-    animated.push({
-      type: "tree",
-      object: tree,
-      phase: Math.random() * Math.PI * 2,
-      amplitude: .035 + Math.random() * .05
-    });
-  }
-
-  const treePositions = [
-    [-29, -20, 1.15], [-25, -31, .95], [-35, -10, 1.05],
-    [-31, 6, 1.2], [-25, 16, .9], [-36, 28, 1.1],
-    [-12, -35, 1.1], [-8, -41, .9], [5, -37, 1.0],
-    [12, -31, 1.15], [24, -34, .95], [31, -20, 1.1],
-    [28, -9, 1.2], [34, 8, .95], [25, 22, 1.1],
-    [10, 31, 1.0], [-4, 35, 1.15], [-18, 37, .9],
-    [-30, 4, 1.0], [-20, -3, .9], [-10, -4, 1.15],
-    [18, -1, .9], [28, 1, 1.1], [18, 12, 1.0]
-  ];
-
-  treePositions.forEach(([x, z, s], i) => {
-    createTree(x, z, s, i);
-  });
-
-  // -------------------------------------------------------------------------
-  // Water pool and rocks
-  // -------------------------------------------------------------------------
-
-  const pool = new THREE.Group();
-  pool.position.set(-10, 0, 13);
-  group.add(pool);
-
-  const poolCircle = new THREE.Mesh(
-    new THREE.CircleGeometry(6.5, 64),
-    materials.water
-  );
-  poolCircle.rotation.x = -Math.PI / 2;
-  poolCircle.position.y = .04;
-  poolCircle.receiveShadow = true;
-  pool.add(poolCircle);
-
-  const poolRing = new THREE.Mesh(
-    new THREE.RingGeometry(6.45, 6.8, 64),
-    new THREE.MeshBasicMaterial({ color: 0x8f6937, side: THREE.DoubleSide })
-  );
-  poolRing.rotation.x = -Math.PI / 2;
-  poolRing.position.y = .05;
-  pool.add(poolRing);
-
-  const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
-  for (let i = 0; i < 22; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 8 + Math.random() * 12;
-    const rock = new THREE.Mesh(rockGeometry, materials.stoneDark);
-    rock.position.set(
-      Math.cos(angle) * radius,
-      .25 + Math.random() * .3,
-      Math.sin(angle) * radius
-    );
-    rock.scale.set(.5 + Math.random() * 1.4, .35 + Math.random() * .7, .5 + Math.random() * 1.2);
-    rock.rotation.set(Math.random(), Math.random(), Math.random());
-    rock.castShadow = true;
-    rock.receiveShadow = true;
-    group.add(rock);
-  }
-
-  // -------------------------------------------------------------------------
-  // Fire pit and ambient particles
-  // -------------------------------------------------------------------------
-
-  const fire = new THREE.Group();
-  fire.position.set(-4, 0, 8);
-  group.add(fire);
-
-  for (let i = 0; i < 5; i++) {
-    const angle = (i / 5) * Math.PI * 2;
-    const log = new THREE.Mesh(new THREE.CylinderGeometry(.13, .18, 1.4, 6), materials.trunk);
-    log.position.set(Math.cos(angle) * .55, .15, Math.sin(angle) * .55);
-    log.rotation.z = Math.PI / 2;
-    log.rotation.y = angle;
-    log.castShadow = true;
-    fire.add(log);
-  }
-
-  const smoke = [];
-  for (let i = 0; i < 12; i++) {
-    const puff = new THREE.Mesh(
-      new THREE.SphereGeometry(.25 + Math.random() * .25, 8, 6),
-      new THREE.MeshBasicMaterial({
-        color: 0x29211c,
-        transparent: true,
-        opacity: .18,
-        depthWrite: false
-      })
-    );
-    fire.add(puff);
-    smoke.push({
-      object: puff,
-      phase: Math.random() * Math.PI * 2,
-      speed: .18 + Math.random() * .12
-    });
-  }
-
-  // Fireflies. (Original added these to the scene; folded into the group.)
-  const fireflies = [];
-  for (let i = 0; i < 28; i++) {
-    const x = (Math.random() - .5) * 55;
-    const y = 1.5 + Math.random() * 6;
-    const z = (Math.random() - .5) * 55;
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-      color: 0xffd36b,
-      transparent: true,
-      opacity: .75,
-      depthWrite: false
-    }));
-    sprite.position.set(x, y, z);
-    group.add(sprite);
-    fireflies.push({
-      sprite,
-      base: new THREE.Vector3(x, y, z),
-      phase: Math.random() * Math.PI * 2,
-      speed: .5 + Math.random() * .8
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Interactive flags and banners
-  // -------------------------------------------------------------------------
-
-  const flags = [];
-
-  function createFlag(x, y, z, color) {
-    const flagGroup = new THREE.Group();
-    flagGroup.position.set(x, y, z);
-
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.055, .075, 4.2, 6), materials.gold);
-    pole.position.y = 2.1;
-    pole.castShadow = true;
-    flagGroup.add(pole);
-
-    const flag = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.65, .85),
-      new THREE.MeshStandardMaterial({
-        color,
-        roughness: .85,
-        side: THREE.DoubleSide
-      })
-    );
-    flag.position.set(.82, 3.65, 0);
-    flag.castShadow = true;
-    flagGroup.add(flag);
-
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 1.9, 6), materials.gold);
-    rod.rotation.z = Math.PI / 2;
-    rod.position.set(1.65, 3.65, 0);
-    flagGroup.add(rod);
-
-    group.add(flagGroup);
-    flags.push({ group: flagGroup, flag, phase: Math.random() * Math.PI * 2 });
-  }
-
-  createFlag(-13, 5.5, 15, 0x8f3f2f);
-  createFlag(13, 5.5, -15, 0x285b63);
-
-  // -------------------------------------------------------------------------
-  // Animation — the original scene's per-frame expressions, moved here.
-  // -------------------------------------------------------------------------
-
+  // --- Walker Update Protocol ---
   function update(t, dt) {
-    const elapsed = t;
-
-    flames.forEach((flame, i) => {
-      const flicker = 1 + Math.sin(elapsed * 9 + i * 2.3) * .18 + Math.sin(elapsed * 15 + i) * .08;
-      flame.scale.set(1, flicker, 1);
-      flame.rotation.y = elapsed * 1.8 + i;
-      fireLight.intensity = 2.1 + Math.sin(elapsed * 7.5) * .35 + Math.sin(elapsed * 11) * .15;
-    });
-
-    flags.forEach(flag => {
-      flag.flag.rotation.y = Math.sin(elapsed * 2.2 + flag.phase) * .18;
-      flag.flag.rotation.z = Math.sin(elapsed * 3.1 + flag.phase) * .05;
-      flag.group.rotation.z = Math.sin(elapsed * 1.4 + flag.phase) * .018;
-    });
-
-    smoke.forEach(puff => {
-      const life = (elapsed * puff.speed + puff.phase) % 1;
-      puff.object.position.set(
-        Math.cos(puff.phase) * (life * 1.2),
-        .5 + life * 3.2,
-        Math.sin(puff.phase) * (life * .9)
-      );
-      puff.object.scale.setScalar(.4 + life * 1.4);
-      puff.object.material.opacity = Math.sin(life * Math.PI) * .18;
-    });
-
-    fireflies.forEach(firefly => {
-      const angle = elapsed * firefly.speed + firefly.phase;
-      firefly.sprite.position.set(
-        firefly.base.x + Math.cos(angle) * 1.4,
-        firefly.base.y + Math.sin(angle * 2) * .55,
-        firefly.base.z + Math.sin(angle) * 1.2
-      );
-      firefly.sprite.material.opacity = .55 + Math.sin(angle * 2.4) * .25;
-    });
-
-    animated.forEach(item => {
-      item.object.rotation.z = Math.sin(elapsed * .65 + item.phase) * item.amplitude;
-      item.object.rotation.x = Math.cos(elapsed * .48 + item.phase) * item.amplitude * .6;
-    });
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
   }
 
   return {
     group,
     update,
-    spawn: { x: -21, z: 25, yaw: -0.6 },
-    env: { background: 0x17120d, fogColor: 0x17120d, fogDensity: 0.025 },
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { name: "Adventure Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x080b14, fogColor: 0x080b14, fogDensity: 0.024 },
     doors: {
-      next: { x: 13.1, z: -20.7 },
-      prev: { x: -17, z: -17.2 }
-    },
-    relic: { name: "Enchanted Chalice", x: 20, z: -43 }
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
   };
 }
