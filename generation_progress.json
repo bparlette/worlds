@@ -250,5 +250,14 @@
     "filename": "028_batman_axis_chemical_factory.html",
     "verified_working": false,
     "generated_at": "2026-11-01 04:49:44"
+  },
+  "29": {
+    "id": 29,
+    "game": "Rygar",
+    "target": "Lapis Valley",
+    "platform": "NES",
+    "filename": "029_rygar_lapis_valley.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 05:02:48"
   }
 }

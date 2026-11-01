@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lapis Valley — Rygar Interactive World</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f1df;
+      --muted: rgba(245, 241, 223, 0.7);
+      --panel: rgba(20, 25, 35, 0.72);
+      --line: rgba(255, 255, 255, 0.14);
+      --accent: #ffcf5a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080b12;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+      display: block;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: var(--ink);
+    }
+
+    .brand {
+      position: absolute;
+      top: 24px;
+      left: 26px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      transform: rotate(45deg);
+      box-shadow: 0 0 24px rgba(255, 207, 90, 0.25);
+    }
+
+    .brand-mark::before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 4px;
+      box-shadow: inset 0 0 0 4px #152437;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.1;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .info {
+      position: absolute;
+      left: 26px;
+      bottom: 24px;
+      max-width: 360px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.24);
+    }
+
+    .info h2 {
+      margin: 0 0 7px;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .info p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .controls {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .controls button {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 9px 14px;
+      color: var(--ink);
+      background: rgba(20, 25, 35, 0.78);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .controls button:hover {
+      background: rgba(38, 47, 62, 0.9);
+      border-color: rgba(255, 207, 90, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .controls button:active { transform: translateY(0); }
+
+    .credit {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      color: rgba(245, 241, 223, 0.55);
+      font-size: 10px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .location-tag {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translate(-50%, -20px);
+      padding: 7px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: rgba(245, 241, 223, 0.8);
+      background: rgba(9, 12, 19, 0.45);
+      backdrop-filter: blur(8px);
+      font-size: 10px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      transition: opacity 500ms ease;
+    }
+
+    @media (max-width: 680px) {
+      .brand { top: 16px; left: 16px; }
+      .brand-mark { width: 32px; height: 32px; }
+      .brand strong { font-size: 14px; }
+      .brand span { font-size: 8px; }
+      .info { left: 16px; bottom: 16px; right: 16px; max-width: none; padding: 12px 14px; }
+      .credit { display: none; }
+      .controls { right: 14px; bottom: 145px; }
+      .location-tag { top: 19px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div class="hud">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <strong>Lapis Valley</strong>
+        <span>Interactive Rygar World</span>
+      </div>
+    </div>
+
+    <div class="credit">Rygar × Lapis Valley · Fan Interactive</div>
+    <div class="location-tag" id="locationTag">Exploring Lapis Valley</div>
+
+    <section class="info">
+      <h2>Choose a Region</h2>
+      <p>Drag to orbit, scroll or pinch to zoom. Click a region to travel there and hear its atmosphere.</p>
+    </section>
+
+    <nav class="controls" aria-label="World locations">
+      <button data-location="suero">Suero Mountain</button>
+      <button data-location="gran">Gran Mountains</button>
+      <button data-location="indora">Indora Rooms</button>
+    </nav>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090d16);
+    scene.fog = new THREE.FogExp2(0x090d16, 0.016);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+
+    const world = {
+      suero: {
+        name: "Suero Mountain",
+        palette: new THREE.Color(0x546789),
+        fog: new THREE.Color(0x546789),
+        sky: new THREE.Color(0x667ba6),
+        sun: new THREE.Color(0xffbd62),
+        ground: new THREE.Color(0x263c4b),
+        rock: new THREE.Color(0x394b5e),
+        grass: new THREE.Color(0x244c3e),
+        flower: new THREE.Color(0xffb65c),
+        light: new THREE.Color(0xffc16d),
+        ambient: 0.42
+      },
+      gran: {
+        name: "Gran Mountains / Valley of Rolsa",
+        palette: new THREE.Color(0x3c6370),
+        fog: new THREE.Color(0x3c6370),
+        sky: new THREE.Color(0x31576a),
+        sun: new THREE.Color(0x8bc7d6),
+        ground: new THREE.Color(0x18333a),
+        rock: new THREE.Color(0x294852),
+        grass: new THREE.Color(0x244d3d),
+        flower: new THREE.Color(0x78d5ff),
+        light: new THREE.Color(0x8ed8e8),
+        ambient: 0.34
+      },
+      indora: {
+        name: "Indora Rooms",
+        palette: new THREE.Color(0x71604d),
+        fog: new THREE.Color(0x71604d),
+        sky: new THREE.Color(0x35281f),
+        sun: new THREE.Color(0xe4ad62),
+        ground: new THREE.Color(0x302a22),
+        rock: new THREE.Color(0x493d31),
+        grass: new THREE.Color(0x4a3826),
+        flower: new THREE.Color(0xd98b48),
+        light: new THREE.Color(0xffc578),
+        ambient: 0.48
+      }
+    };
+
+    const locations = {
+      suero: {
+        position: new THREE.Vector3(-12, 4, 8),
+        target: new THREE.Vector3(-12, 3, 8),
+        radius: 23,
+        theta: -0.75,
+        phi: 1.15
+      },
+      gran: {
+        position: new THREE.Vector3(12, 4, -10),
+        target: new THREE.Vector3(12, 3, -10),
+        radius: 25,
+        theta: 0.7,
+        phi: 1.18
+      },
+      indora: {
+        position: new THREE.Vector3(0, 5, 18),
+        target: new THREE.Vector3(0, 3, 18),
+        radius: 25,
+        theta: 0,
+        phi: 1.08
+      }
+    };
+
+    // -------------------------------------------------------------------------
+    // Materials and procedural textures
+    // -------------------------------------------------------------------------
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x2e5b43,
+        roughness: 0.96,
+        metalness: 0
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x4a5560,
+        roughness: 0.98,
+        metalness: 0
+      }),
+      darkRock: new THREE.MeshStandardMaterial({
+        color: 0x25303a,
+        roughness: 1,
+        metalness: 0
+      }),
+      path: new THREE.MeshStandardMaterial({
+        color: 0x6d6248,
+        roughness: 1
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x5b3824,
+        roughness: 0.92
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xf0b84b,
+        roughness: 0.38,
+        metalness: 0.72
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x3f8b4e,
+        roughness: 0.85
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xe35d4f,
+        roughness: 0.72
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0x8c55b5,
+        roughness: 0.72
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x4ab5d3,
+        roughness: 0.65
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x746b57,
+        roughness: 0.95
+      }),
+      pillar: new THREE.MeshStandardMaterial({
+        color: 0x403c35,
+        roughness: 0.88
+      })
+    };
+
+    function makeNoiseTexture(base, fleck, size = 256) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+
+      for (let i = 0; i < 1800; i++) {
+        const light = Math.random() > 0.52;
+        ctx.fillStyle = light ? fleck : "rgba(0,0,0,0.16)";
+        const r = Math.random() * 2.2 + 0.4;
+        ctx.beginPath();
+        ctx.arc(Math.random() * size, Math.random() * size, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(4, 4);
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return texture;
+    }
+
+    const grassTexture = makeNoiseTexture("#315845", "#6c8b4d");
+    materials.grass.map = grassTexture;
+
+    const rockTexture = makeNoiseTexture("#4c555d", "#899197");
+    materials.rock.map = rockTexture;
+
+    const pathTexture = makeNoiseTexture("#77694e", "#b19a69");
+    materials.path.map = pathTexture;
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+    const hemi = new THREE.HemisphereLight(0x91b6d9, 0x18231d, 1.15);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffc16a, 2.8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -42;
+    sun.shadow.camera.right = 42;
+    sun.shadow.camera.top = 42;
+    sun.shadow.camera.bottom = -42;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 120;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.035;
+    scene.add(sun);
+    scene.add(sun.target);
+
+    const rim = new THREE.DirectionalLight(0x6c9ed8, 0.9);
+    rim.position.set(-25, 18, -30);
+    scene.add(rim);
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+    function seeded(seed) {
+      let state = seed >>> 0;
+      return () => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 4294967296;
+      };
+    }
+
+    const random = seeded(928374);
+
+    function mesh(geometry, material, position, castShadow = true, receiveShadow = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.copy(position);
+      object.castShadow = castShadow;
+      object.receiveShadow = receiveShadow;
+      scene.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, x, y, z, castShadow = true) {
+      const object = mesh(new THREE.BoxGeometry(w, h, d), material, new THREE.Vector3(x, y, z), castShadow, true);
+      return object;
+    }
+
+    function cylinder(rt, rb, h, material, x, y, z, segments = 12) {
+      const object = mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material,
+        new THREE.Vector3(x, y, z)
+      );
+      return object;
+    }
+
+    function cone(radius, height, material, x, y, z, segments = 9) {
+      const object = mesh(
+        new THREE.ConeGeometry(radius, height, segments),
+        material,
+        new THREE.Vector3(x, y, z)
+      );
+      return object;
+    }
+
+    function makeRock(x, y, z, scale = 1, material = materials.rock) {
+      const group = new THREE.Group();
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(1, 0),
+        material
+      );
+      rock.scale.set(
+        scale * (0.8 + random() * 0.8),
+        scale * (0.55 + random() * 0.7),
+        scale * (0.8 + random() * 0.8)
+      );
+      rock.position.y = scale * 0.42;
+      rock.rotation.set(random() * 3, random() * 3, random() * 3);
+      group.add(rock);
+      scene.add(group);
+      return group;
+    }
+
+    function makeTree(x, z, scale = 1, variant = 0) {
+      const group = new THREE.Group();
+      const trunk = cylinder(0.18 * scale, 0.28 * scale, 2.2 * scale, materials.wood, 0, 1.1 * scale, 0, 8);
+      const crown = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(1.35 * scale, 1),
+        variant === 1 ? materials.red : materials.leaf
+      );
+      crown.position.y = 2.8 * scale;
+      crown.scale.set(1.05, 1.25, 1);
+      crown.rotation.y = random() * Math.PI;
+      group.add(crown);
+      group.add(trunk);
+      scene.add(group);
+      return group;
+    }
+
+    function makeFlower(x, y, z, colorMaterial, scale = 1) {
+      const group = new THREE.Group();
+      const stem = cylinder(0.025 * scale, 0.035 * scale, 0.45 * scale, materials.leaf, 0, 0.22 * scale, 0, 5);
+      const bloom = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16 * scale, 8, 6),
+        colorMaterial
+      );
+      bloom.scale.y = 0.45;
+      bloom.position.y = 0.46 * scale;
+      group.add(stem, bloom);
+      scene.add(group);
+      return group;
+    }
+
+    function makePath(x, z, length = 18, width = 3.2) {
+      const geometry = new THREE.PlaneGeometry(length, width);
+      const path = new THREE.Mesh(geometry, materials.path);
+      path.rotation.x = -Math.PI / 2;
+      path.position.set(x, 0.035, z);
+      path.receiveShadow = true;
+      scene.add(path);
+      return path;
+    }
+
+    // -------------------------------------------------------------------------
+    // Suero Mountain: volcanic slopes, glowing crystals, distant peak
+    // -------------------------------------------------------------------------
+    const suero = world.suero;
+    const sueroGroup = new THREE.Group();
+    scene.add(sueroGroup);
+
+    const sueroGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(130, 130),
+      new THREE.MeshStandardMaterial({
+        color: suero.ground,
+        map: grassTexture,
+        roughness: 1
+      })
+    );
+    sueroGround.rotation.x = -Math.PI / 2;
+    sueroGround.position.y = -0.08;
+    sueroGround.receiveShadow = true;
+    sueroGroup.add(sueroGround);
+
+    const sueroPeak = cone(
+      23,
+      48,
+      new THREE.MeshStandardMaterial({
+        color: suero.rock,
+        roughness: 0.96,
+        flatShading: true
+      }),
+      -31,
+      24,
+      -38,
+      11
+    );
+    sueroPeak.rotation.y = random() * Math.PI;
+
+    for (let i = 0; i < 18; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 12 + random() * 36;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      makeRock(x, 0, z, 1.2 + random() * 3);
+    }
+
+    for (let i = 0; i < 24; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 10 + random() * 30;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      makeTree(x, z, 0.8 + random() * 1.2, i % 3 === 0 ? 1 : 0);
+    }
+
+    const crystalMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffb54f,
+      emissive: 0xff7b20,
+      emissiveIntensity: 1.4,
+      roughness: 0.25,
+      metalness: 0.1
+    });
+
+    const crystalGroup = new THREE.Group();
+    scene.add(crystalGroup);
+
+    for (let i = 0; i < 8; i++) {
+      const crystal = new THREE.Mesh(
+        new THREE.ConeGeometry(0.28, 1.6 + random() * 0.8, 6),
+        crystalMaterial
+      );
+      crystal.position.set(
+        -8 + random() * 16,
+        0.8 + random() * 1.2,
+        -3 + random() * 6
+      );
+      crystal.rotation.y = random() * Math.PI;
+      crystalGroup.add(crystal);
+    }
+
+    // -------------------------------------------------------------------------
+    // Gran Mountains / Valley of Rolsa: pine forest, waterfall, cold lakes
+    // -------------------------------------------------------------------------
+    const gran = world.gran;
+    const granGroup = new THREE.Group();
+    scene.add(granGroup);
+
+    const granGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(145, 145),
+      new THREE.MeshStandardMaterial({
+        color: gran.ground,
+        map: grassTexture,
+        roughness: 1
+      })
+    );
+    granGround.rotation.x = -Math.PI / 2;
+    granGround.position.y = -0.12;
+    granGround.receiveShadow = true;
+    granGroup.add(granGround);
+
+    const granLake = new THREE.Mesh(
+      new THREE.CircleGeometry(15, 64),
+      new THREE.MeshStandardMaterial({
+        color: gran.sky,
+        roughness: 0.16,
+        metalness: 0.35,
+        emissive: 0x163c4a,
+        emissiveIntensity: 0.35
+      })
+    );
+    granLake.rotation.x = -Math.PI / 2;
+    granLake.scale.set(1.25, 0.75, 1);
+    granLake.position.set(18, 0.02, -20);
+    granGroup.add(granLake);
+
+    for (let i = 0; i < 30; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 10 + random() * 45;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      makeRock(x, 0, z, 1.5 + random() * 3.5);
+    }
+
+    for (let i = 0; i < 42; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 12 + random() * 43;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      makeTree(x, z, 1.2 + random() * 1.6, i % 4 === 0 ? 1 : 0);
+    }
+
+    const waterfall = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.48, 18, 10, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: 0x8bd7e6,
+        transparent: true,
+        opacity: 0.72,
+        side: THREE.DoubleSide
+      })
+    );
+    waterfall.position.set(24, 9, -31);
+    granGroup.add(waterfall);
+
+    for (let i = 0; i < 7; i++) {
+      const drop = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.16, 0.8, 6),
+        new THREE.MeshBasicMaterial({
+          color: 0xd6f5ff,
+          transparent: true,
+          opacity: 0.8
+        })
+      );
+      drop.position.set(24 + (i - 3) * 0.24, 11 + i * 2.2, -31);
+      granGroup.add(drop);
+    }
+
+    // -------------------------------------------------------------------------
+    // Indora Rooms: ancient shrine, statues, warm torches
+    // -------------------------------------------------------------------------
+    const indora = world.indora;
+    const indoraGroup = new THREE.Group();
+    scene.add(indoraGroup);
+
+    const indoraGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(120, 120),
+      new THREE.MeshStandardMaterial({
+        color: indora.ground,
+        map: grassTexture,
+        roughness: 1
+      })
+    );
+    indoraGround.rotation.x = -Math.PI / 2;
+    indoraGround.position.y = -0.16;
+    indoraGround.receiveShadow = true;
+    indoraGroup.add(indoraGround);
+
+    const shrine = new THREE.Group();
+    shrine.position.set(0, 0, 0);
+    scene.add(shrine);
+
+    const outerWall = new THREE.Mesh(
+      new THREE.CylinderGeometry(12, 13, 3.2, 20),
+      materials.wall
+    );
+    outerWall.position.y = 1.6;
+    outerWall.castShadow = true;
+    outerWall.receiveShadow = true;
+    shrine.add(outerWall);
+
+    const innerHall = new THREE.Mesh(
+      new THREE.CylinderGeometry(8.5, 9, 2.7, 20),
+      materials.pillar
+    );
+    innerHall.position.y = 4.25;
+    innerHall.castShadow = true;
+    innerHall.receiveShadow = true;
+    shrine.add(innerHall);
+
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(10.5, 2.2, 20),
+      materials.wood
+    );
+    roof.position.y = 7.05;
+    roof.castShadow = true;
+    roof.receiveShadow = true;
+    shrine.add(roof);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const x = Math.cos(angle) * 10.8;
+      const z = Math.sin(angle) * 10.8;
+      const pillar = cylinder(0.55, 0.65, 3.4, materials.pillar, x, 1.7, z, 8);
+      pillar.castShadow = true;
+      pillar.receiveShadow = true;
+      shrine.add(pillar);
+    }
+
+    const statueMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8a765a,
+      roughness: 0.9,
+      metalness: 0.05
+    });
+
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const x = Math.cos(angle) * 5.6;
+      const z = Math.sin(angle) * 5.6;
+      const statue = new THREE.Group();
+      statue.position.set(x, 6.1, z);
+      statue.rotation.y = angle + Math.PI / 2;
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.9, 1.7, 8),
+        statueMaterial
+      );
+      body.castShadow = true;
+      statue.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.48, 10, 8),
+        statueMaterial
+      );
+      head.position.y = 1.55;
+      head.scale.y = 1.25;
+      head.castShadow = true;
+      statue.add(head);
+
+      const staff = cylinder(0.055, 0.075, 3.5, materials.gold, 0, 1.8, 0, 7);
+      statue.add(staff);
+
+      shrine.add(statue);
+    }
+
+    const torchMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffa43c,
+      emissive: 0xff6b18,
+      emissiveIntensity: 2.2,
+      roughness: 0.5
+    });
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const x = Math.cos(angle) * 9.7;
+      const z = Math.sin(angle) * 9.7;
+      cylinder(0.13, 0.17, 0.9, materials.wood, x, 6.2, z, 7);
+      const flame = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 8, 6),
+        torchMaterial
+      );
+      flame.scale.y = 2.1;
+      flame.position.set(x, 6.75, z);
+      shrine.add(flame);
+    }
+
+    for (let i = 0; i < 28; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 18 + random() * 35;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      makeRock(x, 0, z, 1.2 + random() * 2.5);
+    }
+
+    for (let i = 0; i < 20; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 18 + random() * 35;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      makeTree(x, z, 0.8 + random() * 1.1, i % 4 === 0 ? 1 : 0);
+    }
+
+    // -------------------------------------------------------------------------
+    // Shared environmental details
+    // -------------------------------------------------------------------------
+    const butterfly = new THREE.Group();
+    const butterflyWingMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffb65c,
+      emissive: 0x6b2c00,
+      emissiveIntensity: 0.25,
+      roughness: 0.7
+    });
+
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Mesh(
+        new THREE.CircleGeometry(0.22, 12),
+        butterflyWingMaterial
+      );
+      wing.rotation.x = Math.PI / 2;
+      wing.scale.y = 0.55;
+      wing.position.x = side * 0.12;
+      butterfly.add(wing);
+    }
+    butterfly.position.set(-4, 5, 11);
+    scene.add(butterfly);
+
+    const fireflies = [];
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffd76b,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 32; i++) {
+      const firefly = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 6, 5),
+        fireflyMaterial
+      );
+      const location = Object.keys(world).find(key => key !== "indora") === "suero"
+        ? world.suero
+        : world.gran;
+
+      firefly.position.set(
+        (random() - 0.5) * 70,
+        1 + random() * 12,
+        (random() - 0.5) * 70
+      );
+      firefly.userData = {
+        base: firefly.position.clone(),
+        phase: random() * Math.PI * 2,
+        speed: 0.45 + random() * 0.65
+      };
+      scene.add(firefly);
+      fireflies.push(firefly);
+    }
+
+    // -------------------------------------------------------------------------
+    // Camera controls: orbit, pan-free drag, wheel/pinch zoom
+    // -------------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(),
+      radius: 25,
+      theta: 0,
+      phi: 1.12,
+      minRadius: 8,
+      maxRadius: 52,
+      minPhi: 0.35,
+      maxPhi: 1.48
+    };
+
+    const defaultCamera = {
+      target: new THREE.Vector3(),
+      radius: 25,
+      theta: 0,
+      phi: 1.12
+    };
+
+    let dragging = false;
+    let pointerX = 0;
+    let pointerY = 0;
+    let previousX = 0;
+    let previousY = 0;
+    const activePointers = new Map();
+    let initialPinchDistance = 0;
+    let initialPinchRadius = 0;
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    function moveCamera(dx, dy) {
+      controls.theta -= dx * 0.005;
+      controls.phi = THREE.MathUtils.clamp(controls.phi - dy * 0.004, controls.minPhi, controls.maxPhi);
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 1) {
+        dragging = true;
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        previousX = event.clientX;
+        previousY = event.clientY;
+        renderer.domElement.setPointerCapture(event.pointerId);
+      } else if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        initialPinchDistance = points[0].distanceTo(points[1]);
+        initialPinchRadius = controls.radius;
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = points[0].distanceTo(points[1]);
+        if (initialPinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(
+            initialPinchRadius * initialPinchDistance / Math.max(distance, 1),
+            controls.minRadius,
+            controls.maxRadius
+          );
+          updateCamera();
+        }
+        return;
+      }
+
+      if (!dragging) return;
+
+      const dx = event.clientX - pointerX;
+      const dy = event.clientY - pointerY;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      moveCamera(dx, dy);
+    });
+
+    function endPointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size === 0) {
+        dragging = false;
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endPointer);
+    renderer.domElement.addEventListener("pointercancel", endPointer);
+    renderer.domElement.addEventListener("lostpointercapture", endPointer);
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius * Math.exp(event.deltaY * 0.001),
+        controls.minRadius,
+        controls.maxRadius
+      );
+      updateCamera();
+    }, { passive: false });
+
+    // -------------------------------------------------------------------------
+    // Navigation and atmosphere
+    // -------------------------------------------------------------------------
+    const locationTag = document.getElementById("locationTag");
+    const locationButtons = [...document.querySelectorAll("[data-location]")];
+
+    function setDestination(name) {
+      const destination = locations[name];
+      if (!destination) return;
+
+      controls.target.copy(destination.target);
+      controls.radius = destination.radius;
+      controls.theta = destination.theta;
+      controls.phi = destination.phi;
+      updateCamera();
+
+      const worldData = world[name];
+      scene.fog.color.copy(worldData.fog);
+      scene.background.lerp(worldData.fog, 0.15);
+      sun.color.copy(worldData.sun);
+      sun.intensity = worldData.sun.clone().multiplyScalar(worldData.ambient * 1.7);
+      hemi.intensity = worldData.ambient;
+      rim.intensity = 0.65;
+
+      locationTag.textContent = worldData.name;
+      locationTag.style.opacity = "1";
+    }
+
+    function resetCamera() {
+      const destination = locations.indora;
+      controls.target.copy(destination.target);
+      controls.radius = destination.radius;
+      controls.theta = destination.theta;
+      controls.phi = destination.phi;
+      updateCamera();
+    }
+
+    locationButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        setDestination(button.dataset.location);
+      });
+    });
+
+    document.getElementById("reset").addEventListener("click", resetCamera);
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      const t = elapsed * 0.75;
+      butterfly.position.x = -4 + Math.sin(t * 0.8) * 0.55;
+      butterfly.position.y = 5 + Math.sin(t * 1.2) * 0.35;
+      butterfly.rotation.z = Math.sin(t * 0.7) * 0.18;
+
+      fireflies.forEach((firefly, index) => {
+        const data = firefly.userData;
+        const angle = t * data.speed + data.phase;
+        firefly.position.x = data.base.x + Math.cos(angle) * 1.2;
+        firefly.position.z = data.base.z + Math.sin(angle) * 0.8;
+        firefly.position.y = data.base.y + Math.sin(angle * 1.7) * 0.35;
+        const pulse = 0.75 + Math.sin(angle * 2 + data.phase) * 0.25;
+        firefly.scale.setScalar(pulse);
+      });
+
+      const time = clock.elapsedTime;
+      if (time % 2.4 < 0.01) {
+        butterfly.position.y = 5 + Math.sin(time * 1.2) * 0.35;
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
