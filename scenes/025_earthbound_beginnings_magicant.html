@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magicant — EarthBound Beginnings</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #05070d;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #f7e7c4;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
+    }
+
+    #title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      padding: 12px 16px 11px;
+      border: 1px solid rgba(255, 231, 170, 0.35);
+      border-radius: 4px;
+      background: linear-gradient(135deg, rgba(38, 25, 19, 0.82), rgba(18, 12, 10, 0.58));
+      backdrop-filter: blur(8px);
+    }
+
+    #title h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(24px, 4vw, 40px);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    #title p {
+      margin: 6px 0 0;
+      color: #e8c98d;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #help {
+      position: absolute;
+      right: 22px;
+      bottom: 20px;
+      padding: 10px 13px;
+      border-radius: 4px;
+      background: rgba(10, 13, 21, 0.68);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #d9d7c7;
+      font-size: 11px;
+      line-height: 1.6;
+      text-align: right;
+    }
+
+    #hint {
+      position: absolute;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      width: min(680px, calc(100% - 40px));
+      padding: 12px 16px;
+      border-left: 3px solid #e9877b;
+      border-radius: 3px;
+      background: rgba(18, 18, 25, 0.72);
+      color: #f6d7a7;
+      font-size: 12px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    #telemetry {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      background: rgba(8, 10, 17, 0.55);
+      color: #b8c1cf;
+      font-size: 10px;
+      line-height: 1.7;
+      text-align: right;
+    }
+
+    @media (max-width: 650px) {
+      #title {
+        top: 14px;
+        left: 14px;
+      }
+
+      #telemetry {
+        display: none;
+      }
+
+      #help {
+        right: 12px;
+        bottom: 12px;
+      }
+
+      #hint {
+        bottom: 62px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div id="title">
+      <h1>Magicant</h1>
+      <p>EarthBound Beginnings · World 01</p>
+    </div>
+
+    <div id="telemetry">
+      <div>EXPLORER: <span id="playerName">Player</span></div>
+      <div>INVENTORY: <span id="inventory">...</span></div>
+      <div>ARMOR: <span id="armor">Rusty Tunic</span></div>
+      <div>WEATHER: <span id="weather">Rain</span></div>
+    </div>
+
+    <div id="hint">
+      Drag to orbit · Scroll to zoom · Walk through the world<br>
+      Find the cave, answer the riddle, and trade your diary.
+    </div>
+
+    <div id="help">
+      Press <strong>Escape</strong> to open the inventory.<br>
+      Select items to equip or trade.
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101923);
+    scene.fog = new THREE.FogExp2(0x18242c, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      innerWidth / innerHeight,
+      0.1,
+      120
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x3f5838,
+        roughness: 1
+      }),
+      path: new THREE.MeshStandardMaterial({
+        color: 0x756851,
+        roughness: 0.95
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x56605a,
+        roughness: 0.95
+      }),
+      darkRock: new THREE.MeshStandardMaterial({
+        color: 0x242c31,
+        roughness: 1
+      }),
+      tree: new THREE.MeshStandardMaterial({
+        color: 0x283b2d,
+        roughness: 1
+      }),
+      trunk: new THREE.MeshStandardMaterial({
+        color: 0x594331,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x486a35,
+        roughness: 0.95
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x6b8245,
+        roughness: 0.95
+      }),
+      mushroom: new THREE.MeshStandardMaterial({
+        color: 0xb84f52,
+        roughness: 0.85
+      }),
+      mushroomTop: new THREE.MeshStandardMaterial({
+        color: 0xf08c83,
+        roughness: 0.75
+      }),
+      sign: new THREE.MeshStandardMaterial({
+        color: 0x17252a,
+        roughness: 0.8
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xf2b84b,
+        metalness: 0.72,
+        roughness: 0.3
+      }),
+      coin: new THREE.MeshStandardMaterial({
+        color: 0xf3d77a,
+        metalness: 0.75,
+        roughness: 0.28
+      }),
+      diary: new THREE.MeshStandardMaterial({
+        color: 0x8e3f43,
+        roughness: 0.92
+      })
+    };
+
+    const animated = [];
+    const clouds = [];
+    const fireflies = [];
+    const items = [];
+    const shopSigns = [];
+
+    function mesh(geometry, material, position, castShadow = true, receiveShadow = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(...position);
+      object.castShadow = castShadow;
+      object.receiveShadow = receiveShadow;
+      world.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, position, parent = world) {
+      const object = mesh(new THREE.BoxGeometry(w, h, d), material, position, true, true);
+      parent.add(object);
+      return object;
+    }
+
+    function cylinder(rt, rb, h, material, position, parent = world, segments = 16) {
+      const object = mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material,
+        position,
+        true,
+        true
+      );
+      parent.add(object);
+      return object;
+    }
+
+    function sphere(r, material, position, parent = world, segments = 20) {
+      const object = mesh(
+        new THREE.SphereGeometry(r, segments, Math.max(10, segments / 2)),
+        material,
+        position,
+        true,
+        true
+      );
+      parent.add(object);
+      return object;
+    }
+
+    function torus(radius, tube, material, position, parent = world) {
+      const object = mesh(
+        new THREE.TorusGeometry(radius, tube, 10, 32),
+        material,
+        position,
+        true,
+        true
+      );
+      parent.add(object);
+      return object;
+    }
+
+    function textSprite(text, options = {}) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 128;
+      const context = canvas.getContext("2d");
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = options.background || "rgba(8, 13, 17, 0.82)";
+      context.strokeStyle = options.border || "rgba(235, 213, 159, 0.7)";
+      context.lineWidth = 8;
+      context.beginPath();
+      context.roundRect(8, 8, 496, 112, 24);
+      context.fill();
+      context.stroke();
+
+      context.fillStyle = options.color || "#f4dfaa";
+      context.font = `700 45px "Courier New", monospace`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(text, 256, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false
+      });
+      const sprite = new THREE.Sprite(material);
+      world.add(sprite);
+      return sprite;
+    }
+
+    function makeTree(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.scale.setScalar(scale);
+      world.add(tree);
+
+      cylinder(0.22, 0.36, 3.2, materials.trunk, [0, 1.6, 0], tree);
+      const crown = new THREE.Group();
+      crown.position.y = 3.4;
+      tree.add(crown);
+
+      const left = sphere(1.25, materials.leaf, [-0.8, 0, 0], crown);
+      const right = sphere(1.35, materials.leaf, [0.8, 0.1, 0.05], crown);
+      const top = sphere(1.1, materials.leafLight, [0, 1.05, -0.05], crown);
+      const lower = sphere(1.55, materials.leaf, [0, -0.1, 0], crown);
+
+      animated.push({
+        type: "sway",
+        object: crown,
+        phase: Math.random() * Math.PI * 2,
+        amount: 0.025
+      });
+
+      return tree;
+    }
+
+    function makeMushroom(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      cylinder(0.18, 0.27, 0.34, materials.mushroom, [0, 0.17, 0], group, 12);
+      const cap = sphere(0.25, materials.mushroomTop, [0, 0.39, 0], group, 16);
+      cap.scale.set(1, 0.55, 1);
+
+      animated.push({
+        type: "pulse",
+        object: cap,
+        phase: Math.random() * Math.PI * 2,
+        amount: 0.08
+      });
+
+      return group;
+    }
+
+    function makeRock(x, z, scale = 1) {
+      const rock = mesh(
+        new THREE.DodecahedronGeometry(scale, 1),
+        materials.rock,
+        [x, scale * 0.35, z]
+      );
+      rock.rotation.set(Math.random(), Math.random(), Math.random());
+      return rock;
+    }
+
+    function makeShop(x, z, name, color) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      box(4.2, 0.28, 4.4, materials.rock, [0, 0.14, 0], group);
+      box(3.4, 2.6, 0.28, materials.sign, [0, 1.55, -1.8], group);
+      box(3.5, 0.16, 3.7, materials.rock, [0, 0.12, 0.1], group);
+
+      for (let i = 0; i < 3; i++) {
+        const shelf = box(3.1, 0.12, 0.8, materials.wood || materials.trunk, [0, 0.7 + i * 0.72, 0.7], group);
+        shelf.material = materials.trunk;
+      }
+
+      const awning = box(3.8, 0.12, 1.05, materials.leaf, [0, 3.05, 0.15], group);
+      awning.rotation.x = -0.12;
+
+      const sign = textSprite(name, {
+        background: "rgba(11, 18, 22, 0.9)",
+        border: `rgba(${color}, 0.8)`,
+        color: `#${new THREE.Color(color).getHexString()}`
+      });
+      sign.position.set(0, 3.45, -1.8);
+      sign.scale.set(3.1, 0.78, 1);
+      shopSigns.push(sign);
+
+      const itemColors = [
+        [0x9b68e5, 0x4b35e8],
+        [0xd7a644, 0x7f5b12],
+        [0x75c8c5, 0x284f4d]
+      ];
+      const shopColor = itemColors[shopSigns.length % itemColors.length];
+
+      const coin = cylinder(
+        0.26,
+        0.26,
+        0.08,
+        materials.coin,
+        [1.2, 1.65, 0.1],
+        group,
+        24
+      );
+      coin.castShadow = true;
+
+      const ring = torus(0.22, 0.045, materials.gold, [1.2, 1.65, 0.1], group);
+      ring.rotation.x = Math.PI / 2;
+
+      const armor = box(0.55, 0.8, 0.4, materials.gold, [0.55, 1.7, 0.2], group);
+      armor.rotation.z = 0.1;
+
+      const label = textSprite("7", {
+        background: "rgba(12, 17, 21, 0.95)",
+        border: `rgba(${shopColor}, 0.9)`,
+        color: `#${new THREE.Color(shopColor).getHexString()}`
+      });
+      label.position.set(0, 3.48, -1.8);
+      label.scale.set(1.25, 0.32, 1);
+
+      return group;
+    }
+
+    function makeDiary() {
+      const group = new THREE.Group();
+      group.position.set(0, 0.42, 0);
+      world.add(group);
+
+      const cover = box(0.7, 0.08, 0.48, materials.diary, [0, 0, 0], group);
+      cover.rotation.x = -0.08;
+
+      const pages = box(0.56, 0.025, 0.34, materials.path, [0, 0.05, 0], group);
+      pages.rotation.x = -0.08;
+
+      for (let i = 0; i < 4; i++) {
+        const line = box(0.47, 0.012, 0.012, materials.mushroomTop, [0, 0.065 + i * 0.035, 0.16], group);
+        line.rotation.x = -0.08;
+      }
+
+      return group;
+    }
+
+    function makeCloud(x, y, z, scale) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x91a5ad,
+        roughness: 1,
+        emissive: 0x121a21,
+        emissiveIntensity: 0.25
+      });
+
+      const puffs = [
+        [-1.1, 0, 0, 0.8],
+        [-0.35, 0.25, 0, 1.05],
+        [0.65, 0.1, 0, 0.9],
+        [1.35, -0.05, 0, 0.65]
+      ];
+
+      for (const puff of puffs) {
+        const cloudPuff = sphere(...puff, group);
+        cloudPuff.castShadow = false;
+      }
+
+      clouds.push({
+        group,
+        speed: 0.08 + Math.random() * 0.08
+      });
+
+      return group;
+    }
+
+    function makeLamp(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      cylinder(0.055, 0.08, 1.8, materials.darkRock, [0, 0.9, 0], group, 10);
+      box(0.48, 0.34, 0.48, materials.mushroom, [0, 1.85, 0], group);
+      box(0.6, 0.1, 0.6, materials.mushroomTop, [0, 2.08, 0], group);
+
+      const light = new THREE.PointLight(0xffa84a, 3.2, 6, 2);
+      light.position.set(0, 2.15, 0);
+      group.add(light);
+
+      animated.push({
+        type: "float",
+        object: group,
+        phase: Math.random() * Math.PI * 2,
+        amount: 0.08
+      });
+    }
+
+    // Lighting and atmosphere.
+    const hemisphere = new THREE.HemisphereLight(0x8eb7c8, 0x342d20, 1.35);
+    scene.add(hemisphere);
+
+    const moon = new THREE.DirectionalLight(0xb9d9ef, 2.2);
+    moon.position.set(-18, 25, 12);
+    moon.castShadow = true;
+    moon.shadow.mapSize.set(2048, 2048);
+    moon.shadow.camera.left = -30;
+    moon.shadow.camera.right = 30;
+    moon.shadow.camera.top = 30;
+    moon.shadow.camera.bottom = -30;
+    moon.shadow.camera.near = 1;
+    moon.shadow.camera.far = 70;
+    moon.shadow.bias = -0.0004;
+    scene.add(moon);
+
+    const rainLight = new THREE.PointLight(0x77b7d4, 2.2, 28, 2);
+    rainLight.position.set(0, 9, 0);
+    scene.add(rainLight);
+
+    // Ground and path.
+    const ground = mesh(new THREE.PlaneGeometry(90, 90), materials.grass, [0, -0.02, 0]);
+    ground.rotation.x = -Math.PI / 2;
+    ground.castShadow = false;
+
+    const path = mesh(new THREE.PlaneGeometry(11, 42), materials.path, [0, 0.005, 0]);
+    path.rotation.x = -Math.PI / 2;
+    path.castShadow = false;
+
+    // Painted route markers.
+    for (let i = 0; i < 10; i++) {
+      const marker = box(0.12, 0.025, 0.65, materials.mushroomTop, [-0.8, 0.025, -17 + i * 3.7]);
+      marker.rotation.y = Math.PI / 2;
+    }
+
+    // A bridge over a small stream.
+    const stream = mesh(new THREE.PlaneGeometry(8, 30), materials.darkRock, [0, -0.06, -27]);
+    stream.rotation.x = -Math.PI / 2;
+    stream.castShadow = false;
+
+    const bridge = new THREE.Group();
+    bridge.position.set(0, 0, -23);
+    world.add(bridge);
+
+    for (let i = 0; i < 11; i++) {
+      box(0.42, 0.25, 4.2, materials.rock, [-1.8 + i * 0.45, 0.65, 0], bridge);
+    }
+    box(4.2, 0.25, 0.3, materials.rock, [0, 1.35, -1.75], bridge);
+    box(4.2, 0.25, 0.3, materials.rock, [0, 1.35, 1.75], bridge);
+
+    for (let i = 0; i < 4; i++) {
+      const rail = box(0.12, 0.9, 3.4, materials.trunk, [-1.7 + i * 1.05, 1.8, 0], bridge);
+      rail.rotation.z = 0.025 * (i - 1.5);
+    }
+
+    // Bridge policemen.
+    function makeCop(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      cylinder(0.12, 0.17, 0.65, materials.rock, [0, 0.33, 0], group, 12);
+      box(0.28, 0.25, 0.2, materials.rock, [0, 0.7, 0], group);
+      const hat = sphere(0.2, materials.rock, [0, 0.95, 0], group);
+      hat.scale.set(0.85, 0.45, 0.85);
+      const hatBrim = cylinder(0.25, 0.25, 0.045, materials.rock, [0, 0.95, 0], group, 16);
+      hatBrim.scale.z = 0.8;
+
+      const badge = sphere(0.065, materials.gold, [0, 0.73, 0.12], group, 12);
+      badge.scale.z = 0.4;
+
+      animated.push({
+        type: "walk",
+        object: group,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.35,
+        distance: 2
+      });
+    }
+
+    makeCop(-0.95, 0.2);
+    makeCop(0.95, 0.2);
+
+    // Trees and environment.
+    makeTree(-12, -11, 1.25);
+    makeTree(-14, -7, 0.9);
+    makeTree(-10, -17, 1.1);
+    makeTree(12, -13, 1.2);
+    makeTree(15, -8, 0.95);
+    makeTree(10, 15, 1.1);
+    makeTree(-16, 18, 1.0);
+    makeTree(18, 22, 0.9);
+    makeTree(-20, 24, 1.15);
+    makeTree(22, 27, 1.0);
+
+    makeMushroom(-5, 3, 1.1);
+    makeMushroom(-3.5, 4.2, 0.8);
+    makeMushroom(5, -4, 0.9);
+    makeMushroom(6.5, -3, 0.65);
+    makeMushroom(-13, 10, 0.8);
+    makeMushroom(13, 11, 0.75);
+
+    makeRock(-7, 2, 0.8);
+    makeRock(7, -2, 0.7);
+    makeRock(-15, -15, 1.2);
+    makeRock(15, -17, 1.1);
+    makeRock(18, 8, 0.9);
+
+    makeLamp(-6.5, -5.5);
+    makeLamp(6.5, -5.5);
+    makeLamp(-7, 8);
+    makeLamp(7, 8);
+
+    // The cave.
+    const cave = new THREE.Group();
+    cave.position.set(0, 0, 15);
+    world.add(cave);
+
+    const caveFloor = mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.2, 28, 1, true), materials.darkRock, [0, 0.05, 0], cave);
+    caveFloor.rotation.x = Math.PI / 2;
+    caveFloor.castShadow = false;
+
+    const caveBack = cylinder(5.3, 5.3, 5, materials.darkRock, [0, 2.5, -4.8], cave, 24);
+    caveBack.castShadow = true;
+
+    const caveSideLeft = cylinder(5.3, 5.3, 5, materials.darkRock, [-5.2, 2.5, 0], cave, 24);
+    const caveSideRight = cylinder(5.3, 5.3, 5, materials.darkRock, [5.2, 2.5, 0], cave, 24);
+    caveSideLeft.rotation.z = Math.PI / 2;
+    caveSideRight.rotation.z = -Math.PI / 2;
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const rock = mesh(
+        new THREE.DodecahedronGeometry(0.4 + Math.random() * 0.35, 0),
+        materials.rock,
+        [Math.cos(angle) * 5.05, 0.35 + Math.random() * 1.1, Math.sin(angle) * 5.05]
+      );
+      rock.rotation.set(Math.random(), Math.random(), Math.random());
+    }
+
+    // The strange pink stalagmite.
+    const crystal = new THREE.Group();
+    crystal.position.set(0, 0.2, 0.2);
+    cave.add(crystal);
+
+    const crystalMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe96f91,
+      roughness: 0.48,
+      metalness: 0.08,
+      emissive: 0x6f1231,
+      emissiveIntensity: 0.45
+    });
+
+    const crystalCore = cylinder(0.22, 0.48, 3.1, crystalMaterial, [0, 1.65, 0], crystal, 18);
+    const crystalCap = sphere(0.65, crystalMaterial, [0, 3.25, 0], crystal, 24);
+    crystalCap.scale.set(0.72, 0.42, 0.72);
+
+    const crystalLight = new THREE.PointLight(0xff4f78, 3.4, 8, 2);
+    crystalLight.position.set(0, 2.5, 0);
+    crystal.add(crystalLight);
+
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const arm = cylinder(
+        0.08,
+        0.18,
+        0.9 + Math.random() * 0.4,
+        crystalMaterial,
+        [Math.cos(angle) * 0.45, 2.3 + Math.random() * 0.35, Math.sin(angle) * 0.45],
+        crystal,
+        12
+      );
+      arm.rotation.z = Math.cos(angle) * 0.25;
+      arm.rotation.x = Math.sin(angle) * 0.25;
+    }
+
+    animated.push({
+      type: "breathe",
+      object: crystal,
+      phase: 0,
+      amount: 0.08
+    });
+
+    // The diary, found near the cave.
+    const diary = makeDiary();
+    diary.position.set(3.2, 0.58, -1.7);
+    diary.rotation.y = -0.45;
+    diary.rotation.z = 0.08;
+
+    // Shops: 777, with the best armor from each.
+    makeShop(-10, 5, "777", 0x9b68e5);
+    makeShop(10, 5, "777", 0xd7a644);
+    makeShop(0, 13, "777", 0x75c8c5);
+
+    // A small fountain or well in the third shop area.
+    const well = new THREE.Group();
+    well.position.set(0, 0, 19);
+    world.add(well);
+
+    cylinder(1.55, 1.55, 0.25, materials.rock, [0, 0.13, 0], well, 24);
+    cylinder(1.15, 1.15, 2.2, materials.rock, [0, 1.2, 0], well, 24);
+    cylinder(1.35, 1.35, 0.18, materials.rock, [0, 2.35, 0], well, 24);
+    cylinder(0.45, 0.45, 0.65, materials.darkRock, [0, 0.35, 0], well, 16);
+
+    const water = mesh(new THREE.CircleGeometry(0.95, 24), materials.leafLight, [0, 0.24, 0], well);
+    water.rotation.x = -Math.PI / 2;
+    water.castShadow = false;
+
+    // Fireflies.
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffd66b,
+      transparent: true,
+      opacity: 0.85
+    });
+
+    for (let i = 0; i < 24; i++) {
+      const firefly = sphere(
+        0.055 + Math.random() * 0.035,
+        fireflyMaterial,
+        [
+          (Math.random() - 0.5) * 22,
+          0.8 + Math.random() * 5,
+          (Math.random() - 0.5) * 22
+        ],
+        world,
+        8
+      );
+      firefly.castShadow = false;
+      fireflies.push({
+        object: firefly,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.6 + Math.random() * 0.8
+      });
+    }
+
+    // Player and camera.
+    const player = new THREE.Group();
+    player.position.set(0, 0, 25);
+    world.add(player);
+
+    const body = sphere(0.42, materials.leaf, [0, 1.05, 0], player);
+    body.scale.set(0.75, 1.25, 0.8);
+
+    const head = sphere(0.25, materials.mushroomTop, [0, 1.72, 0], player);
+    head.scale.set(0.8, 1.15, 0.8);
+
+    const hat = sphere(0.32, materials.mushroom, [0, 1.95, 0], player);
+    hat.scale.set(0.9, 0.55, 0.9);
+
+    const hatBrim = cylinder(0.42, 0.42, 0.05, materials.mushroom, [0, 1.95, 0], player, 16);
+    hatBrim.scale.z = 0.8;
+
+    const leftArm = sphere(0.16, materials.leaf, [-0.43, 1.0, 0], player);
+    leftArm.rotation.z = -0.25;
+    const rightArm = sphere(0.16, materials.leaf, [0.43, 1.0, 0], player);
+    rightArm.rotation.z = 0.25;
+
+    const legs = [];
+    for (const side of [-1, 1]) {
+      const leg = cylinder(
+        0.09,
+        0.11,
+        0.65,
+        materials.mushroom,
+        [side * 0.14, 0.36, 0],
+        player,
+        10
+      );
+      legs.push(leg);
+    }
+
+    const inventory = new THREE.Group();
+    player.add(inventory);
+
+    let diaryItem = null;
+    let coinItem = null;
+    let ringItem = null;
+    let armorItem = null;
+
+    function createInventoryItem(name, material, position, rotation) {
+      const item = new THREE.Group();
+      item.position.set(...position);
+      item.rotation.set(...rotation);
+      inventory.add(item);
+
+      const root = new THREE.Group();
+      item.add(root);
+
+      if (name === "Magic Coin") {
+        const coin = cylinder(0.22, 0.22, 0.07, material, [0, 0, 0], root, 24);
+        coin.castShadow = true;
+        const groove = torus(0.16, 0.018, material, [0, 0.045, 0], root);
+        groove.rotation.x = Math.PI / 2;
+      } else if (name === "Gold Ring") {
+        const ring = torus(0.25, 0.055, material, [0, 0, 0], root);
+        ring.rotation.x = Math.PI / 2;
+        const band = torus(0.25, 0.075, material, [0, 0, 0], root);
+        band.rotation.x = Math.PI / 2;
+      } else if (name === "777 Armor") {
+        const plate = box(0.65, 0.9, 0.42, material, [0, 0, 0], root);
+        plate.rotation.z = -0.12;
+        const shoulder = sphere(0.25, material, [0, 0.45, 0], root);
+        shoulder.scale.set(1.4, 0.55, 0.7);
+      } else {
+        const book = box(0.55, 0.08, 0.4, material, [0, 0, 0], root);
+        book.rotation.x = -0.08;
+        const pages = box(0.47, 0.025, 0.32, materials.path, [0, 0.05, 0], root);
+        pages.rotation.x = -0.08;
+      }
+
+      items.push(item);
+      return item;
+    }
+
+    diaryItem = createInventoryItem("Great Grandfather's Diary", materials.diary, [0, 0, 0], [0.2, 0.1, 0]);
+    coinItem = createInventoryItem("Magic Coin", materials.coin, [0, 0, 0], [0, 0, 0]);
+    ringItem = createInventoryItem("Gold Ring", materials.gold, [0, 0, 0], [0, 0, 0]);
+    armorItem = createInventoryItem("777 Armor", materials.gold, [0, 0, 0], [0, 0, 0]);
+
+    // UI state.
+    const playerName = document.getElementById("playerName");
+    const inventoryText = document.getElementById("inventory");
+    const armorText = document.getElementById("armor");
+    const weatherText = document.getElementById("weather");
+    const hint = document.getElementById("hint");
+
+    let hasDiary = true;
+    let hasAnswered = false;
+    let hasTradedDiary = false;
+    let hasTradedArmor = false;
+    let currentArmor = "Rusty Tunic";
+    let currentCoin = "Old Coin";
+    let currentRing = "Small Silver Ring";
+    let currentWeather = "Rain";
+
+    function updateUI() {
+      playerName.textContent = "Player";
+      inventoryText.textContent = hasDiary ? "Great Grandfather's Diary · Magic Coin · Gold Ring" : "Magic Coin · Gold Ring";
+      armorText.textContent = currentArmor;
+      weatherText.textContent = currentWeather;
+    }
+
+    updateUI();
+
+    // Camera controls: drag to orbit, wheel to zoom, touch via pointer.
+    const pointer = {
+      down: false,
+      x: 0,
+      y: 0,
+      lastX: 0,
+      lastY: 0
+    };
+
+    const cameraState = {
+      theta: -0.28,
+      phi: 1.22,
+      radius: 13.5
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+      camera.position.set(
+        player.position.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        player.position.y + cameraState.radius * Math.cos(cameraState.phi),
+        player.position.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+      camera.lookAt(player.position);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      pointer.down = true;
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      pointer.lastX = event.clientX;
+      pointer.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!pointer.down) return;
+
+      const dx = event.clientX - pointer.lastX;
+      const dy = event.clientY - pointer.lastY;
+      pointer.lastX = event.clientX;
+      pointer.lastY = event.clientY;
+
+      cameraState.theta -= dx * 0.005;
+      cameraState.phi = THREE.MathUtils.clamp(cameraState.phi + dy * 0.004, 0.35, 1.48);
+      updateCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      pointer.down = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      pointer.down = false;
+    });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      cameraState.radius = THREE.MathUtils.clamp(cameraState.radius + event.deltaY * 0.008, 5, 27);
+      updateCamera();
+    }, { passive: false });
+
+    // Keyboard and inventory.
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        showInventory();
+      }
+
+      if (event.key.toLowerCase() === "r") {
+        resetPlayer();
+      }
+    });
+
+    function resetPlayer() {
+      player.position.set(0, 0, 25);
+      player.rotation.set(0, 0, 0);
+      updateCamera();
+    }
+
+    function showInventory() {
+      const panel = document.createElement("div");
+      panel.style.position = "fixed";
+      panel.style.top = "22px";
+      panel.style.left = "22px";
+      panel.style.width = "320px";
+      panel.style.maxHeight = "calc(100vh - 44px)";
+      panel.style.border = "1px solid rgba(235, 213, 159, 0.4)";
+      panel.style.borderRadius = "6px";
+      panel.style.background = "rgba(12, 16, 22, 0.94)";
+      panel.style.color = "#f4dfaa";
+      panel.style.font = "15px 'Courier New', monospace";
+      panel.style.overflowY = "auto";
+      document.body.appendChild(panel);
+
+      const header = document.createElement("div");
+      header.style.fontFamily = "Georgia, serif";
+      header.style.fontSize = "24px";
+      header.style.textAlign = "center";
+      header.textContent = "INVENTORY";
+      panel.prepend(header);
+
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "1fr 1fr";
+      row.style.gap = "8px";
+      panel.appendChild(row);
+
+      const selectable = [
+        { name: "Great Grandfather's Diary", type: "key", material: materials.diary },
+        { name: "Magic Coin", type: "coin", material: materials.coin },
+        { name: "Gold Ring", type: "ring", material: materials.gold },
+        { name: currentArmor, type: "armor", material: materials.gold }
+      ];
+
+      for (const item of selectable) {
+        if (item === diaryItem && !hasDiary) continue;
+        if (item === armorItem && !hasTradedArmor) continue;
+
+        const button = document.createElement("button");
+        button.textContent = item.name;
+        button.style.minHeight = "38px";
+        button.style.border = "1px solid rgba(235, 213, 159, 0.25)";
+        button.style.background = "rgba(255, 255, 255, 0.04)";
+        button.style.color = "#f4dfaa";
+        button.style.cursor = "pointer";
+        button.addEventListener("click", () => handleInventorySelection(item));
+        row.appendChild(button);
+      }
+
+      const close = document.createElement("button");
+      close.textContent = "Close";
+      close.style.right = "12px";
+      close.style.bottom = "12px";
+      close.style.border = "1px solid rgba(235, 213, 159, 0.3)";
+      close.style.background = "rgba(12, 16, 22, 0.9)";
+      close.style.color = "#f4dfaa";
+      close.addEventListener("click", hideInventory);
+      panel.appendChild(close);
+    }
+
+    function hideInventory() {
+      const panel = document.querySelector("[style*='position: fixed']");
+      if (panel) panel.remove();
+    }
+
+    function handleInventorySelection(item) {
+      if (item === diaryItem) {
+        if (!hasDiary) {
+          hasDiary = true;
+          diaryItem.visible = true;
+          inventory.add(diaryItem);
+          updateUI();
+          hint.innerHTML = "You found the diary! It contains the answer to the cave riddle. Keep it safe, and perhaps trade it to the Mysterious Goods Keeper.";
+        } else {
+          hasDiary = false;
+          diaryItem.visible = false;
+          inventory.remove(diaryItem);
+          updateUI();
+        }
+      } else if (item === coinItem) {
+        hasTradedArmor = true;
+        coinItem.visible = false;
+        inventory.remove(coinItem);
+        updateUI();
+      } else if (item === ringItem) {
+        hasTradedArmor = true;
+        ringItem.visible = false;
+        inventory.remove(ringItem);
+        updateUI();
+      } else if (item === armorItem) {
+        currentArmor = "777 Armor";
+        armorItem.material = materials.gold;
+        updateUI();
+      }
+    }
+
+    // Telepathy system.
+    let telepathyActive = false;
+    let telepathyTimer = 0;
+    let riddleAnswered = false;
+
+    function triggerTelepathy() {
+      telepathyActive = true;
+      telepathyTimer = 12;
+      hint.innerHTML = `
+        <strong>⚠️ TELEPATHY LINK ACTIVE ⚠️</strong><br>
+        The pink crystal speaks directly into your mind.
+        <br><br>
+        <em>“Player, I am a guardian of forgotten truths. Before you depart, answer this:
+        What has cities, but no houses; mountains, but no trees; and water, but no fish?”</em><br>
+        Use your diary to answer.
+      `;
+
+      const sound = new THREE.Audio();
+      sound.ctx = new THREE.WebAudioContext();
+      const now = sound.ctx.currentTime;
+      const osc = sound.ctx.createOscillator();
+      const gain = sound.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 2.5);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 3);
+      osc.connect(gain);
+      gain.connect(sound.ctx.destination);
+      osc.start();
+      sound.play();
+    }
+
+    // Riddle answer and diary trade.
+    const riddleAnswer = "A map.";
+
+    function answerRiddle() {
+      if (!hasDiary || riddleAnswered) return;
+
+      riddleAnswered = true;
+      hint.innerHTML = `
+        <strong>⚠️ TELEPATHY LINK ACTIVE ⚠️</strong><br>
+        You answered correctly. The crystal is pleased.
+        <br><br>
+        <em>“Player, you have proven worthy of my trust. The diary is no longer needed here. Give it to the Mysterious Goods Keeper, and take the best armor from all three 777 shops.”</em>
+      `;
+
+      hasDiary = false;
+      diaryItem.visible = false;
+      inventory.remove(diaryItem);
+      updateUI();
+
+      triggerTelepathy();
+    }
+
+    // Mysterious Goods Keeper and trade.
+    const keeper = new THREE.Group();
+    keeper.position.set(0, 0, 19);
+    world.add(keeper);
+
+    const keeperBody = sphere(0.48, materials.diary, [0, 1.05, 0], keeper);
+    keeperBody.scale.set(0.75, 1.25, 0.8);
+
+    const keeperHead = sphere(0.27, materials.mushroomTop, [0, 1.72, 0], keeper);
+    keeperHead.scale.set(0.8, 1.15, 0.8);
+
+    const keeperHat = sphere(0.32, materials.mushroom, [0, 1.95, 0], keeper);
+    keeperHat.scale.set(0.9, 0.55, 0.9);
+
+    const keeperSign = textSprite("MYSTERIOUS GOODS KEEPER", {
+      background: "rgba(20, 18, 16, 0.96)",
+      color: "#e8c98d"
+    });
+    keeperSign.position.set(0, 3.25, 0);
+    keeperSign.scale.set(4.2, 0.85, 1);
+
+    const tradeTable = box(2.6, 0.25, 1.4, materials.rock, [0, 1.2, 0], keeper);
+    tradeTable.rotation.y = Math.PI / 2;
+
+    const tradeLamp = new THREE.PointLight(0xffb35c, 2.2, 7, 2);
+    tradeLamp.position.set(0, 2.3, 0);
+    keeper.add(tradeLamp);
+
+    // Shop signs and their items.
+    const shopItems = [
+      {
+        name: "Magic Coin",
+        type: "coin",
+        material: materials.coin,
+        position: [1.2, 1.7, 0.1],
+        rotation: [0, 0, 0]
+      },
+      {
+        name: "Gold Ring",
+        type: "ring",
+        material: materials.gold,
+        position: [1.2, 1.7, 0.1],
+        rotation: [0, 0, 0]
+      },
+      {
+        name: "777 Armor",
+        type: "armor",
+        material: materials.gold,
+        position: [0.55, 1.7, 0.2],
+        rotation: [0, 0, 0]
+      }
+    ];
+
+    for (const shop of shopItems) {
+      const item = createInventoryItem(shop.name, shop.material, ...shop.position, ...shop.rotation);
+      items.push(item);
+    }
+
+    // A small floating guide above the cave.
+    const guide = textSprite("Cave", {
+      background: "rgba(22, 16, 21, 0.88)",
+      border: "rgba(233, 111, 113, 0.8)",
+      color: "#ff9ca3"
+    });
+    guide.position.set(0, 5.6, 15);
+    guide.scale.set(2.5, 0.62, 1);
+
+    // Rain particles.
+    const rainMaterial = new THREE.MeshBasicMaterial({
+      color: 0x91b8c6,
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false
+    });
+
+    const rain = [];
+    for (let i = 0; i < 120; i++) {
+      const drop = mesh(
+        new THREE.BoxGeometry(0.025, 0.45, 0.025),
+        rainMaterial,
+        [
+          (Math.random() - 0.5) * 32,
+          0.6 + Math.random() * 12,
+          (Math.random() - 0.5) * 32
+        ],
+        false,
+        false
+      );
+      rain.push({
+        object: drop,
+        speed: 1.2 + Math.random() * 1.5,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // Animation loop.
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      for (const cloud of clouds) {
+        cloud.group.position.x += cloud.speed * delta;
+        if (cloud.group.position.x > 30) cloud.group.position.x = -30;
+      }
+
+      for (const item of animated) {
+        if (item.type === "sway" && item.object.type !== "Group") {
+          item.object.rotation.z = Math.sin(elapsed * 0.8 + item.phase) * item.amount;
+        } else if (item.type === "sway" && item.object.type === "Group") {
+          item.object.rotation.z = Math.sin(elapsed * 0.65 + item.phase) * item.amount;
+        } else if (item.type === "pulse") {
+          item.object.scale.y = 1 + Math.sin(elapsed * 1.5 + item.phase) * item.amount;
+        } else if (item.type === "float") {
+          item.object.position.y = Math.sin(elapsed * 1.1 + item.phase) * item.amount;
+        } else if (item.type === "breathe") {
+          const pulse = 1 + Math.sin(elapsed * 1.25 + item.phase) * item.amount;
+          crystalCore.scale.setScalar(pulse);
+          crystalCap.scale.setScalar(1 + Math.sin(elapsed * 1.25 + item.phase + 0.5) * 0.06);
+          crystalLight.intensity = 3.4 * pulse;
+        }
+      }
+
+      for (const item of items) {
+        item.rotation.y += delta * 0.18;
+      }
+
+      for (const firefly of fireflies) {
+        firefly.object.position.x += Math.sin(elapsed * firefly.speed + firefly.phase) * delta * 0.35;
+        firefly.object.position.z += Math.cos(elapsed * firefly.speed * 0.8 + firefly.phase) * delta * 0.25;
+        firefly.object.position.y += Math.sin(elapsed * 1.2 + firefly.phase) * delta * 0.12;
+        firefly.object.material.opacity = 0.55 + Math.sin(elapsed * 2 + firefly.phase) * 0.25;
+      }
+
+      for (const drop of rain) {
+        drop.object.position.y -= drop.speed * delta;
+        drop.object.position.x += Math.sin(elapsed * 1.4 + drop.phase) * delta * 0.08;
+        if (drop.object.position.y < -5) drop.object.position.y = 14;
+      }
+
+      if (telepathyActive) {
+        telepathyTimer -= delta;
+        if (telepathyTimer <= 0) {
+          telepathyActive = false;
+          hint.innerHTML = "The telepathic link has ended. Use your diary to answer the riddle, or trade the diary and armor at the Mysterious Goods Keeper.";
+        }
+      }
+
+      if (hasDiary && !riddleAnswered && telepathyActive) {
+        hint.innerHTML = `
+          <strong>⚠️ TELEPATHY LINK ACTIVE ⚠️</strong><br>
+          The pink crystal speaks directly into your mind.
+          <br><br>
+          <em>“Player, I am a guardian of forgotten truths. Before you depart, answer this:
+          What has cities, but no houses; mountains, but no trees; and water, but no fish?”</em><br>
+          Use your diary to answer.
+        `;
+      }
+
+      if (hasDiary && !riddleAnswered && Math.random() > 0.985) {
+        triggerTelepathy();
+      }
+
+      updateCamera();
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

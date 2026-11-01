@@ -214,5 +214,14 @@
     "filename": "024_kirby_s_adventure_rainbow_resort.html",
     "verified_working": false,
     "generated_at": "2026-11-01 03:48:27"
+  },
+  "25": {
+    "id": 25,
+    "game": "EarthBound Beginnings",
+    "target": "Magicant",
+    "platform": "NES",
+    "filename": "025_earthbound_beginnings_magicant.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 04:06:35"
   }
 }
