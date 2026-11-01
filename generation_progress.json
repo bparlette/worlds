@@ -151,5 +151,14 @@
     "filename": "017_contra_jungle_waterfall.html",
     "verified_working": false,
     "generated_at": "2026-11-01 02:06:36"
+  },
+  "18": {
+    "id": 18,
+    "game": "Ninja Gaiden",
+    "target": "Downtown Neon Rooftops",
+    "platform": "NES",
+    "filename": "018_ninja_gaiden_downtown_neon_rooftops.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 02:23:38"
   }
 }
