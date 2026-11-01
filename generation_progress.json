@@ -106,5 +106,14 @@
     "filename": "012_the_legend_of_zelda_underworld_dungeons.html",
     "verified_working": false,
     "generated_at": "2026-11-01 01:52:02"
+  },
+  "13": {
+    "id": 13,
+    "game": "Zelda II: The Adventure of Link",
+    "target": "Palace Temples",
+    "platform": "NES",
+    "filename": "013_zelda_ii_the_adventure_of_link_palace_temples.html",
+    "verified_working": true,
+    "generated_at": "2026-11-01 01:04:03"
   }
 }

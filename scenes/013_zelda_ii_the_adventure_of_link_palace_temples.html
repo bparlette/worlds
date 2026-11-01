@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Palace Temples — Zelda II</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #080a12;
+      color: #f4e5c1;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    #scene {
+      position: fixed;
+      inset: 0;
+      display: block;
+      touch-action: none;
+    }
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(180deg, rgba(4,5,12,0.72), rgba(4,5,12,0.18)),
+        radial-gradient(circle at 50% 35%, transparent 48%, rgba(0,0,0,0.28));
+    }
+    .title {
+      text-align: center;
+      text-shadow: 0 2px 12px #000;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 48px);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: #fff0bf;
+    }
+    .title p {
+      margin: 8px 0 0;
+      color: #cbb678;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .story {
+      max-width: 560px;
+      margin: 0 auto;
+      color: #e8d8b4;
+      font-size: 14px;
+      line-height: 1.65;
+      text-align: center;
+      text-shadow: 0 1px 5px #000;
+    }
+    .story strong {
+      color: #fff1c2;
+      font-weight: 600;
+    }
+    .controls {
+      text-align: center;
+      color: #a99b78;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background: #080a12;
+      color: #e8c982;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      transition: opacity 0.8s ease;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    @media (max-width: 700px) {
+      #hud { padding: 16px; }
+      .story { font-size: 12px; }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="hud">
+    <div class="title">
+      <h1>Palace Temples</h1>
+      <p>The Adventure of Link · Nintendo NES</p>
+    </div>
+    <div class="story">
+      <p>As soon as you ride the elevator, you arrive at the <strong>Great Palace</strong>.</p>
+      <p>A force field blocks the entrance. It will only lift for the hero who placed <strong>all six crystals</strong> in the palace statues.</p>
+      <p>This walkthrough follows the quickest path to the <strong>Triforce of Courage</strong> and omits optional rooms.</p>
+    </div>
+    <div class="controls">Drag to orbit · Scroll to zoom · Click a crystal to activate it</div>
+  </div>
+  <div id="loading">Loading the Great Palace…</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const canvas = document.querySelector("#scene");
+    const loading = document.querySelector("#loading");
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0e18);
+    scene.fog = new THREE.FogExp2(0x101324, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      120
+    );
+
+    const clock = new THREE.Clock();
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+    const mat = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x746b5c,
+        roughness: 0.91,
+        metalness: 0.02
+      }),
+      darkStone: new THREE.MeshStandardMaterial({
+        color: 0x343842,
+        roughness: 0.95
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x9b8c70,
+        roughness: 0.84,
+        metalness: 0.04
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd6a84c,
+        roughness: 0.3,
+        metalness: 0.72
+      }),
+      goldDark: new THREE.MeshStandardMaterial({
+        color: 0x806026,
+        roughness: 0.45,
+        metalness: 0.65
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x8b201e,
+        roughness: 0.65
+      }),
+      crystalBlue: new THREE.MeshStandardMaterial({
+        color: 0x78c9ff,
+        emissive: 0x154c78,
+        emissiveIntensity: 1.6,
+        roughness: 0.18,
+        metalness: 0.15
+      }),
+      crystalPink: new THREE.MeshStandardMaterial({
+        color: 0xff91b4,
+        emissive: 0x6f1b48,
+        emissiveIntensity: 1.45,
+        roughness: 0.2,
+        metalness: 0.1
+      }),
+      crystalYellow: new THREE.MeshStandardMaterial({
+        color: 0xffe378,
+        emissive: 0x6a5110,
+        emissiveIntensity: 1.5,
+        roughness: 0.2,
+        metalness: 0.1
+      }),
+      crystalGreen: new THREE.MeshStandardMaterial({
+        color: 0x80ff9a,
+        emissive: 0x124c24,
+        emissiveIntensity: 1.45,
+        roughness: 0.2,
+        metalness: 0.1
+      })
+    };
+
+    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = scene) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function cylinder(rt, rb, h, material, x = 0, y = 0, z = 0, parent = scene, segments = 24) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x9bb4d8, 0x21170d, 1.25));
+
+    const moonLight = new THREE.DirectionalLight(0xb9d5ff, 2.4);
+    moonLight.position.set(-18, 28, 15);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.set(2048, 2048);
+    moonLight.shadow.camera.left = -35;
+    moonLight.shadow.camera.right = 35;
+    moonLight.shadow.camera.top = 35;
+    moonLight.shadow.camera.bottom = -35;
+    moonLight.shadow.camera.near = 1;
+    moonLight.shadow.camera.far = 80;
+    scene.add(moonLight);
+
+    const warmLight = new THREE.PointLight(0xffb85d, 28, 42, 2);
+    warmLight.position.set(0, 8, 0);
+    scene.add(warmLight);
+
+    const entranceLight = new THREE.PointLight(0x75baff, 22, 30, 2);
+    entranceLight.position.set(0, 5, 12);
+    scene.add(entranceLight);
+
+    // ---------------------------------------------------------------------
+    // Palace architecture
+    // ---------------------------------------------------------------------
+    const palace = new THREE.Group();
+    scene.add(palace);
+
+    // Main dais and surrounding platform.
+    box(34, 1.1, 27, mat.floor, 0, 0.55, 0, palace);
+    box(37, 1.5, 30, mat.darkStone, 0, 0.75, 0, palace);
+    box(38, 0.35, 31, mat.stone, 0, 1.65, 0, palace);
+
+    // Central staircase.
+    for (let i = 0; i < 9; i++) {
+      box(9.5, 0.28, 1.05, mat.floor, 0, 0.9 + i * 0.25, 10.5 - i * 0.9, palace);
+    }
+
+    // Grand hall columns and arches.
+    const columnPositions = [
+      [-12, -11], [-12, 0], [-12, 11],
+      [12, -11], [12, 0], [12, 11],
+      [0, -11], [0, 11]
+    ];
+
+    for (const [x, z] of columnPositions) {
+      cylinder(1.15, 1.35, 7.5, mat.stone, x, 4.8, z, palace, 20);
+      cylinder(1.55, 1.55, 0.65, mat.goldDark, x, 8.55, z, palace, 20);
+      cylinder(1.65, 1.65, 0.45, mat.gold, x, 9.0, z, palace, 20);
+      box(3.2, 1.1, 1.25, mat.darkStone, x, 1.15, z, palace);
+    }
+
+    // Arches constructed from wedge-like blocks.
+    function arch(x, z, rotationY = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotationY;
+      palace.add(group);
+
+      for (let i = 0; i < 7; i++) {
+        const angle = Math.PI * (i / 7);
+        const block = box(
+          1.8,
+          0.8,
+          1.05,
+          mat.stone,
+          Math.sin(angle) * 2.25,
+          5.1 + Math.cos(angle) * 2.25,
+          -Math.cos(angle) * 2.25,
+          group
+        );
+        block.rotation.z = Math.cos(angle) * 0.18;
+        block.rotation.y = Math.sin(angle) * 0.18;
+      }
+      box(5.2, 0.55, 1.25, mat.goldDark, 0, 7.45, 0, group);
+    }
+
+    arch(-12, -11, 0);
+    arch(12, -11, 0);
+    arch(-12, 11, 0);
+    arch(12, 11, 0);
+    arch(0, -11, Math.PI / 2);
+    arch(0, 11, Math.PI / 2);
+
+    // Ceiling ribs.
+    for (const z of [-9, 0, 9]) {
+      box(25, 0.35, 0.45, mat.goldDark, 0, 10.2, z, palace);
+      for (let x = -10; x <= 10; x += 5) {
+        box(0.35, 0.35, 18, mat.goldDark, x, 10.2, 0, palace);
+      }
+    }
+
+    // Wall paintings / banners.
+    for (const z of [-10.7, 10.7]) {
+      for (const x of [-12, 12]) {
+        const banner = box(2.8, 5.2, 0.18, mat.red, x, 5.3, z, palace);
+        banner.rotation.y = x < 0 ? -0.12 : 0.12;
+        for (const dx of [-0.65, 0.65]) {
+          const tie = box(0.12, 5.6, 0.25, mat.gold, x + dx, 5.3, z + 0.12, palace);
+          tie.rotation.y = x < 0 ? 0.12 : -0.12;
+        }
+      }
+    }
+
+    // Main throne.
+    const throne = new THREE.Group();
+    throne.position.set(0, 0, -7.5);
+    palace.add(throne);
+
+    box(6.8, 0.65, 3.4, mat.goldDark, 0, 1.25, 0, throne);
+    box(4.8, 1.5, 2.5, mat.red, 0, 2.35, 0, throne);
+    box(6.1, 0.55, 3.0, mat.gold, 0, 3.2, 0, throne);
+    box(1.0, 3.0, 1.0, mat.gold, -2.1, 2.1, 0, throne);
+    box(1.0, 3.0, 1.0, mat.gold, 2.1, 2.1, 0, throne);
+    box(4.8, 0.25, 2.8, mat.gold, 0, 3.65, 0, throne);
+
+    const throneCrown = new THREE.Mesh(
+      new THREE.ConeGeometry(1.15, 2.4, 3),
+      mat.gold
+    );
+    throneCrown.position.y = 4.65;
+    throneCrown.rotation.y = Math.PI / 6;
+    throne.add(throneCrown);
+
+    // Crystal statues around the dais.
+    const crystalPositions = [
+      [-10.5, 2.8],
+      [-5.2, 4.2],
+      [5.2, 4.2],
+      [10.5, 2.8],
+      [-7.5, -3.2],
+      [7.5, -3.2]
+    ];
+
+    const crystals = [];
+
+    function makeCrystal(x, z, material, index) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      palace.add(group);
+
+      cylinder(1.55, 1.9, 0.45, mat.darkStone, 0, 0.25, 0, group, 16);
+      cylinder(0.9, 1.25, 0.35, mat.stone, 0, 0.65, 0, group, 16);
+      cylinder(0.62, 0.9, 1.8, material, 0, 1.55, 0, group, 16);
+      cylinder(1.0, 0.62, 0.35, material, 0, 2.55, 0, group, 16);
+      cylinder(0.18, 0.18, 1.1, material, 0, 3.0, 0, group, 12);
+
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.34, 16, 12),
+        material
+      );
+      orb.position.y = 3.7;
+      group.add(orb);
+
+      // A subtle halo.
+      const halo = new THREE.Mesh(
+        new THREE.RingGeometry(1.55, 2.0, 32),
+        new THREE.MeshBasicMaterial({
+          color: material.color,
+          transparent: true,
+          opacity: 0.16,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      halo.rotation.x = Math.PI / 2;
+      halo.position.y = 0.45;
+      group.add(halo);
+
+      const glow = new THREE.PointLight(material.color, 0, 8, 2);
+      glow.position.y = 2.2;
+      group.add(glow);
+
+      const userData = {
+        group,
+        material,
+        index,
+        active: false,
+        placed: false,
+        click: () => activateCrystal(group)
+      };
+
+      const pickables = [orb, glow];
+      for (const object of pickables) object.userData.crystalClick = userData.click;
+
+      crystals.push({ ...userData, halo, orb });
+      return group;
+    }
+
+    crystalPositions.forEach((p, i) => {
+      const material = [
+        mat.crystalBlue,
+        mat.crystalPink,
+        mat.crystalYellow,
+        mat.crystalGreen,
+        mat.crystalBlue,
+        mat.crystalPink
+      ][i];
+      makeCrystal(p[0], p[1], material, i);
+    });
+
+    // Entrance force field.
+    const forceField = new THREE.Group();
+    palace.add(forceField);
+
+    const fieldMaterial = new THREE.MeshBasicMaterial({
+      color: 0x65b9ff,
+      transparent: true,
+      opacity: 0.16,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    const fieldFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(18, 18),
+      fieldMaterial
+    );
+    fieldFloor.rotation.x = -Math.PI / 2;
+    fieldFloor.position.y = 1.72;
+    forceField.add(fieldFloor);
+
+    const fieldEdges = [];
+    const edgeMaterial = new THREE.LineBasicMaterial({
+      color: 0x8ce9ff,
+      transparent: true,
+      opacity: 0.55
+    });
+
+    for (const z of [-9, 9]) {
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-9, 1.75, z),
+          new THREE.Vector3(9, 1.75, z)
+        ]),
+        edgeMaterial
+      );
+      forceField.add(line);
+      fieldEdges.push(line);
+    }
+
+    for (const x of [-9, 9]) {
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(x, 1.75, -9),
+          new THREE.Vector3(x, 1.75, 9)
+        ]),
+        edgeMaterial
+      );
+      forceField.add(line);
+      fieldEdges.push(line);
+    }
+
+    // Entrance pillars and gate.
+    for (const x of [-8.5, 8.5]) {
+      box(1.7, 5.5, 2.2, mat.darkStone, x, 2.8, 13, palace);
+      box(2.3, 0.55, 2.8, mat.goldDark, x, 5.7, 13, palace);
+      box(1.8, 0.7, 1.8, mat.gold, x, 6.1, 13, palace);
+    }
+
+    // Force-field guardian statue.
+    const guardian = new THREE.Group();
+    guardian.position.set(0, 0, 14.5);
+    palace.add(guardian);
+
+    cylinder(1.25, 1.8, 0.5, mat.darkStone, 0, 0.25, 0, guardian, 16);
+    cylinder(0.75, 1.1, 3.4, mat.stone, 0, 2.0, 0, guardian, 16);
+    box(2.0, 0.45, 1.2, mat.goldDark, 0, 3.85, 0, guardian);
+    const guardianFace = new THREE.Mesh(
+      new THREE.SphereGeometry(0.42, 16, 12),
+      mat.gold
+    );
+    guardianFace.position.y = 4.45;
+    guardian.add(guardianFace);
+
+    const guardianLight = new THREE.PointLight(0x68baff, 18, 18, 2);
+    guardianLight.position.y = 4.7;
+    guardian.add(guardianLight);
+
+    guardianLight.userData.crystalClick = () => activateCrystal(crystals[4]);
+
+    // Side rooms along the path.
+    function sideRoom(x, z, rotation, title, description) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      palace.add(group);
+
+      box(8, 0.35, 10, mat.floor, 0, 0.2, 0, group);
+      for (const sx of [-3.6, 3.6]) {
+        for (const sz of [-4, 4]) {
+          box(0.55, 6.5, 0.55, mat.stone, sx, 3.5, sz, group);
+        }
+      }
+      box(8, 0.45, 9, mat.darkStone, 0, 6.8, 0, group);
+      box(1.1, 4.5, 0.25, mat.red, 0, 2.7, 4.75, group);
+      box(0.65, 1.2, 0.15, mat.gold, -1.8, 3.2, 4.88, group);
+      box(0.65, 1.2, 0.15, mat.gold, 1.8, 3.2, 4.88, group);
+
+      const plaque = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 0.75),
+        new THREE.MeshBasicMaterial({ color: 0xd7b96e })
+      );
+      plaque.position.set(0, 2.4, 4.91);
+      group.add(plaque);
+
+      const descriptionMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0, 1),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.72,
+          depthWrite: false
+        })
+      );
+      descriptionMesh.position.set(0, 2.4, 4.94);
+      group.add(descriptionMesh);
+
+      return group;
+    }
+
+    sideRoom(-8, 7.5, Math.PI / 2, "The Hall of Echoes", "A narrow room where your footsteps seem to return. Focus on the path ahead.");
+    sideRoom(8, 7.5, -Math.PI / 2, "The Crystal Gallery", "Paintings depict the old guardians. Six crystals are required to open the palace gate.");
+    sideRoom(-8, -7.5, -Math.PI / 2, "The Sunken Courtyard", "Rainwater pools beneath the broken arch. The quickest route remains the central stairs.");
+    sideRoom(8, -7.5, Math.PI / 2, "The Hall of Reminders", "An ancient throne and a single missing crystal mark where the task was nearly completed.");
+
+    // Triforce altar at the end.
+    const altar = new THREE.Group();
+    altar.position.set(0, 0, -10.5);
+    palace.add(altar);
+
+    cylinder(4.8, 5.4, 0.65, mat.darkStone, 0, 0.35, 0, altar, 32);
+    cylinder(3.5, 4.2, 0.55, mat.stone, 0, 0.85, 0, altar, 32);
+    cylinder(2.2, 3.0, 1.1, mat.goldDark, 0, 1.5, 0, altar, 32);
+
+    const triforce = new THREE.Group();
+    triforce.position.y = 2.25;
+    altar.add(triforce);
+
+    for (let i = 0; i < 3; i++) {
+      const angle = Math.PI / 3 * i + Math.PI / 2;
+      const shape = new THREE.Shape();
+      shape.moveTo(0, -0.75);
+      shape.lineTo(0.65, 0);
+      shape.lineTo(0, 0.75);
+      shape.lineTo(0.25, 0);
+      shape.closePath();
+
+      const mesh = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(shape, {
+          depth: 0.35,
+          bevelEnabled: true,
+          bevelSize: 0.12,
+          bevelThickness: 0.1,
+          bevelSegments: 2
+        }),
+        mat.gold
+      );
+      mesh.rotation.z = angle;
+      mesh.position.x = Math.cos(angle) * 1.15;
+      mesh.position.y = Math.sin(angle) * 1.15;
+      triforce.add(mesh);
+    }
+
+    const triforceLight = new THREE.PointLight(0xffe08a, 42, 24, 2);
+    triforceLight.position.y = 3.5;
+    altar.add(triforceLight);
+
+    // Floating dust motes.
+    const moteCount = 420;
+    const motePositions = new Float32Array(moteCount * 3);
+    for (let i = 0; i < moteCount; i++) {
+      motePositions[i * 3] = (Math.random() - 0.5) * 35;
+      motePositions[i * 3 + 1] = Math.random() * 12;
+      motePositions[i * 3 + 2] = (Math.random() - 0.5) * 28;
+    }
+    const moteGeometry = new THREE.BufferGeometry();
+    moteGeometry.setAttribute("position", new THREE.BufferAttribute(motePositions, 3));
+
+    const motes = new THREE.Points(
+      moteGeometry,
+      new THREE.PointsMaterial({
+        color: 0xffd88a,
+        size: 0.045,
+        transparent: true,
+        opacity: 0.48,
+        depthWrite: false
+      })
+    );
+    scene.add(motes);
+
+    // Animated floating crystals above the six statues.
+    const floatingCrystals = [];
+    for (const crystal of crystals) {
+      const floating = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.38, 0),
+        crystal.material
+      );
+      floating.position.set(crystal.group.position.x, 5.2 + crystal.index * 0.35, crystal.group.position.z);
+      palace.add(floating);
+      floatingCrystals.push({ mesh: floating, baseY: floating.position.y, phase: Math.random() * Math.PI * 2 });
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: native orbit, zoom, and touch
+    // ---------------------------------------------------------------------
+    const orbit = {
+      theta: 0.72,
+      phi: 1.13,
+      radius: 31,
+      target: new THREE.Vector3(0, 3.5, -1.5),
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(orbit.phi);
+      camera.position.set(
+        orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+        orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+        orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
+      );
+      camera.lookAt(orbit.target);
+    }
+
+    canvas.addEventListener("pointerdown", (event) => {
+      orbit.dragging = true;
+      orbit.pointerX = event.clientX;
+      orbit.pointerY = event.clientY;
+      orbit.lastX = event.clientX;
+      orbit.lastY = event.clientY;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = "grabbing";
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!orbit.dragging) return;
+      const dx = event.clientX - orbit.lastX;
+      const dy = event.clientY - orbit.lastY;
+      orbit.lastX = event.clientX;
+      orbit.lastY = event.clientY;
+      orbit.theta -= dx * 0.0055;
+      orbit.phi = THREE.MathUtils.clamp(orbit.phi - dy * 0.0045, 0.38, 1.48);
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      orbit.dragging = false;
+      canvas.style.cursor = "grab";
+      if (event && canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointercancel", stopDragging);
+    canvas.style.cursor = "grab";
+
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      orbit.radius = THREE.MathUtils.clamp(orbit.radius + event.deltaY * 0.018, 13, 58);
+      updateCamera();
+    }, { passive: false });
+
+    // Pinch zoom.
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    canvas.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      }
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (pinchDistance > 0) {
+          orbit.radius = THREE.MathUtils.clamp(
+            orbit.radius + (pinchDistance - distance) * 0.012,
+            13,
+            58
+          );
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+    }
+
+    canvas.addEventListener("pointerup", removePointer);
+    canvas.addEventListener("pointercancel", removePointer);
+
+    // Clicking a crystal.
+    canvas.addEventListener("click", (event) => {
+      const hit = raycastCrystals(event);
+      if (hit) activateCrystal(hit.object.userData.crystal);
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    function raycastCrystals(event) {
+      pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(crystals.map((c) => c.group), true);
+      for (const hit of hits) {
+        if (hit.object.userData.crystalClick) return hit.object;
+      }
+      return null;
+    }
+
+    function activateCrystal(crystal) {
+      if (crystal.placed) return;
+      crystal.placed = true;
+      crystal.active = true;
+      crystal.halo.material.opacity = 0.38;
+      crystal.halo.scale.setScalar(1.15);
+      crystal.group.traverse((object) => {
+        if (object.isMesh) object.material = crystal.material;
+      });
+      const glow = new THREE.PointLight(crystal.material.color, 38, 12, 2);
+      glow.position.set(crystal.group.position.x, 2.4, crystal.group.position.z);
+      crystal.group.add(glow);
+      glow.userData.crystalClick = () => {};
+    }
+
+    // ---------------------------------------------------------------------
+    // Entrance animation and force-field behavior
+    // ---------------------------------------------------------------------
+    const entrance = new THREE.Group();
+    palace.add(entrance);
+
+    const entranceGate = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.1, 2.1, 0.35, 32, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: 0x72d8ff,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    entranceGate.rotation.x = Math.PI / 2;
+    entranceGate.position.set(0, 1.78, 13);
+    entrance.add(entranceGate);
+
+    const entranceHalo = new THREE.Mesh(
+      new THREE.RingGeometry(2.25, 2.75, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0x72d8ff,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    entranceHalo.rotation.x = Math.PI / 2;
+    entranceHalo.position.set(0, 1.78, 13);
+    entrance.add(entranceHalo);
+
+    let forceFieldActive = true;
+    let entranceSequence = 0;
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle entrance gate pulse while the hero approaches.
+      entranceGate.material.opacity = 0.14 + Math.sin(elapsed * 1.8) * 0.035;
+      entranceHalo.rotation.z = elapsed * 0.35;
+      entranceHalo.scale.setScalar(1 + Math.sin(elapsed * 1.4) * 0.08);
+
+      // Force field fades as all six crystals are placed.
+      const placedCount = crystals.filter((c) => c.placed).length;
+      if (forceFieldActive) {
+        const fade = 1 - placedCount / 6;
+        fieldFloor.material.opacity = 0.16 * fade;
+        for (const edge of fieldEdges) edge.material.opacity = 0.55 * fade;
+        guardianLight.intensity = 18 + (6 - placedCount) * 8;
+      } else {
+        const targetOpacity = 0;
+        fieldFloor.material.opacity = THREE.MathUtils.damp(fieldFloor.material.opacity, targetOpacity, 2.5, 0.05);
+        for (const edge of fieldEdges) edge.material.opacity = THREE.MathUtils.damp(edge.material.opacity, 0, 2.5, 0.05);
+        guardianLight.intensity = THREE.MathUtils.damp(guardianLight.intensity, 8, 2.5, 0.05);
+      }
+
+      // Triforce glow grows after the final crystal is placed.
+      triforceLight.intensity = 42 + Math.sin(elapsed * 2.1) * 8;
+      triforce.scale.setScalar(1 + Math.sin(elapsed * 1.7) * 0.035);
+
+      // Floating crystals drift.
+      for (const item of floatingCrystals) {
+        item.mesh.position.y = item.baseY + Math.sin(elapsed * 0.8 + item.phase) * 0.28;
+        item.mesh.rotation.y = elapsed * 0.35 + item.phase;
+        item.mesh.rotation.x = Math.sin(elapsed * 0.55 + item.phase) * 0.2;
+      }
+
+      // Dust drifts upward and wraps around.
+      const positions = moteGeometry.attributes.position.array;
+      for (let i = 0; i < moteCount; i++) {
+        positions[i * 3 + 1] += 0.0007 + Math.sin(elapsed * 0.4 + i) * 0.00015;
+        positions[i * 3] += Math.sin(elapsed * 0.25 + i * 0.7) * 0.00012;
+        if (positions[i * 3 + 1] > 13) positions[i * 3 + 1] = 0.2;
+      }
+      moteGeometry.attributes.position.needsUpdate = true;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    // Initial camera framing.
+    updateCamera();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Begin after a short intro.
+    entranceSequence = 0;
+    function startStory() {
+      forceFieldActive = true;
+      entranceSequence = 0;
+      loading.classList.add("hidden");
+      setTimeout(() => loading.remove(), 900);
+    }
+
+    startStory();
+    animate();
+  </script>
+</body>
+</html>
