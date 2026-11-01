@@ -142,5 +142,14 @@
     "filename": "016_mega_man_2_bubble_man_s_underwater_lair.html",
     "verified_working": false,
     "generated_at": "2026-11-01 01:51:38"
+  },
+  "17": {
+    "id": 17,
+    "game": "Contra",
+    "target": "Jungle Waterfall",
+    "platform": "NES",
+    "filename": "017_contra_jungle_waterfall.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 02:06:36"
   }
 }
