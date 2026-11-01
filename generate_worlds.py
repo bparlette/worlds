@@ -22,15 +22,16 @@ LLAMA_PORT = 8082
 
 os.makedirs(SCENES_DIR, exist_ok=True)
 
-SYSTEM_PROMPT = """You are an expert 3D WebGL / Three.js developer and game environment artist.
-Generate a complete, self-contained, production-grade 3D WebGL interactive world inside a single HTML file.
-Requirements:
-1. Use only the Three.js core ES module from:
+SYSTEM_PROMPT = """You are an expert 3D WebGL / Three.js developer.
+Generate a complete, self-contained 3D WebGL interactive world inside a single HTML file.
+CRITICAL CONSTRAINTS:
+1. Write concise, clean, highly modular Three.js code that ALWAYS finishes completely within 2,500 tokens.
+2. Must properly close all functions, add the animation loop (requestAnimationFrame), and close </script></body></html>. NEVER leave code unfinished or cut off mid-function.
+3. Use only Three.js core ES module:
    https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js
-2. Do not import addons or legacy example js paths. Implement all camera controls (orbit / drag to rotate, scroll to zoom) directly in native JavaScript.
-3. Include rich visual fidelity: dynamic lighting (Directional, Ambient, Point lights with shadows), atmospheric fog matching the setting palette, layered procedural geometry (structures, platforms, animated environmental props, floating particles, water/lava shader planes), and smooth 60fps render loop with idle animations.
-4. Add a minimalist, elegant HUD overlay in the top-left corner displaying the game title, platform, and world setting name, with camera interaction tips.
-5. Output ONLY the raw executable HTML code inside ```html ... ``` code fences."""
+4. Implement native drag-to-orbit camera controls directly in JS.
+5. Create recognizable landmarks, atmospheric lighting/fog, and animated elements.
+6. Output ONLY executable HTML inside ```html ... ```."""
 
 
 def load_progress() -> dict:
@@ -57,8 +58,8 @@ def generate_single_world(spec: dict) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 4096,
-        "temperature": 0.7,
+        "max_tokens": 24000,
+        "temperature": 0.6,
         "stream": True
     }
 
@@ -100,6 +101,16 @@ def generate_single_world(spec: dict) -> str:
         html = raw_content.strip()
     else:
         html = f"<!DOCTYPE html><html><body><pre>{raw_content}</pre></body></html>"
+
+    # Validation: Ensure closing tags exist
+    if "</html>" not in html.lower():
+        print(f"[Warning] Scene code was incomplete, appending closing tags...")
+        if "</script>" not in html:
+            html += "\n    animate();\n  </script>"
+        if "</body>" not in html:
+            html += "\n</body>"
+        if "</html>" not in html:
+            html += "\n</html>"
 
     return html
 
