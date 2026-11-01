@@ -2,11 +2,12 @@
 MODEL_DIR="$HOME/.models/Qwen3.5-4B-3D-Coder"
 PORT="${PORT:-8082}"
 
-echo "Starting Qwen3.5-4B-3D-Coder server (ctx-size 20480, FlashAttn, N-gram Speculative Decoding, Vision mmproj enabled) on 0.0.0.0:$PORT..."
+echo "Starting Qwen3.5-4B-3D-Coder server (ctx-size 20480, FlashAttn, N-gram Speculative Decoding, Vision mmproj enabled, max 1280 vision tokens) on 0.0.0.0:$PORT..."
 exec /opt/homebrew/bin/llama-server \
   -m "$MODEL_DIR/Qwen3.5-4B-3D-Coder-Q4_K_M.gguf" \
   --mmproj "$MODEL_DIR/mmproj-Qwen3.5-4B-BF16.gguf" \
   --image-min-tokens 1024 \
+  --image-max-tokens 1280 \
   --reasoning off \
   --n-gpu-layers all \
   --flash-attn on \

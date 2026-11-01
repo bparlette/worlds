@@ -7,6 +7,8 @@ and commits/pushes each generated world incrementally to GitHub repo 'bparlette/
 
 import os
 import sys
+import io
+import math
 import json
 import time
 import re
@@ -15,6 +17,7 @@ import urllib.error
 import subprocess
 import concurrent.futures
 import base64
+from PIL import Image
 from scene_linter import lint_and_autofix_scene
 
 WORLDS_DIR = "/Users/braidpairlette/worlds"
@@ -22,6 +25,13 @@ SCENES_DIR = os.path.join(WORLDS_DIR, "scenes")
 JSON_PATH = os.path.join(WORLDS_DIR, "game_worlds_extracted.json")
 PROGRESS_PATH = os.path.join(WORLDS_DIR, "generation_progress.json")
 LLAMA_PORT = 8082
+
+# Qwen3.5-VL vision token standard:
+# patch_size = 16, spatial_merge_size = 2 -> 1 vision token per 32x32 px (1,024 px).
+# Cap at 1,280 vision tokens (1,310,720 px) aligned to 32-px grid; never upscale smaller images.
+VISION_STRIDE = 32
+MAX_VISION_TOKENS = 1280
+MAX_VISION_PIXELS = MAX_VISION_TOKENS * VISION_STRIDE * VISION_STRIDE  # 1,310,720
 
 os.makedirs(SCENES_DIR, exist_ok=True)
 
@@ -39,9 +49,9 @@ CRITICAL CONSTRAINTS:
 5. Create recognizable landmarks, atmospheric lighting/fog, and animated elements.
 6. RELIC (required): Include the world's hidden treasure relic object:
    - name: this game's single most iconic treasure object (proper name in quotes, e.g. Adventure's chalice, Pitfall's golden idol).
-   - x, z: a point on WALKABLE ground in this world, at least 6 units from spawn and at least 3 units from doors/landmarks, off the direct beeline.
+   - x, z: a point on WALKABLE ground in this world, at least 6 units from spawn and at least 3 units from doors/landmarks, off the direct beeline. Build the relic from pure Three.js 3D primitives only (no sprite/billboard/canvas).
 7. HYGIENE (required): Do NOT create any object, variable, or group named 'glitch' (case-insensitive) to prevent collision with the Back Roms host entity.
-8. SCALE (required): Build SMALL, dense worlds — about half the size of a typical sprawling scene. The entire playable layout must fit within a 30 x 30 unit footprint (X span and Z span each at most 30 units) and at most 12 units of height. Make one rich, compact room/area, not a sprawling field: bring landmarks close and keep walking distances short.
+8. SCALE (required): Build SMALL, dense worlds — about half the size of a typical sprawling scene. The entire playable layout (including outer wall thickness, loops, and trees/ceilings) MUST fit strictly within a 30 x 30 unit footprint (X in [-15, 15], Z in [-15, 15]; place outer wall centers at most at ±14.5) and height Y in [0, 12]. Check loop bounds so no repeated object overshoots ±14.5. Make one rich, compact room/area, not a sprawling field: bring landmarks close and keep walking distances short. If the reference map shows a whole world or multi-room sheet, build ONLY its single most iconic room/section at full detail.
 9. FOUR WALLS (required): Give the world a clear outer boundary made of four walls — north, east, south, and west — using whatever fits the theme (walls, cliffs, hedges, cave rock, fences, or a water's edge), forming a compact rectangular layout. The Back Roms host turns each entire wall into a passage, so keep the boundary walls plain, solid, and continuous, with no essential landmark built into or against them. Do NOT place a freestanding portal, rift, gate, doorway, or travel hole anywhere in the room — the walls are the exits, and the host draws the passage effect on them.
 10. Output ONLY executable HTML inside ```html ... ```."""
 
@@ -61,14 +71,64 @@ def save_progress(progress: dict):
         json.dump(progress, f, indent=2)
 
 
+def _resize_to_vision_standard(data: bytes) -> tuple[bytes, dict]:
+    """Normalize and cap reference image to <= 1,280 vision tokens (32x32 patch grid).
+    Never upscales smaller images. Converts GIF/palette to RGB PNG for clean ViT decode."""
+    orig_bytes = len(data)
+    with Image.open(io.BytesIO(data)) as img:
+        orig_w, orig_h = img.size
+        orig_fmt = img.format or "PNG"
+        orig_mode = img.mode
+        orig_vtokens = math.ceil(orig_w / VISION_STRIDE) * math.ceil(orig_h / VISION_STRIDE)
+
+        if orig_w * orig_h > MAX_VISION_PIXELS:
+            scale = math.sqrt(MAX_VISION_PIXELS / (orig_w * orig_h))
+            new_w = max(VISION_STRIDE, (int(orig_w * scale) // VISION_STRIDE) * VISION_STRIDE)
+            new_h = max(VISION_STRIDE, (int(orig_h * scale) // VISION_STRIDE) * VISION_STRIDE)
+            while (new_w // VISION_STRIDE) * (new_h // VISION_STRIDE) > MAX_VISION_TOKENS:
+                if new_w >= new_h and new_w > VISION_STRIDE:
+                    new_w -= VISION_STRIDE
+                elif new_h > VISION_STRIDE:
+                    new_h -= VISION_STRIDE
+                else:
+                    break
+            rgb = img.convert("RGB") if img.mode != "RGB" else img
+            resized = rgb.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            resized.save(buf, format="PNG", optimize=True)
+            out_bytes = buf.getvalue()
+        elif orig_fmt != "PNG" or orig_mode not in ("RGB", "RGBA"):
+            new_w, new_h = orig_w, orig_h
+            rgb = img.convert("RGB")
+            buf = io.BytesIO()
+            rgb.save(buf, format="PNG", optimize=True)
+            out_bytes = buf.getvalue()
+        else:
+            new_w, new_h = orig_w, orig_h
+            out_bytes = data
+
+    sent_vtokens = math.ceil(new_w / VISION_STRIDE) * math.ceil(new_h / VISION_STRIDE)
+    meta = {
+        "orig_w": orig_w, "orig_h": orig_h, "orig_fmt": orig_fmt, "orig_mode": orig_mode,
+        "orig_bytes": orig_bytes, "orig_vtokens": orig_vtokens,
+        "sent_w": new_w, "sent_h": new_h, "sent_bytes": len(out_bytes), "sent_vtokens": sent_vtokens
+    }
+    return out_bytes, meta
+
+
 def _image_data_uri(url: str) -> str:
-    """Download a reference image and inline it as a data URI for llama-server."""
+    """Download a reference image, apply the 1,280-token vision resize standard, and inline as a data URI."""
     req = urllib.request.Request(
         url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        data = r.read()
-        ctype = r.headers.get_content_type() or "image/png"
-    return f"data:{ctype};base64," + base64.b64encode(data).decode("ascii")
+    with urllib.request.urlopen(req, timeout=25) as r:
+        raw_data = r.read()
+    out_bytes, m = _resize_to_vision_standard(raw_data)
+    print(
+        f"[Image Standard] {m['orig_w']}x{m['orig_h']} {m['orig_fmt']}/{m['orig_mode']} "
+        f"({m['orig_bytes']/1024:.1f}KB, {m['orig_vtokens']} vtok) -> "
+        f"{m['sent_w']}x{m['sent_h']} PNG ({m['sent_bytes']/1024:.1f}KB, {m['sent_vtokens']} vtok)"
+    )
+    return "data:image/png;base64," + base64.b64encode(out_bytes).decode("ascii")
 
 
 _LABEL_PREFIX = re.compile(
