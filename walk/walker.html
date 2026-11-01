@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link rel="icon" href="data:," />
-<title>World Walker — 100 Retro Worlds</title>
+<title>Back Roms — walk the 900 retro worlds</title>
 <style>
   :root {
     --cream: #f5e6bd;
@@ -711,7 +711,7 @@
       el("loading").classList.add("done");
       tick();
     })().catch(err => {
-      console.error("World Walker failed to boot:", err);
+      console.error("Back Roms failed to boot:", err);
       el("loading").firstElementChild.style.display = "none";
       el("loading").lastElementChild.textContent = "Failed to load — " + err.message;
     });

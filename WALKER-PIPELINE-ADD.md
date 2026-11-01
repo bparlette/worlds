@@ -7,9 +7,9 @@
 extract → generate → heal → lint → [ NEW: make_walker_module ] → registry + manifest
 ```
 
-It converts each finished diorama scene into a **World Walker module** and
+It converts each finished diorama scene into a **Back Roms module** and
 registers it in `walk/worlds.json`. From then on the world is walkable and
-portal-connected in the Walker (bparlette.github.io/worlds/walk/walker.html)
+portal-connected in Back Roms (bparlette.github.io/worlds/walk/walker.html)
 with zero further hand work.
 
 Is it generic? **Yes, with one honest caveat.** The transformation is
@@ -54,11 +54,11 @@ export function createWorld(THREE) {
 - **R2 — One group.** Every mesh, light and effect goes into the single
   returned `group`. Nothing touches a global scene. The module contains
   **no** renderer, camera, HUD/DOM, orbit controls, or
-  `requestAnimationFrame` — the Walker owns all of that.
+  `requestAnimationFrame` — Back Roms owns all of that.
 - **R3 — Animation lives in `update(t, dt)`.** Move the scene's per-frame
   expressions there verbatim (they read the same closure variables the
   build created). `update` must not reference the old clock/renderer, and
-  must be safe to simply stop calling — unloading = the Walker disposes
+  must be safe to simply stop calling — unloading = Back Roms disposes
   the group.
 - **R4 — Spawn.** A point on walkable ground, not inside geometry, `yaw`
   facing the world's hero view (what the diorama's default camera framed).
@@ -69,7 +69,7 @@ export function createWorld(THREE) {
 - **R6 — Env.** `background`, `fogColor`, `fogDensity` copied from the
   scene's own values, so walking in feels like the diorama looked.
 - **R7 — Real ground.** Terrain must be actual meshes inside the group —
-  the Walker floors the player by raycasting down. No invisible or
+  Back Roms floors the player by raycasting down. No invisible or
   merged-away ground planes.
 
 ## 3. Manifest step (same script)
@@ -101,7 +101,7 @@ in the walk yet — the walk itself never breaks.
 ## 5. The endgame (retire the converter)
 
 Teach `generate_worlds.py` to emit this shape natively: one build function,
-two wrappers — the diorama page and the Walker module. At that point
+two wrappers — the diorama page and Back Roms module. At that point
 conversion is free, spawn/doors come from the generator's own scene
 knowledge, and this document becomes a historical footnote. Until then,
 the converter above is the bridge — and every converted world is also a
