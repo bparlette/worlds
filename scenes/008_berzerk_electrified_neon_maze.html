@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Electrified Neon Maze — Berzerk</title>
+  <style>
+    :root {
+      --cyan: #61ffbd;
+      --pink: #ff3ed8;
+      --amber: #ffd65c;
+      --panel: rgba(4, 7, 13, 0.76);
+      --border: 1px solid rgba(97, 255, 189, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #020407;
+      color: #e9ffff;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    body {
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .title {
+      color: var(--cyan);
+      font-size: clamp(25px, 4vw, 52px);
+      line-height: 0.95;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 18px rgba(97, 255, 189, 0.65),
+        0 0 45px rgba(255, 61, 216, 0.25);
+    }
+
+    .title span {
+      color: var(--pink);
+      font-size: 0.42em;
+      letter-spacing: 0.28em;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      color: #b9f5e5;
+      font-size: 12px;
+      line-height: 1.6;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 12px #000;
+    }
+
+    .status {
+      min-width: 220px;
+      padding: 13px 15px;
+      border: var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 30px rgba(97, 255, 189, 0.08);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      color: #a9f5df;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+    }
+
+    .status-row strong {
+      color: var(--cyan);
+      font-size: 13px;
+    }
+
+    .status-row:last-child strong {
+      color: var(--pink);
+    }
+
+    .status-row i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    .status-row:last-child i {
+      background: var(--pink);
+      box-shadow: 0 0 10px var(--pink);
+    }
+
+    #controls {
+      position: absolute;
+      left: 28px;
+      bottom: 24px;
+      color: #89e6d3;
+      font-size: 11px;
+      line-height: 1.8;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 12px #000;
+    }
+
+    #controls b {
+      color: #e9ffff;
+      font-weight: normal;
+    }
+
+    #reticle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      opacity: 0.75;
+    }
+
+    #retreticle::before,
+    #reticle::after {
+      content: "";
+      position: absolute;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    #reticle::before {
+      top: 8px;
+      left: 0;
+      width: 18px;
+      height: 1px;
+    }
+
+    #reticle::after {
+      top: 0;
+      left: 8px;
+      width: 1px;
+      height: 18px;
+    }
+
+    #reticle span {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: var(--pink);
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      background: #020407;
+      transition: opacity 0.8s ease;
+    }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader {
+      width: 180px;
+      text-align: center;
+      color: var(--cyan);
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .loader::before {
+      content: "";
+      display: block;
+      width: 100%;
+      height: 2px;
+      margin-bottom: 16px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      animation: scan 1.1s ease-in-out infinite;
+    }
+
+    .loader::after {
+      content: "";
+      display: block;
+      width: 70px;
+      height: 70px;
+      margin: auto;
+      border: 1px solid rgba(97, 255, 189, 0.25);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 1.1s linear infinite;
+    }
+
+    @keyframes scan {
+      0%, 100% { opacity: 0.25; transform: scaleX(0.4); }
+      50% { opacity: 1; transform: scaleX(1); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 700px) {
+      .topbar {
+        top: 16px;
+        left: 16px;
+        right: 16px;
+      }
+
+      .subtitle {
+        max-width: 260px;
+      }
+
+      .status {
+        min-width: 190px;
+      }
+
+      #controls {
+        left: 16px;
+        bottom: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="loader">Initializing maze</div>
+  </div>
+
+  <div id="hud">
+    <div class="topbar">
+      <div>
+        <div class="title">Electrified Neon <span>Maze</span></div>
+        <div class="subtitle">
+          A chamber without an exit. Kill the machines and keep moving.
+          Every room is another cage.
+        </div>
+      </div>
+
+      <div class="status">
+        <div class="status-row">
+          <span>ROOM</span>
+          <strong id="roomValue">01</strong>
+        </div>
+        <div class="status-row">
+          <span>ENEMIES</span>
+          <strong id="enemyValue">000</strong>
+        </div>
+        <div class="status-row">
+          <span>STANDBY</span>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
+    <div id="reticle"><span></span></div>
+
+    <div id="controls">
+      <b>DRAG</b> to orbit &nbsp;·&nbsp; <b>SCROLL</b> to zoom<br />
+      <b>CLICK / TAP</b> enemies to destroy &nbsp;·&nbsp; <b>WASD</b> to move
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020407);
+    scene.fog = new THREE.FogExp2(0x071019, 0.043);
+
+    const camera = new THREE.PerspectiveCamera(
+      68,
+      innerWidth / innerHeight,
+      0.1,
+      140
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x101a20,
+        roughness: 0.68,
+        metalness: 0.42
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x18232a,
+        roughness: 0.72,
+        metalness: 0.38
+      }),
+      wallDark: new THREE.MeshStandardMaterial({
+        color: 0x090e12,
+        roughness: 0.8,
+        metalness: 0.3
+      }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x54ffb0,
+        emissive: 0x16ffb0,
+        emissiveIntensity: 2.2,
+        roughness: 0.35,
+        metalness: 0.15
+      }),
+      pink: new THREE.MeshStandardMaterial({
+        color: 0xff35dc,
+        emissive: 0xff168c,
+        emissiveIntensity: 2.4,
+        roughness: 0.3,
+        metalness: 0.15
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffd65c,
+        emissive: 0xffa62e,
+        emissiveIntensity: 1.8,
+        roughness: 0.4
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x020405,
+        roughness: 0.95,
+        metalness: 0.05
+      })
+    };
+
+    clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const enemies = [];
+    const particles = [];
+    const floorLights = [];
+    const roomNames = [
+      "SECTOR 01 — THE HALL",
+      "SECTOR 02 — THE PIT",
+      "SECTOR 03 — THE CATHEDRAL",
+      "SECTOR 04 — THE FORGE",
+      "SECTOR 05 — THE CHAMBER",
+      "SECTOR 06 — THE END"
+    ];
+
+    let roomIndex = 0;
+    let enemiesRemaining = 0;
+    let playerPosition = new THREE.Vector3(0, 0, 0);
+    let cameraPosition = new THREE.Vector3(0, 2.2, 10);
+    let cameraTarget = new THREE.Vector3(0, 0, 0);
+    let moving = false;
+    let movingSpeed = 0;
+    let lastMovement = 0;
+
+    function createRoom(index) {
+      const room = new THREE.Group();
+      room.position.set(
+        Math.sin(index * 1.73) * 3.5,
+        0,
+        Math.cos(index * 1.41) * 3.5
+      );
+      world.add(room);
+
+      const size = 7.2;
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(size, size),
+        materials.floor
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      room.add(floor);
+
+      const grid = new THREE.GridHelper(size, 12, 0x28404a, 0x14232b);
+      grid.position.y = 0.012;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.22;
+      room.add(grid);
+
+      const wallPositions = [
+        [-size / 2, 0, 0],
+        [size / 2, 0, 0],
+        [0, 0, -size / 2],
+        [0, 0, size / 2]
+      ];
+
+      for (const [x, y, z] of wallPositions) {
+        const wall = new THREE.Mesh(
+          new THREE.BoxGeometry(0.35, 4.2, size),
+          index % 3 === 0 ? materials.wallDark : materials.wall
+        );
+        wall.position.set(x, 2.1, z);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        room.add(wall);
+      }
+
+      const backWall = new THREE.Mesh(
+        new THREE.BoxGeometry(size, 4.2, 0.35),
+        materials.wallDark
+      );
+      backWall.position.set(0, 2.1, -size / 2);
+      backWall.castShadow = true;
+      backWall.receiveShadow = true;
+      room.add(backWall);
+
+      const neonSegments = [
+        { mat: materials.cyan, count: 11 },
+        { mat: materials.pink, count: 9 },
+        { mat: materials.yellow, count: 7 }
+      ];
+
+      neonSegments.forEach((config, segmentIndex) => {
+        for (let i = 0; i < config.count; i++) {
+          const x = -size / 2 + 0.65 + i * ((size - 1.3) / (config.count - 1));
+          const tube = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.035, 0.035, 0.85, 8),
+            config.mat
+          );
+          tube.rotation.z = Math.PI / 2;
+          tube.position.set(x, 3.72, 0.15 + segmentIndex * 1.2);
+          room.add(tube);
+        }
+      });
+
+      const centerRing = new THREE.Mesh(
+        new THREE.TorusGeometry(1.15, 0.045, 8, 40),
+        index % 2 === 0 ? materials.cyan : materials.pink
+      );
+      centerRing.rotation.x = Math.PI / 2;
+      centerRing.position.y = 3.75;
+      centerRing.castShadow = true;
+      room.add(centerRing);
+
+      const halo = new THREE.Mesh(
+        new THREE.CircleGeometry(1.45, 40),
+        new THREE.MeshBasicMaterial({
+          color: index % 2 === 0 ? 0x54ffb0 : 0xff35dc,
+          transparent: true,
+          opacity: 0.045,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        })
+      );
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.y = 3.68;
+      room.add(halo);
+
+      const portal = new THREE.Group();
+      portal.position.set(0, 0, size / 2 + 0.25);
+      portal.rotation.y = (index * Math.PI) / 2;
+
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(1.45, 2.6, 0.18),
+        materials.black
+      );
+      frame.castShadow = true;
+      portal.add(frame);
+
+      const glow = new THREE.Mesh(
+        new THREE.BoxGeometry(1.12, 2.25, 0.08),
+        index % 2 === 0 ? materials.cyan : materials.pink
+      );
+      glow.position.y = 1.35;
+      portal.add(glow);
+
+      const top = new THREE.Mesh(
+        new THREE.BoxGeometry(1.7, 0.16, 0.25),
+        materials.yellow
+      );
+      top.position.y = 2.75;
+      portal.add(top);
+
+      room.add(portal);
+
+      const light = new THREE.PointLight(
+        index % 2 === 0 ? 0x48ffe2 : 0xff229d,
+        18,
+        9,
+        2
+      );
+      light.position.set(0, 3.3, 0);
+      light.castShadow = true;
+      light.shadow.mapSize.set(1024, 1024);
+      light.shadow.camera.near = 0.5;
+      light.shadow.camera.far = 18;
+      light.shadow.bias = -0.001;
+      room.add(light);
+      floorLights.push(light);
+
+      const wallLight = new THREE.PointLight(
+        index % 2 === 0 ? 0x48ffe2 : 0xff229d,
+        8,
+        5,
+        2
+      );
+      wallLight.position.set(0, 2.4, -size / 2 + 0.5);
+      room.add(wallLight);
+
+      return room;
+    }
+
+    for (let i = 0; i < 6; i++) {
+      createRoom(i);
+    }
+
+    function createEnemy(index, room) {
+      const group = new THREE.Group();
+      const scale = 0.8 + (index % 3) * 0.12;
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 0.58, 0.72),
+        new THREE.MeshStandardMaterial({
+          color: 0x10171c,
+          roughness: 0.45,
+          metalness: 0.55
+        })
+      );
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      const chest = new THREE.Mesh(
+        new THREE.BoxGeometry(0.58, 0.28, 0.08),
+        index % 3 === 0 ? materials.yellow : materials.pink
+      );
+      chest.position.y = 0.38;
+      group.add(chest);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 12, 8),
+        materials.black
+      );
+      head.position.y = 0.83;
+      group.add(head);
+
+      const eyeMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff0044,
+        toneMapped: false
+      });
+
+      const leftEye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 8, 6),
+        eyeMaterial
+      );
+      leftEye.position.set(-0.12, 0.9, 0.25);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 8, 6),
+        eyeMaterial
+      );
+      rightEye.position.set(0.12, 0.9, 0.25);
+      group.add(rightEye);
+
+      const antenna = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.45, 6),
+        materials.yellow
+      );
+      antenna.position.y = 1.18;
+      group.add(antenna);
+
+      const antennaGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 8, 6),
+        new THREE.MeshBasicMaterial({
+          color: 0xffb83d,
+          toneMapped: false
+        })
+      );
+      antennaGlow.position.y = 1.42;
+      group.add(antennaGlow);
+
+      const weapon = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.08, 0.48, 8),
+        materials.cyan
+      );
+      weapon.rotation.z = Math.PI / 2;
+      weapon.position.set(0, 0.38, 0.53);
+      group.add(weapon);
+
+      room.add(group);
+
+      const enemy = {
+        group,
+        body,
+        chest,
+        head,
+        leftEye,
+        rightEye,
+        antenna,
+        antennaGlow,
+        weapon,
+        position: group.position.clone(),
+        velocity: new THREE.Vector3(
+          (index % 2 ? 1 : -1) * 0.55,
+          0,
+          ((index * 3) % 2 ? 1 : -1) * 0.55
+        ),
+        phase: index * 1.7,
+        active: true,
+        index
+      };
+
+      enemies.push(enemy);
+      enemiesRemaining++;
+      updateHUD();
+    }
+
+    function placeEnemies(room, count) {
+      for (let i = 0; i < count; i++) {
+        const angle = i * 2.399 + room.position.x;
+        const radius = 2.1 + (i % 3) * 0.8;
+        createEnemy(i, room);
+        enemy.position.set(
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius
+        );
+      }
+    }
+
+    placeEnemies(world.children[roomIndex], 4);
+
+    function createParticles(position, color, count = 20) {
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const color = new THREE.Color(color);
+
+      for (let i = 0; i < count; i++) {
+        positions[i * 3] = 0;
+        positions[i * 3 + 1] = 0;
+        positions[i * 3 + 2] = 0;
+        colors[i * 3] = 1;
+        colors[i * 3 + 1] = 1;
+        colors[i * 3 + 2] = 1;
+      }
+
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.13,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false
+      });
+
+      const points = new THREE.Points(geometry, material);
+      points.position.copy(position);
+      scene.add(points);
+
+      particles.push({
+        points,
+        positions,
+        base: position.clone(),
+        age: 0,
+        life: 2.2 + Math.random() * 1.5,
+        rotation: Math.random() * Math.PI
+      });
+    }
+
+    function spawnExplosion(position, color) {
+      createParticles(position, color, 28);
+
+      const shockwave = new THREE.Mesh(
+        new THREE.RingGeometry(0.45, 0.5, 40),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.7,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          toneMapped: false
+        })
+      );
+      shockwave.rotation.x = -Math.PI / 2;
+      shockwave.position.copy(position);
+      scene.add(shockwave);
+
+      const effect = {
+        mesh: shockwave,
+        age: 0,
+        life: 0.85
+      };
+
+      particles.push(effect);
+    }
+
+    const keyState = new Set();
+    const pressedKeys = new Set();
+
+    addEventListener("keydown", (event) => {
+      pressedKeys.add(event.code);
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
+        event.preventDefault();
+      }
+    });
+
+    addEventListener("keyup", (event) => {
+      pressedKeys.delete(event.code);
+    });
+
+    addEventListener("blur", () => {
+      pressedKeys.clear();
+    });
+
+    function updateMovement(delta) {
+      const forward = new THREE.Vector3();
+      const right = new THREE.Vector3();
+
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
+
+      right.crossVectors(forward, camera.up).normalize();
+
+      const speed = 3.2;
+      let movement = 0;
+
+      if (pressedKeys.has("KeyW") || pressedKeys.has("ArrowUp")) movement += 1;
+      if (pressedKeys.has("KeyS") || pressedKeys.has("ArrowDown")) movement -= 1;
+      if (pressedKeys.has("KeyD") || pressedKeys.has("ArrowRight")) movement += 1;
+      if (pressedKeys.has("KeyA") || pressedKeys.has("ArrowLeft")) movement -= 1;
+
+      if (movement !== 0) {
+        moving = true;
+        lastMovement = performance.now();
+      } else {
+        moving = false;
+      }
+
+      const movementVector = new THREE.Vector3(
+        right.x * movement,
+        0,
+        right.z * movement
+      ).multiplyScalar(speed * delta);
+
+      playerPosition.add(movementVector);
+
+      const room = world.children[roomIndex];
+      const roomBounds = new THREE.Box3().setFromObject(room);
+      const bounds = new THREE.Box3().setFromObject(room);
+      bounds.min.y = 0.1;
+      bounds.max.y = 3.8;
+
+      if (
+        playerPosition.x < bounds.min.x ||
+        playerPosition.x > bounds.max.x ||
+        playerPosition.z < bounds.min.z ||
+        playerPosition.z > bounds.max.z
+      ) {
+        playerPosition.x = THREE.MathUtils.clamp(
+          playerPosition.x,
+          bounds.min.x,
+          bounds.max.x
+        );
+        playerPosition.z = THREE.MathUtils.clamp(
+          playerPosition.z,
+          bounds.min.z,
+          bounds.max.z
+        );
+      }
+
+      cameraPosition.set(
+        playerPosition.x,
+        2.25,
+        playerPosition.z + 8.5
+      );
+      cameraTarget.set(
+        playerPosition.x,
+        0,
+        playerPosition.z
+      );
+    }
+
+    function updateCamera(delta) {
+      cameraPosition.lerp(cameraTarget, 1 - Math.exp(-delta * 3.2));
+
+      const yaw = Math.atan2(
+        cameraPosition.x - cameraTarget.x,
+        cameraPosition.z - cameraTarget.z
+      );
+
+      camera.position.copy(cameraPosition);
+      camera.lookAt(cameraTarget);
+
+      const desiredYaw = cameraTarget.x - cameraTarget.z;
+      camera.rotation.y = yaw;
+    }
+
+    addEventListener("pointerdown", (event) => {
+      pointer.setFromCamera(event.clientX, camera);
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(enemies, false);
+      if (hits.length) {
+        const hit = hits[0].object;
+        const enemy = enemies.find((enemy) => enemy.group === hit);
+        if (enemy && enemy.active) {
+          enemy.active = false;
+          spawnExplosion(enemy.group.position, 0xff3bd8);
+          createParticles(enemy.group.position, 0xff3bd8, 24);
+          enemiesRemaining--;
+          updateHUD();
+        }
+      }
+    });
+
+    function updateHUD() {
+      document.getElementById("roomValue").textContent =
+        String(roomIndex + 1).padStart(2, "0");
+      document.getElementById("enemyValue").textContent =
+        String(enemiesRemaining).padStart(3, "0");
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+
+      updateMovement(delta);
+      updateCamera(delta);
+
+      for (const enemy of enemies) {
+        if (!enemy.active) continue;
+
+        enemy.group.position.add(enemy.velocity);
+        enemy.group.position.x += Math.sin(elapsed * 2.2 + enemy.phase) * 0.015;
+        enemy.group.position.z += Math.cos(elapsed * 2.4 + enemy.phase) * 0.015;
+
+        if (
+          enemy.group.position.x < -3.4 ||
+          enemy.group.position.x > 3.4 ||
+          enemy.group.position.z < -3.4 ||
+          enemy.group.position.z > 3.4
+        ) {
+          enemy.group.position.x = THREE.MathUtils.clamp(
+            enemy.group.position.x,
+            -3.4,
+            3.4
+          );
+          enemy.group.position.z = THREE.MathUtils.clamp(
+            enemy.group.position.z,
+            -3.4,
+            3.4
+          );
+        }
+
+        const pulse = 0.85 + Math.sin(elapsed * 3.2 + enemy.phase) * 0.15;
+        enemy.chest.scale.setScalar(pulse);
+        enemy.head.rotation.y += delta * 1.2;
+        enemy.weapon.rotation.z = Math.PI / 2 + Math.sin(elapsed * 4 + enemy.phase) * 0.12;
+        enemy.antennaGlow.scale.setScalar(0.85 + pulse * 0.3);
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const particle = particles[i];
+        particle.age += delta;
+
+        if (particle.points instanceof THREE.Mesh) {
+          particle.mesh.rotation.y += delta * 0.5;
+          particle.mesh.material.opacity = Math.max(
+            0,
+            particle.mesh.material.opacity - delta * 0.45
+          );
+          particle.mesh.scale.setScalar(1 + particle.age * 0.8);
+
+          if (particle.age > particle.life || particle.mesh.material.opacity <= 0) {
+            scene.remove(particle.mesh);
+            particles.splice(i, 1);
+          }
+        } else {
+          particle.points.rotation.y += delta * 0.45;
+          particle.points.position.y += delta * 0.35;
+          particle.points.material.opacity = Math.max(
+            0,
+            particle.points.material.opacity - delta * 0.55
+          );
+
+          if (particle.age > particle.life || particle.points.material.opacity <= 0) {
+            scene.remove(particle.points);
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      for (let i = floorLights.length - 1; i >= 0; i--) {
+        const light = floorLights[i];
+        light.intensity = 17 + Math.sin(elapsed * 1.7 + i) * 2.5;
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.setTimeout(() => {
+      document.getElementById("loading").classList.add("hidden");
+    }, 500);
+  </script>
+</body>
+</html>

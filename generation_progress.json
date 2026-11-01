@@ -61,5 +61,14 @@
     "filename": "007_mountain_king_diamond_caverns.html",
     "verified_working": false,
     "generated_at": "2026-10-31 23:36:52"
+  },
+  "8": {
+    "id": 8,
+    "game": "Berzerk",
+    "target": "Electrified Neon Maze",
+    "platform": "Atari 2600",
+    "filename": "008_berzerk_electrified_neon_maze.html",
+    "verified_working": false,
+    "generated_at": "2026-10-31 23:46:41"
   }
 }
