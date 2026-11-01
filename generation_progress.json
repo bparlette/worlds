@@ -70,5 +70,14 @@
     "filename": "008_berzerk_electrified_neon_maze.html",
     "verified_working": false,
     "generated_at": "2026-10-31 23:46:41"
+  },
+  "9": {
+    "id": 9,
+    "game": "Warlords",
+    "target": "Quadrant Fortresses",
+    "platform": "Atari 2600",
+    "filename": "009_warlords_quadrant_fortresses.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 00:36:16"
   }
 }
