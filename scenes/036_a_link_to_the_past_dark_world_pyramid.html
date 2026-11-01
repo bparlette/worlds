@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark World Pyramid — A Link to the Past</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050307;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #f5e7c4;
+      text-shadow: 0 2px 12px #000;
+      user-select: none;
+    }
+
+    .panel {
+      position: absolute;
+      top: 22px;
+      left: 22px;
+      width: min(340px, calc(100vw - 44px));
+      padding: 18px 20px;
+      border: 1px solid rgba(240, 218, 168, 0.22);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(25, 15, 24, .88), rgba(20, 12, 20, .66));
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+    }
+
+    .eyebrow {
+      margin-bottom: 5px;
+      color: #d9a85d;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(23px, 3vw, 34px);
+      font-weight: 600;
+      line-height: 1.05;
+    }
+
+    .panel p {
+      margin: 0;
+      color: rgba(245, 231, 196, .75);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .panel strong {
+      color: #fff0ce;
+      font-weight: 650;
+    }
+
+    .route {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(245, 231, 196, .13);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: nowrap;
+      color: #e6c789;
+    }
+
+    .route b {
+      color: #fff0cf;
+    }
+
+    #legend {
+      position: absolute;
+      right: 22px;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 13px;
+      border: 1px solid rgba(240, 218, 168, .18);
+      border-radius: 999px;
+      background: rgba(18, 10, 16, .72);
+      color: rgba(255, 239, 205, .72);
+      font-size: 10px;
+      backdrop-filter: blur(10px);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #efb65f;
+      box-shadow: 0 0 12px #efb65f;
+    }
+
+    #help {
+      position: absolute;
+      left: 22px;
+      bottom: 22px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: rgba(12, 7, 12, .62);
+      color: rgba(255, 239, 205, .56);
+      font-size: 10px;
+      backdrop-filter: blur(8px);
+    }
+
+    #title {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      color: rgba(255, 229, 179, .72);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 28px;
+      pointer-events: none;
+      text-shadow: 0 2px 15px #000;
+    }
+
+    @media (max-width: 600px) {
+      .panel {
+        top: 12px;
+        left: 12px;
+        width: calc(100vw - 24px);
+        padding: 14px 16px;
+      }
+
+      #title {
+        top: 145px;
+        right: 18px;
+        font-size: 22px;
+      }
+
+      #help {
+        left: 12px;
+        bottom: 12px;
+      }
+
+      #legend {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="panel">
+      <div class="eyebrow">Dark World · Level 1</div>
+      <h1>The Dark Palace</h1>
+      <p>
+        <strong>110 rupees</strong> are needed to open the palace gate.
+        Follow the arrows, find the canopy gaps, and flip the roof switch.
+      </p>
+      <div class="route">
+        <b>DOWN</b> → <b>LEFT</b> → <b>DOWN</b> → <b>RIGHT</b> → <b>UP</b> → <b>RIGHT</b>
+      </div>
+    </div>
+
+    <div id="title">THE DARK PALACE</div>
+
+    <div id="help">Drag to orbit · Scroll to zoom</div>
+    <div id="legend"><span class="legend-dot"></span> Follow the arrow path</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x09060b);
+    scene.fog = new THREE.FogExp2(0x120b14, 0.027);
+
+    const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 120);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement: document.body.appendChild(renderer.domElement);
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      earth: new THREE.MeshStandardMaterial({ color: 0x21131c, roughness: 1 }),
+      darkEarth: new THREE.MeshStandardMaterial({ color: 0x130d14, roughness: 1 }),
+      path: new THREE.MeshStandardMaterial({ color: 0x6b3c31, roughness: 0.95 }),
+      thorn: new THREE.MeshStandardMaterial({ color: 0x482018, roughness: 0.8 }),
+      thornLight: new THREE.MeshStandardMaterial({ color: 0x753823, roughness: 0.82 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x311b20, roughness: 0.9, side: THREE.DoubleSide }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x4b2629, roughness: 0.88, side: THREE.DoubleSide }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xd7a34b, roughness: 0.42, metalness: 0.68 }),
+      goldDark: new THREE.MeshStandardMaterial({ color: 0x8c5b19, roughness: 0.5, metalness: 0.6 }),
+      bone: new THREE.MeshStandardMaterial({ color: 0xc3a26a, roughness: 0.78 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0x241720, roughness: 0.96 }),
+      wallDark: new THREE.MeshStandardMaterial({ color: 0x120c12, roughness: 1 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x7b1725, roughness: 0.85 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x080508, roughness: 1 }),
+      moon: new THREE.MeshStandardMaterial({ color: 0xd9c6a4, roughness: 0.9 })
+    };
+
+    const arrowMaterials = [
+      new THREE.MeshBasicMaterial({ color: 0xf0b75c }),
+      new THREE.MeshBasicMaterial({ color: 0xd98b3f }),
+      new THREE.MeshBasicMaterial({ color: 0x7d4527 })
+    ];
+
+    const arrowGroups = [];
+    const particles = [];
+    const flowers = [];
+    const butterflies = [];
+
+    const clock = new THREE.Clock();
+    const cameraTarget = new THREE.Vector3(0, 1.8, 0);
+
+    function seededRandom(seed) {
+      let value = seed >>> 0;
+      return () => {
+        value = (value * 1664525 + 1013904223) >>> 0;
+        return value / 4294967296;
+      };
+    }
+
+    const random = seededRandom(1998);
+
+    function mesh(geometry, material, parent = world, position = [0, 0, 0], rotation = [0, 0, 0], castShadow = true) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(...position);
+      object.rotation.set(...rotation);
+      object.castShadow = castShadow;
+      object.receiveShadow = true;
+      parent.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, parent = world, position = [0, 0, 0], rotation = [0, 0, 0]) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, parent, position, rotation);
+    }
+
+    function cylinder(radius, height, material, parent = world, position = [0, 0, 0], rotation = [0, 0, 0], segments = 10) {
+      return mesh(new THREE.CylinderGeometry(radius, radius, height, segments), material, parent, position, rotation);
+    }
+
+    function cone(radius, height, material, parent = world, position = [0, 0, 0], rotation = [0, 0, 0], segments = 9) {
+      return mesh(new THREE.ConeGeometry(radius, height, segments), material, parent, position, rotation);
+    }
+
+    function sphere(radius, material, parent = world, position = [0, 0, 0], rotation = [0, 0, 0], segments = 10) {
+      return mesh(new THREE.SphereGeometry(radius, segments, Math.max(6, segments / 2)), material, parent, position, rotation);
+    }
+
+    function makeArrow(x, z, angle = 0, colorIndex = 0, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.08, z);
+      group.rotation.y = angle;
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      const shaft = box(0.12, 0.055, 0.52, arrowMaterials[colorIndex], group, [0, 0, 0]);
+      const head = box(0.12, 0.055, 0.22, arrowMaterials[colorIndex], group, [0, 0, 0.33]);
+      head.rotation.y = Math.PI / 2;
+      const tip = cone(0.14, 0.12, arrowMaterials[colorIndex], group, [0, 0, 0.53], [0, 0, -Math.PI / 2], 6);
+      tip.rotation.z = 0;
+
+      arrowGroups.push(group);
+      return group;
+    }
+
+    function makeBush(x, z, scale = 1, color = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      const count = 4 + Math.floor(random() * 5);
+
+      for (let i = 0; i < count; i++) {
+        const angle = random() * Math.PI * 2;
+        const radius = random() * 0.65;
+        const height = 0.55 + random() * 0.65;
+        const x2 = Math.cos(angle) * radius;
+        const z2 = Math.sin(angle) * radius;
+
+        const leaf = cone(
+          0.22 + random() * 0.18,
+          height,
+          i % 2 ? materials.leaf : materials.leafLight,
+          group,
+          [x2, height * 0.52, z2],
+          [random() * 0.25, angle, random() * 0.25],
+          7
+        );
+
+        const thorn = cone(
+          0.055,
+          height * 0.75,
+          i % 2 ? materials.thorn : materials.thornLight,
+          group,
+          [x2 * 1.08, height * 0.68, z2],
+          [random() * 0.2, angle, random() * 0.2],
+          5
+        );
+
+        if (random() > 0.55) {
+          const flower = sphere(0.085, materials.gold, group, [x2 * 1.1, height * 0.82, z2]);
+          flower.scale.y = 0.7;
+          flowers.push({ object: flower, phase: random() * 6, base: flower.position.clone() });
+        }
+      }
+
+      const center = cone(0.35, 0.72, materials.thorn, group, [0, 0.36, 0], [0, 0, 0], 7);
+      center.scale.z = 0.75;
+
+      return group;
+    }
+
+    function makeTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      cylinder(0.25, 2.2, materials.bone, group, [0, 1.1, 0], [0, random() * 0.4, 0], 7);
+      cylinder(0.13, 1.3, materials.bone, group, [0, 2.25, 0], [0, 0, 0], 6);
+
+      const crown = cone(1.25, 2.4, materials.leaf, group, [0, 3.45, 0], [0, 0, 0], 8);
+      crown.scale.z = 0.82;
+      crown.rotation.y = random() * Math.PI;
+
+      const crown2 = cone(0.88, 1.8, materials.leafLight, group, [0.45, 4.25, 0.05], [0, 0, -0.25], 7);
+      crown2.rotation.y = random() * Math.PI;
+
+      for (let i = 0; i < 6; i++) {
+        const angle = random() * Math.PI * 2;
+        const radius = random() * 0.65;
+        const leaf = cone(
+          0.28,
+          0.85 + random() * 0.45,
+          materials.leaf,
+          group,
+          [Math.cos(angle) * radius, 2.55 + random() * 0.7, Math.sin(angle) * radius],
+          [0, angle, 0],
+          6
+        );
+        leaf.rotation.z = (random() - 0.5) * 0.4;
+      }
+
+      return group;
+    }
+
+    function makeRuin(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      const base = box(3.4, 0.25, 2.6, materials.darkEarth, group, [0, 0.12, 0]);
+      base.receiveShadow = true;
+
+      const left = box(0.65, 1.7 + random() * 0.6, 1.35, materials.wall, group, [-1.1, 1.0, 0]);
+      left.rotation.z = (random() - 0.5) * 0.12;
+
+      const right = box(0.62, 1.5 + random() * 0.5, 1.35, materials.wall, group, [1.15, 0.95, 0]);
+      right.rotation.z = (random() - 0.5) * 0.12;
+
+      const back = box(2.8, 1.25, 0.55, materials.wallDark, group, [0, 1.05, -0.55]);
+      back.rotation.y = (random() - 0.5) * 0.15;
+
+      const arch = box(0.9, 1.25, 0.35, materials.wall, group, [0, 0.95, 0.42]);
+      arch.rotation.z = 0.03;
+
+      const gold = box(0.13, 0.55, 0.08, materials.gold, group, [0, 1.05, 0.62]);
+      gold.rotation.z = 0.08;
+
+      for (let i = 0; i < 5; i++) {
+        const bone = box(0.18, 0.35 + random() * 0.4, 0.14, materials.bone, group, [-0.3 + random() * 0.6, 1.65 + i * 0.3, 0.78]);
+        bone.rotation.z = (random() - 0.5) * 0.2;
+      }
+
+      return group;
+    }
+
+    function makeSwitch(x, z, target) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      cylinder(0.16, 0.28, materials.bone, group, [0, 0.14, 0], [0, 0, 0], 8);
+
+      const lever = box(0.09, 0.26, 0.07, materials.gold, group, [0, 0.39, 0]);
+      lever.rotation.z = -0.55;
+
+      const base = cylinder(0.34, 0.12, materials.darkEarth, group, [0, 0.06, 0], [0, 0, 0], 10);
+      base.receiveShadow = true;
+
+      target.add(lever);
+      return group;
+    }
+
+    // Lighting: moonlight, warm path lamps, and subtle red palace glow.
+    scene.add(new THREE.HemisphereLight(0x76506b, 0x160b12, 0.62));
+
+    const moonLight = new THREE.DirectionalLight(0xb9a9d9, 1.55);
+    moonLight.position.set(-14, 22, 12);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.set(2048, 2048);
+    moonLight.shadow.camera.left = -25;
+    moonLight.shadow.camera.right = 25;
+    moonLight.shadow.camera.top = 25;
+    moonLight.shadow.camera.bottom = -25;
+    moonLight.shadow.camera.near = 1;
+    moonLight.shadow.camera.far = 60;
+    moonLight.shadow.bias = -0.0004;
+    scene.add(moonLight);
+
+    const warmLight = new THREE.PointLight(0xffa84d, 1.8, 13, 2);
+    warmLight.position.set(0, 3.8, 3.5);
+    scene.add(warmLight);
+
+    const palaceLight = new THREE.PointLight(0x8d2643, 1.2, 15, 2);
+    palaceLight.position.set(0, 4.2, 0);
+    scene.add(palaceLight);
+
+    // Terrain: a dark, uneven circular island with a winding path.
+    const terrain = mesh(
+      new THREE.CircleGeometry(17, 96),
+      materials.earth,
+      world,
+      [0, -0.03, 0],
+      [-Math.PI / 2, 0, 0]
+    );
+    terrain.receiveShadow = true;
+
+    const terrainRim = mesh(
+      new THREE.RingGeometry(16.4, 17.1, 96),
+      materials.darkEarth,
+      world,
+      [0, 0.015, 0],
+      [-Math.PI / 2, 0, 0]
+    );
+    terrainRim.receiveShadow = true;
+
+    // Path segments: the required route, with gaps and a final straight approach.
+    const pathPoints = [
+      [0, 2.8], [0, 0.8], [0, -1.3],
+      [-1.6, -1.3], [-3.6, -1.3], [-5.3, -1.3],
+      [-5.3, 1.3], [-5.3, 3.4],
+      [-3.6, 3.4], [-1.6, 3.4], [0, 3.4],
+      [1.6, 3.4], [3.6, 3.4], [5.3, 3.4]
+    ];
+
+    for (let i = 0; i < pathPoints.length - 1; i++) {
+      const a = pathPoints[i];
+      const b = pathPoints[i + 1];
+      const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const angle = Math.atan2(b[1] - a[1], b[0] - a[0]);
+
+      const path = box(
+        length,
+        0.055,
+        0.95,
+        materials.path,
+        world,
+        [(a[0] + b[0]) / 2, 0.025, (a[1] + b[1]) / 2],
+        [0, -angle, 0]
+      );
+      path.receiveShadow = true;
+    }
+
+    // Arrows mark the easy first section and the final route.
+    makeArrow(0, 2.35, 0, 0, 1.05);
+    makeArrow(0, 0.85, 0, 0, 1.05);
+    makeArrow(0, -1.35, 0, 0, 1.05);
+    makeArrow(-2.4, -1.35, Math.PI, 1, 0.95);
+    makeArrow(-4.15, -1.35, Math.PI, 1, 0.95);
+    makeArrow(-5.35, 0, Math.PI, 1, 0.9);
+    makeArrow(-5.35, 2.3, Math.PI, 1, 0.9);
+    makeArrow(-3.5, 3.4, Math.PI, 1, 0.9);
+    makeArrow(-1.6, 3.4, Math.PI, 1, 0.9);
+    makeArrow(0, 3.4, Math.PI, 1, 0.9);
+    makeArrow(1.6, 3.4, Math.PI, 1, 0.9);
+    makeArrow(3.5, 3.4, Math.PI, 1, 0.9);
+    makeArrow(5.35, 2.3, Math.PI, 1, 0.9);
+
+    // Canopy of thorny bushes surrounding the maze.
+    const bushPositions = [
+      [-7.8, -6.6], [-6.2, -7.6], [-4.4, -7.8], [-2.7, -7.6], [-1.0, -7.7],
+      [1.3, -7.6], [3.1, -7.8], [4.9, -7.5], [6.7, -6.8], [8.1, -4.9],
+      [8.2, -2.8], [8.0, -0.8], [7.8, 1.5], [7.4, 3.6], [5.9, 4.8],
+      [3.6, 5.0], [1.4, 5.1], [-0.8, 5.0], [-2.8, 5.0], [-4.5, 4.9],
+      [-6.4, 4.7], [-8.0, 3.5], [-8.6, 1.4], [-8.4, -0.8], [-7.9, -2.8],
+      [-6.4, -4.0], [4.6, -4.8], [6.0, -3.7], [7.0, -5.1], [8.7, -3.2],
+      [-4.6, 6.0], [-2.5, 6.6], [0, 6.7], [2.2, 6.5], [4.3, 6.1],
+      [-5.7, 7.0], [-3.2, 7.4], [0.2, 7.6], [3.0, 7.3], [5.3, 7.0]
+    ];
+
+    for (const [x, z] of bushPositions) {
+      const scale = 0.8 + random() * 1.15;
+      makeBush(x, z, scale, Math.floor(random() * 3));
+    }
+
+    // Broken canopy gaps: darker patches and golden edge lights.
+    const canopyGaps = [
+      [-1.15, -1.35, 0.95],
+      [2.65, -1.35, 1.05],
+      [-5.35, 0, 0.85],
+      [0, 3.4, 0.9],
+      [3.55, 3.4, 0.8]
+    ];
+
+    for (const [x, z, radius] of canopyGaps) {
+      const gap = mesh(
+        new THREE.CircleGeometry(radius, 24),
+        materials.black,
+        world,
+        [x, 0.045, z],
+        [-Math.PI / 2, 0, 0]
+      );
+      gap.receiveShadow = true;
+
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        const light = sphere(
+          0.075,
+          materials.gold,
+          world,
+          [x + Math.cos(angle) * radius * 0.72, 0.16, z + Math.sin(angle) * radius * 0.72]
+        );
+        light.scale.y = 0.7;
+        flowers.push({ object: light, phase: random() * 6, base: light.position.clone() });
+      }
+    }
+
+    // Ruins along the route.
+    makeRuin(-3.2, 0.8, 0.82);
+    makeRuin(2.2, -0.5, 0.7);
+    makeRuin(-0.4, 2.0, 0.62);
+    makeRuin(4.1, 1.0, 0.68);
+    makeRuin(-4.8, 2.5, 0.58);
+
+    // Palace entrance and roof switch.
+    const palace = new THREE.Group();
+    palace.position.set(0, 0, 5.5);
+    world.add(palace);
+
+    const palaceBase = box(6.8, 0.35, 4.2, materials.darkEarth, palace, [0, 0.12, 0]);
+    palaceBase.receiveShadow = true;
+
+    const entrance = box(2.25, 3.2, 0.35, materials.wall, palace, [0, 1.75, 1.85]);
+    entrance.rotation.z = 0.015;
+
+    const entranceTop = box(2.5, 0.28, 2.2, materials.wall, palace, [0, 3.45, 0.25]);
+    entranceTop.rotation.y = 0.04;
+
+    const sideWall = box(0.45, 3.2, 4.0, materials.wall, palace, [-3.25, 1.7, 0]);
+    const sideWall2 = box(0.45, 3.2, 4.0, materials.wall, palace, [3.25, 1.7, 0]);
+
+    const roof = box(6.8, 0.35, 4.7, materials.wallDark, palace, [0, 3.8, -0.1]);
+    roof.rotation.z = 0.025;
+
+    const roofRim = box(7.2, 0.18, 0.2, materials.goldDark, palace, [0, 4.02, 2.15]);
+    roofRim.rotation.z = 0.025;
+
+    const switchTarget = makeSwitch(0, 3.95, palace);
+
+    // Gold coin pile beside the entrance.
+    const coinPile = new THREE.Group();
+    coinPile.position.set(2.65, 0, 3.6);
+    palace.add(coinPile);
+
+    for (let i = 0; i < 18; i++) {
+      const coin = cylinder(
+        0.12 + random() * 0.035,
+        0.025,
+        materials.gold,
+        coinPile,
+        [
+          (random() - 0.5) * 0.85,
+          0.11 + Math.floor(i / 3) * 0.075 + random() * 0.035,
+          (random() - 0.5) * 0.7
+        ],
+        [0, random() * Math.PI, 0],
+        12
+      );
+      coin.castShadow = true;
+    }
+
+    // Small lanterns and hanging chains.
+    for (const [x, z] of [[-2.7, 2.1], [2.7, 2.1], [-2.7, -1.8], [2.7, -1.8]]) {
+      cylinder(0.025, 0.8, materials.goldDark, world, [x, 0.4, z], [0, 0, 0], 6);
+      const lantern = sphere(0.13, materials.gold, world, [x, 0.88, z]);
+      lantern.scale.y = 1.35;
+      const glow = new THREE.PointLight(0xffb14b, 0.45, 3.2, 2);
+      glow.position.set(x, 0.9, z);
+      scene.add(glow);
+    }
+
+    // Floating gold motes.
+    for (let i = 0; i < 55; i++) {
+      const angle = random() * Math.PI * 2;
+      const radius = 3 + random() * 8;
+      const size = 0.025 + random() * 0.06;
+      const mote = sphere(size, materials.gold, world, [
+        Math.cos(angle) * radius,
+        0.5 + random() * 6.5,
+        Math.sin(angle) * radius
+      ]);
+      mote.castShadow = false;
+      particles.push({
+        object: mote,
+        phase: random() * Math.PI * 2,
+        speed: 0.35 + random() * 0.55,
+        base: mote.position.clone()
+      });
+    }
+
+    // Fireflies.
+    for (let i = 0; i < 18; i++) {
+      const firefly = sphere(
+        0.045 + random() * 0.035,
+        new THREE.MeshBasicMaterial({ color: 0xffc866 }),
+        world,
+        [
+          (random() - 0.5) * 15,
+          0.5 + random() * 5,
+          (random() - 0.5) * 15
+        ],
+        [0, 0, 0],
+        6
+      );
+      firefly.castShadow = false;
+      flowers.push({ object: firefly, phase: random() * 6, base: firefly.position.clone() });
+    }
+
+    // Butterfly-like sprites made from small gold discs.
+    for (let i = 0; i < 12; i++) {
+      const wingsLeft = sphere(0.09, materials.gold, world, [0, 0, 0], [0, 0, 0], 6);
+      const wingsRight = sphere(0.09, materials.gold, world, [0, 0, 0], [0, 0, 0], 6);
+      wingsLeft.scale.x = 0.35;
+      wingsRight.scale.x = 0.35;
+      butterflies.push({
+        wingsLeft,
+        wingsRight,
+        phase: random() * Math.PI * 2,
+        speed: 0.35 + random() * 0.45,
+        base: new THREE.Vector3(
+          (random() - 0.5) * 12,
+          0.5 + random() * 5,
+          (random() - 0.5) * 12
+        )
+      });
+    }
+
+    // Camera controls: native orbit with drag, wheel zoom, touch pinch, and keyboard.
+    const controls = {
+      theta: 0.68,
+      phi: 1.03,
+      radius: 23,
+      target: cameraTarget.clone(),
+      dragging: false,
+      pointerX: 0,
+      pointerY: 0,
+      previousPinch: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+      const dx = event.clientX - controls.pointerX;
+      const dy = event.clientY - controls.pointerY;
+      controls.pointerX = event.clientX;
+      controls.pointerY = event.clientY;
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(controls.phi - dy * 0.005, 0.28, 1.47);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(controls.radius + event.deltaY * 0.012, 9, 36);
+      updateCamera();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    const touches = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("touchstart", (event) => {
+      for (const touch of event.changedTouches) {
+        touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+      }
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()];
+        pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("touchmove", (event) => {
+      for (const touch of event.changedTouches) {
+        if (!touches.has(touch.identifier)) continue;
+        touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+      }
+
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()];
+        const distance = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(controls.radius + (pinchDistance - distance) * 0.018, 9, 36);
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    }, { passive: true });
+
+    function releaseTouch(event) {
+      touches.delete(event.pointerId);
+      if (touches.size < 2) pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("touchend", releaseTouch);
+    renderer.domElement.addEventListener("touchleave", releaseTouch);
+
+    addEventListener("keydown", (event) => {
+      const amount = 0.08;
+      if (event.key === "ArrowLeft") controls.theta += amount;
+      if (event.key === "ArrowRight") controls.theta -= amount;
+      if (event.key === "ArrowUp") controls.phi = Math.max(0.28, controls.phi - amount);
+      if (event.key === "ArrowDown") controls.phi = Math.min(1.47, controls.phi + amount);
+      updateCamera();
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+
+    // Animation.
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      for (const item of particles) {
+        item.object.position.y = item.base.y + Math.sin(elapsed * item.speed + item.phase) * 0.18;
+        item.object.position.x = item.base.x + Math.cos(elapsed * item.speed * 0.7 + item.phase) * 0.16;
+        item.object.position.z = item.base.z + Math.sin(elapsed * item.speed * 0.55 + item.phase) * 0.16;
+        item.object.scale.setScalar(0.75 + Math.sin(elapsed * 1.4 + item.phase) * 0.35);
+      }
+
+      for (const item of flowers) {
+        item.object.position.y = item.base.y + Math.sin(elapsed * 1.15 + item.phase) * 0.045;
+        item.object.rotation.z = Math.sin(elapsed * 0.8 + item.phase) * 0.16;
+      }
+
+      for (const item of butterflies) {
+        const cycle = elapsed * item.speed + item.phase;
+        item.wingsLeft.position.set(
+          item.base.x + Math.cos(cycle) * 0.09,
+          item.base.y + Math.sin(cycle * 1.3) * 0.09,
+          item.base.z + Math.sin(cycle * 0.8) * 0.13
+        );
+        item.wingsRight.position.set(
+          item.base.x + Math.cos(cycle) * 0.09,
+          item.base.y + Math.sin(cycle * 1.3) * 0.09,
+          item.base.z + Math.sin(cycle * 0.8) * 0.13
+        );
+        item.wingsLeft.rotation.y = Math.sin(cycle) * 0.28;
+        item.wingsRight.rotation.y = -Math.sin(cycle) * 0.28;
+      }
+
+      palaceLight.intensity = 1.05 + Math.sin(elapsed * 1.7) * 0.12;
+      warmLight.intensity = 1.55 + Math.sin(elapsed * 1.35) * 0.12;
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
