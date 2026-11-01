@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>3D Coder — Scene Generator & Gallery</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #141c2e;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --border: #1e293b;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --card-hover: #1e293b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+    .header {
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    p.sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .main-card {
+      width: 100%;
+      max-width: 700px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 90px;
+      background: #080d1a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      font-size: 15px;
+      resize: vertical;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    textarea:focus {
+      border-color: var(--accent);
+    }
+    .upload-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .file-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: #1e293b;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #cbd5e1;
+      border: 1px dashed #334155;
+    }
+    #imagePreview {
+      max-width: 50px;
+      max-height: 50px;
+      border-radius: 8px;
+      display: none;
+      border: 1px solid var(--accent);
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px var(--accent-glow);
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn-submit:active {
+      transform: scale(0.98);
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .scene-container {
+      width: 100%;
+      max-width: 700px;
+      display: none;
+      margin-bottom: 25px;
+    }
+    .scene-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .scene-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .links-row {
+      display: flex;
+      gap: 8px;
+    }
+    .action-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: 8px;
+      background: #1e293b;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid #334155;
+    }
+    .action-link:active {
+      background: #334155;
+    }
+    .viewport-box {
+      width: 100%;
+      height: 480px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .quick-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .pill {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .pill:hover {
+      border-color: var(--accent);
+      color: #e2e8f0;
+    }
+
+    /* History Gallery Section */
+    .history-section {
+      width: 100%;
+      max-width: 700px;
+      margin-top: 10px;
+      margin-bottom: 40px;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+    .history-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .history-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .history-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border 0.2s;
+    }
+    .history-card:hover {
+      border-color: #334155;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .card-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .card-prompt {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+      background: #0a0f1d;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+    }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .card-btn {
+      flex: 1;
+      text-align: center;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      background: #1e293b;
+      color: #e2e8f0;
+      text-decoration: none;
+      border: 1px solid #334155;
+      cursor: pointer;
+    }
+    .card-btn.primary {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: var(--accent);
+    }
+    .card-btn:active {
+      filter: brightness(1.2);
+    }
+    .empty-history {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Qwen3.5-4B-3D-Coder</div>
+    <h1>Interactive 3D Scene Studio</h1>
+    <p class="sub">Prompt a world or upload an image to generate & view live 3D Three.js scenes</p>
+  </div>
+
+  <div class="main-card">
+    <textarea id="promptInput" placeholder="Describe a 3D scene (e.g. Rainy amber market street with lanterns and reflection puddles)...">Rainy amber market street with warm glowing lanterns, wooden market stalls, and wet cobblestone puddles</textarea>
+
+    <div class="upload-row">
+      <label class="file-btn">
+        📷 Upload Reference Image
+        <input type="file" id="imageInput" accept="image/*" style="display:none">
+      </label>
+      <img id="imagePreview" alt="Preview">
+      <span id="imageName" style="font-size: 12px; color: var(--text-muted);"></span>
+    </div>
+
+    <div class="quick-prompts">
+      <div class="pill" onclick="setPrompt('Rainy amber market street with warm glowing lanterns, wooden market stalls, and wet cobblestone puddles')">🏮 Amber Market</div>
+      <div class="pill" onclick="setPrompt('Floating cybernetic crystal monolith emitting purple volumetric point lights over a reflective grid')">💎 Crystal Monolith</div>
+      <div class="pill" onclick="setPrompt('Subarctic deep ocean seabed with rugged glacial bedrock crevices, scattered boulders, gravel beds, and northern kelp')">🌊 Arctic Seabed</div>
+      <div class="pill" onclick="setPrompt('Voxel neon cyberpunk street corner with rain puddles and glowing billboards')">🏙️ Voxel Cyberpunk</div>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <button class="btn-submit" id="btnGenerate" onclick="generateScene()">
+        <span class="spinner" id="spinner"></span>
+        <span id="btnText">✨ Generate & Deploy 3D Scene</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="scene-container" id="sceneContainer">
+    <div class="scene-header">
+      <h3 id="sceneTitle">🎮 Live 3D Viewport</h3>
+      <div class="links-row">
+        <a id="btnOpenFull" class="action-link" target="_blank" href="#">↗ Fullscreen</a>
+        <a id="btnCopyUrl" class="action-link" href="#" onclick="copySceneUrl(event)">📋 Copy Link</a>
+      </div>
+    </div>
+    <div class="viewport-box">
+      <iframe id="sceneIframe" src="about:blank"></iframe>
+    </div>
+  </div>
+
+  <!-- History & Creations Gallery Section -->
+  <div class="history-section">
+    <div class="history-header">
+      <h2>📚 Saved Creations (<span id="historyCount">0</span>)</h2>
+      <button onclick="loadHistory()" style="background:none; border:none; color:var(--accent); font-size:12px; font-weight:600; cursor:pointer;">↻ Refresh</button>
+    </div>
+    <div class="history-grid" id="historyList">
+      <div class="empty-history">Loading your creations...</div>
+    </div>
+  </div>
+
+  <script>
+    let activeImageBase64 = null;
+    let currentSceneUrl = null;
+    let activeJobPollInterval = null;
+
+    document.getElementById('imageInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        activeImageBase64 = evt.target.result;
+        const preview = document.getElementById('imagePreview');
+        preview.src = activeImageBase64;
+        preview.style.display = 'block';
+        document.getElementById('imageName').innerText = file.name;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function setPrompt(txt) {
+      document.getElementById('promptInput').value = txt;
+    }
+
+    async function generateScene() {
+      const prompt = document.getElementById('promptInput').value.trim();
+      const btn = document.getElementById('btnGenerate');
+      const spinner = document.getElementById('spinner');
+      const btnText = document.getElementById('btnText');
+
+      btn.disabled = true;
+      spinner.style.display = 'inline-block';
+      btnText.innerText = 'Queued & Generating 3D Scene...';
+
+      try {
+        const resp = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            prompt: prompt,
+            image: activeImageBase64
+          })
+        });
+
+        const res = await resp.json();
+        if (!res.success) {
+          alert('Generation error: ' + (res.error || 'Unknown'));
+          resetGenerateBtn();
+          return;
+        }
+
+        const jobId = res.job_id;
+        pollJob(jobId);
+
+      } catch (err) {
+        alert('Network error: ' + err.message);
+        resetGenerateBtn();
+      }
+    }
+
+    function pollJob(jobId) {
+      if (activeJobPollInterval) clearInterval(activeJobPollInterval);
+      
+      const btnText = document.getElementById('btnText');
+      let dots = 0;
+
+      activeJobPollInterval = setInterval(async () => {
+        dots = (dots + 1) % 4;
+        btnText.innerText = 'Building 3D Scene' + '.'.repeat(dots);
+
+        try {
+          const resp = await fetch('/api/job/' + jobId);
+          const job = await resp.json();
+
+          if (job.status === 'completed') {
+            clearInterval(activeJobPollInterval);
+            resetGenerateBtn();
+            displayScene(job.result);
+            loadHistory();
+          } else if (job.status === 'failed') {
+            clearInterval(activeJobPollInterval);
+            resetGenerateBtn();
+            alert('Generation failed: ' + (job.error || 'Unknown'));
+          }
+        } catch (e) {
+          console.warn('Polling error:', e);
+        }
+      }, 2500);
+    }
+
+    function resetGenerateBtn() {
+      const btn = document.getElementById('btnGenerate');
+      const spinner = document.getElementById('spinner');
+      const btnText = document.getElementById('btnText');
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.innerText = '✨ Generate & Deploy 3D Scene';
+    }
+
+    function displayScene(item) {
+      const container = document.getElementById('sceneContainer');
+      const iframe = document.getElementById('sceneIframe');
+      const title = document.getElementById('sceneTitle');
+
+      currentSceneUrl = window.location.origin + item.scene_url;
+      title.innerText = '🎮 ' + (item.title || '3D Scene Viewport');
+      iframe.src = item.scene_url;
+      document.getElementById('btnOpenFull').href = item.scene_url;
+      container.style.display = 'block';
+      container.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copySceneUrl(e, url) {
+      if (e) e.preventDefault();
+      const target = url || currentSceneUrl;
+      if (!target) return;
+      navigator.clipboard.writeText(target).then(() => {
+        alert('Copied 3D scene link to clipboard!\n' + target);
+      });
+    }
+
+    async function loadHistory() {
+      const list = document.getElementById('historyList');
+      const count = document.getElementById('historyCount');
+      try {
+        const resp = await fetch('/api/history');
+        const items = await resp.json();
+        count.innerText = items.length;
+
+        if (!items || items.length === 0) {
+          list.innerHTML = '<div class="empty-history">No creations saved yet. Generate your first 3D scene above!</div>';
+          return;
+        }
+
+        let html = '';
+        items.forEach((item, idx) => {
+          const fullUrl = window.location.origin + item.scene_url;
+          html += `
+            <div class="history-card">
+              <div class="card-top">
+                <div class="card-title">🏛️ ${escapeHtml(item.title || 'Untitled 3D Scene')}</div>
+                <div class="card-date">${escapeHtml(item.created_at || '')}</div>
+              </div>
+              <div class="card-prompt">"${escapeHtml(item.prompt || '')}"</div>
+              <div class="card-actions">
+                <button class="card-btn primary" onclick='displayScene(${JSON.stringify(item)})'>▶ Load in Viewport</button>
+                <a class="card-btn" target="_blank" href="${item.scene_url}">↗ Fullscreen</a>
+                <button class="card-btn" onclick='copySceneUrl(event, "${fullUrl}")'>📋 Copy Link</button>
+              </div>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      } catch (err) {
+        list.innerHTML = '<div class="empty-history">Failed to load history: ' + err.message + '</div>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    // Auto load on open
+    window.addEventListener('DOMContentLoaded', () => {
+      loadHistory();
+    });
+  </script>
+
+</body>
+</html>
