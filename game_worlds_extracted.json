@@ -1,0 +1,1002 @@
+[
+  {
+    "id": 1,
+    "platform": "Atari 2600",
+    "game": "Adventure",
+    "target": "Castles & Mazes",
+    "url": "https://strategywiki.org/wiki/Adventure_(Atari_2600)/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Castles & Mazes from Adventure on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Castles & Mazes' from Adventure (Atari 2600). World environmental details: A classic 3D retro environment capturing Castles & Mazes from Adventure on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 2,
+    "platform": "Atari 2600",
+    "game": "Pitfall!",
+    "target": "Jungle & Underworld",
+    "url": "https://strategywiki.org/wiki/Pitfall!/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Jungle & Underworld from Pitfall! on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Jungle & Underworld' from Pitfall! (Atari 2600). World environmental details: A classic 3D retro environment capturing Jungle & Underworld from Pitfall! on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 3,
+    "platform": "Atari 2600",
+    "game": "Haunted House",
+    "target": "Ghost Mansion",
+    "url": "https://strategywiki.org/wiki/Haunted_House/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Ghost Mansion from Haunted House on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Ghost Mansion' from Haunted House (Atari 2600). World environmental details: A classic 3D retro environment capturing Ghost Mansion from Haunted House on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 4,
+    "platform": "Atari 2600",
+    "game": "Yars' Revenge",
+    "target": "Neutral Zone & Shield",
+    "url": "https://strategywiki.org/wiki/Yars%27_Revenge",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Neutral Zone & Shield from Yars' Revenge on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Neutral Zone & Shield' from Yars' Revenge (Atari 2600). World environmental details: A classic 3D retro environment capturing Neutral Zone & Shield from Yars' Revenge on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 5,
+    "platform": "Atari 2600",
+    "game": "River Raid",
+    "target": "Canyon Riverway",
+    "url": "https://strategywiki.org/wiki/River_Raid",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Canyon Riverway from River Raid on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Canyon Riverway' from River Raid (Atari 2600). World environmental details: A classic 3D retro environment capturing Canyon Riverway from River Raid on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 6,
+    "platform": "Atari 2600",
+    "game": "Solaris",
+    "target": "Stellar Quadrants & Canyons",
+    "url": "https://strategywiki.org/wiki/Solaris_(Atari_2600)/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Stellar Quadrants & Canyons from Solaris on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Stellar Quadrants & Canyons' from Solaris (Atari 2600). World environmental details: A classic 3D retro environment capturing Stellar Quadrants & Canyons from Solaris on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 7,
+    "platform": "Atari 2600",
+    "game": "Mountain King",
+    "target": "Diamond Caverns",
+    "url": "https://strategywiki.org/wiki/Mountain_King",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Diamond Caverns from Mountain King on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Diamond Caverns' from Mountain King (Atari 2600). World environmental details: A classic 3D retro environment capturing Diamond Caverns from Mountain King on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 8,
+    "platform": "Atari 2600",
+    "game": "Berzerk",
+    "target": "Electrified Neon Maze",
+    "url": "https://strategywiki.org/wiki/Berzerk",
+    "section_count": 2,
+    "description": "[Story] The story of Berzerk is a bit chilling. As the player of the game, you are forced to wander forever in a maze full of enemy robots, destroying as many as you can and moving from room to room until the robots ultimately defeat you. There is no escape, only the will to live.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Electrified Neon Maze' from Berzerk (Atari 2600). World environmental details: [Story] The story of Berzerk is a bit chilling. As the player of the game, you are forced to wander forever in a maze full of enemy robots, destroying as many as you can and moving from room to room until the robots ultimately defeat you. There is no escape, only the will to live.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 9,
+    "platform": "Atari 2600",
+    "game": "Warlords",
+    "target": "Quadrant Fortresses",
+    "url": "https://strategywiki.org/wiki/Warlords_(1980)",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Quadrant Fortresses from Warlords on Atari 2600.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Quadrant Fortresses' from Warlords (Atari 2600). World environmental details: A classic 3D retro environment capturing Quadrant Fortresses from Warlords on Atari 2600.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 10,
+    "platform": "NES",
+    "game": "Super Mario Bros.",
+    "target": "World 1-1",
+    "url": "https://strategywiki.org/wiki/Super_Mario_Bros./Walkthrough",
+    "section_count": 2,
+    "description": "[Overview] The game is set up as eight worlds divided into four levels each. In each level, Mario or Luigi must run or swim through the level, dodging enemies and obstacles while grabbing power-ups and coins. The game can be played by either one or two players. In two-player mode the players alternate, with player 1 controlling Mario, and player 2 taking control of Luigi. To begin the complete walkthrough, start withWorld 1. Coin Rooms, Heavens, & Warp Zones The standard time limit sequence for levels is as follows: However, there are six exceptions: Worlds3-2,5-1and8-1all have clear times of 300.World 8-1is also notable because it is the longest level in the surface world! Castles4-4,7-4and8-4are all mazes, and they have clear times of 400.World 8-4is also the only world where you can be sent backwards! InVs. Super Mario Bros., Worlds2-2,4-1,6-1,7-1,8-1and8-2have clear times of 350. How",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'World 1-1' from Super Mario Bros. (NES). World environmental details: [Overview] The game is set up as eight worlds divided into four levels each. In each level, Mario or Luigi must run or swim through the level, dodging enemies and obstacles while grabbing power-ups and coins. The game can be played by either one or two players. In two-player mode the players alternate, with player 1 controlling Mario, and player 2 taking control of Luigi. To begin the complete walkthrough, start withWorld 1. Coin Rooms, Heavens, & Warp Zones The standard time limit sequence for levels is as follows: However, there are six exceptions: Worlds3-2,5-1and8-1all have clear times of . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 11,
+    "platform": "NES",
+    "game": "Super Mario Bros. 3",
+    "target": "Dark Land Airships",
+    "url": "https://strategywiki.org/wiki/Super_Mario_Bros._3/Walkthrough",
+    "section_count": 6,
+    "description": "[World 1-2] Goombas have infested the rolling green hills of the Grass Land. This is your first chance at unlimited 1-Ups! Although the technique is tricky at first, you'll do well to learn it. You're sure to need a few extra Marios for this adventure. 1:Jump for unlimited 1-Ups!Use the pipe that spews a never-ending stream of Goombas to earn unlimited 1-Ups! Jump on a Goomba while holdingto bounce high. At the highest point of the bounce, taprepeatedly to slow your descent onto the next Goomba. The first eight Goombas award you more and more points. Stomp nine Goombas without touching the ground to earn a 1-Up for each one you flatten thereafter. Don't go directly underneath the pipe, or the Goombas will stop pouring out. With this method, you can earn as many 1-Ups as you want. Even if the timer runs out or you mess up and lose a life, you can come back right away! 2: Before dropping d",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Dark Land Airships' from Super Mario Bros. 3 (NES). World environmental details: [World 1-2] Goombas have infested the rolling green hills of the Grass Land. This is your first chance at unlimited 1-Ups! Although the technique is tricky at first, you'll do well to learn it. You're sure to need a few extra Marios for this adventure. 1:Jump for unlimited 1-Ups!Use the pipe that spews a never-ending stream of Goombas to earn unlimited 1-Ups! Jump on a Goomba while holdingto bounce high. At the highest point of the bounce, taprepeatedly to slow your descent onto the next Goomba. The first eight Goombas award you more and more points. Stomp nine Goombas without touching the gro. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 12,
+    "platform": "NES",
+    "game": "The Legend of Zelda",
+    "target": "Underworld Dungeons",
+    "url": "https://strategywiki.org/wiki/The_Legend_of_Zelda/Walkthrough",
+    "section_count": 3,
+    "description": "[Overview] This walkthrough uses the following notation throughout each quest. This is a mandatory task that must be completed before any of the tasks listed below it.This is an optional task that is listed at the earliest time that it becomes possible to complete. This is an optional task that is listed at the earliest time that it becomes possible to complete. There are many things that are immediately available to you in theOverworldbefore you even set foot in theUnderworld. You may choose to take advantage of that fact early in your quest, or wait until you have grown a little stronger instead. For both quests, having the bommerang received in level 1 will make navigation in the overworld much easier. Almost every enemy, especially the lynels, can be stunned while you proceed to the next area. You are not required to complete the levels in their numerical order. You can enter any dun",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Underworld Dungeons' from The Legend of Zelda (NES). World environmental details: [Overview] This walkthrough uses the following notation throughout each quest. This is a mandatory task that must be completed before any of the tasks listed below it.This is an optional task that is listed at the earliest time that it becomes possible to complete. This is an optional task that is listed at the earliest time that it becomes possible to complete. There are many things that are immediately available to you in theOverworldbefore you even set foot in theUnderworld. You may choose to take advantage of that fact early in your quest, or wait until you have grown a little stronger ins. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 13,
+    "platform": "NES",
+    "game": "Zelda II: The Adventure of Link",
+    "target": "Palace Temples",
+    "url": "https://strategywiki.org/wiki/Zelda_II:_The_Adventure_of_Link/Walkthrough",
+    "section_count": 3,
+    "description": "[Great Palace] Once you make it through the second mountain tunnel, you will arrive at the Great Palace. When you arrive, you will find a force field that will prevent anyone from entering. Provided you placed all six crystals in the palace statues, the force field will be lifted for the hero who accomplished such a monumental task. There are so many rooms in the Great Palace, and many of them are not necessary to visit for the sake of beating the game, so the walkthrough will only cover the rooms that lie along the quickest path to the Triforce of Courage. A: As soon as you ride the elevator down to this first room, begin moving to the left. There is nothing worth discovering to the right. You will have your first fight against a Fokkel. Fokkels aren't terribly difficult, but you do have to keep an eye out for the flames that they fire up into the air which may bounce back towards you w",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Palace Temples' from Zelda II: The Adventure of Link (NES). World environmental details: [Great Palace] Once you make it through the second mountain tunnel, you will arrive at the Great Palace. When you arrive, you will find a force field that will prevent anyone from entering. Provided you placed all six crystals in the palace statues, the force field will be lifted for the hero who accomplished such a monumental task. There are so many rooms in the Great Palace, and many of them are not necessary to visit for the sake of beating the game, so the walkthrough will only cover the rooms that lie along the quickest path to the Triforce of Courage. A: As soon as you ride the elevator . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 14,
+    "platform": "NES",
+    "game": "Metroid",
+    "target": "Norfair Volcanic Caverns",
+    "url": "https://strategywiki.org/wiki/Metroid/Walkthrough",
+    "section_count": 2,
+    "description": "[Overview] Norfair is a region of lava pools and glass bubbles. This is where you will find the Screw Attack, Wave Beam, and High Jump boots, plus extra missiles and energy tanks. Take the Ice Beam with you and freeze enemies for platforms in order to jump over high walls. In Norfair, many of the pathways which used to be clear have caved in or been filled by cooled lava. However, narrow pathways still exist inside the rubble. Never assume you've found a dead end until you've fully explored every wall, floor, and ceiling. Norfair is also along the path to Ridley's Hideout.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Norfair Volcanic Caverns' from Metroid (NES). World environmental details: [Overview] Norfair is a region of lava pools and glass bubbles. This is where you will find the Screw Attack, Wave Beam, and High Jump boots, plus extra missiles and energy tanks. Take the Ice Beam with you and freeze enemies for platforms in order to jump over high walls. In Norfair, many of the pathways which used to be clear have caved in or been filled by cooled lava. However, narrow pathways still exist inside the rubble. Never assume you've found a dead end until you've fully explored every wall, floor, and ceiling. Norfair is also along the path to Ridley's Hideout.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 15,
+    "platform": "NES",
+    "game": "Castlevania",
+    "target": "Clock Tower",
+    "url": "https://strategywiki.org/wiki/Castlevania/Walkthrough",
+    "section_count": 5,
+    "description": "[Overview] The Fishmen return in force as you plunge to the underground depths of the castle. Bats will fly about at the most inconvenient moments while you ride platforms only inches above the water. When you rise to the surface, Fleamen will assail you as they drop from the claws of giant Eagles. And before you can face Frankenstein's Monster and his diminutive keeper Igor, you will be challenged by a slew of fire-breathing dragon skeletons.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Clock Tower' from Castlevania (NES). World environmental details: [Overview] The Fishmen return in force as you plunge to the underground depths of the castle. Bats will fly about at the most inconvenient moments while you ride platforms only inches above the water. When you rise to the surface, Fleamen will assail you as they drop from the claws of giant Eagles. And before you can face Frankenstein's Monster and his diminutive keeper Igor, you will be challenged by a slew of fire-breathing dragon skeletons.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 16,
+    "platform": "NES",
+    "game": "Mega Man 2",
+    "target": "Bubble Man's Underwater Lair",
+    "url": "https://strategywiki.org/wiki/Mega_Man_2/Walkthrough",
+    "section_count": 2,
+    "description": "[Game flow] Over the course of the game, Mega Man will fight eight Robot Masters in their own habitat, in an order of his choosing. After defeating all of the Robot Masters, he must launch an assault on Dr. Wily's Skull Fortress, which is broken into six stages. The first eight stages (Robot Masters) can be attacked in any order: The trick to choosing which order to tackle them in is understanding that every Robot Master has a particular weakness to another Robot Master's weapon. If you are playing the game for the first time and do not wish to have this strategy spoiled for you, the walkthrough will not reveal a Robot Master's weakness unless you choose to view it. The first time you play, you will not have any idea which robot to start with, and which robot to visit next. The best strategy is to try every weapon available to you when you arrive at the fight with a boss, and make note o",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Bubble Man's Underwater Lair' from Mega Man 2 (NES). World environmental details: [Game flow] Over the course of the game, Mega Man will fight eight Robot Masters in their own habitat, in an order of his choosing. After defeating all of the Robot Masters, he must launch an assault on Dr. Wily's Skull Fortress, which is broken into six stages. The first eight stages (Robot Masters) can be attacked in any order: The trick to choosing which order to tackle them in is understanding that every Robot Master has a particular weakness to another Robot Master's weapon. If you are playing the game for the first time and do not wish to have this strategy spoiled for you, the walkthrou. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 17,
+    "platform": "NES",
+    "game": "Contra",
+    "target": "Jungle Waterfall",
+    "url": "https://strategywiki.org/wiki/Contra/Walkthrough",
+    "section_count": 3,
+    "description": "[Stage 1] The first stage scrolls horizontally, and takes place in the jungle. As soon as you begin, soldiers appear to attack you from the right. You should immediately open fire in order to clear a path in front of you. Before the bridge, you will encounter a weapon sensor in the cliff wall, which contains the Laser gun. This is quickly followed by a capsule that flies overhead from left to right with the Spread gun. In general, beginners will want to collect the Spread gun, but experts may prefer to stick with the Laser gun due to the damage it can do. The famous bridge sequence occurs, with explosives taking out each part of the bridge as you cross them. The explosions can kill you, so you must make sure that your jumps clear the explosions as they happen. It's much better to fall into the water below then to time your jump incorrectly and get killed. If you fall in the water, note t",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Jungle Waterfall' from Contra (NES). World environmental details: [Stage 1] The first stage scrolls horizontally, and takes place in the jungle. As soon as you begin, soldiers appear to attack you from the right. You should immediately open fire in order to clear a path in front of you. Before the bridge, you will encounter a weapon sensor in the cliff wall, which contains the Laser gun. This is quickly followed by a capsule that flies overhead from left to right with the Spread gun. In general, beginners will want to collect the Spread gun, but experts may prefer to stick with the Laser gun due to the damage it can do. The famous bridge sequence occurs, wit. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 18,
+    "platform": "NES",
+    "game": "Ninja Gaiden",
+    "target": "Downtown Neon Rooftops",
+    "url": "https://strategywiki.org/wiki/Ninja_Gaiden_(NES)/Walkthrough",
+    "section_count": 4,
+    "description": "[Overview] Ninja Gaiden is a linear action game, in which you must guide the ninja Ryu Hayabusa through six \"Acts\" that comprise 20 levels. You may not select or skip any level; to complete the game, you must play every stage in order. At the end of each Act, you must challenge and defeat one or more bosses. If you lose this fight, you may be sent back to an earlier moment in the Act. Throughout your adventure, there are a couple of techniques that you can make use of to advance further throughout the game.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Downtown Neon Rooftops' from Ninja Gaiden (NES). World environmental details: [Overview] Ninja Gaiden is a linear action game, in which you must guide the ninja Ryu Hayabusa through six \"Acts\" that comprise 20 levels. You may not select or skip any level; to complete the game, you must play every stage in order. At the end of each Act, you must challenge and defeat one or more bosses. If you lose this fight, you may be sent back to an earlier moment in the Act. Throughout your adventure, there are a couple of techniques that you can make use of to advance further throughout the game.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 19,
+    "platform": "NES",
+    "game": "Blaster Master",
+    "target": "Area 1 Underworld",
+    "url": "https://strategywiki.org/wiki/Blaster_Master/Walkthrough",
+    "section_count": 6,
+    "description": "[Area 1 Boss: Chlameatle] After you climb up the ladder from the lake, you'll step inside the fifth interior. Walk upward, but beware of security. Machines that line the walls cross over to the opposite walls whenever Jason steps in their line of motion. You can destroy these machines with your gun or grenades before they can pose a threat to you. Walk up until you see the passage on the right. In this next room, you must maneuver through a small maze. A number of creatures attack you here, including small robots that track you down, more security machines, and a large creature near the end that spreads bullets in several directions. Use grenades to take out as many enemies as you can. To get through this area, you must head all the way down, to the right, then up through the channel that brings you back to the upper left corner, and then down and around until you reach the passage near ",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Area 1 Underworld' from Blaster Master (NES). World environmental details: [Area 1 Boss: Chlameatle] After you climb up the ladder from the lake, you'll step inside the fifth interior. Walk upward, but beware of security. Machines that line the walls cross over to the opposite walls whenever Jason steps in their line of motion. You can destroy these machines with your gun or grenades before they can pose a threat to you. Walk up until you see the passage on the right. In this next room, you must maneuver through a small maze. A number of creatures attack you here, including small robots that track you down, more security machines, and a large creature near the end th. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 20,
+    "platform": "NES",
+    "game": "Bionic Commando",
+    "target": "Neutral Area Military Base",
+    "url": "https://strategywiki.org/wiki/Bionic_Commando_(NES)/Walkthrough",
+    "section_count": 3,
+    "description": "[Overview] At the beginning of the game, you begin in your helicopter above Area 0, en route toArea 1. While you are not required to stop there first, it is highly recommended that you do. It is also recommended that you take each area on as you encounter them in the map, without skipping any areas. You typically receive items that are vital, if not required, to complete subsequent areas. The colors of each tile gives a slight indication of the type of land below. Red is for mountains, green is for forest, and blue is for water. While you are navigating around the map, you will see a number of trucks traveling along routes between areas. If there ever comes a time when your helicopter crosses paths with one of these trucks, you will have an enemy encounter.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Neutral Area Military Base' from Bionic Commando (NES). World environmental details: [Overview] At the beginning of the game, you begin in your helicopter above Area 0, en route toArea 1. While you are not required to stop there first, it is highly recommended that you do. It is also recommended that you take each area on as you encounter them in the map, without skipping any areas. You typically receive items that are vital, if not required, to complete subsequent areas. The colors of each tile gives a slight indication of the type of land below. Red is for mountains, green is for forest, and blue is for water. While you are navigating around the map, you will see a number of. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 21,
+    "platform": "NES",
+    "game": "DuckTales",
+    "target": "The Moon Base",
+    "url": "https://strategywiki.org/wiki/DuckTales/Walkthrough",
+    "section_count": 8,
+    "description": "[The Moon] Beneath the crust of the Moon is theGreen Cheese of Longevitykept by the vicious Moon Rat. The entrance to the cave is blocked by a large wall so Scrooge will need help if he wants the cheese. The aliens that have visited the Moon also keep a valuable trinket on their spaceship.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'The Moon Base' from DuckTales (NES). World environmental details: [The Moon] Beneath the crust of the Moon is theGreen Cheese of Longevitykept by the vicious Moon Rat. The entrance to the cave is blocked by a large wall so Scrooge will need help if he wants the cheese. The aliens that have visited the Moon also keep a valuable trinket on their spaceship.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 22,
+    "platform": "NES",
+    "game": "Kid Icarus",
+    "target": "Sky World Floating Palace",
+    "url": "https://strategywiki.org/wiki/Kid_Icarus/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] It should be relatively easy to clear the first stage. While steadily defeating your enemies, cautiously climb the steps one by one. Be particularly careful where the steps narrow. If you slip and fall off of the screen, it will be \"Game Over.\" Earn extra points to keep your score high. Ideally, you should earn 20,000 points before clearing this area. If you do, you will earn a longer health meter before moving on to the next stage.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Sky World Floating Palace' from Kid Icarus (NES). World environmental details: [Overview] It should be relatively easy to clear the first stage. While steadily defeating your enemies, cautiously climb the steps one by one. Be particularly careful where the steps narrow. If you slip and fall off of the screen, it will be \"Game Over.\" Earn extra points to keep your score high. Ideally, you should earn 20,000 points before clearing this area. If you do, you will earn a longer health meter before moving on to the next stage.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 23,
+    "platform": "NES",
+    "game": "StarTropics",
+    "target": "Submerged Coral Caverns",
+    "url": "https://strategywiki.org/wiki/StarTropics/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] You begin the adventure at the helicopter landing pad on C-Island. Walk left until you reach a village, enter it. This is the village of Coralcola. Talk to all the villagers to learn more about your uncle Dr. J, the village of Caralcola and Southern Cross. After talking to everyone, enter the large thatched hut on the left to meet the village chief. The chief will tell you that your uncle has been abducted and will ask for your help. He will also give you your first weapon, the yo-yo. Finally, he will tell you to take the tunnel in the village, which leads to your uncle's lab. Then go to the hut in the upper right and talk to the guard at the entrance. If you've already talked to all the villagers, he'll let you enter. Inside you will meet the shaman, who will give you more information about your uncle and warn you of what awaits you ahead. The game will save automatically and",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Submerged Coral Caverns' from StarTropics (NES). World environmental details: [Overview] You begin the adventure at the helicopter landing pad on C-Island. Walk left until you reach a village, enter it. This is the village of Coralcola. Talk to all the villagers to learn more about your uncle Dr. J, the village of Caralcola and Southern Cross. After talking to everyone, enter the large thatched hut on the left to meet the village chief. The chief will tell you that your uncle has been abducted and will ask for your help. He will also give you your first weapon, the yo-yo. Finally, he will tell you to take the tunnel in the village, which leads to your uncle's lab. Then . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 24,
+    "platform": "NES",
+    "game": "Kirby's Adventure",
+    "target": "Rainbow Resort",
+    "url": "https://strategywiki.org/wiki/Kirby%27s_Adventure/Walkthrough",
+    "section_count": 7,
+    "description": "[Level 7-1] At the beginning of the level you have the possibility to acquire the Laser skill. Acquire it to easily eliminate all enemies along the path by bouncing it off inclined surfaces. Just before the door it will also allow you to take a 1-Up. In the next area you have to fight your way along a path of star blocks. Shortly after starting, you have the opportunity to acquire the Fire or Spark skill, which will allow you to proceed more quickly. Continuing, you have the opportunity to take a Pep Drink. However, there is a secret in this area: some of the blue blocks that border the path are actually destructible. Just below where you find a Flamer, you can destroy the blocks on the floor, using Spark or a slide attack. You will thus be able to reach a compartment in which there is a Waddle Doo, from which you can acquire the Beam skill. At this point, continue along the path. When y",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Rainbow Resort' from Kirby's Adventure (NES). World environmental details: [Level 7-1] At the beginning of the level you have the possibility to acquire the Laser skill. Acquire it to easily eliminate all enemies along the path by bouncing it off inclined surfaces. Just before the door it will also allow you to take a 1-Up. In the next area you have to fight your way along a path of star blocks. Shortly after starting, you have the opportunity to acquire the Fire or Spark skill, which will allow you to proceed more quickly. Continuing, you have the opportunity to take a Pep Drink. However, there is a secret in this area: some of the blue blocks that border the path a. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 25,
+    "platform": "NES",
+    "game": "EarthBound Beginnings",
+    "target": "Magicant",
+    "url": "https://strategywiki.org/wiki/EarthBound_Beginnings/Walkthrough",
+    "section_count": 2,
+    "description": "[Magicant] North of the zoo, past the bridge with the policemen, you'll find a cave. Inside is what seems to be a strange-looking pink stalagmite. Inspect it and you'll hear a voice speaking into your head. Use telepathy. If you have your Great Grandfather's Diary in your inventory, you'll be able to answer the riddle. After you enter Magicant, you'll no longer need the diary, so give it to the Mysterious Goods Keeper. Here is the only place you can buy armor. You'll find three shops, marked \"7\" on their signs (spelling out 777, apparently). Get the best armor from each: Magic Coin, Gold Ring, and Water Pendant (H2O Pendant). The Water Pendant is probably the best pendant, because some enemies burst into flames or explode when defeated, dealing out fire damage, while elemental PK attacks are uncommon until the end of the game (PK Beam isn't so uncommon, but it's not elemental). North of ",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Magicant' from EarthBound Beginnings (NES). World environmental details: [Magicant] North of the zoo, past the bridge with the policemen, you'll find a cave. Inside is what seems to be a strange-looking pink stalagmite. Inspect it and you'll hear a voice speaking into your head. Use telepathy. If you have your Great Grandfather's Diary in your inventory, you'll be able to answer the riddle. After you enter Magicant, you'll no longer need the diary, so give it to the Mysterious Goods Keeper. Here is the only place you can buy armor. You'll find three shops, marked \"7\" on their signs (spelling out 777, apparently). Get the best armor from each: Magic Coin, Gold Ring,. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 26,
+    "platform": "NES",
+    "game": "Final Fantasy",
+    "target": "Flying Fortress",
+    "url": "https://strategywiki.org/wiki/Final_Fantasy/Walkthrough",
+    "section_count": 4,
+    "description": "[Overview] Note: This walkthrough is primarily based on theFinal Fantasy Originsremake for the PlayStation (normal mode). The only major differences between the NES versions andOriginsare name changes and a modifications to a fewenemy stats. TheDawn of Soulsedition has the same names as the Origins edition, but radically different stats and four new (optional) dungeons.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Flying Fortress' from Final Fantasy (NES). World environmental details: [Overview] Note: This walkthrough is primarily based on theFinal Fantasy Originsremake for the PlayStation (normal mode). The only major differences between the NES versions andOriginsare name changes and a modifications to a fewenemy stats. TheDawn of Soulsedition has the same names as the Origins edition, but radically different stats and four new (optional) dungeons.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 27,
+    "platform": "NES",
+    "game": "Dragon Warrior",
+    "target": "Charlock Castle",
+    "url": "https://strategywiki.org/wiki/Dragon_Warrior/Walkthrough",
+    "section_count": 2,
+    "description": "[Overview] The walkthrough that follows presents the chapter-by-chapter story of Dragon Warrior. The game itself is quite simple however; once you are familiar with the gameplay very little needs be known to win the game.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Charlock Castle' from Dragon Warrior (NES). World environmental details: [Overview] The walkthrough that follows presents the chapter-by-chapter story of Dragon Warrior. The game itself is quite simple however; once you are familiar with the gameplay very little needs be known to win the game.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 28,
+    "platform": "NES",
+    "game": "Batman",
+    "target": "Axis Chemical Factory",
+    "url": "https://strategywiki.org/wiki/Batman:_The_Video_Game_(NES)/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Axis Chemical Factory from Batman on NES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Axis Chemical Factory' from Batman (NES). World environmental details: A classic 3D retro environment capturing Axis Chemical Factory from Batman on NES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 29,
+    "platform": "NES",
+    "game": "Rygar",
+    "target": "Lapis Valley",
+    "url": "https://strategywiki.org/wiki/Rygar_(NES)/Walkthrough",
+    "section_count": 2,
+    "description": "[Version Difference] Other than package and in-game text, the only difference between Famicom version and NES version is the music used in the following locations: Suero Mountain / Mt. Primevil(sunset) Gran Mountains / Valley of Rolsa The one used in all Indora rooms",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Lapis Valley' from Rygar (NES). World environmental details: [Version Difference] Other than package and in-game text, the only difference between Famicom version and NES version is the music used in the following locations: Suero Mountain / Mt. Primevil(sunset) Gran Mountains / Valley of Rolsa The one used in all Indora rooms. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 30,
+    "platform": "NES",
+    "game": "Shadowgate",
+    "target": "Castle Crypt",
+    "url": "https://strategywiki.org/wiki/Shadowgate/Walkthrough",
+    "section_count": 41,
+    "description": "[Overview] One of Shadowgate's most famous features is the numerous ways in which your character can die. This page will identify those deaths and how to obtain them.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Castle Crypt' from Shadowgate (NES). World environmental details: [Overview] One of Shadowgate's most famous features is the numerous ways in which your character can die. This page will identify those deaths and how to obtain them.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 31,
+    "platform": "NES",
+    "game": "Crystalis",
+    "target": "Floating Tower of Babylon",
+    "url": "https://strategywiki.org/wiki/Crystalis/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] ThisGuardblocks passage to Queen Aryllis' House. EitherParalyzeher orChangeinto a Woman to get inside. Queen Aryllis.Changeinto a Woman and give her theKirisa Plantto get theBow of Moon. Stairs to Basement. TheBlizzard Braceletis inside. Despite being accessible earlier (you can do it as soon as you get the Ball of Water in the Waterfall Valley), it is best to visit Amazones once you have the Change spell since you really can't do much until you approach them disguised as a woman. It is located in the southeast part of the Cordel Plains, so the best route is to Teleport to Brynmaer and head east-southeast. You'll soon find a narrow part of the river where you can use the Ball of Water to freeze an ice bridge. From there, continue south until you see the passage. In the Amazones village, there are two key items to collect. Both require entering the home of Queen Aryllis (the ea",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Floating Tower of Babylon' from Crystalis (NES). World environmental details: [Overview] ThisGuardblocks passage to Queen Aryllis' House. EitherParalyzeher orChangeinto a Woman to get inside. Queen Aryllis.Changeinto a Woman and give her theKirisa Plantto get theBow of Moon. Stairs to Basement. TheBlizzard Braceletis inside. Despite being accessible earlier (you can do it as soon as you get the Ball of Water in the Waterfall Valley), it is best to visit Amazones once you have the Change spell since you really can't do much until you approach them disguised as a woman. It is located in the southeast part of the Cordel Plains, so the best route is to Teleport to Brynmaer . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 32,
+    "platform": "NES",
+    "game": "A Boy and His Blob",
+    "target": "Blobolonia",
+    "url": "https://strategywiki.org/wiki/A_Boy_and_His_Blob:_Trouble_on_Blobolonia/Walkthrough",
+    "section_count": 5,
+    "description": "[Blobolonia] Move two screens right. Once you reach the first set of trees, you will see balls bouncing up and down. Time your movements and walk past the balls as they're in the air. Once you reach the clearing, you must feed theOrangejellybean before going to the next screen. At the second forest, you will see cherry bombs. You must shoot them before they hit the ground, as their explosions will cost a life even if you are on a different screen. It is possible to run past the first two sets, but the third set must be destroyed. At the corn field, there will be four screens of dodging popcorn. At the third screen, hold your fire until you see a gap in the pattern, then shoot and run your way past. On the fourth screen, run to the middle, wait for a gap, and continue running with the gap in the right position. Next is the factory, with four screens. If you take the direct route, you will",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Blobolonia' from A Boy and His Blob (NES). World environmental details: [Blobolonia] Move two screens right. Once you reach the first set of trees, you will see balls bouncing up and down. Time your movements and walk past the balls as they're in the air. Once you reach the clearing, you must feed theOrangejellybean before going to the next screen. At the second forest, you will see cherry bombs. You must shoot them before they hit the ground, as their explosions will cost a life even if you are on a different screen. It is possible to run past the first two sets, but the third set must be destroyed. At the corn field, there will be four screens of dodging popcorn. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 33,
+    "platform": "NES",
+    "game": "Little Samson",
+    "target": "Molten Volcanic Caverns",
+    "url": "https://strategywiki.org/wiki/Little_Samson",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Molten Volcanic Caverns from Little Samson on NES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Molten Volcanic Caverns' from Little Samson (NES). World environmental details: A classic 3D retro environment capturing Molten Volcanic Caverns from Little Samson on NES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 34,
+    "platform": "SNES",
+    "game": "Super Mario World",
+    "target": "Forest of Illusion",
+    "url": "https://strategywiki.org/wiki/Super_Mario_World/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] This level moves away from the norm we are used to seeing in this game. There are 2 parts to this level, and the ground is slippery requiring you to be careful. Koopa Troopas have command over the first part and will try to kick their shells at you, so try to avoid them if you can. Rexes are also present, and you may stomp on them if you'd like. There is a ? block with a Mushroom inside it, but it is difficult to collect as it is guarded by a Shiny Shell Koopa and is therefore best avoided. The second part of the level is the only part of the game where you're going to see ice blocks, light blue pipes and fancy little platforms. Watch out for the Cheep-Cheeps, who will try to jump out at you! If you have Blue Yoshi or the cape, you can simply fly over the level (while avoiding any pipes) and avoid confronting any enemies. If not, there is a P-Switch located towards the end of ",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Forest of Illusion' from Super Mario World (SNES). World environmental details: [Overview] This level moves away from the norm we are used to seeing in this game. There are 2 parts to this level, and the ground is slippery requiring you to be careful. Koopa Troopas have command over the first part and will try to kick their shells at you, so try to avoid them if you can. Rexes are also present, and you may stomp on them if you'd like. There is a ? block with a Mushroom inside it, but it is difficult to collect as it is guarded by a Shiny Shell Koopa and is therefore best avoided. The second part of the level is the only part of the game where you're going to see ice block. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 35,
+    "platform": "SNES",
+    "game": "Yoshi's Island",
+    "target": "Pastel Crayon Hills",
+    "url": "https://strategywiki.org/wiki/Super_Mario_World_2:_Yoshi%27s_Island/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Pastel Crayon Hills from Yoshi's Island on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Pastel Crayon Hills' from Yoshi's Island (SNES). World environmental details: A classic 3D retro environment capturing Pastel Crayon Hills from Yoshi's Island on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 36,
+    "platform": "SNES",
+    "game": "A Link to the Past",
+    "target": "Dark World Pyramid",
+    "url": "https://strategywiki.org/wiki/The_Legend_of_Zelda:_A_Link_to_the_Past/Walkthrough",
+    "section_count": 14,
+    "description": "[The struggle to reach the Dark Palace] The Dark Palace, your first goal in the Dark World, is surrounded by a baffling maze of thorny bushes. Foremost you will need 110 rupees in total to gain entrance into the Dark Palace. The first part is easy; just follow the arrows. After that, it gets tricky. Look for small holes in the canopy of thorns that indicate a path. In the large central maze, enter from the top, and go down, left, down, right, up, and right. The monkey will guide you to the final stage for a price. The only way to open the Dark Palace entrance is to flip the switch on the roof.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Dark World Pyramid' from A Link to the Past (SNES). World environmental details: [The struggle to reach the Dark Palace] The Dark Palace, your first goal in the Dark World, is surrounded by a baffling maze of thorny bushes. Foremost you will need 110 rupees in total to gain entrance into the Dark Palace. The first part is easy; just follow the arrows. After that, it gets tricky. Look for small holes in the canopy of thorns that indicate a path. In the large central maze, enter from the top, and go down, left, down, right, up, and right. The monkey will guide you to the final stage for a price. The only way to open the Dark Palace entrance is to flip the switch on the roof.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 37,
+    "platform": "SNES",
+    "game": "Super Metroid",
+    "target": "Maridia Submerged Depths",
+    "url": "https://strategywiki.org/wiki/Super_Metroid/Walkthrough",
+    "section_count": 14,
+    "description": "[To Maridia] Now, you need to go to the section of Brinstar with the glass tube leading to Norfair to get to Maridia. From Samus' ship, you can take the right path to get there quicker. On the other hand, you can take the left path to get some items in Brinstar on the way to Maridia.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Maridia Submerged Depths' from Super Metroid (SNES). World environmental details: [To Maridia] Now, you need to go to the section of Brinstar with the glass tube leading to Norfair to get to Maridia. From Samus' ship, you can take the right path to get there quicker. On the other hand, you can take the left path to get some items in Brinstar on the way to Maridia.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 38,
+    "platform": "SNES",
+    "game": "Chrono Trigger",
+    "target": "2300 A.D. Ruined Domes",
+    "url": "https://strategywiki.org/wiki/Chrono_Trigger/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] There are 13 achievements available forSteam.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing '2300 A.D. Ruined Domes' from Chrono Trigger (SNES). World environmental details: [Overview] There are 13 achievements available forSteam.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 39,
+    "platform": "SNES",
+    "game": "Chrono Trigger",
+    "target": "65,000,000 B.C. Tyrano Lair",
+    "url": "https://strategywiki.org/wiki/Chrono_Trigger/Walkthrough/Chapter_19",
+    "section_count": 1,
+    "description": "[Overview] There are 13 achievements available forSteam.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing '65,000,000 B.C. Tyrano Lair' from Chrono Trigger (SNES). World environmental details: [Overview] There are 13 achievements available forSteam.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 40,
+    "platform": "SNES",
+    "game": "Final Fantasy VI",
+    "target": "Magitek Research Facility",
+    "url": "https://strategywiki.org/wiki/Final_Fantasy_VI/Walkthrough",
+    "section_count": 2,
+    "description": "[Sidequests] There are a few things that should be on your ToDo List before you end your stay in the world of balance: Complete the letter sequence between the wounded soldier in the Veldt and the girl in Maranda Get Mog in your party and learn all the dances you can with him, particularly the Water Rondo (which can only be learned in the World of Balance) Buy the two espers from the auction in Jidoor and buy the single esper in Tzen, although these can be done in the world of ruin as well Clear out the treasures in the imperial city and any other areas you have not yet completed, including possibly Doma Hang out on the forest in Triangle Island and fight some Intangirs if you really want a challenge. They have 32,000 HP, auto-Vanish and -Sleep statuses, and always counterattack with Meteo.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Magitek Research Facility' from Final Fantasy VI (SNES). World environmental details: [Sidequests] There are a few things that should be on your ToDo List before you end your stay in the world of balance: Complete the letter sequence between the wounded soldier in the Veldt and the girl in Maranda Get Mog in your party and learn all the dances you can with him, particularly the Water Rondo (which can only be learned in the World of Balance) Buy the two espers from the auction in Jidoor and buy the single esper in Tzen, although these can be done in the world of ruin as well Clear out the treasures in the imperial city and any other areas you have not yet completed, including po. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 41,
+    "platform": "SNES",
+    "game": "EarthBound",
+    "target": "Moonside Neon Grid",
+    "url": "https://strategywiki.org/wiki/EarthBound/Walkthrough",
+    "section_count": 1,
+    "description": "[Ribbons] Must be equipped as \"other\". Usable only by Paula.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Moonside Neon Grid' from EarthBound (SNES). World environmental details: [Ribbons] Must be equipped as \"other\". Usable only by Paula.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 42,
+    "platform": "SNES",
+    "game": "Donkey Kong Country",
+    "target": "Mine Cart Carnage",
+    "url": "https://strategywiki.org/wiki/Donkey_Kong_Country/Walkthrough",
+    "section_count": 2,
+    "description": "[SNES] It was a dark and stormy nite.... Storms lashed the rugged terrain of Donkey Kong Island, home of the famous video game ape and his family and friends. Near Donkey Kong's tree house, a small monkey named Diddy cowered in fear of the savage lightning which periodically illuminated the lush, dark jungle that covered most of the island. Donkey Kong had assigned Diddy to guard duty on this awful night, and he was not happy about his fate. Donkey Kong's earlier pep talk kept creeping back into Diddy's mind. \"Ok, little buddy,\" Donkey had said in his patronizing voice. \"As part of your hero training, you've got to stand guard tonight over my bananas... I'll relive you at midnight, so try and stay awake until then!\" Buddy? Yeah, right. Now he was alone. Alone unless you counted the unknown threats which lurked behind every tree that he glimpsed during the lightning flashes. The Kremlings",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Mine Cart Carnage' from Donkey Kong Country (SNES). World environmental details: [SNES] It was a dark and stormy nite.... Storms lashed the rugged terrain of Donkey Kong Island, home of the famous video game ape and his family and friends. Near Donkey Kong's tree house, a small monkey named Diddy cowered in fear of the savage lightning which periodically illuminated the lush, dark jungle that covered most of the island. Donkey Kong had assigned Diddy to guard duty on this awful night, and he was not happy about his fate. Donkey Kong's earlier pep talk kept creeping back into Diddy's mind. \"Ok, little buddy,\" Donkey had said in his patronizing voice. \"As part of your hero t. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 43,
+    "platform": "SNES",
+    "game": "Donkey Kong Country 2",
+    "target": "Bramble Scramble",
+    "url": "https://strategywiki.org/wiki/Donkey_Kong_Country_2:_Diddy%27s_Kong_Quest/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] Funky Flights 2 is the same thing as Funky Flights fromDonkey Kong Country. The only difference is that you have to pay money most of the time. Funky Flights 2 usually costs 2 Banana Coins, except for the first world, which is always free. With Funky Flights 2, you can travel to any world that you have already been to without beating any bosses. This is very useful if you need some extra lives or something for a harder world.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Bramble Scramble' from Donkey Kong Country 2 (SNES). World environmental details: [Overview] Funky Flights 2 is the same thing as Funky Flights fromDonkey Kong Country. The only difference is that you have to pay money most of the time. Funky Flights 2 usually costs 2 Banana Coins, except for the first world, which is always free. With Funky Flights 2, you can travel to any world that you have already been to without beating any bosses. This is very useful if you need some extra lives or something for a harder world.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 44,
+    "platform": "SNES",
+    "game": "Mega Man X",
+    "target": "Central Highway",
+    "url": "https://strategywiki.org/wiki/Mega_Man_X/Walkthrough",
+    "section_count": 5,
+    "description": "[Overview] Mega Man X is separated into stages where the player must run from start to finish in a linear manner. At the end of each level a boss awaits Mega Man. After beating the first stage, the player will have the option of selecting other stages, each of them with different layouts and enemies, as well as a boss (or \"Maverick\") at the end. These stages can be beaten in any order, but the order below is recommended. After beating the boss at the end of these stages, X will gain a new weapon; he can also get upgrades, heart tanks (which increases your maximum health), or sub-tanks (which contain energy that restores the player's health) in these stages. Once all of the bosses are beaten in their stages, the player will move on to the final part of the game: Sigma's fortress. The fortress contains four stages, each with a boss at the end. The final stage of Sigma's fortress contains t",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Central Highway' from Mega Man X (SNES). World environmental details: [Overview] Mega Man X is separated into stages where the player must run from start to finish in a linear manner. At the end of each level a boss awaits Mega Man. After beating the first stage, the player will have the option of selecting other stages, each of them with different layouts and enemies, as well as a boss (or \"Maverick\") at the end. These stages can be beaten in any order, but the order below is recommended. After beating the boss at the end of these stages, X will gain a new weapon; he can also get upgrades, heart tanks (which increases your maximum health), or sub-tanks (which c. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 45,
+    "platform": "SNES",
+    "game": "Super Castlevania IV",
+    "target": "Rotating Stone Room",
+    "url": "https://strategywiki.org/wiki/Super_Castlevania_IV/Walkthrough",
+    "section_count": 4,
+    "description": "[Overview] Dracula's Clock Tower is the last obstacle to face before you reach his tower. This is arguably the hardest stage in the game; patience is a must if Simon is to reach the home stretch.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Rotating Stone Room' from Super Castlevania IV (SNES). World environmental details: [Overview] Dracula's Clock Tower is the last obstacle to face before you reach his tower. This is arguably the hardest stage in the game; patience is a must if Simon is to reach the home stretch.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 46,
+    "platform": "SNES",
+    "game": "Contra III",
+    "target": "Neo City Streets",
+    "url": "https://strategywiki.org/wiki/Contra_III:_The_Alien_Wars/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] Ah, the sights to see in the ruined city. Watch out for the dogs eating from the trash cans ahead. On the higher difficulty levels they will run at you after you pass by them. Jump into the tank when you see it and start some carnage. Blast the walls with the turret and watch them crumble down. There will be another one ahead. Once you reach the spot where the flames are shooting up out of the ground, you'll have to get out of the tank and head off on foot again. Jump over the bunch of them and grab the powerups if you want. Further ahead, the wall will crumble and a tank will come out. Jump onto one of the platforms when the bomber comes and blasts the ground. Keep going right, avoiding the flame balls and pillars of fire. A few times here a pillar of flame will twist over the top of one of one of the platforms. Stay still until it goes away. Continue on until you see the bos",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Neo City Streets' from Contra III (SNES). World environmental details: [Overview] Ah, the sights to see in the ruined city. Watch out for the dogs eating from the trash cans ahead. On the higher difficulty levels they will run at you after you pass by them. Jump into the tank when you see it and start some carnage. Blast the walls with the turret and watch them crumble down. There will be another one ahead. Once you reach the spot where the flames are shooting up out of the ground, you'll have to get out of the tank and head off on foot again. Jump over the bunch of them and grab the powerups if you want. Further ahead, the wall will crumble and a tank will come . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 47,
+    "platform": "SNES",
+    "game": "Secret of Mana",
+    "target": "The Mana Fortress",
+    "url": "https://strategywiki.org/wiki/Secret_of_Mana/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] The walkthrough for Secret of Mana is split up sequentially by the designated chapters in the game. Optional boss encounters and sidequests are listed in each chapter as they are best attempted. Using the power of Mana, a civilization had grown strong... In time, Mana was used to create the ultimate weapon: the Mana Fortress... This angered the gods. They sent their beasts to destroy the Fortress... A violent war rocked the world, and Mana seemed to disappear... Before all was lost, a hero with the Mana Sword smashed the Fortress... Though the civilization had been destroyed, the world was peaceful again. But time flows like a river... and history repeats...",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'The Mana Fortress' from Secret of Mana (SNES). World environmental details: [Overview] The walkthrough for Secret of Mana is split up sequentially by the designated chapters in the game. Optional boss encounters and sidequests are listed in each chapter as they are best attempted. Using the power of Mana, a civilization had grown strong... In time, Mana was used to create the ultimate weapon: the Mana Fortress... This angered the gods. They sent their beasts to destroy the Fortress... A violent war rocked the world, and Mana seemed to disappear... Before all was lost, a hero with the Mana Sword smashed the Fortress... Though the civilization had been destroyed, the wo. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 48,
+    "platform": "SNES",
+    "game": "Trials of Mana",
+    "target": "Crystal Forest",
+    "url": "https://strategywiki.org/wiki/Trials_of_Mana/Walkthrough",
+    "section_count": 5,
+    "description": "[Overview] It's time to start the adventure. You have before you six characters. All of them are ordinary people who, with training and experience, will become the saviors of Mana. Pretty cool, huh? Read up on information for each of them before choosing, and try to form a balanced team that uses the characters who sound most fun to you. Also, you should be aware that the difficulty of some of the final encounters of the game varies significantly depending on who you choose as your leader. To avoid spoiling some of the final encounters, the characters have been divided up according to how difficult their corresponding final boss is. Note that this is relative difficulty; Carlie and Kevin's final boss is still a challenging opponent.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Crystal Forest' from Trials of Mana (SNES). World environmental details: [Overview] It's time to start the adventure. You have before you six characters. All of them are ordinary people who, with training and experience, will become the saviors of Mana. Pretty cool, huh? Read up on information for each of them before choosing, and try to form a balanced team that uses the characters who sound most fun to you. Also, you should be aware that the difficulty of some of the final encounters of the game varies significantly depending on who you choose as your leader. To avoid spoiling some of the final encounters, the characters have been divided up according to how diff. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 49,
+    "platform": "SNES",
+    "game": "Super Mario RPG",
+    "target": "Booster's Tower",
+    "url": "https://strategywiki.org/wiki/Super_Mario_RPG:_Legend_of_the_Seven_Stars/Walkthrough",
+    "section_count": 2,
+    "description": "[Mario's Pad] Mario will crush down into his own house. After a short talk with Toad, pressto jump out. As a general rule, if you find yourself stuck in some situation where you can't move or hit, it's usually because you have to jump to progress the plot for whatever reason. You can check out the lamp to rest, which fills up your HP and FP fully (more on that later). But now, leave your house and talk to Toad using. He'll tell you to go back to the castle, but before you do this, jump on the floating platform with the multicolored S to save your game (it's required anyway). Once you've done that, leave the area to the south, and on the world map, go back to Bowser's Keep. This time, the giant sword that recently crushed into the castle destroys the bridge that leads to the castle, leaving Mario stranded. After this scene you'll automatically reappear on the world map, so go back to Mari",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Booster's Tower' from Super Mario RPG (SNES). World environmental details: [Mario's Pad] Mario will crush down into his own house. After a short talk with Toad, pressto jump out. As a general rule, if you find yourself stuck in some situation where you can't move or hit, it's usually because you have to jump to progress the plot for whatever reason. You can check out the lamp to rest, which fills up your HP and FP fully (more on that later). But now, leave your house and talk to Toad using. He'll tell you to go back to the castle, but before you do this, jump on the floating platform with the multicolored S to save your game (it's required anyway). Once you've done t. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 50,
+    "platform": "SNES",
+    "game": "Super Ghouls 'n Ghosts",
+    "target": "Sea of Despair",
+    "url": "https://strategywiki.org/wiki/Super_Ghouls_%27n_Ghosts/Walkthrough",
+    "section_count": 1,
+    "description": "[Dealing with Red Gargoyles] The easiest way to defeat a Red Gargoyle is to just use the Crossbow. Get as close to it as you can to it, jump forward and then hit it while it’s sitting down. When it’s in the air, double jump straight up and use the Crossbow at the highest point in your jump. Without the Crossbow, get close enough that you can double jump toward it and not run into it. Make sure that you are a little higher than the Red Gargoyle and fire your weapon at it. When it flies up it’ll get hit by the blast. The rest is more complicated so I’ll do it in point form. If the Red Gargoyle isn’t too high to reach with a double jump try walking away from it. It will follow you and very likely try to swoop in at you. If it does, turn around and quickly hit it. You will have to kill it with that hit or it will just keep flying toward you. You can try ducking or running away if there’s a s",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Sea of Despair' from Super Ghouls 'n Ghosts (SNES). World environmental details: [Dealing with Red Gargoyles] The easiest way to defeat a Red Gargoyle is to just use the Crossbow. Get as close to it as you can to it, jump forward and then hit it while it’s sitting down. When it’s in the air, double jump straight up and use the Crossbow at the highest point in your jump. Without the Crossbow, get close enough that you can double jump toward it and not run into it. Make sure that you are a little higher than the Red Gargoyle and fire your weapon at it. When it flies up it’ll get hit by the blast. The rest is more complicated so I’ll do it in point form. If the Red Gargoyle i. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 51,
+    "platform": "SNES",
+    "game": "ActRaiser",
+    "target": "Bloodpool Marshlands",
+    "url": "https://strategywiki.org/wiki/ActRaiser/Walkthrough",
+    "section_count": 10,
+    "description": "[Bloodpool act-1 map] Platforms located at the bottom, as well as bridge segments, will fall a few seconds after stepping on them. While the logs will return, the cracked bridge segments will not.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Bloodpool Marshlands' from ActRaiser (SNES). World environmental details: [Bloodpool act-1 map] Platforms located at the bottom, as well as bridge segments, will fall a few seconds after stepping on them. While the logs will return, the cracked bridge segments will not.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 52,
+    "platform": "SNES",
+    "game": "Soul Blazer",
+    "target": "GreenWood Forest Sanctuary",
+    "url": "https://strategywiki.org/wiki/Soul_Blazer/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] The walkthrough for Soul Blazer is split up into the seven worlds in which the game takes place. The game is fairly linear so this guide will take you through the areas and secrets in the most efficient way possible.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'GreenWood Forest Sanctuary' from Soul Blazer (SNES). World environmental details: [Overview] The walkthrough for Soul Blazer is split up into the seven worlds in which the game takes place. The game is fairly linear so this guide will take you through the areas and secrets in the most efficient way possible.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 53,
+    "platform": "SNES",
+    "game": "Illusion of Gaia",
+    "target": "Sky-High Nazca Lines",
+    "url": "https://strategywiki.org/wiki/Illusion_of_Gaia/Walkthrough",
+    "section_count": 3,
+    "description": "[The Story] When he was younger, our hero Will went to the Tower of Babel with his father, Olman. There he found a strange flute, but was separated from his father and somehow lost his way back to the tower. (The game never elaborates on how) Shortly after he returned to his Grandparent's house at a town called South Cape, he noticed he had developed strange powers, and was seeing portals to another dimension, portals no one else even noticed. He ignored the portals for the most part, and befriended three boys; classmates named Seth, Erik, and Lance. The game begins on a somewhat ordinary day.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Sky-High Nazca Lines' from Illusion of Gaia (SNES). World environmental details: [The Story] When he was younger, our hero Will went to the Tower of Babel with his father, Olman. There he found a strange flute, but was separated from his father and somehow lost his way back to the tower. (The game never elaborates on how) Shortly after he returned to his Grandparent's house at a town called South Cape, he noticed he had developed strange powers, and was seeing portals to another dimension, portals no one else even noticed. He ignored the portals for the most part, and befriended three boys; classmates named Seth, Erik, and Lance. The game begins on a somewhat ordinary day.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 54,
+    "platform": "SNES",
+    "game": "Terranigma",
+    "target": "Underworld Crystalline Core",
+    "url": "https://strategywiki.org/wiki/Terranigma/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Underworld Crystalline Core from Terranigma on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Underworld Crystalline Core' from Terranigma (SNES). World environmental details: A classic 3D retro environment capturing Underworld Crystalline Core from Terranigma on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 55,
+    "platform": "SNES",
+    "game": "Demon's Crest",
+    "target": "Cemetery of the Undead",
+    "url": "https://strategywiki.org/wiki/Demon%27s_Crest/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Cemetery of the Undead from Demon's Crest on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Cemetery of the Undead' from Demon's Crest (SNES). World environmental details: A classic 3D retro environment capturing Cemetery of the Undead from Demon's Crest on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 56,
+    "platform": "SNES",
+    "game": "F-Zero",
+    "target": "Mute City Anti-Gravity Track",
+    "url": "https://strategywiki.org/wiki/F-Zero/Tracks",
+    "section_count": 1,
+    "description": "[Overview] Mute City Iis the simplest course in the game and the first track in the Knight League. Along the left side of the first straight, just ahead of the goal line, is the circuit's only pit area. At the end of this straight is Turn 1, a roughly 45° right turn that can easily be taken at full throttle. At this point, the left shoulder will be covered inheavy rough. Unless another racer knocks you into the shoulder, however, it should be very easy to avoid the rough. After a brief straightaway pilots will hit Turn 2 which, like the one before it, is a 45° right turn. From here the track widens a bit and the rough begins to fade away before the 90° Turn 3 leads into the backstretch. This long section features a singlejump platein the middle of the track, just past the halfway point of the straight. If you have anyS-JETcharges available, use one just prior to hitting the jump. With pr",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Mute City Anti-Gravity Track' from F-Zero (SNES). World environmental details: [Overview] Mute City Iis the simplest course in the game and the first track in the Knight League. Along the left side of the first straight, just ahead of the goal line, is the circuit's only pit area. At the end of this straight is Turn 1, a roughly 45° right turn that can easily be taken at full throttle. At this point, the left shoulder will be covered inheavy rough. Unless another racer knocks you into the shoulder, however, it should be very easy to avoid the rough. After a brief straightaway pilots will hit Turn 2 which, like the one before it, is a 45° right turn. From here the track w. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 57,
+    "platform": "SNES",
+    "game": "Star Fox",
+    "target": "Orbital Asteroid Belt",
+    "url": "https://strategywiki.org/wiki/Star_Fox/Walkthrough",
+    "section_count": 8,
+    "description": "[Stage 2 - Asteroid] This level opens with you going into first person for the first time, you can reenter third person with the SELECT button. There are many enemies that contribute to your score this time so be sure to fire frequently, first person will allow you to aim more accurately as you have a reticle to help you out. You will fly through multiple squadrons of fighters, focus your attention on the centipedes which have long orange bodies and spinners, which are enemies with guns on the top and bottom parts of the ship that don't stick around long. This is followed by an asteroid field, the red asteroids can be destroyed but the gray ones can't. Dodge the gray ones and shoot the red ones until you come upon three red asteroids in a triangle, go through the middle of the triangle and a twin blaster will spawn slightly to your right and ahead of you, pick it up to unlock plasma shot",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Orbital Asteroid Belt' from Star Fox (SNES). World environmental details: [Stage 2 - Asteroid] This level opens with you going into first person for the first time, you can reenter third person with the SELECT button. There are many enemies that contribute to your score this time so be sure to fire frequently, first person will allow you to aim more accurately as you have a reticle to help you out. You will fly through multiple squadrons of fighters, focus your attention on the centipedes which have long orange bodies and spinners, which are enemies with guns on the top and bottom parts of the ship that don't stick around long. This is followed by an asteroid field,. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 58,
+    "platform": "SNES",
+    "game": "Zombies Ate My Neighbors",
+    "target": "Suburban Hedge Maze",
+    "url": "https://strategywiki.org/wiki/Zombies_Ate_My_Neighbors/Stages",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Suburban Hedge Maze from Zombies Ate My Neighbors on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Suburban Hedge Maze' from Zombies Ate My Neighbors (SNES). World environmental details: A classic 3D retro environment capturing Suburban Hedge Maze from Zombies Ate My Neighbors on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 59,
+    "platform": "SNES",
+    "game": "TMNT IV: Turtles in Time",
+    "target": "Neon Night-Riders",
+    "url": "https://strategywiki.org/wiki/Teenage_Mutant_Ninja_Turtles_IV:_Turtles_in_Time/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Neon Night-Riders from TMNT IV: Turtles in Time on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Neon Night-Riders' from TMNT IV: Turtles in Time (SNES). World environmental details: A classic 3D retro environment capturing Neon Night-Riders from TMNT IV: Turtles in Time on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 60,
+    "platform": "SNES",
+    "game": "Lufia II",
+    "target": "The Ancient Cave",
+    "url": "https://strategywiki.org/wiki/Lufia_II:_Rise_of_the_Sinistrals/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing The Ancient Cave from Lufia II on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'The Ancient Cave' from Lufia II (SNES). World environmental details: A classic 3D retro environment capturing The Ancient Cave from Lufia II on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 61,
+    "platform": "SNES",
+    "game": "SimCity",
+    "target": "Megalopolis Grid",
+    "url": "https://strategywiki.org/wiki/SimCity_(SNES)/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Megalopolis Grid from SimCity on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Megalopolis Grid' from SimCity (SNES). World environmental details: A classic 3D retro environment capturing Megalopolis Grid from SimCity on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 62,
+    "platform": "SNES",
+    "game": "Pilotwings",
+    "target": "Skydiving Target Archipelago",
+    "url": "https://strategywiki.org/wiki/Pilotwings/Skydiving",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Skydiving Target Archipelago from Pilotwings on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Skydiving Target Archipelago' from Pilotwings (SNES). World environmental details: A classic 3D retro environment capturing Skydiving Target Archipelago from Pilotwings on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 63,
+    "platform": "SNES",
+    "game": "Super Mario Kart",
+    "target": "Rainbow Road",
+    "url": "https://strategywiki.org/wiki/Super_Mario_Kart/Rainbow_Road",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Rainbow Road from Super Mario Kart on SNES.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Rainbow Road' from Super Mario Kart (SNES). World environmental details: A classic 3D retro environment capturing Rainbow Road from Super Mario Kart on SNES.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 64,
+    "platform": "Genesis",
+    "game": "Sonic the Hedgehog",
+    "target": "Green Hill Zone",
+    "url": "https://strategywiki.org/wiki/Sonic_the_Hedgehog_(16-bit)/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Green Hill Zone from Sonic the Hedgehog on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Green Hill Zone' from Sonic the Hedgehog (Genesis). World environmental details: A classic 3D retro environment capturing Green Hill Zone from Sonic the Hedgehog on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 65,
+    "platform": "Genesis",
+    "game": "Sonic the Hedgehog 2",
+    "target": "Chemical Plant Zone",
+    "url": "https://strategywiki.org/wiki/Sonic_the_Hedgehog_2/Chemical_Plant_Zone",
+    "section_count": 3,
+    "description": "[Overview] A zone themed on a large industrial plant, producing the deadly Mega Muck compound (the strange pink water which can be noticed and in some cases must be negotiated through).",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Chemical Plant Zone' from Sonic the Hedgehog 2 (Genesis). World environmental details: [Overview] A zone themed on a large industrial plant, producing the deadly Mega Muck compound (the strange pink water which can be noticed and in some cases must be negotiated through).. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 66,
+    "platform": "Genesis",
+    "game": "Sonic the Hedgehog 2",
+    "target": "Casino Night Zone",
+    "url": "https://strategywiki.org/wiki/Sonic_the_Hedgehog_2/Casino_Night_Zone",
+    "section_count": 2,
+    "description": "[Overview] A city that never sleeps, full of pinball rooms, flashing lights, and slot machines. This zone became the first of many casino/carnival style zones that would eventually be included in future Sonic titles. A straightforward zone with many objects to fool around with (such as pinball flippers and bumpers), and no real threats apart from some crushing blue blocks and a slow badnik called Crawl.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Casino Night Zone' from Sonic the Hedgehog 2 (Genesis). World environmental details: [Overview] A city that never sleeps, full of pinball rooms, flashing lights, and slot machines. This zone became the first of many casino/carnival style zones that would eventually be included in future Sonic titles. A straightforward zone with many objects to fool around with (such as pinball flippers and bumpers), and no real threats apart from some crushing blue blocks and a slow badnik called Crawl.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 67,
+    "platform": "Genesis",
+    "game": "Sonic 3 & Knuckles",
+    "target": "Lava Reef Zone",
+    "url": "https://strategywiki.org/wiki/Sonic_the_Hedgehog_3_%26_Knuckles/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Lava Reef Zone from Sonic 3 & Knuckles on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Lava Reef Zone' from Sonic 3 & Knuckles (Genesis). World environmental details: A classic 3D retro environment capturing Lava Reef Zone from Sonic 3 & Knuckles on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 68,
+    "platform": "Genesis",
+    "game": "Streets of Rage 2",
+    "target": "Rain-Slicked Downtown",
+    "url": "https://strategywiki.org/wiki/Streets_of_Rage_2/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] There are 12achievementsfor theXbox 360and 12trophiesfor thePlayStation 3inStreets of Rage 2.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Rain-Slicked Downtown' from Streets of Rage 2 (Genesis). World environmental details: [Overview] There are 12achievementsfor theXbox 360and 12trophiesfor thePlayStation 3inStreets of Rage 2.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 69,
+    "platform": "Genesis",
+    "game": "Phantasy Star IV",
+    "target": "Dezoris Ice Continent",
+    "url": "https://strategywiki.org/wiki/Phantasy_Star_IV:_The_End_of_the_Millennium/Walkthrough",
+    "section_count": 4,
+    "description": "[Chaz] Chazis the first character you will find in the game.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Dezoris Ice Continent' from Phantasy Star IV (Genesis). World environmental details: [Chaz] Chazis the first character you will find in the game.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 70,
+    "platform": "Genesis",
+    "game": "Shinobi III",
+    "target": "Bamboo Forest",
+    "url": "https://strategywiki.org/wiki/Shinobi_III:_Return_of_the_Ninja_Master/Walkthrough",
+    "section_count": 2,
+    "description": "[Controls] : Pauses the game, allows selecting Ninjitsu : Attack - throws shuriken at long range, or makes a short-range melee attack : Jump. Hold for increased height. These controls may be remapped in the options menu. In addition, there is a code that enables 6-button mode that separates the three actions from the single attack button.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Bamboo Forest' from Shinobi III (Genesis). World environmental details: [Controls] : Pauses the game, allows selecting Ninjitsu : Attack - throws shuriken at long range, or makes a short-range melee attack : Jump. Hold for increased height. These controls may be remapped in the options menu. In addition, there is a code that enables 6-button mode that separates the three actions from the single attack button.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 71,
+    "platform": "Genesis",
+    "game": "Gunstar Heroes",
+    "target": "Flying Battleship Megasys",
+    "url": "https://strategywiki.org/wiki/Gunstar_Heroes/Walkthrough",
+    "section_count": 3,
+    "description": "[On the Battleship] After defeating the phantom, you can proceed forward. There are for cannons, each of which can be destroyed for a weapon. Also, watch out for the \"sleeping\" soldier, because he is actually ready to attack. The machine will hops around. Every few hops it will either lift one of its legs and fire down from it or fire down from the middle. You are practically invincible when you hang on the top. You can also stand on the legs. Most weapons should have no problem destroying the machine. After destroying the mini-boss, there are two manned cannons with can be destroyed for health. You will then reach the end of the ship. From there you can jump onto the helicopter on which the next mini-boss is standing. He will fly back and forth shooting bombs up into the air which will explode when they hit the plane. Throwing him will only result in an unavoidable counter attack. Once ",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Flying Battleship Megasys' from Gunstar Heroes (Genesis). World environmental details: [On the Battleship] After defeating the phantom, you can proceed forward. There are for cannons, each of which can be destroyed for a weapon. Also, watch out for the \"sleeping\" soldier, because he is actually ready to attack. The machine will hops around. Every few hops it will either lift one of its legs and fire down from it or fire down from the middle. You are practically invincible when you hang on the top. You can also stand on the legs. Most weapons should have no problem destroying the machine. After destroying the mini-boss, there are two manned cannons with can be destroyed for healt. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 72,
+    "platform": "Genesis",
+    "game": "Golden Axe",
+    "target": "Turtle Village",
+    "url": "https://strategywiki.org/wiki/Golden_Axe/Walkthrough",
+    "section_count": 2,
+    "description": "[Overview] Note that the home versions' Beginner Mode has some differences. The damage done by your attacks is doubled. All levels of magic only ever use two pots. There are no maps or bonus stages, and the game ends atStage 3. The boss ofStage 3isDeath Adder Jr.rather thanLt. Bitter. This walkthrough is intended to help a single player through the game; playing with a friend will make the game much easier, although magic pots will be more scarce.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Turtle Village' from Golden Axe (Genesis). World environmental details: [Overview] Note that the home versions' Beginner Mode has some differences. The damage done by your attacks is doubled. All levels of magic only ever use two pots. There are no maps or bonus stages, and the game ends atStage 3. The boss ofStage 3isDeath Adder Jr.rather thanLt. Bitter. This walkthrough is intended to help a single player through the game; playing with a friend will make the game much easier, although magic pots will be more scarce.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 73,
+    "platform": "Genesis",
+    "game": "Castlevania: Bloodlines",
+    "target": "Sunken Atlantis Ruins",
+    "url": "https://strategywiki.org/wiki/Castlevania:_Bloodlines/Walkthrough",
+    "section_count": 5,
+    "description": "[Overview] The first stage ofBloodlinescan be rather daunting for a first stage, but it's not terribly difficult.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Sunken Atlantis Ruins' from Castlevania: Bloodlines (Genesis). World environmental details: [Overview] The first stage ofBloodlinescan be rather daunting for a first stage, but it's not terribly difficult.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 74,
+    "platform": "Genesis",
+    "game": "Landstalker",
+    "target": "Greenmaze Labyrinth",
+    "url": "https://strategywiki.org/wiki/Landstalker:_The_Treasures_of_King_Nole/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Greenmaze Labyrinth from Landstalker on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Greenmaze Labyrinth' from Landstalker (Genesis). World environmental details: A classic 3D retro environment capturing Greenmaze Labyrinth from Landstalker on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 75,
+    "platform": "Genesis",
+    "game": "Beyond Oasis",
+    "target": "Water Temple Aqueducts",
+    "url": "https://strategywiki.org/wiki/Beyond_Oasis/Walkthrough",
+    "section_count": 6,
+    "description": "[Onwards to the Water Shrine] Head out of the castle and back east towards the first village. Make note of the river; you'll come here after you get the water spirit. From the village, continue east. Run to the right and down a bit, then go up the stairs where the crossbowman is. Continue to the right to the next area. Head right again and down the stairs next to the fire surrounded by the hedgehog creatures. Defeat them if you like and continue south...",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Water Temple Aqueducts' from Beyond Oasis (Genesis). World environmental details: [Onwards to the Water Shrine] Head out of the castle and back east towards the first village. Make note of the river; you'll come here after you get the water spirit. From the village, continue east. Run to the right and down a bit, then go up the stairs where the crossbowman is. Continue to the right to the next area. Head right again and down the stairs next to the fire surrounded by the hedgehog creatures. Defeat them if you like and continue south.... Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 76,
+    "platform": "Genesis",
+    "game": "ToeJam & Earl",
+    "target": "Layered Surreal Islands",
+    "url": "https://strategywiki.org/wiki/ToeJam_%26_Earl",
+    "section_count": 3,
+    "description": "[Overview] This is the first game in theToeJam & Earlseries. For other games in the series see theToeJam & Earl category. ToeJam & Earlis the first in a series ofaction-adventuregames for theSega GenesisandXboxconsoles. The first game was released on March 12,1991in North America. The games feature the two eponymous characters, aliens from a planet called Funkotron, who accidentally crash on Earth after their ship collides with an asteroid. The games were created byToeJam & Earl Productions, formerly known as Johnson Voorsanger Productions (JVP), of San Rafael, California by founders Greg Johnson and Mark Voorsanger. Scott Berfield was the producer and it was published bySega of America. The music was written by John Baker.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Layered Surreal Islands' from ToeJam & Earl (Genesis). World environmental details: [Overview] This is the first game in theToeJam & Earlseries. For other games in the series see theToeJam & Earl category. ToeJam & Earlis the first in a series ofaction-adventuregames for theSega GenesisandXboxconsoles. The first game was released on March 12,1991in North America. The games feature the two eponymous characters, aliens from a planet called Funkotron, who accidentally crash on Earth after their ship collides with an asteroid. The games were created byToeJam & Earl Productions, formerly known as Johnson Voorsanger Productions (JVP), of San Rafael, California by founders Greg John. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 77,
+    "platform": "Genesis",
+    "game": "Ristar",
+    "target": "Planet Flora",
+    "url": "https://strategywiki.org/wiki/Ristar/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Planet Flora from Ristar on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Planet Flora' from Ristar (Genesis). World environmental details: A classic 3D retro environment capturing Planet Flora from Ristar on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 78,
+    "platform": "Genesis",
+    "game": "Crusader of Centy",
+    "target": "Animal Village",
+    "url": "https://strategywiki.org/wiki/Crusader_of_Centy/Walkthrough",
+    "section_count": 2,
+    "description": "[Overview] The Age of Darkness, without light. Creatures who wandered this world were later called \"monsters\" by humans. They were feared by everyone. No one knows where, when, or how these creatures came to be. Have they been here since the start of humanity, or were they here since the start of time? Who's to say... One day, there was a change in the world. A great beam of light struck the earth and diffused through the darkness. Filling the earth with light and destiny. Most of the monsters had no resistance to light and quickly perished... A seemingly endless period of time passed. Humanity had evolved and dominated the earth's surface. But... monsters did not become extinct. They hid underground and increased their numbers as if they were waiting for the moment of restoration. Our story begins when the monsters reappear and the inevitable conflict between man and monster ensues.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Animal Village' from Crusader of Centy (Genesis). World environmental details: [Overview] The Age of Darkness, without light. Creatures who wandered this world were later called \"monsters\" by humans. They were feared by everyone. No one knows where, when, or how these creatures came to be. Have they been here since the start of humanity, or were they here since the start of time? Who's to say... One day, there was a change in the world. A great beam of light struck the earth and diffused through the darkness. Filling the earth with light and destiny. Most of the monsters had no resistance to light and quickly perished... A seemingly endless period of time passed. Humanit. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 79,
+    "platform": "Genesis",
+    "game": "Comix Zone",
+    "target": "Mutant Drainage Sewers",
+    "url": "https://strategywiki.org/wiki/Comix_Zone/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] There are 12 achievements in theXbox 360version worth a total of 200. There are 12 trophies for thePlayStation 3consisting of 13:Gold, 42:Silver and 71:Bronze. Refer toSonic's Ultimate Genesis Collectionfor achievements and trophies from the compilation.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Mutant Drainage Sewers' from Comix Zone (Genesis). World environmental details: [Overview] There are 12 achievements in theXbox 360version worth a total of 200. There are 12 trophies for thePlayStation 3consisting of 13:Gold, 42:Silver and 71:Bronze. Refer toSonic's Ultimate Genesis Collectionfor achievements and trophies from the compilation.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 80,
+    "platform": "Genesis",
+    "game": "Disney's Aladdin",
+    "target": "Agrabah Rooftops",
+    "url": "https://strategywiki.org/wiki/Disney%27s_Aladdin_(Sega)/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Agrabah Rooftops from Disney's Aladdin on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Agrabah Rooftops' from Disney's Aladdin (Genesis). World environmental details: A classic 3D retro environment capturing Agrabah Rooftops from Disney's Aladdin on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 81,
+    "platform": "Genesis",
+    "game": "Vectorman",
+    "target": "Terraforming Junkyard",
+    "url": "https://strategywiki.org/wiki/Vectorman/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Terraforming Junkyard from Vectorman on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Terraforming Junkyard' from Vectorman (Genesis). World environmental details: A classic 3D retro environment capturing Terraforming Junkyard from Vectorman on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 82,
+    "platform": "Genesis",
+    "game": "Ecco the Dolphin",
+    "target": "Open Ocean & Sunken Temples",
+    "url": "https://strategywiki.org/wiki/Ecco_the_Dolphin/Walkthrough",
+    "section_count": 1,
+    "description": "[Overview] At first, this level will seem scary, but it's actually fairly straightforward. As the name suggests, Ecco finds himself in the open ocean, surrounded by sharks. The objective of this level is simply to get to the far right side of the map without becoming dolphin steak. To do this, you'll need to dive down into the depths and dash forwards along the bottom of the stage. This way, you'll kill any sharks in your path, taking little or no damage. The main danger is surfacing for air, since you may surface into a particularly shark-infested area. My advice is to keep dashing, spending as little time as possible above the bottom of the stage. It may take a few attempts to get it right, but you should eventually make your way to the far edge, and the next level.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Open Ocean & Sunken Temples' from Ecco the Dolphin (Genesis). World environmental details: [Overview] At first, this level will seem scary, but it's actually fairly straightforward. As the name suggests, Ecco finds himself in the open ocean, surrounded by sharks. The objective of this level is simply to get to the far right side of the map without becoming dolphin steak. To do this, you'll need to dive down into the depths and dash forwards along the bottom of the stage. This way, you'll kill any sharks in your path, taking little or no damage. The main danger is surfacing for air, since you may surface into a particularly shark-infested area. My advice is to keep dashing, spending . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 83,
+    "platform": "Genesis",
+    "game": "Flashback",
+    "target": "Titan Cyber-Jungle",
+    "url": "https://strategywiki.org/wiki/Flashback:_The_Quest_for_Identity/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Titan Cyber-Jungle from Flashback on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Titan Cyber-Jungle' from Flashback (Genesis). World environmental details: A classic 3D retro environment capturing Titan Cyber-Jungle from Flashback on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 84,
+    "platform": "Master System",
+    "game": "Wonder Boy III",
+    "target": "Desert Sandstone Pyramid",
+    "url": "https://strategywiki.org/wiki/Wonder_Boy_III:_The_Dragon%27s_Trap/Walkthrough",
+    "section_count": 3,
+    "description": "[Overview] The game picks up whereWonder Boy in Monster Landleft off: you must make your way through the castle and defeat Meka Dragon. Just like the previous game, if you take the wrong route through the level you'll loop around. Head to the right, slaying Snakes as you go. After passing through the long corridor, use theJump Blockto get on the stone platform. Kill the Blue Snake, go right. Slay the Cyclopes and fall down the hole. Fall down on the left. Go to the left and make your way through the blue corridor. PressUpto enter the door and prepare to fight Meka.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Desert Sandstone Pyramid' from Wonder Boy III (Master System). World environmental details: [Overview] The game picks up whereWonder Boy in Monster Landleft off: you must make your way through the castle and defeat Meka Dragon. Just like the previous game, if you take the wrong route through the level you'll loop around. Head to the right, slaying Snakes as you go. After passing through the long corridor, use theJump Blockto get on the stone platform. Kill the Blue Snake, go right. Slay the Cyclopes and fall down the hole. Fall down on the left. Go to the left and make your way through the blue corridor. PressUpto enter the door and prepare to fight Meka.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 85,
+    "platform": "Master System",
+    "game": "Alex Kidd in Miracle World",
+    "target": "Mt. Eternal",
+    "url": "https://strategywiki.org/wiki/Alex_Kidd_in_Miracle_World/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Mt. Eternal from Alex Kidd in Miracle World on Master System.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Mt. Eternal' from Alex Kidd in Miracle World (Master System). World environmental details: A classic 3D retro environment capturing Mt. Eternal from Alex Kidd in Miracle World on Master System.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 86,
+    "platform": "Master System",
+    "game": "Phantasy Star",
+    "target": "Camineet Spaceport City",
+    "url": "https://strategywiki.org/wiki/Phantasy_Star/Walkthrough",
+    "section_count": 3,
+    "description": "[Northeast Camineet] In the building in the northeast corner, you can collect 50 mesetas. Follow the left-hand wall to reach the chest. There is also a place to recover health to the southwest of your home. You can also learn about the Algol star system and the three planets, Palma, Motavia, and Dezoris. You can learn from nearby buildings of a fighter named Odin in a town called Scion, and a Laconian pot that can assist you. Armory (left):Lth. Sld: 30Irn. Sld: 520Crc. Sld: 1400 First Food (middle):Cola: 10Burger: 40 Second-Hand shop (right):Flash: 20Escaper: 10Transer: 48",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Camineet Spaceport City' from Phantasy Star (Master System). World environmental details: [Northeast Camineet] In the building in the northeast corner, you can collect 50 mesetas. Follow the left-hand wall to reach the chest. There is also a place to recover health to the southwest of your home. You can also learn about the Algol star system and the three planets, Palma, Motavia, and Dezoris. You can learn from nearby buildings of a fighter named Odin in a town called Scion, and a Laconian pot that can assist you. Armory (left):Lth. Sld: 30Irn. Sld: 520Crc. Sld: 1400 First Food (middle):Cola: 10Burger: 40 Second-Hand shop (right):Flash: 20Escaper: 10Transer: 48. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 87,
+    "platform": "Genesis",
+    "game": "Another World",
+    "target": "Alien Wasteland",
+    "url": "https://strategywiki.org/wiki/Out_of_This_World/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Alien Wasteland from Another World on Genesis.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Alien Wasteland' from Another World (Genesis). World environmental details: A classic 3D retro environment capturing Alien Wasteland from Another World on Genesis.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 88,
+    "platform": "Arcade",
+    "game": "Pac-Man",
+    "target": "The Neon Labyrinth",
+    "url": "https://strategywiki.org/wiki/Pac-Man/Walkthrough",
+    "section_count": 8,
+    "description": "[Overview] In the wiki spirit, everyone is invited to upload their favorite Pac-Man patterns to this page. In order to assist you with making that possible, please click on the Pattern Template thumbnail and use the image contained there.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'The Neon Labyrinth' from Pac-Man (Arcade). World environmental details: [Overview] In the wiki spirit, everyone is invited to upload their favorite Pac-Man patterns to this page. In order to assist you with making that possible, please click on the Pattern Template thumbnail and use the image contained there.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 89,
+    "platform": "Arcade",
+    "game": "Donkey Kong",
+    "target": "25m Construction Site",
+    "url": "https://strategywiki.org/wiki/Donkey_Kong/Walkthrough",
+    "section_count": 5,
+    "description": "[Rivet Stage] The Rivet Stage is the final challenge of every level. Donkey Kong has taken Pauline to the highest point of the construction site. To rescue her, Mario must remove the yellow rivets by walking or jumping over them. These rivets disappear when crossed, creating gaps that impede the Firefoxes but must be crossed by jumping. Firefoxes always spawn on the opposite side of the screen from Mario. The center of the screen is treated as the \"left side.\" Firefoxes won't move down a ladder unless Mario is positioned lower than them, though they can move upward regardless of his position. Two hammers are available to help manage Firefoxes. The lower hammer can be picked up easily, while the upper hammer can be retrieved by jumping from the left ramp or by standing at the edge and jumping straight up. Be cautious, as you can't jump across gaps while holding a hammer. The safest approa",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing '25m Construction Site' from Donkey Kong (Arcade). World environmental details: [Rivet Stage] The Rivet Stage is the final challenge of every level. Donkey Kong has taken Pauline to the highest point of the construction site. To rescue her, Mario must remove the yellow rivets by walking or jumping over them. These rivets disappear when crossed, creating gaps that impede the Firefoxes but must be crossed by jumping. Firefoxes always spawn on the opposite side of the screen from Mario. The center of the screen is treated as the \"left side.\" Firefoxes won't move down a ladder unless Mario is positioned lower than them, though they can move upward regardless of his position. . Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 90,
+    "platform": "Arcade",
+    "game": "Gauntlet",
+    "target": "Infinite Dungeon Maze",
+    "url": "https://strategywiki.org/wiki/Gauntlet_(1985)",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Infinite Dungeon Maze from Gauntlet on Arcade.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Infinite Dungeon Maze' from Gauntlet (Arcade). World environmental details: A classic 3D retro environment capturing Infinite Dungeon Maze from Gauntlet on Arcade.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 91,
+    "platform": "Arcade",
+    "game": "Smash TV",
+    "target": "Arena Studio 1",
+    "url": "https://strategywiki.org/wiki/Smash_T.V./Walkthrough",
+    "section_count": 10,
+    "description": "[Room 1] Welcome to the game. This room only features Green Clubbers, who attack by entering it from all four sides, running towards the contestants and trying to club them with their baseball bats; once you have killed them all, a screen with the map shown below on it will come into view from the left side of the screen (the glowingXto the left is this room, while the dollar sign in the top-right is a bonus room, and Mutoid Man's head to the right is the boss room). The only available exit is to the right.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Arena Studio 1' from Smash TV (Arcade). World environmental details: [Room 1] Welcome to the game. This room only features Green Clubbers, who attack by entering it from all four sides, running towards the contestants and trying to club them with their baseball bats; once you have killed them all, a screen with the map shown below on it will come into view from the left side of the screen (the glowingXto the left is this room, while the dollar sign in the top-right is a bonus room, and Mutoid Man's head to the right is the boss room). The only available exit is to the right.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 92,
+    "platform": "Arcade",
+    "game": "Bubble Bobble",
+    "target": "Cave of Monsters",
+    "url": "https://strategywiki.org/wiki/Bubble_Bobble/Walkthrough",
+    "section_count": 3,
+    "description": "[Levels] Each level (orround) consists of a single screen which is entirely visible. All levels are composed of platforms which are arranged in various patterns or images. Every level contains two walls on the left and right side of each stage which confine the characters. However, many levels contain openings on the top and bottom of the stage. Characters who fall through the bottom of the stage will reappear at the top and continue to fall down. Each level contains several aspects that change from one round to the next. Monsters and bubbles: Each stage has its own composition of enemies which will appear when the stage begins. In most cases, the enemies appear immediately at the start of the level. However, in some cases, enemies do not appear all at once, with some being delayed. Some levels release a mixture of special bubbles, including water, lightning or fire, which are intended t",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Cave of Monsters' from Bubble Bobble (Arcade). World environmental details: [Levels] Each level (orround) consists of a single screen which is entirely visible. All levels are composed of platforms which are arranged in various patterns or images. Every level contains two walls on the left and right side of each stage which confine the characters. However, many levels contain openings on the top and bottom of the stage. Characters who fall through the bottom of the stage will reappear at the top and continue to fall down. Each level contains several aspects that change from one round to the next. Monsters and bubbles: Each stage has its own composition of enemies whic. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 93,
+    "platform": "Arcade",
+    "game": "Gradius",
+    "target": "Moai Head Graveyard",
+    "url": "https://strategywiki.org/wiki/Gradius/Walkthrough",
+    "section_count": 4,
+    "description": "[Overview] Each stage of Gradius is composed of three sections: the pre-stage, the stage itself, and the post-stage boss fight.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Moai Head Graveyard' from Gradius (Arcade). World environmental details: [Overview] Each stage of Gradius is composed of three sections: the pre-stage, the stage itself, and the post-stage boss fight.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 94,
+    "platform": "Arcade",
+    "game": "R-Type",
+    "target": "Biomechanical Core",
+    "url": "https://strategywiki.org/wiki/R-Type/Walkthrough",
+    "section_count": 4,
+    "description": "[Encounter] As the stage begins, you will be attacked by two small waves of red, followed by brown ships that fly a snake formation. At the same time these ships appear, the first walking ground mech will appear. Take out the flying squadrons with a fully powered Wave Beam. Then the screen will fill with red ships for some time until the first power-up transport appears. It will land on a ledge, and then fly back to the right if you don't shoot it. Inside will be a Reflection Laser weapon upgrade, but since this is your first power-up, all it will do is summon the initial Level 1 Force. Let the Force fly to the right as a large hovering armored mech appears on the screen. Shoot it with a few fully charged Wave Beams while the Force collides with it. Around the same time, a walking missile launcher will appear on the ground. Take out any ground troops, but watch out for mechs that appear ",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Biomechanical Core' from R-Type (Arcade). World environmental details: [Encounter] As the stage begins, you will be attacked by two small waves of red, followed by brown ships that fly a snake formation. At the same time these ships appear, the first walking ground mech will appear. Take out the flying squadrons with a fully powered Wave Beam. Then the screen will fill with red ships for some time until the first power-up transport appears. It will land on a ledge, and then fly back to the right if you don't shoot it. Inside will be a Reflection Laser weapon upgrade, but since this is your first power-up, all it will do is summon the initial Level 1 Force. Let th. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 95,
+    "platform": "Arcade",
+    "game": "OutRun",
+    "target": "Coconut Beach",
+    "url": "https://strategywiki.org/wiki/OutRun/Routes",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Coconut Beach from OutRun on Arcade.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Coconut Beach' from OutRun (Arcade). World environmental details: A classic 3D retro environment capturing Coconut Beach from OutRun on Arcade.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 96,
+    "platform": "Arcade",
+    "game": "Space Harrier",
+    "target": "The Fantasy Zone",
+    "url": "https://strategywiki.org/wiki/Space_Harrier/Stages",
+    "section_count": 2,
+    "description": "[Overview] Minia's landscape and occupants will most likely remind you of thethird stage. Mushrooms occupy the ground, and you will encounter Loopers in the air through certain segments. But the real danger are the mix of fighter ships that attack you as you fly through the stage. Three Valkyrie jets fly in from the upper left, and swoop down to the bottom right as they fire missiles at you. Then three Mukadensu ships appear from behind you on your left, followed by three more ships appearing from behind you on your right. Three Mukadensu ships will appear from the distance, one on the left, one in the middle, and one on the right. They will rise up and down. Shortly after they appear, four more ships will appear from behind you, two on the left and two on the right. They will fly ahead of you and cross through the middle of the screen. Valkyrie ships will fly in from the background and ",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'The Fantasy Zone' from Space Harrier (Arcade). World environmental details: [Overview] Minia's landscape and occupants will most likely remind you of thethird stage. Mushrooms occupy the ground, and you will encounter Loopers in the air through certain segments. But the real danger are the mix of fighter ships that attack you as you fly through the stage. Three Valkyrie jets fly in from the upper left, and swoop down to the bottom right as they fire missiles at you. Then three Mukadensu ships appear from behind you on your left, followed by three more ships appearing from behind you on your right. Three Mukadensu ships will appear from the distance, one on the left, o. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 97,
+    "platform": "Arcade",
+    "game": "Marble Madness",
+    "target": "Practice & Intermediate Grid",
+    "url": "https://strategywiki.org/wiki/Marble_Madness/Courses",
+    "section_count": 1,
+    "description": "[Overview] The practice race is the easiest one - simply follow the arrows to the bottom, and onto the half-pipe. There are 60 seconds on the clock; while they don't carry over to the next race, they each award 100 points per second remaining. Each corner of the half-pipe extends much higher than the pipe itself, with ground markings with the numbers 3, 4, 5, 6. Attempting a jump onto these markings will award between 3000 and 6000 points, depending on how far you land. If you simply remain at the starting location on this map, the game will raise a ramp underneath the marbles to move them forward.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Practice & Intermediate Grid' from Marble Madness (Arcade). World environmental details: [Overview] The practice race is the easiest one - simply follow the arrows to the bottom, and onto the half-pipe. There are 60 seconds on the clock; while they don't carry over to the next race, they each award 100 points per second remaining. Each corner of the half-pipe extends much higher than the pipe itself, with ground markings with the numbers 3, 4, 5, 6. Attempting a jump onto these markings will award between 3000 and 6000 points, depending on how far you land. If you simply remain at the starting location on this map, the game will raise a ramp underneath the marbles to move them for. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 98,
+    "platform": "Arcade",
+    "game": "Defender",
+    "target": "Cylindrical City Horizon",
+    "url": "https://strategywiki.org/wiki/Defender",
+    "section_count": 3,
+    "description": "[Overview] This is the first game in theDefenderseries. For other games in the series see theDefender category. Defenderis considered one of the most challenging arcade games ever made. One look at the controls was enough to send many players in search of a simpler game. But those who were brave enough to attempt it found a compelling and addictive game, with an incredibly rich level of strategy. Defender was the brain child of early (and continuing) game developer Eugene Jarvis. Eugene wished to make a video game that immersed the player more than the myriad of Space Invader clones that flooded the markets, and by many experts' accounts, he succeeded. The break-neck pace of the action made the game an easy choice for Atari to buy the home licensing rights. They brought a conversion to the 2600 that was generally well received, despite its shortcomings. But the version created for the 8-",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Cylindrical City Horizon' from Defender (Arcade). World environmental details: [Overview] This is the first game in theDefenderseries. For other games in the series see theDefender category. Defenderis considered one of the most challenging arcade games ever made. One look at the controls was enough to send many players in search of a simpler game. But those who were brave enough to attempt it found a compelling and addictive game, with an incredibly rich level of strategy. Defender was the brain child of early (and continuing) game developer Eugene Jarvis. Eugene wished to make a video game that immersed the player more than the myriad of Space Invader clones that flood. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 99,
+    "platform": "Arcade",
+    "game": "Battlezone",
+    "target": "Green Wireframe Moonscape",
+    "url": "https://strategywiki.org/wiki/Battlezone",
+    "section_count": 2,
+    "description": "[Overview] This is the first game in theBattlezoneseries. For other games in the series see theBattlezone category. Battlezoneis a first-personshooterarcade game which was released byAtariin1980; it utilizes one Motorola M6502 (running at 1.512 MHz), with a Pokey sound chip running at that same speed, and a custom DAC. It was later ported to several other systems, and was included in several compilations - and common play in the U.S. can range from $0.25 to $1 per game (depending on how the cabinet is set). The default setting is $0.25 play with three lives and two bonuses at 15,000 and 100,000 points.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Green Wireframe Moonscape' from Battlezone (Arcade). World environmental details: [Overview] This is the first game in theBattlezoneseries. For other games in the series see theBattlezone category. Battlezoneis a first-personshooterarcade game which was released byAtariin1980; it utilizes one Motorola M6502 (running at 1.512 MHz), with a Pokey sound chip running at that same speed, and a custom DAC. It was later ported to several other systems, and was included in several compilations - and common play in the U.S. can range from $0.25 to $1 per game (depending on how the cabinet is set). The default setting is $0.25 play with three lives and two bonuses at 15,000 and 100,00. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  },
+  {
+    "id": 100,
+    "platform": "Arcade",
+    "game": "Bad Dudes vs. DragonNinja",
+    "target": "Speeding Semi-Trucks",
+    "url": "https://strategywiki.org/wiki/Bad_Dudes_Vs._DragonNinja/Walkthrough",
+    "section_count": 0,
+    "description": "A classic 3D retro environment capturing Speeding Semi-Trucks from Bad Dudes vs. DragonNinja on Arcade.",
+    "qwen_prompt": "Generate a fully interactive 3D WebGL Three.js world representing 'Speeding Semi-Trucks' from Bad Dudes vs. DragonNinja (Arcade). World environmental details: A classic 3D retro environment capturing Speeding Semi-Trucks from Bad Dudes vs. DragonNinja on Arcade.. Include lighting, fog, textures/materials, animated environmental elements, and mouse/touch orbit camera controls."
+  }
+]
