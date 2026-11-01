@@ -4,6 +4,14 @@ Captured 2026-11-01 from Cherie; expanded and adjudicated by Moth the same day.
 Verdicts: **DO** = build as stated · **ADAPT** = build with the noted change · **DON'T** = not as stated (reason given).
 Nothing here is scheduled until Cherie picks a phase.
 
+## Decisions — Cherie, 2026-11-01
+
+- §§1–4 **APPROVED**, in implementation as three parallel lanes (walker core / map module / pipeline thumbs); integration lands on main as one batch.
+- §5 side-scroller: **DROPPED** — not building it.
+- Favorites: ONE simple star touch control. No thumbs up/down, no repair-queue wiring.
+- Map thumbnails: REAL baked top-down renders from a new pipeline step in the walker converter — not reference-image tiles.
+- The phasing section below is superseded by the parallel build.
+
 ---
 
 ## 1. Saved state — start where you last played · **DO**
@@ -15,7 +23,7 @@ Resume in the same world, at the same spot, with the same relics collected.
 - Version the save schema (`v2`). Worlds get regenerated and edited, so a saved position can end up inside new geometry: on load, run the same ground/stuck check the walker uses at spawn; if it fails, fall back to the world's normal spawn with relics and visited intact. A stale save must never soft-lock the player.
 - Cost: small. All client-side; no server, no account. This is the highest value-per-effort item in this doc.
 
-## 2. Favorite a world (and maybe thumbs up / down) · **ADAPT**
+## 2. Favorite a world · **DO — star only** (Cherie, 2026-11-01: one simple star touch control; no thumbs down)
 
 Cherie's version: a simple touch control, upper-right corner, to favorite/bookmark a room — or thumbs up / thumbs down.
 
@@ -42,7 +50,7 @@ From the map, let the player arrange their favorites into a sequence — a perso
 - UI: on the map, tap favorites in order (numbered badges 1, 2, 3…), "Walk this route" swaps the active ring. Keep the canonical ring one tap away ("Back Roms ring").
 - Why it's the standout: it's the first feature that makes the catalog *personal* — 1,000 worlds is a warehouse; a hand-built route of your 12 favorites is a place. It also gives §2's favorite button its real purpose.
 
-## 5. Side-scroller walker built from the gallery images · **ADAPT** (local prototype yes; public version needs a different art source)
+## 5. Side-scroller walker built from the gallery images · **DROPPED** (Cherie, 2026-11-01 — not building it; analysis below kept for the record)
 
 Cherie's version: a side-view walker mode where the gallery images themselves become the scrolling world — walk through the map image.
 
