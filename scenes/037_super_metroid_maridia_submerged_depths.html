@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maridia Submerged Depths — Brinstar</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #020308;
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      color: #eef2ff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, .8);
+    }
+
+    .topbar {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+    }
+
+    .brand {
+      max-width: 430px;
+      padding: 16px 18px;
+      border: 1px solid rgba(142, 211, 255, .24);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(5, 13, 28, .86), rgba(5, 10, 20, .58));
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, .35);
+    }
+
+    .eyebrow {
+      color: #79c9ff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 7px 0 7px;
+      font-size: clamp(22px, 3vw, 36px);
+      line-height: 1.05;
+      letter-spacing: -.025em;
+    }
+
+    .subtitle {
+      color: rgba(225, 235, 255, .72);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .legend {
+      min-width: 220px;
+      padding: 14px 16px;
+      border: 1px solid rgba(142, 211, 255, .2);
+      border-radius: 12px;
+      background: rgba(4, 10, 20, .72);
+      backdrop-filter: blur(10px);
+    }
+
+    .route {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 10px 0;
+    }
+
+    .route-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .route p {
+      margin: 5px 0 0;
+      color: rgba(225, 235, 255, .72);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .route.left { border-left: 2px solid #83ddff; }
+    .route.right { border-left: 2px solid #ffbf69; }
+
+    .bottom {
+      position: absolute;
+      right: 24px;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .controls {
+      padding: 10px 14px;
+      border: 1px solid rgba(142, 211, 255, .2);
+      border-radius: 10px;
+      background: rgba(4, 10, 20, .72);
+      color: rgba(225, 235, 255, .7);
+      font-size: 11px;
+      backdrop-filter: blur(10px);
+    }
+
+    .status {
+      color: #83f4d6;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 45%, rgba(0, 0, 0, .48) 100%),
+        linear-gradient(to bottom, rgba(0, 0, 0, .18), transparent 25%, transparent 75%, rgba(0, 0, 0, .45));
+    }
+
+    @media (max-width: 700px) {
+      .topbar { top: 12px; left: 12px; right: 12px; }
+      .brand { max-width: 100%; padding: 12px 14px; }
+      .legend { display: none; }
+      .bottom { right: 12px; bottom: 12px; }
+      .controls { padding: 9px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="hud">
+      <div class="vignette"></div>
+      <div class="topbar">
+        <div class="brand">
+          <div class="eyebrow">Super Metroid · Brinstar</div>
+          <h1>Maridia Submerged Depths</h1>
+          <div class="subtitle">
+            You must descend through Brinstar to the glass tube.
+            <b>Right path</b> leads to Maridia; <b>left path</b> opens a Brinstar side route.
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="route left" id="leftRoute">
+            <div class="route-label">Left Path</div>
+            <p>Explore Brinstar for upgrades before heading toward Maridia.</p>
+          </div>
+          <div class="route right" id="rightRoute">
+            <div class="route-label">Right Path</div>
+            <p>Follow the main right route to the submerged glass tube and Maridia.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="controls">Drag to orbit · Scroll to zoom</div>
+        <div class="status">System link: Maridia</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const app = document.getElementById("app");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x02050c);
+    scene.fog = new THREE.FogExp2(0x061020, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(
+      68,
+      innerWidth / innerHeight,
+      0.1,
+      120
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    app.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // Shared materials
+    const materials = {
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x354054,
+        roughness: 0.94,
+        metalness: 0.02,
+        flatShading: true
+      }),
+      darkRock: new THREE.MeshStandardMaterial({
+        color: 0x111a25,
+        roughness: 1,
+        metalness: 0.05,
+        flatShading: true
+      }),
+      blueRock: new THREE.MeshStandardMaterial({
+        color: 0x24536d,
+        roughness: 0.82,
+        metalness: 0.08
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x0b4661,
+        roughness: 0.24,
+        metalness: 0.18,
+        transparent: true,
+        opacity: 0.82,
+        emissive: 0x03273b,
+        emissiveIntensity: 0.55
+      }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x75e8ff,
+        emissive: 0x20bde8,
+        emissiveIntensity: 2.4,
+        roughness: 0.3,
+        metalness: 0.25
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x287dff,
+        emissive: 0x0b328b,
+        emissiveIntensity: 1.4,
+        roughness: 0.42,
+        metalness: 0.3
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffc25a,
+        emissive: 0x9a3c00,
+        emissiveIntensity: 1.1,
+        roughness: 0.48
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xe6f3ff,
+        emissive: 0x6688a4,
+        emissiveIntensity: 0.7,
+        roughness: 0.5
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xff3d4f,
+        emissive: 0x8e0818,
+        emissiveIntensity: 1.7,
+        roughness: 0.42
+      })
+    };
+
+    const pointLights = [];
+    const waterBodies = [];
+    const animatedParticles = [];
+    const waterSurfaces = [];
+
+    function mesh(geometry, material, position, scale = [1, 1, 1], parent = world) {
+      const object = new THREE.Mesh(geometry, material);
+      object.position.set(...position);
+      object.scale.set(...scale);
+      object.castShadow = true;
+      object.receiveShadow = true;
+      parent.add(object);
+      return object;
+    }
+
+    function box(w, h, d, material, position, rotation = [0, 0, 0], parent = world) {
+      return mesh(new THREE.BoxGeometry(w, h, d), material, position, [1, 1, 1], parent);
+    }
+
+    function cylinder(rt, rb, h, material, position, segments = 12, rotation = [0, 0, 0], parent = world) {
+      return mesh(
+        new THREE.CylinderGeometry(rt, rb, h, segments),
+        material,
+        position,
+        [1, 1, 1],
+        parent
+      );
+    }
+
+    function tube(radius, material, position, height, rotation = [0, 0, 0], parent = world) {
+      return mesh(
+        new THREE.CylinderGeometry(radius, radius, height, 18),
+        material,
+        position,
+        [1, 1, 1],
+        parent
+      );
+    }
+
+    function torus(radius, tubeRadius, material, position, rotation = [0, 0, 0], parent = world) {
+      return mesh(
+        new THREE.TorusGeometry(radius, tubeRadius, 8, 32),
+        material,
+        position,
+        [1, 1, 1],
+        parent
+      );
+    }
+
+    // Lighting
+    scene.add(new THREE.HemisphereLight(0x7899c8, 0x06070b, 0.68));
+
+    const keyLight = new THREE.DirectionalLight(0x91bfff, 2.1);
+    keyLight.position.set(-18, 24, 14);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -35;
+    keyLight.shadow.camera.right = 35;
+    keyLight.shadow.camera.top = 35;
+    keyLight.shadow.camera.bottom = -35;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 80;
+    scene.add(keyLight);
+
+    const maridiaLight = new THREE.PointLight(0xff543f, 28, 32, 2);
+    maridiaLight.position.set(12, 2, -18);
+    scene.add(mardiaLight);
+
+    const entranceLight = new THREE.PointLight(0x58dfff, 22, 24, 2);
+    entranceLight.position.set(-2, 5, 17);
+    scene.add(entranceLight);
+
+    // Main cavern: irregular layered rock walls and floor
+    const floor = mesh(
+      new THREE.CylinderGeometry(38, 44, 3.5, 18, 1, false),
+      materials.darkRock,
+      [0, -2.1, 0],
+      [1, 1, 1]
+    );
+
+    const floorTop = mesh(
+      new THREE.CylinderGeometry(36, 38, 0.55, 18, 1, false),
+      materials.rock,
+      [0, -1.45, 0],
+      [1, 1, 1]
+    );
+
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2 + Math.sin(i * 2.3) * 0.12;
+      const radius = 29 + (i % 4) * 2.2;
+      const height = 5 + (i % 5) * 1.35;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      const wall = cylinder(
+        3.2 + (i % 3),
+        5.5 + (i % 4),
+        height,
+        i % 2 ? materials.rock : materials.blueRock,
+        [x, -1.5 + height / 2, z],
+        9,
+        [Math.sin(angle) * 0.3, 0, -Math.cos(angle) * 0.3]
+      );
+
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+    }
+
+    // Cavern ceiling ribs
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const radius = 19 + (i % 3) * 2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const rib = cylinder(
+        0.35,
+        0.55,
+        6 + (i % 3),
+        materials.darkRock,
+        [x, 8 + (i % 2), z],
+        7,
+        [Math.sin(angle) * 0.35, 0, -Math.cos(angle) * 0.35]
+      );
+      rib.castShadow = true;
+    }
+
+    // Main route: right path leading to the submerged tube
+    const rightPath = new THREE.Group();
+    world.add(rightPath);
+
+    const rightRoutePoints = [
+      [-2.5, -0.65, 18],
+      [-2.5, -0.65, 8],
+      [-2.5, -0.65, -2],
+      [-2.5, -0.65, -13],
+      [-2.5, -0.65, -23]
+    ];
+
+    rightRoutePoints.forEach((p, i) => {
+      box(1.45, 0.28, 3.8, materials.blueRock, [p[0], p[1], p[2]], [0, 0, 0], rightPath);
+    });
+
+    for (let i = 0; i < rightRoutePoints.length - 1; i++) {
+      const a = rightRoutePoints[i];
+      const b = rightRoutePoints[i + 1];
+      const angle = Math.atan2(b[0] - a[0], b[2] - a[2]);
+      const connector = box(
+        1.6,
+        0.26,
+        3.4,
+        materials.blueRock,
+        [(a[0] + b[0]) / 2, a[1], (a[2] + b[2]) / 2],
+        [0, -angle, 0],
+        rightPath
+      );
+      connector.rotation.x = Math.sin(angle) * 0.12;
+    }
+
+    // Left side route with branches and item platforms
+    const leftPath = new THREE.Group();
+    world.add(leftPath);
+
+    const leftRoutePoints = [
+      [12, -0.65, 18],
+      [12, -0.65, 8],
+      [12, -0.65, -5],
+      [12, -0.65, -15]
+    ];
+
+    leftRoutePoints.forEach((p) => {
+      box(1.35, 0.27, 3.6, materials.blueRock, [p[0], p[1], p[2]], [0, 0, 0], leftPath);
+    });
+
+    for (let i = 0; i < leftRoutePoints.length - 1; i++) {
+      const a = leftRoutePoints[i];
+      const b = leftRoutePoints[i + 1];
+      const angle = Math.atan2(b[0] - a[0], b[2] - a[2]);
+      const connector = box(
+        1.5,
+        0.27,
+        3.4,
+        materials.blueRock,
+        [(a[0] + b[0]) / 2, a[1], (a[2] + b[2]) / 2],
+        [0, -angle, 0],
+        leftPath
+      );
+      connector.rotation.x = Math.sin(angle) * 0.12;
+    }
+
+    // Left-side branching route
+    const branchPoints = [
+      [12, -0.65, 8],
+      [18, -0.65, 8],
+      [23, -0.65, 8]
+    ];
+    branchPoints.forEach((p) => {
+      box(1.25, 0.26, 3.2, materials.blueRock, [p[0], p[1], p[2]], [0, 0, 0], leftPath);
+    });
+    for (let i = 0; i < branchPoints.length - 1; i++) {
+      const a = branchPoints[i];
+      const b = branchPoints[i + 1];
+      const connector = box(
+        1.35,
+        0.26,
+        3.2,
+        materials.blueRock,
+        [(a[0] + b[0]) / 2, a[1], (a[2] + b[2]) / 2],
+        [0, 0, 0],
+        leftPath
+      );
+      connector.rotation.y = Math.atan2(a[0] - b[0], a[2] - b[2]);
+    }
+
+    // Elevated side platforms
+    const platformData = [
+      [18.5, 1.25, 7],
+      [23.5, 1.25, 7],
+      [18.5, 1.25, 1],
+      [23.5, 1.25, -9]
+    ];
+
+    platformData.forEach((p, i) => {
+      box(2.4, 0.35, 2.2, materials.blueRock, [p[0], p[1], p[2]], [0, 0, 0], leftPath);
+      for (let j = 0; j < 3; j++) {
+        cylinder(
+          0.12,
+          0.16,
+          0.8,
+          materials.darkRock,
+          [p[0] - 0.85 + j * 0.85, p[1] - 0.1, p[2]],
+          6
+        );
+      }
+    });
+
+    // Item crates
+    function crate(position, material = materials.yellow) {
+      const group = new THREE.Group();
+      world.add(group);
+      box(0.8, 0.85, 0.8, material, [0, 0.45, 0], [0, 0, 0], group);
+      box(0.88, 0.12, 0.88, materials.white, [0, 0.91, 0], [0, 0, 0], group);
+      for (let i = 0; i < 4; i++) {
+        const bolt = mesh(
+          new THREE.CylinderGeometry(0.07, 0.07, 0.08, 6),
+          materials.darkRock,
+          [0, 0.93, 0],
+          [1, 1, 1],
+          group
+        );
+        bolt.rotation.x = Math.PI / 2;
+      }
+      return group;
+    }
+
+    crate([18.5, 0, 7]);
+    crate([23.5, 0, 7]);
+    crate([18.5, 0, 1]);
+    crate([23.5, 0, -9]);
+
+    // Submerged glass tube
+    const tubeGroup = new THREE.Group();
+    tubeGroup.position.set(-2.5, -0.65, -23);
+    world.add(tubeGroup);
+
+    const tubeOuter = cylinder(
+      2.15,
+      2.15,
+      8.5,
+      materials.darkRock,
+      [0, 3.8, 0],
+      20,
+      [0, 0, 0],
+      tubeGroup
+    );
+
+    const tubeGlass = cylinder(
+      1.55,
+      1.55,
+      8.2,
+      new THREE.MeshPhysicalMaterial({
+        color: 0x65c9e8,
+        roughness: 0.08,
+        metalness: 0.05,
+        transmission: 0.35,
+        transparent: true,
+        opacity: 0.3,
+        emissive: 0x07384c,
+        emissiveIntensity: 0.75,
+        side: THREE.DoubleSide
+      }),
+      [0, 3.8, 0],
+      24,
+      [0, 0, 0],
+      tubeGroup
+    );
+
+    for (let i = 0; i < 4; i++) {
+      tubeGlass.position.y = 0.45 + i * 2.15;
+    }
+
+    for (let i = 0; i < 6; i++) {
+      const ring = torus(2.1, 0.16, materials.cyan, [0, 0.3 + i * 1.4, 0], [0, 0, 0], tubeGroup);
+      ring.rotation.z = 0.12 * i;
+    }
+
+    const tubeLight = new THREE.PointLight(0x42d8ff, 34, 18, 2);
+    tubeLight.position.set(0, 5, 0);
+    tubeGroup.add(tubeLight);
+
+    // Water surrounding the tube
+    const tubeWater = mesh(
+      new THREE.CylinderGeometry(4.8, 5.2, 0.35, 28),
+      materials.water,
+      [-2.5, -0.15, -23],
+      [1, 1, 1]
+    );
+    tubeWater.receiveShadow = true;
+    waterBodies.push(tubeWater);
+
+    const waterRipples = [];
+    for (let i = 0; i < 7; i++) {
+      const ripple = torus(
+        0.8 + i * 0.45,
+        0.025,
+        new THREE.MeshBasicMaterial({
+          color: 0x73eaff,
+          transparent: true,
+          opacity: 0.35 - i * 0.03,
+          depthWrite: false
+        }),
+        [-2.5 + (i % 2) * 0.5, 0.05, -23 + Math.floor(i / 2) * 0.6],
+        [0, 0, 0]
+      );
+      waterRipples.push(ripple);
+    }
+
+    // Entrance portal and glowing arch
+    const entrance = new THREE.Group();
+    entrance.position.set(-2.5, -0.65, 18);
+    world.add(entrance);
+
+    box(7.2, 0.7, 1.2, materials.blueRock, [0, 0.5, 0], [0, 0, 0], entrance);
+    box(0.7, 6.2, 1.2, materials.blueRock, [-3.2, 3.1, 0], [0, 0, 0], entrance);
+    box(0.7, 6.2, 1.2, materials.blueRock, [3.2, 3.1, 0], [0, 0, 0], entrance);
+    box(7.2, 0.65, 1.2, materials.blueRock, [0, 6.1, 0], [0, 0, 0], entrance);
+
+    const portalGlow = torus(3.4, 0.24, materials.cyan, [0, 5.7, 0], [0, 0, 0], entrance);
+    const portalCore = mesh(
+      new THREE.SphereGeometry(1.1, 16, 12),
+      materials.cyan,
+      [0, 5.7, 0.2],
+      [1, 1.1, 1],
+      entrance
+    );
+
+    entranceLight = new THREE.PointLight(0x52ddff, 30, 18, 2);
+    entranceLight.position.set(0, 5.5, 0.5);
+    entrance.add(entranceLight);
+
+    // Decorative pipes along the right route
+    for (let i = 0; i < 8; i++) {
+      const z = 12 - i * 3.5;
+      const pipe = cylinder(
+        0.16,
+        0.19,
+        3.2,
+        materials.darkRock,
+        [-3.8, 0.15, z],
+        8,
+        [0, 0, 0]
+      );
+      pipe.rotation.y = Math.sin(i * 1.7) * 0.12;
+    }
+
+    // Hanging crystals
+    function crystal(position, scale = 1, material = materials.cyan) {
+      const group = new THREE.Group();
+      group.position.set(...position);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      const stem = cylinder(
+        0.12,
+        0.28,
+        1.3,
+        material,
+        [0, 0.65, 0],
+        7
+      );
+      stem.rotation.z = (Math.random() - 0.5) * 0.25;
+
+      const tip = cone(
+        0.75,
+        1.1,
+        material,
+        [0, 1.25, 0],
+        7
+      );
+      tip.rotation.z = (Math.random() - 0.5) * 0.25;
+      return group;
+    }
+
+    function cone(radius, height, material, position, segments = 7, parent = world) {
+      return cylinder(radius, height, material, position, segments);
+    }
+
+    [
+      [-10, 5.5, 10, 1.2],
+      [-12, 5.0, 4, 0.9],
+      [10, 5.8, 11, 1.0],
+      [12, 5.2, 5, 1.3],
+      [-10, 5.7, -10, 0.85],
+      [11, 5.5, -11, 1.1],
+      [-2.5, 5.7, -19, 0.75]
+    ].forEach((p) => crystal(p, p[3], p[3] > 9 ? materials.blue : materials.cyan));
+
+    // Waterfalls
+    function waterfall(position, width = 2.2, height = 5.5) {
+      const group = new THREE.Group();
+      group.position.set(...position);
+      world.add(group);
+
+      const sheet = mesh(
+        new THREE.PlaneGeometry(width, height, 8, 1),
+        new THREE.MeshStandardMaterial({
+          color: 0x4ac5e5,
+          emissive: 0x063c56,
+          emissiveIntensity: 0.8,
+          roughness: 0.25,
+          metalness: 0.15,
+          transparent: true,
+          opacity: 0.72,
+          side: THREE.DoubleSide
+        }),
+        [0, -height / 2, 0],
+        [1, 1, 1],
+        group
+      );
+      sheet.rotation.y = Math.sin(position[0]) * 0.25;
+
+      const droplets = [];
+      for (let i = 0; i < 10; i++) {
+        const drop = mesh(
+          new THREE.SphereGeometry(0.09, 6, 5),
+          materials.cyan,
+          [0, -height + Math.random() * height, 0],
+          [1, 1, 1],
+          group
+        );
+        drop.castShadow = false;
+        droplets.push(drop);
+      }
+
+      waterBodies.push(group);
+      return group;
+    }
+
+    waterfall([7.7, 5.4, 8], 1.8, 5.2);
+    waterfall([-8.3, 5.8, -8], 2.1, 6.0);
+
+    // Suspended particles
+    const particleMaterial = new THREE.PointsMaterial({
+      color: 0x8fdcff,
+      size: 0.09,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false
+    });
+
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particleCount = 550;
+    const particlePositions = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 54;
+      particlePositions[i * 3 + 1] = Math.random() * 13 - 1;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 54;
+    }
+
+    particlesGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+    const particles = new THREE.Points(particlesGeometry, particleMaterial);
+    world.add(particles);
+    animatedParticles.push({ object: particles, phase: Math.random() * 10, speed: 0.02 + Math.random() * 0.03 });
+
+    // Floating dust motes
+    const moteMaterial = new THREE.PointsMaterial({
+      color: 0xb5eaff,
+      size: 0.12,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+
+    const moteCount = 80;
+    const motePositions = new Float32Array(moteCount * 3);
+    for (let i = 0; i < moteCount; i++) {
+      motePositions[i * 3] = (Math.random() - 0.5) * 42;
+      motePositions[i * 3 + 1] = Math.random() * 9 - 1;
+      motePositions[i * 3 + 2] = (Math.random() - 0.5) * 42;
+    }
+    const moteGeometry = new THREE.BufferGeometry();
+    moteGeometry.setAttribute("position", new THREE.BufferAttribute(motePositions, 3));
+    const motes = new THREE.Points(moteGeometry, moteMaterial);
+    world.add(motes);
+
+    // Animated water surface
+    const waterMaterial = materials.water.clone();
+    const water = mesh(
+      new THREE.CylinderGeometry(7, 7, 0.35, 32),
+      waterMaterial,
+      [-2.5, -0.15, -23],
+      [1, 1, 1]
+    );
+
+    // Route marker lights
+    const routeLights = [];
+    for (let i = 0; i < 7; i++) {
+      const z = 13 - i * 3.6;
+      const light = mesh(
+        new THREE.SphereGeometry(0.13, 8, 6),
+        materials.cyan,
+        [-3.8, 0.45, z],
+        [1, 1, 1]
+      );
+      routeLights.push({ object: light, phase: i * 0.7 });
+    }
+
+    // Interactive route markers
+    const leftMarkers = [];
+    for (let i = 0; i < 5; i++) {
+      const marker = mesh(
+        new THREE.SphereGeometry(0.15, 8, 6),
+        materials.yellow,
+        [18.5, 0.2, 7 - i * 4],
+        [1, 1, 1]
+      );
+      leftMarkers.push({ object: marker, phase: i * 1.1 });
+    }
+
+    // Camera controls: orbit around a moving target
+    const controls = {
+      target: new THREE.Vector3(-1.5, 0.5, 2),
+      radius: 31,
+      theta: 0.62,
+      phi: 1.22,
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+      pointerId: null
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.pointerId = event.pointerId;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging || event.pointerId !== controls.pointerId) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(controls.phi - dy * 0.005, 0.28, Math.PI - 0.28);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      if (event.pointerId !== controls.pointerId) return;
+      controls.dragging = false;
+      controls.pointerId = null;
+      renderer.domElement.style.cursor = "grab";
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius + event.deltaY * 0.025,
+        12,
+        55
+      );
+      updateCamera();
+    }, { passive: false });
+
+    // Touch pinch zoom
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        if (pinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(
+            controls.radius + (pinchDistance - distance) * 0.025,
+            12,
+            55
+          );
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    // Clickable route buttons
+    const leftButton = document.getElementById("leftRoute");
+    const rightButton = document.getElementById("rightRoute");
+
+    function goToRoute(route) {
+      controls.target.set(route.target.x, route.target.y, route.target.z);
+      controls.radius = route.radius;
+      controls.theta = route.theta;
+      controls.phi = route.phi;
+      updateCamera();
+    }
+
+    leftButton.addEventListener("click", () => {
+      controls.target.set(16, 0.7, 7);
+      controls.radius = 24;
+      controls.theta = 0.75;
+      controls.phi = 1.16;
+      updateCamera();
+    });
+
+    rightButton.addEventListener("click", () => {
+      controls.target.set(-1.5, 0.5, -2);
+      controls.radius = 28;
+      controls.theta = 0.62;
+      controls.phi = 1.22;
+      updateCamera();
+    });
+
+    // Animation
+    const t = clock.getElapsedTime();
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      const positions = particlesGeometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        const index = i * 3;
+        positions[index] += Math.sin(t * 0.18 + i) * delta * 0.035;
+        positions[index + 1] += Math.cos(t * 0.15 + i * 0.7) * delta * 0.045;
+        positions[index + 2] += Math.sin(t * 0.12 + i * 0.4) * delta * 0.03;
+
+        if (positions[index + 1] > 12) {
+          positions[index + 1] = -1;
+        }
+      }
+      particlesGeometry.attributes.position.needsUpdate = true;
+
+      const motePositions = moteGeometry.attributes.position.array;
+      for (let i = 0; i < moteCount; i++) {
+        const index = i * 3;
+        motePositions[index] += Math.sin(t * 0.22 + i) * delta * 0.018;
+        motePositions[index + 1] += Math.cos(t * 0.18 + i * 0.5) * delta * 0.025;
+        motePositions[index + 2] += Math.sin(t * 0.16 + i * 0.3) * delta * 0.015;
+        if (motePositions[index + 1] > 8) motePositions[index + 1] = -1;
+      }
+      moteGeometry.attributes.position.needsUpdate = true;
+
+      for (let i = 0; i < waterRipples.length; i++) {
+        const ripple = waterRipples[i];
+        const scale = 1 + Math.sin(t * 0.8 + i) * 0.08;
+        ripple.scale.setScalar(scale);
+        ripple.material.opacity = 0.25 + 0.15 * (Math.sin(t * 0.8 + i) + 1) * 0.5;
+      }
+
+      for (const item of animatedParticles) {
+        item.object.rotation.y = t * item.speed + item.phase;
+        item.object.position.y = Math.sin(t * 0.22 + item.phase) * 0.18;
+      }
+
+      for (const item of routeLights) {
+        item.object.material = materials.cyan;
+        const pulse = 0.85 + Math.sin(t * 2.1 + item.phase) * 0.18;
+        item.object.scale.setScalar(pulse);
+      }
+
+      for (const item of leftMarkers) {
+        item.object.material = materials.yellow;
+        const pulse = 0.85 + Math.sin(t * 1.7 + item.phase) * 0.16;
+        item.object.scale.setScalar(pulse);
+      }
+
+      for (const drop of waterBodies) {
+        if (!drop.userData.isWater) continue;
+        drop.position.y = Math.sin(t * 0.65 + drop.userData.phase) * 0.07;
+      }
+
+      for (let i = 0; i < droplets.length; i++) {
+        const drop = droplets[i];
+        drop.position.y -= delta * (1.3 + (i % 3) * 0.25);
+        drop.position.x += Math.sin(t * 1.2 + i) * delta * 0.35;
+        if (drop.position.y < -2.2) {
+          drop.position.y = 5.4 - (i % 3) * 0.8;
+          drop.position.x = 0;
+        }
+      }
+
+      tubeLight.intensity = 30 + Math.sin(t * 1.7) * 3;
+      entranceLight.intensity = 29 + Math.sin(t * 1.3) * 2;
+
+      maridiaLight.intensity = 27 + Math.sin(t * 1.1) * 2.5;
+
+      // Subtle camera breathing movement
+      if (!controls.dragging) {
+        controls.target.y += Math.sin(t * 0.25) * 0.0007;
+      }
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

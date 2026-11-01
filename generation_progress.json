@@ -322,5 +322,14 @@
     "filename": "036_a_link_to_the_past_dark_world_pyramid.html",
     "verified_working": false,
     "generated_at": "2026-11-01 07:11:00"
+  },
+  "37": {
+    "id": 37,
+    "game": "Super Metroid",
+    "target": "Maridia Submerged Depths",
+    "platform": "SNES",
+    "filename": "037_super_metroid_maridia_submerged_depths.html",
+    "verified_working": false,
+    "generated_at": "2026-11-01 07:24:53"
   }
 }
