@@ -156,6 +156,16 @@ def sanitize_scene_html(html: str) -> str:
     if "touch-action" not in fixed and "</head>" in fixed:
         fixed = fixed.replace("</head>", "<style>html,body,canvas{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}</style></head>", 1)
         print("[Sanitizer] Added touch-action:none for touch orbit")
+    # iOS Safari does not reliably honor touch-action: swallow one-finger drags and
+    # Safari's own gestures in JS (touchstart left alone so tap/click still fires).
+    if "touch-guard" not in fixed and "</body>" in fixed:
+        guard = ("<script>/* touch-guard */(function(){var o={passive:false};"
+                 "document.addEventListener('touchmove',function(e){var t=e.target;"
+                 "if(t&&t.tagName==='CANVAS')e.preventDefault();},o);"
+                 "['gesturestart','gesturechange','gestureend'].forEach(function(n){"
+                 "document.addEventListener(n,function(e){e.preventDefault();},o);});})();</script>")
+        fixed = fixed.replace("</body>", guard + "</body>", 1)
+        print("[Sanitizer] Added JS touch guard (one-finger drag + gesture events)")
     # Gate 1: defaultCamera is a plain {x,y,z,target} object; .distance() does not exist.
     fixed, d = re.subn(
         r"defaultCamera\.distance\(\)",
