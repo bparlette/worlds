@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>100 Retro Worlds - 3D WebGL Walkthrough Explorer</title>
+    <title>900 Retro Worlds - 3D WebGL Walkthrough Explorer</title>
     <style>
         :root {
             --bg: #090a10;
@@ -140,12 +140,35 @@
             font-weight: 600;
             margin-bottom: 12px;
         }
+        .description-container {
+            margin-bottom: 20px;
+            flex: 1;
+        }
         .description {
             font-size: 0.88rem;
             color: var(--text-muted);
             line-height: 1.5;
-            margin-bottom: 20px;
-            flex: 1;
+            transition: max-height 0.3s ease;
+        }
+        .description.collapsed {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .expand-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 0;
+            margin-top: 6px;
+            display: inline-block;
+        }
+        .expand-btn:hover {
+            text-decoration: underline;
         }
         .card-footer {
             margin-top: auto;
@@ -176,10 +199,10 @@
 </head>
 <body>
     <header>
-        <h1>100 Retro Game Worlds</h1>
+        <h1>900 Retro Game Worlds</h1>
         <p>Autonomous procedural 3D WebGL environments extracted from StrategyWiki walkthroughs and synthesized by Qwen3.5-3D-Coder.</p>
         <div class="stats-bar">
-            <span>Worlds Synthesized: <strong>5 / 100</strong></span>
+            <span>Worlds Synthesized: <strong>5 / 900</strong></span>
             <span>Architecture: <strong>Three.js WebGL</strong></span>
             <span>Target Platforms: <strong>Atari, NES, SNES, Genesis, Arcade</strong></span>
         </div>
@@ -198,7 +221,10 @@
             <div class="card-body">
                 <h3>Adventure</h3>
                 <h4>Castles & Mazes</h4>
-                <p class="description">A classic 3D retro environment capturing Castles & Mazes from Adventure on Atari 2600....</p>
+                <div class="description-container">
+                    <p class="description collapsed" id="desc-1">A classic 3D retro environment capturing Castles & Mazes from Adventure on Atari 2600.</p>
+                    <button class="expand-btn" onclick="toggleDesc('1', this)">Read more ▾</button>
+                </div>
             </div>
             <div class="card-footer">
                 <a class="play-btn" href="scenes/001_adventure_castles_mazes.html" target="_blank">Launch 3D World ➔</a>
@@ -216,7 +242,10 @@
             <div class="card-body">
                 <h3>Pitfall!</h3>
                 <h4>Jungle & Underworld</h4>
-                <p class="description">A classic 3D retro environment capturing Jungle & Underworld from Pitfall! on Atari 2600....</p>
+                <div class="description-container">
+                    <p class="description collapsed" id="desc-2">A classic 3D retro environment capturing Jungle & Underworld from Pitfall! on Atari 2600.</p>
+                    <button class="expand-btn" onclick="toggleDesc('2', this)">Read more ▾</button>
+                </div>
             </div>
             <div class="card-footer">
                 <a class="play-btn" href="scenes/002_pitfall_jungle_underworld.html" target="_blank">Launch 3D World ➔</a>
@@ -234,7 +263,10 @@
             <div class="card-body">
                 <h3>Haunted House</h3>
                 <h4>Ghost Mansion</h4>
-                <p class="description">A classic 3D retro environment capturing Ghost Mansion from Haunted House on Atari 2600....</p>
+                <div class="description-container">
+                    <p class="description collapsed" id="desc-3">A classic 3D retro environment capturing Ghost Mansion from Haunted House on Atari 2600.</p>
+                    <button class="expand-btn" onclick="toggleDesc('3', this)">Read more ▾</button>
+                </div>
             </div>
             <div class="card-footer">
                 <a class="play-btn" href="scenes/003_haunted_house_ghost_mansion.html" target="_blank">Launch 3D World ➔</a>
@@ -252,7 +284,10 @@
             <div class="card-body">
                 <h3>Yars' Revenge</h3>
                 <h4>Neutral Zone & Shield</h4>
-                <p class="description">A classic 3D retro environment capturing Neutral Zone & Shield from Yars' Revenge on Atari 2600....</p>
+                <div class="description-container">
+                    <p class="description collapsed" id="desc-4">A classic 3D retro environment capturing Neutral Zone & Shield from Yars' Revenge on Atari 2600.</p>
+                    <button class="expand-btn" onclick="toggleDesc('4', this)">Read more ▾</button>
+                </div>
             </div>
             <div class="card-footer">
                 <a class="play-btn" href="scenes/004_yars_revenge_neutral_zone_shield.html" target="_blank">Launch 3D World ➔</a>
@@ -270,7 +305,10 @@
             <div class="card-body">
                 <h3>River Raid</h3>
                 <h4>Canyon Riverway</h4>
-                <p class="description">A classic 3D retro environment capturing Canyon Riverway from River Raid on Atari 2600....</p>
+                <div class="description-container">
+                    <p class="description collapsed" id="desc-5">A classic 3D retro environment capturing Canyon Riverway from River Raid on Atari 2600.</p>
+                    <button class="expand-btn" onclick="toggleDesc('5', this)">Read more ▾</button>
+                </div>
             </div>
             <div class="card-footer">
                 <a class="play-btn" href="scenes/005_river_raid_canyon_riverway.html" target="_blank">Launch 3D World ➔</a>
@@ -282,5 +320,18 @@
     <footer>
         <p>Generated by Antigravity & Qwen3.5-3D-Coder • Hosted with GitHub Pages</p>
     </footer>
+    <script>
+        function toggleDesc(id, btn) {
+            const el = document.getElementById('desc-' + id);
+            if (!el) return;
+            if (el.classList.contains('collapsed')) {
+                el.classList.remove('collapsed');
+                btn.textContent = 'Show less ▴';
+            } else {
+                el.classList.add('collapsed');
+                btn.textContent = 'Read more ▾';
+            }
+        }
+    </script>
 </body>
 </html>
