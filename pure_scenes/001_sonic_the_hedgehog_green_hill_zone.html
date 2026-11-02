@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Sonic Island</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #dfe7e8;
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .panel {
+      position: absolute;
+      top: 22px;
+      left: 22px;
+      z-index: 10;
+      max-width: min(360px, calc(100vw - 44px));
+      padding: 16px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.76);
+      box-shadow: 0 12px 40px rgba(32, 58, 65, 0.14);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      user-select: none;
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      color: #17353d;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    p {
+      margin: 0;
+      color: #557078;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(35, 82, 92, 0.16);
+      border-radius: 9px;
+      padding: 7px 10px;
+      color: #28515b;
+      background: rgba(255, 255, 255, 0.86);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: white;
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .hint {
+      position: absolute;
+      right: 18px;
+      bottom: 16px;
+      z-index: 10;
+      padding: 8px 11px;
+      border-radius: 9px;
+      color: rgba(30, 64, 72, 0.75);
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .panel {
+        top: 12px;
+        left: 12px;
+        padding: 12px 14px;
+      }
+
+      h1 {
+        font-size: 15px;
+      }
+
+      .hint {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div class="panel">
+    <h1>Voxel Sonic Island</h1>
+    <p>
+      A blocky Sonic-inspired diorama with platforms, rings, palm trees,
+      flowers, and a river.
+    </p>
+    <div class="controls">
+      <button id="reset">Reset view</button>
+      <button id="spin">Auto rotate</button>
+      <button id="toggle">Pause</button>
+    </div>
+  </div>
+
+  <div class="hint">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from
+      "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const app = document.getElementById("app");
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xdfe7e8);
+    scene.fog = new THREE.Fog(0xdfe7e8, 25, 55);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    app.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xf5ffff, 0x776044, 2.15);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff4d6, 3.4);
+    sun.position.set(-8, 14, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -15;
+    sun.shadow.camera.right = 15;
+    sun.shadow.camera.top = 15;
+    sun.shadow.camera.bottom = -15;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9dd9e5, 0.8);
+    fill.position.set(10, 6, -10);
+    scene.add(fill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      earth: new THREE.MeshStandardMaterial({
+        color: 0xa95f2b,
+        roughness: 0.94
+      }),
+      earthDark: new THREE.MeshStandardMaterial({
+        color: 0x713b20,
+        roughness: 0.98
+      }),
+      earthLight: new THREE.MeshStandardMaterial({
+        color: 0xc47a43,
+        roughness: 0.95
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x39b958,
+        roughness: 0.9
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x65d863,
+        roughness: 0.9
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x1f8f43,
+        roughness: 0.95
+      }),
+      root: new THREE.MeshStandardMaterial({
+        color: 0x75462a,
+        roughness: 1
+      }),
+      trunk: new THREE.MeshStandardMaterial({
+        color: 0xb96b31,
+        roughness: 0.9
+      }),
+      trunkLight: new THREE.MeshStandardMaterial({
+        color: 0xd58b45,
+        roughness: 0.85
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x26a84d,
+        roughness: 0.88
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x45c95a,
+        roughness: 0.86
+      }),
+      leafDark: new THREE.MeshStandardMaterial({
+        color: 0x16783b,
+        roughness: 0.92
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x1768d5,
+        roughness: 0.48,
+        metalness: 0.04
+      }),
+      blueLight: new THREE.MeshStandardMaterial({
+        color: 0x318de7,
+        roughness: 0.42,
+        metalness: 0.04
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf7fbff,
+        roughness: 0.5
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xe84646,
+        roughness: 0.55
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xffc83d,
+        roughness: 0.3,
+        metalness: 0.25
+      }),
+      goldDark: new THREE.MeshStandardMaterial({
+        color: 0xd99b1f,
+        roughness: 0.4,
+        metalness: 0.2
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x28a9c9,
+        roughness: 0.28,
+        metalness: 0.12
+      }),
+      waterLight: new THREE.MeshStandardMaterial({
+        color: 0x69d3e8,
+        roughness: 0.25,
+        metalness: 0.1
+      }),
+      flowerPurple: new THREE.MeshStandardMaterial({
+        color: 0xa85fe6,
+        roughness: 0.75
+      }),
+      flowerYellow: new THREE.MeshStandardMaterial({
+        color: 0xf2c64f,
+        roughness: 0.75
+      }),
+      petal: new THREE.MeshStandardMaterial({
+        color: 0xe5a7ff,
+        roughness: 0.78
+      }),
+      stem: new THREE.MeshStandardMaterial({
+        color: 0x39a84a,
+        roughness: 0.85
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const unit = 0.48;
+    const voxelGeometry = new THREE.BoxGeometry(unit, unit, unit);
+
+    const voxelCache = new Map();
+
+    function voxelKey(x, y, z, material) {
+      return `${x},${y},${z}|${material.uuid}`;
+    }
+
+    function addVoxel(x, y, z, material, castShadow = true) {
+      const key = voxelKey(x, y, z, material);
+      if (!voxelCache.has(key)) {
+        voxelCache.set(key, new THREE.Mesh(voxelGeometry, material));
+      }
+      const mesh = voxelCache.get(key);
+      mesh.position.set(x * unit, y * unit, z * unit);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function addBlock(x, y, z, material, sx = 1, sy = 1, sz = 1) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(x === undefined ? unit : sx, sy * unit, sz * unit),
+        material
+      );
+      mesh.position.set(x * unit, y * unit, z * unit);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function addHorizontalBlock(x, y, z, material, sx = 1, sz = 1) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx * unit, unit, sz * unit),
+        material
+      );
+      mesh.position.set(x * unit, y * unit, z * unit);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function addRing(x, y, z, material = materials.gold) {
+      const group = new THREE.Group();
+      const outer = new THREE.TorusGeometry(0.25, 0.065, 8, 24);
+      const inner = new THREE.TorusGeometry(0.16, 0.055, 8, 24);
+      outer.rotation.y = Math.PI / 2;
+      inner.rotation.y = Math.PI / 2;
+      outer.castShadow = true;
+      inner.castShadow = true;
+      group.add(outer, inner);
+      group.position.set(x * unit, y * unit, z * unit);
+      scene.add(group);
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // Island layout
+    //
+    // x,z are grid coordinates. Each voxel is approximately 0.48 world units.
+    // The island has a high left bank, stepped platforms, a river, and a
+    // lower right palm grove.
+    // -------------------------------------------------------------------------
+
+    const island = new THREE.Group();
+    scene.add(island);
+
+    function islandVoxel(x, y, z, material, parent = island) {
+      const mesh = new THREE.Mesh(voxelGeometry, material);
+      mesh.position.set(x * unit, y * unit, z * unit);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // Main left plateau and side blocks.
+    for (let x = -7; x <= -1; x++) {
+      for (let z = -4; z <= 3; z++) {
+        const edge = Math.abs(z) === 4 || x === -7;
+        const y = edge ? 1 : 2;
+
+        islandVoxel(x, y, z, materials.earth);
+        islandVoxel(x, y - 1, z, materials.earthDark);
+
+        if (y >= 0 && !edge) {
+          islandVoxel(x, y, z, materials.grass);
+        }
+      }
+    }
+
+    // Back plateau.
+    for (let x = -6; x <= 0; x++) {
+      for (let z = -4; z <= -3; z++) {
+        islandVoxel(x, 1, z, materials.earth);
+        islandVoxel(x, 2, z, materials.grass);
+      }
+    }
+
+    // Upper rear ledge.
+    for (let x = -6; x <= 1; x++) {
+      islandVoxel(x, 4, -3, materials.grass);
+      islandVoxel(x, 3, -3, materials.earth);
+    }
+
+    // Middle stepped platform.
+    for (let x = -5; x <= 1; x++) {
+      islandVoxel(x, 2, -1, materials.grass);
+      islandVoxel(x, 1, -1, materials.earth);
+    }
+
+    // Front middle platform.
+    for (let x = -5; x <= 1; x++) {
+      islandVoxel(x, 1, 0, materials.grass);
+      islandVoxel(x, 0, 0, materials.earth);
+    }
+
+    // Right island.
+    for (let x = 2; x <= 7; x++) {
+      for (let z = -3; z <= 3; z++) {
+        const edge = Math.abs(z) === 3;
+        const y = edge ? 1 : 2;
+        islandVoxel(x, y, z, materials.earth);
+        islandVoxel(x, y - 1, z, materials.earthDark);
+
+        if (!edge && y >= 0) {
+          islandVoxel(x, y, z, materials.grass);
+        }
+      }
+    }
+
+    // Front right terrace.
+    for (let x = 2; x <= 7; x++) {
+      islandVoxel(x, 1, 3, materials.grass);
+      islandVoxel(x, 0, 3, materials.earth);
+    }
+
+    // River channel through the center.
+    for (let x = -2; x <= 1; x++) {
+      for (let z = -2; z <= 2; z++) {
+        islandVoxel(x, 0, z, materials.water);
+      }
+    }
+
+    // Small waterfalls / cascading blocks.
+    for (let x = -3; x <= 0; x++) {
+      addBlock(x, 1.05, 1.0, materials.waterLight, 0.7, 0.18, 0.7);
+    }
+
+    // -------------------------------------------------------------------------
+    // Palm trees
+    // -------------------------------------------------------------------------
+
+    function addPalmTree(x, z, scale = 1, parent = island) {
+      const group = new THREE.Group();
+      group.position.set(x * unit, 0, z * unit);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      // Trunk made from stacked square segments.
+      for (let y = 0; y < 5; y++) {
+        const material = y % 2 === 0 ? materials.trunk : materials.trunkLight;
+        islandVoxel(x, y, z, material, group);
+      }
+
+      // Crown.
+      for (let ix = -2; ix <= 2; ix++) {
+        for (let iz = -2; iz <= 2; iz++) {
+          const dist = Math.abs(ix) + Math.abs(iz);
+          if (dist > 2) continue;
+
+          const leafMaterial =
+            dist === 0 ? materials.leafDark : materials.leaf;
+
+          islandVoxel(x + ix, 5, z + iz, leafMaterial, group);
+        }
+      }
+
+      // A couple upper fronds.
+      islandVoxel(x, 6, z, materials.leafLight, group);
+      islandVoxel(x + 1, 6, z + 1, materials.leaf, group);
+      islandVoxel(x - 1, 6, z - 1, materials.leaf, group);
+
+      return group;
+    }
+
+    addPalmTree(-2.2, -2.7, 1.15);
+    addPalmTree(3.5, 0.6, 1.0);
+    addPalmTree(5.4, 1.8, 0.85);
+    addPalmTree(-4.8, -3.1, 0.75);
+
+    // -------------------------------------------------------------------------
+    // Flowers
+    // -------------------------------------------------------------------------
+
+    function addFlower(x, z, height = 1, purple = false) {
+      const group = new THREE.Group();
+      group.position.set(x * unit, 0, z * unit);
+      island.add(group);
+
+      for (let y = 0; y < height; y++) {
+        islandVoxel(
+          Math.floor(Math.random() * 3 - 1),
+          y,
+          Math.floor(Math.random() * 3 - 1),
+          materials.stem,
+          group
+        );
+      }
+
+      const petalMaterial = purple ? materials.flowerPurple : materials.flowerYellow;
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const px = Math.cos(angle) * 0.16;
+        const pz = Math.sin(angle) * 0.16;
+        islandVoxel(
+          Math.floor(x * unit + px),
+          height + 1,
+          Math.floor(z * unit + pz),
+          petalMaterial,
+          group
+        );
+      }
+
+      islandVoxel(
+        Math.floor(x * unit),
+        height + 2,
+        Math.floor(z * unit),
+        purple ? materials.petal : materials.flowerYellow,
+        group
+      );
+
+      return group;
+    }
+
+    const flowerPositions = [
+      [-6.6, 2.8], [-5.9, 2.5], [-4.5, 2.7], [-3.6, 2.4],
+      [-2.0, 2.6], [1.9, 2.5], [2.8, 2.8], [3.8, 2.5],
+      [5.2, 2.7], [6.4, 2.3], [6.7, -1.7], [5.9, -2.1],
+      [3.9, -2.3], [2.5, -2.0], [-1.5, -2.6], [-4.2, -2.8],
+      [-6.0, -1.8]
+    ];
+
+    flowerPositions.forEach((p, i) => {
+      addFlower(p[0], p[1], 1 + (i % 2), i % 3 === 0);
+    });
+
+    // -------------------------------------------------------------------------
+    // Golden rings
+    // -------------------------------------------------------------------------
+
+    const ringPositions = [
+      [-5.4, 4.05, -2.7], [-4.5, 4.05, -2.7], [-3.6, 4.05, -2.7],
+      [-2.7, 4.05, -2.7], [-1.8, 4.05, -2.7],
+      [-5.2, 2.15, -0.8], [-4.2, 2.15, -0.8], [-3.2, 2.15, -0.8],
+      [-2.2, 2.15, -0.8],
+      [-5.1, 1.25, 0.2], [-4.1, 1.25, 0.2], [-3.1, 1.25, 0.2],
+      [-2.1, 1.25, 0.2],
+      [2.8, 3.25, -1.5], [3.8, 3.25, -1.5], [4.8, 3.25, -1.5],
+      [5.8, 3.25, -1.5],
+      [2.9, 2.35, 0.7], [3.9, 2.35, 0.7], [4.9, 2.35, 0.7],
+      [5.9, 2.35, 0.7],
+      [3.0, 1.45, -0.3], [4.0, 1.45, -0.3], [5.0, 1.45, -0.3],
+      [6.0, 1.45, -0.3]
+    ];
+
+    ringPositions.forEach((p) => addRing(p[0], p[1], p[2]));
+
+    // -------------------------------------------------------------------------
+    // Sonic character, built entirely from blocks
+    // -------------------------------------------------------------------------
+
+    const sonic = new THREE.Group();
+    sonic.position.set(-1.8, 0, 0.7);
+    sonic.rotation.y = -0.18;
+    island.add(sonic);
+
+    // Shoes.
+    addBlock(-0.24, 0.18, 0.25, materials.red, 0.38, 0.3, 0.5);
+    addBlock(0.24, 0.18, 0.25, materials.red, 0.38, 0.3, 0.5);
+
+    // Legs.
+    addBlock(-0.2, 0.5, 0, materials.blue, 0.32, 0.48, 0.38);
+    addBlock(0.2, 0.5, 0, materials.blue, 0.32, 0.48, 0.38);
+
+    // torso.
+    addBlock(0, 1.0, 0, materials.blue, 0.72, 0.76, 0.56);
+
+    // chest panel.
+    addBlock(0, 1.02, 0.3, materials.blueLight, 0.46, 0.48, 0.08);
+
+    // head.
+    addBlock(0, 1.68, 0, materials.blueLight, 0.64, 0.62, 0.58);
+
+    // hair cap.
+    addBlock(-0.05, 1.92, -0.02, materials.blue, 0.68, 0.22, 0.62);
+    addBlock(-0.38, 1.83, 0.08, materials.blue, 0.2, 0.2, 0.5);
+    addBlock(0.38, 1.83, 0.08, materials.blue, 0.2, 0.2, 0.5);
+
+    // eyes.
+    addBlock(-0.17, 1.72, 0.31, materials.white, 0.09, 0.09, 0.08);
+    addBlock(0.17, 1.72, 0.31, materials.white, 0.09, 0.09, 0.08);
+    addBlock(-0.17, 1.72, 0.34, materials.black || materials.earthDark, 0.045, 0.045, 0.03);
+    addBlock(0.17, 1.72, 0.34, materials.black || materials.earthDark, 0.045, 0.045, 0.03);
+
+    // smile.
+    addBlock(0, 1.56, 0.315, materials.white, 0.13, 0.035, 0.025);
+
+    // arms.
+    addBlock(-0.58, 1.12, 0, materials.blue, 0.34, 0.64, 0.42);
+    addBlock(0.58, 1.12, 0, materials.blue, 0.34, 0.64, 0.42);
+
+    // gloves.
+    addBlock(-0.77, 1.02, 0.05, materials.white, 0.2, 0.3, 0.35);
+    addBlock(0.77, 1.02, 0.05, materials.white, 0.2, 0.3, 0.35);
+
+    // cheek.
+    addBlock(-0.24, 1.73, 0.31, materials.red, 0.12, 0.12, 0.04);
+    addBlock(0.24, 1.73, 0.31, materials.red, 0.12, 0.12, 0.04);
+
+    // Spokes.
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const x = Math.cos(angle) * 0.19;
+      const z = Math.sin(angle) * 0.19;
+      addBlock(x, 1.98, z, materials.gold, 0.12, 0.12, 0.12);
+    }
+
+    // -------------------------------------------------------------------------
+    // Small block details
+    // -------------------------------------------------------------------------
+
+    // Tiny signpost.
+    addBlock(0.9, 1.2, -2.8, materials.trunk, 0.18, 2.4, 0.18);
+    addBlock(0.9, 2.45, -2.8, materials.grassLight, 0.55, 0.25, 0.3);
+    addBlock(0.9, 2.55, -2.8, materials.gold, 0.35, 0.12, 0.2);
+
+    // Tiny mushroom.
+    addBlock(-0.1, 0.25, -1.6, materials.red, 0.5, 0.5, 0.45);
+    addBlock(-0.1, 0.56, -1.6, materials.white, 0.42, 0.18, 0.36);
+
+    // Small stacked blocks on the high ledge.
+    addBlock(-5.7, 3.1, -2.8, materials.earthLight, 0.8, 0.8, 0.7);
+    addBlock(-5.25, 3.65, -2.8, materials.grassLight, 0.6, 0.6, 0.55);
+
+    // -------------------------------------------------------------------------
+    // Ground underlay / base
+    // -------------------------------------------------------------------------
+
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(16.5, 0.8, 11.5),
+      new THREE.MeshStandardMaterial({
+        color: 0x8c8170,
+        roughness: 1
+      })
+    );
+    base.position.y = -0.4;
+    base.receiveShadow = true;
+    scene.add(base);
+
+    // -------------------------------------------------------------------------
+    // Direct camera controls: orbit, zoom, pan-like target movement
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 1.4, 0),
+      azimuth: 0.72,
+      polar: 1.08,
+      distance: 18,
+      autoRotate: true
+    };
+
+    const initialView = {
+      target: controls.target.clone(),
+      azimuth: controls.azimuth,
+      polar: controls.polar,
+      distance: controls.distance
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.distance * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.distance * Math.cos(controls.polar),
+        controls.target.z + controls.distance * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    const pointer = new THREE.Vector2();
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      controls.azimuth -= dx * 0.006;
+      controls.polar = THREE.MathUtils.clamp(
+        controls.polar - dy * 0.005,
+        0.35,
+        1.42
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        controls.distance = THREE.MathUtils.clamp(
+          controls.distance * Math.exp(event.deltaY * 0.001),
+          8,
+          30
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // Pinch zoom for touch devices.
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (pinchDistance > 0) {
+          controls.distance = THREE.MathUtils.clamp(
+            controls.distance * (pinchDistance / distance),
+            8,
+            30
+          );
+          updateCamera();
+        }
+
+        pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    // -------------------------------------------------------------------------
+    // UI
+    // -------------------------------------------------------------------------
+
+    const resetButton = document.getElementById("reset");
+    const spinButton = document.getElementById("spin");
+    const toggleButton = document.getElementById("toggle");
+
+    resetButton.addEventListener("click", () => {
+      controls.target.copy(initialView.target);
+      controls.azimuth = initialView.azimuth;
+      controls.polar = initialView.polar;
+      controls.distance = initialView.distance;
+      updateCamera();
+    });
+
+    spinButton.addEventListener("click", () => {
+      controls.autoRotate = !controls.autoRotate;
+      spinButton.textContent = controls.autoRotate ? "Pause spin" : "Auto rotate";
+    });
+
+    let paused = false;
+    toggleButton.addEventListener("click", () => {
+      paused = !paused;
+      toggleButton.textContent = paused ? "Resume" : "Pause";
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+    let elapsed = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      if (!paused) elapsed += delta;
+
+      if (controls.autoRotate && !dragging) {
+        controls.azimuth += delta * 0.12;
+        updateCamera();
+      }
+
+      // Gentle ring rotation.
+      scene.traverse((object) => {
+        if (object.isGroup && object.parent?.scene) {
+          object.rotation.y = elapsed * 0.22;
+        }
+      });
+
+      // Sonic subtle idle bounce.
+      sonic.position.y = Math.sin(elapsed * 2.4) * 0.018;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // -------------------------------------------------------------------------
+    // Resize
+    // -------------------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
