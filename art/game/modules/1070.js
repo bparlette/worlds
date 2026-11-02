@@ -1,0 +1,974 @@
+// @world {"id": "1070", "title": "Ghosts 'n Goblins", "sub": "Makaimura Stage 1 Diorama", "system": "3D Render"}
+// Converted from 1070-ghosts_x27n_goblins_makaimura_stage_1_diorama.html into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    remove: (...objs) => objs.forEach(o => o && group.remove(o)),
+    traverse: (cb) => group.traverse(cb),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {},
+      setAnimationLoop: (cb) => { updateHook = cb; },
+    };
+  }
+
+  function dummyVec() {
+    const v = { x: 0, y: 0, z: 0,
+      set: (x, y, z) => { v.x = x || 0; v.y = y || 0; v.z = z || 0; return v; },
+      copy: (o) => { if (o) { v.x = o.x || 0; v.y = o.y || 0; v.z = o.z || 0; } return v; },
+      add: (o) => { if (o) { v.x += o.x || 0; v.y += o.y || 0; v.z += o.z || 0; } return v; },
+      sub: (o) => { if (o) { v.x -= o.x || 0; v.y -= o.y || 0; v.z -= o.z || 0; } return v; },
+      addScaledVector: (o, s) => { if (o) { v.x += (o.x || 0) * s; v.y += (o.y || 0) * s; v.z += (o.z || 0) * s; } return v; },
+      setFromSpherical: () => v,
+      setFromSphericalCoords: () => v,
+      length: () => Math.hypot(v.x, v.y, v.z),
+      normalize: () => v,
+      clone: () => { const c = dummyVec(); c.x = v.x; c.y = v.y; c.z = v.z; return c; }
+    };
+    return v;
+  }
+
+  function dummyCamera() {
+    return {
+      position: dummyVec(),
+      up: dummyVec(),
+      rotation: { x: 0, y: 0, z: 0, set: () => {} },
+      quaternion: { set: () => {}, copy: () => {} },
+      fov: 60, aspect: 16 / 9, near: 0.1, far: 2000,
+      lookAt: () => {},
+      getWorldDirection: (target) => { const t = target || dummyVec(); if (t.set) t.set(0, 0, -1); return t; },
+      updateProjectionMatrix: () => {},
+      updateMatrixWorld: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  let container = dummyEl();
+  let stage = dummyEl();
+  let app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0xe8e4dc);
+    scene.fog = new THREE.Fog(0xe8e4dc, 18, 38);
+
+    camera = new THREE.OrthographicCamera(
+      -11,
+      11,
+      7.5,
+      -7.5,
+      0.1,
+      100
+    );
+
+    const target = new THREE.Vector3(0, 1.1, 0);
+    const spherical = new THREE.Spherical(18, Math.PI * 0.43, Math.PI * 0.18);
+
+    function updateCamera() {
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    updateCamera();
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0xf5f1e6, 0x59635c, 2.1));
+
+    const keyLight = new THREE.DirectionalLight(0xfff4dc, 3.2);
+    keyLight.position.set(7, 12, 9);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -12;
+    keyLight.shadow.camera.right = 12;
+    keyLight.shadow.camera.top = 12;
+    keyLight.shadow.camera.bottom = -12;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 35;
+    keyLight.shadow.bias = -0.00035;
+    keyLight.shadow.normalBias = 0.025;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0xb8c8d5, 1.15);
+    rimLight.position.set(-9, 6, -8);
+    scene.add(rimLight);
+
+    const frontFill = new THREE.DirectionalLight(0xffffff, 0.7);
+    frontFill.position.set(2, 4, 10);
+    scene.add(frontFill);
+
+    // -------------------------------------------------------------------------
+    // Voxel materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      grassTop: new THREE.MeshStandardMaterial({
+        color: 0x6f9a45,
+        roughness: 0.94
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x87b65d,
+        roughness: 0.96
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x4f7938,
+        roughness: 1
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x796044,
+        roughness: 1
+      }),
+      soilLight: new THREE.MeshStandardMaterial({
+        color: 0x947657,
+        roughness: 1
+      }),
+      bark: new THREE.MeshStandardMaterial({
+        color: 0x65503a,
+        roughness: 1
+      }),
+      barkLight: new THREE.MeshStandardMaterial({
+        color: 0x806649,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x4d7c38,
+        roughness: 1
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x749b47,
+        roughness: 1
+      }),
+      leafDark: new THREE.MeshStandardMaterial({
+        color: 0x355c2c,
+        roughness: 1
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x285b91,
+        roughness: 0.72,
+        metalness: 0.08
+      }),
+      blueLight: new THREE.MeshStandardMaterial({
+        color: 0x3978b4,
+        roughness: 0.68,
+        metalness: 0.08
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xe8ece5,
+        roughness: 0.82
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xa83f35,
+        roughness: 0.8
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xd7a078,
+        roughness: 0.9
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x171b1c,
+        roughness: 0.86
+      }),
+      silver: new THREE.MeshStandardMaterial({
+        color: 0xb8c1c0,
+        roughness: 0.42,
+        metalness: 0.65
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd5a94f,
+        roughness: 0.48,
+        metalness: 0.45
+      }),
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x85827a,
+        roughness: 1
+      }),
+      stoneDark: new THREE.MeshStandardMaterial({
+        color: 0x5b5e58,
+        roughness: 1
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const V = (x, y, z, sx = 1, sy = 1, sz = 1, material, rotationY = 0) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = rotationY;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    };
+
+    function addVoxel(parent, x, y, z, sx, sy, sz, material, rotationY = 0) {
+      const voxel = V(x, y, z, sx, sy, sz, material, rotationY);
+      parent.add(voxel);
+      return voxel;
+    }
+
+    function voxelLine(parent, points, thickness = 1, material, jitter = 0.12) {
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const dz = b[2] - a[2];
+        const length = Math.hypot(dx, dy, dz);
+        const count = Math.max(1, Math.ceil(length / 0.34));
+
+        for (let j = 0; j <= count; j++) {
+          const t = j / count;
+          const x = a[0] + dx * t + (Math.random() - 0.5) * jitter;
+          const y = a[1] + dy * t + (Math.random() - 0.5) * jitter;
+          const z = a[2] + dz * t + (Math.random() - 0.5) * jitter;
+
+          addVoxel(
+            parent,
+            x,
+            y,
+            z,
+            thickness,
+            thickness,
+            thickness,
+            material
+          );
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Ground diorama
+    // -------------------------------------------------------------------------
+
+    const diorama = new THREE.Group();
+    scene.add(diorama);
+
+    // Main soil block, slightly beveled visually through layered blocks.
+    addVoxel(
+      diorama,
+      0,
+      -0.48,
+      0,
+      19,
+      0.9,
+      11,
+      materials.soil
+    );
+
+    addVoxel(
+      diorama,
+      0,
+      0.02,
+      0,
+      18.5,
+      0.24,
+      10.5,
+      materials.soilLight
+    );
+
+    // Grass top is a tiled voxel field.
+    const ground = new THREE.Group();
+    diorama.add(ground);
+
+    const cell = 0.52;
+    const rows = 11;
+    const cols = 19;
+
+    for (let z = 0; z < rows; z++) {
+      for (let x = 0; x < cols; x++) {
+        const px = (x - (cols - 1) / 2) * cell;
+        const pz = (z - (rows - 1) / 2) * cell;
+
+        let material = materials.grassTop;
+
+        if ((x + z * 2) % 7 === 0) {
+          material = materials.grassDark;
+        } else if ((x * 3 + z) % 11 === 0) {
+          material = materials.grassLight;
+        }
+
+        addVoxel(
+          ground,
+          px,
+          0.18,
+          pz,
+          cell * 0.97,
+          0.34,
+          cell * 0.97,
+          material
+        );
+      }
+    }
+
+    // Small flower-like voxel accents.
+    const flowerColors = [
+      materials.red,
+      materials.gold,
+      materials.white
+    ];
+
+    for (let i = 0; i < 15; i++) {
+      const x = (Math.random() - 0.5) * 15.5;
+      const z = (Math.random() - 0.5) * 8.5;
+      const flowerMaterial = flowerColors[i % flowerColors.length];
+
+      addVoxel(
+        ground,
+        x,
+        0.43,
+        z,
+        0.12,
+        0.18,
+        0.12,
+        materials.leafDark
+      );
+
+      addVoxel(
+        ground,
+        x,
+        0.58,
+        z,
+        0.16,
+        0.12,
+        0.16,
+        flowerMaterial
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Background trees
+    // -------------------------------------------------------------------------
+
+    function createTree(x, z, scale = 1, rotation = 0) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.rotation.y = rotation;
+      tree.scale.setScalar(scale);
+      diorama.add(tree);
+
+      const trunk = [
+        [0, 0.35, 0, 0.34, 0.68, 0.34],
+        [0, 0.95, 0, 0.3, 0.6, 0.3],
+        [0, 1.5, 0, 0.25, 0.5, 0.25]
+      ];
+
+      voxelLine(tree, trunk, 0.38, materials.bark, 0.1);
+
+      const leafLayers = [
+        {
+          y: 2.0,
+          halfW: 1.15,
+          halfD: 1.05,
+          count: 11
+        },
+        {
+          y: 2.65,
+          halfW: 0.9,
+          halfD: 0.85,
+          count: 9
+        },
+        {
+          y: 3.25,
+          halfW: 0.65,
+          halfD: 0.62,
+          count: 7
+        }
+      ];
+
+      for (const layer of leafLayers) {
+        for (let i = 0; i < layer.count; i++) {
+          const angle = (i / layer.count) * Math.PI * 2;
+          const radius = layer.halfW * 0.82;
+          const px = Math.cos(angle) * radius;
+          const pz = Math.sin(angle) * layer.halfD * 0.82;
+          const material = Math.random() > 0.5
+            ? materials.leaf
+            : materials.leafLight;
+
+          addVoxel(
+            tree,
+            px,
+            layer.y + (Math.random() - 0.5) * 0.13,
+            pz,
+            0.48,
+            0.48,
+            0.48,
+            material
+          );
+        }
+      }
+    }
+
+    createTree(-5.6, -0.6, 0.95, 0.35);
+    createTree(5.5, -0.7, 1.05, -0.45);
+    createTree(-6.2, 2.1, 0.7, 0.8);
+    createTree(6.2, 2.2, 0.62, -0.65);
+
+    // -------------------------------------------------------------------------
+    // Central armored hero
+    // -------------------------------------------------------------------------
+
+    const hero = new THREE.Group();
+    hero.position.set(-0.45, 0, 0.25);
+    hero.rotation.y = -0.15;
+    diorama.add(hero);
+
+    // Boots
+    addVoxel(hero, -0.34, 0.28, 0.16, 0.42, 0.3, 0.34, materials.black);
+    addVoxel(hero, 0.34, 0.28, 0.16, 0.42, 0.3, 0.34, materials.black);
+
+    // Legs
+    addVoxel(hero, -0.29, 0.68, 0, 0.38, 0.68, 0.42, materials.blue);
+    addVoxel(hero, 0.29, 0.68, 0, 0.38, 0.68, 0.42, materials.blue);
+
+    // Belt
+    addVoxel(hero, 0, 1.12, 0.03, 0.95, 0.24, 0.48, materials.gold);
+
+    // Torso
+    addVoxel(hero, 0, 1.62, 0, 0.9, 0.82, 0.72, materials.silver);
+
+    // Shoulder armor
+    addVoxel(hero, -0.57, 1.68, 0, 0.42, 0.52, 0.7, materials.blueLight);
+    addVoxel(hero, 0.57, 1.68, 0, 0.42, 0.52, 0.7, materials.blueLight);
+
+    // Chest emblem
+    addVoxel(hero, 0, 1.65, 0.39, 0.34, 0.34, 0.1, materials.gold);
+
+    // Neck
+    addVoxel(hero, 0, 2.16, 0, 0.34, 0.28, 0.34, materials.blue);
+
+    // Helmet
+    addVoxel(hero, 0, 2.42, 0, 0.86, 0.38, 0.72, materials.silver);
+
+    // Helmet visor
+    addVoxel(hero, 0, 2.43, 0.39, 0.48, 0.2, 0.08, materials.black);
+
+    // Side armor plates
+    addVoxel(hero, -0.58, 1.43, 0.43, 0.16, 0.54, 0.18, materials.blueLight);
+    addVoxel(hero, 0.58, 1.43, 0.43, 0.16, 0.54, 0.18, materials.blueLight);
+
+    // Sword hilt
+    addVoxel(hero, 0, 2.92, 0, 0.22, 0.22, 0.22, materials.gold);
+    addVoxel(hero, 0, 3.05, 0, 0.58, 0.12, 0.12, materials.gold);
+
+    // Sword blade
+    const blade = addVoxel(
+      hero,
+      0,
+      3.27,
+      0,
+      0.13,
+      1.05,
+      0.13,
+      materials.silver
+    );
+    blade.rotation.z = -0.12;
+
+    // Shield
+    const shield = addVoxel(
+      hero,
+      -1.02,
+      1.34,
+      0.1,
+      0.74,
+      0.72,
+      0.2,
+      materials.blue
+    );
+    shield.rotation.y = -0.25;
+
+    addVoxel(
+      hero,
+      -1.02,
+      1.34,
+      0.23,
+      0.42,
+      0.42,
+      0.08,
+      materials.gold
+    );
+
+    // Spear
+    const spear = addVoxel(
+      hero,
+      0.88,
+      1.88,
+      0.18,
+      0.13,
+      2.1,
+      0.13,
+      materials.gold
+    );
+    spear.rotation.z = 0.12;
+
+    addVoxel(
+      hero,
+      1.0,
+      2.98,
+      0.18,
+      0.34,
+      0.22,
+      0.22,
+      materials.gold
+    );
+
+    // -------------------------------------------------------------------------
+    // Blue-armored soldiers
+    // -------------------------------------------------------------------------
+
+    function createSoldier(x, z, scale = 1, rotation = 0, weaponColor = materials.silver) {
+      const soldier = new THREE.Group();
+      soldier.position.set(x, 0, z);
+      soldier.rotation.y = rotation;
+      soldier.scale.setScalar(scale);
+      diorama.add(soldier);
+
+      // Boots
+      addVoxel(soldier, -0.25, 0.25, 0.12, 0.34, 0.28, 0.32, materials.black);
+      addVoxel(soldier, 0.25, 0.25, 0.12, 0.34, 0.28, 0.32, materials.black);
+
+      // Legs
+      addVoxel(soldier, -0.23, 0.61, 0, 0.34, 0.62, 0.38, materials.blue);
+      addVoxel(soldier, 0.23, 0.61, 0, 0.34, 0.62, 0.38, materials.blue);
+
+      // Belt
+      addVoxel(soldier, 0, 1.08, 0.02, 0.72, 0.2, 0.42, materials.gold);
+
+      // Torso
+      addVoxel(soldier, 0, 1.52, 0, 0.72, 0.72, 0.62, materials.blue);
+
+      // Shoulder pads
+      addVoxel(soldier, -0.48, 1.56, 0, 0.38, 0.42, 0.58, materials.blueLight);
+      addVoxel(soldier, 0.48, 1.56, 0, 0.38, 0.42, 0.58, materials.blueLight);
+
+      // Chest plate
+      addVoxel(soldier, 0, 1.57, 0.34, 0.44, 0.4, 0.12, materials.white);
+
+      // Neck
+      addVoxel(soldier, 0, 2.02, 0, 0.3, 0.25, 0.3, materials.blue);
+
+      // Helmet
+      addVoxel(soldier, 0, 2.27, 0, 0.68, 0.3, 0.58, materials.white);
+
+      // Helmet top
+      addVoxel(soldier, 0, 2.45, -0.02, 0.48, 0.16, 0.42, materials.blueLight);
+
+      // Face mask
+      addVoxel(soldier, 0, 2.25, 0.31, 0.36, 0.28, 0.1, materials.white);
+      addVoxel(soldier, 0, 2.25, 0.37, 0.16, 0.12, 0.05, materials.red);
+
+      // Arms
+      addVoxel(soldier, -0.55, 1.55, 0, 0.3, 0.75, 0.34, materials.blue);
+      addVoxel(soldier, 0.55, 1.55, 0, 0.3, 0.75, 0.34, materials.blue);
+
+      // Hand
+      addVoxel(soldier, -0.72, 1.05, 0, 0.2, 0.25, 0.26, materials.skin);
+      addVoxel(soldier, 0.72, 1.05, 0, 0.2, 0.25, 0.26, materials.skin);
+
+      // Weapon
+      const weapon = addVoxel(
+        soldier,
+        0.25,
+        1.5,
+        0.37,
+        0.16,
+        1.25,
+        0.16,
+        weaponColor
+      );
+      weapon.rotation.z = -0.13;
+
+      addVoxel(
+        soldier,
+        0.91,
+        2.12,
+        0.37,
+        0.28,
+        0.18,
+        0.2,
+        weaponColor
+      );
+
+      // Spear variant
+      if (Math.random() > 0.45) {
+        const spear = addVoxel(
+          soldier,
+          -0.55,
+          1.48,
+          0.34,
+          0.12,
+          1.75,
+          0.12,
+          materials.gold
+        );
+        spear.rotation.z = 0.17;
+
+        addVoxel(
+          soldier,
+          -0.66,
+          2.4,
+          0.34,
+          0.3,
+          0.18,
+          0.18,
+          materials.gold
+        );
+      }
+
+      return soldier;
+    }
+
+    // Left soldier, leaning toward the hero
+    createSoldier(-2.75, 0.45, 0.95, 0.42, materials.silver);
+
+    // Main opposing soldier
+    createSoldier(2.05, 0.45, 1.0, -0.2, materials.silver);
+
+    // Right soldier
+    createSoldier(3.65, 0.1, 0.94, -0.36, materials.gold);
+
+    // Distant soldiers
+    createSoldier(5.05, -0.45, 0.88, -0.48, materials.silver);
+    createSoldier(6.25, 0.15, 0.8, -0.55, materials.gold);
+
+    // -------------------------------------------------------------------------
+    // Fallen or disabled figures
+    // -------------------------------------------------------------------------
+
+    const fallen = new THREE.Group();
+    fallen.position.set(4.65, 0, 1.65);
+    fallen.rotation.y = 0.75;
+    fallen.rotation.z = -0.12;
+    diorama.add(fallen);
+
+    addVoxel(fallen, 0, 0.62, 0, 0.34, 0.62, 0.38, materials.blue);
+    addVoxel(fallen, 0, 1.18, 0, 0.62, 0.28, 0.52, materials.blue);
+    addVoxel(fallen, 0, 1.53, 0, 0.48, 0.22, 0.4, materials.white);
+    addVoxel(fallen, 0, 1.72, 0.02, 0.32, 0.12, 0.3, materials.blueLight);
+    addVoxel(fallen, 0, 1.8, 0.22, 0.2, 0.1, 0.08, materials.red);
+
+    // -------------------------------------------------------------------------
+    // Small props and debris
+    // -------------------------------------------------------------------------
+
+    // Stone rubble
+    for (let i = 0; i < 20; i++) {
+      const x = (Math.random() - 0.5) * 15;
+      const z = (Math.random() - 0.5) * 8;
+      const size = 0.12 + Math.random() * 0.24;
+
+      addVoxel(
+        diorama,
+        x,
+        size * 0.5,
+        z,
+        size,
+        size * (0.6 + Math.random() * 0.5),
+        size,
+        Math.random() > 0.5 ? materials.stone : materials.stoneDark
+      );
+    }
+
+    // A broken wooden post
+    const post = addVoxel(
+      diorama,
+      -4.5,
+      1.15,
+      -2.4,
+      0.22,
+      2.3,
+      0.22,
+      materials.bark
+    );
+    post.rotation.z = 0.14;
+
+    addVoxel(
+      diorama,
+      -4.5,
+      2.25,
+      -2.4,
+      0.45,
+      0.12,
+      0.45,
+      materials.barkLight
+    );
+
+    // Small control pedestal
+    addVoxel(
+      diorama,
+      -5.8,
+      0.35,
+      -2.8,
+      0.7,
+      0.7,
+      0.7,
+      materials.stone
+    );
+
+    addVoxel(
+      diorama,
+      -5.8,
+      0.82,
+      -2.8,
+      0.42,
+      0.18,
+      0.42,
+      materials.gold
+    );
+
+    // -------------------------------------------------------------------------
+    // Pixel-style background cliffs
+    // -------------------------------------------------------------------------
+
+    function createCliff(x, z, width, height, rotation = 0) {
+      const cliff = new THREE.Group();
+      cliff.position.set(x, 0, z);
+      cliff.rotation.y = rotation;
+      diorama.add(cliff);
+
+      for (let i = 0; i < 17; i++) {
+        const px = (Math.random() - 0.5) * (width - 0.6);
+        const py = 0.25 + Math.random() * (height - 0.3);
+        const pz = (Math.random() - 0.5) * 1.2;
+        const size = 0.55 + Math.random() * 0.35;
+
+        addVoxel(
+          cliff,
+          px,
+          py,
+          pz,
+          size,
+          size,
+          size,
+          Math.random() > 0.45 ? materials.stone : materials.stoneDark
+        );
+      }
+    }
+
+    createCliff(-7.4, -3.2, 5.5, 3.6, 0.2);
+    createCliff(7.2, -3.4, 5.0, 3.1, -0.25);
+    createCliff(-8.2, 3.0, 4.0, 2.6, 0.6);
+    createCliff(8.4, 2.6, 3.6, 2.4, -0.45);
+
+    // Dark upper background blocks.
+    for (let i = 0; i < 25; i++) {
+      const x = (Math.random() - 0.5) * 18;
+      const z = (Math.random() - 0.5) * 7;
+      const height = 2.5 + Math.random() * 2.5;
+
+      addVoxel(
+        diorama,
+        x,
+        height * 0.5,
+        z,
+        0.75 + Math.random() * 0.25,
+        height,
+        0.75 + Math.random() * 0.25,
+        materials.stoneDark
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let zoom = 1;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      spherical.theta -= dx * 0.006;
+      spherical.phi = THREE.MathUtils.clamp(
+        spherical.phi - dy * 0.005,
+        Math.PI * 0.12,
+        Math.PI * 0.86
+      );
+
+      zoom = THREE.MathUtils.clamp(
+        zoom + dx * 0.0008,
+        0.65,
+        1.8
+      );
+
+      camera.left = -11 * zoom;
+      camera.right = 11 * zoom;
+      camera.top = 7.5 * zoom;
+      camera.bottom = -7.5 * zoom;
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event.pointerId !== undefined &&
+          renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      zoom = THREE.MathUtils.clamp(
+        zoom + event.deltaY * 0.001,
+        0.65,
+        1.8
+      );
+
+      camera.left = -11 * zoom;
+      camera.right = 11 * zoom;
+      camera.top = 7.5 * zoom;
+      camera.bottom = -7.5 * zoom;
+      updateCamera();
+    }, { passive: false });
+
+    // -------------------------------------------------------------------------
+    // Resize and render loop
+    // -------------------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      camera.left = -11 * zoom;
+      camera.right = 11 * zoom;
+      camera.top = 7.5 * zoom;
+      camera.bottom = -7.5 * zoom;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(width, height);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Ghosts 'n Goblins Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0xe8e4dc, fogColor: 0xe8e4dc, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 },
+      east: { x: 12.0, z: 10.0 },
+      west: { x: -12.0, z: -10.0 }
+    }
+  };
+}

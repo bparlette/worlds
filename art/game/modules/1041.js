@@ -1,0 +1,825 @@
+// @world {"id": "1041", "title": "The Legend of Zelda: Ocarina of Time", "sub": "Kokiri Forest", "system": "3D Render"}
+// Converted from 1041-the_legend_of_zelda_ocarina_of_time_kokiri_forest.html into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    remove: (...objs) => objs.forEach(o => o && group.remove(o)),
+    traverse: (cb) => group.traverse(cb),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {},
+      setAnimationLoop: (cb) => { updateHook = cb; },
+    };
+  }
+
+  function dummyVec() {
+    const v = { x: 0, y: 0, z: 0,
+      set: (x, y, z) => { v.x = x || 0; v.y = y || 0; v.z = z || 0; return v; },
+      copy: (o) => { if (o) { v.x = o.x || 0; v.y = o.y || 0; v.z = o.z || 0; } return v; },
+      add: (o) => { if (o) { v.x += o.x || 0; v.y += o.y || 0; v.z += o.z || 0; } return v; },
+      sub: (o) => { if (o) { v.x -= o.x || 0; v.y -= o.y || 0; v.z -= o.z || 0; } return v; },
+      addScaledVector: (o, s) => { if (o) { v.x += (o.x || 0) * s; v.y += (o.y || 0) * s; v.z += (o.z || 0) * s; } return v; },
+      setFromSpherical: () => v,
+      setFromSphericalCoords: () => v,
+      length: () => Math.hypot(v.x, v.y, v.z),
+      normalize: () => v,
+      clone: () => { const c = dummyVec(); c.x = v.x; c.y = v.y; c.z = v.z; return c; }
+    };
+    return v;
+  }
+
+  function dummyCamera() {
+    return {
+      position: dummyVec(),
+      up: dummyVec(),
+      rotation: { x: 0, y: 0, z: 0, set: () => {} },
+      quaternion: { set: () => {}, copy: () => {} },
+      fov: 60, aspect: 16 / 9, near: 0.1, far: 2000,
+      lookAt: () => {},
+      getWorldDirection: (target) => { const t = target || dummyVec(); if (t.set) t.set(0, 0, -1); return t; },
+      updateProjectionMatrix: () => {},
+      updateMatrixWorld: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  let container = dummyEl();
+  let stage = dummyEl();
+  let app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    container = dummyEl();
+
+    // scene redirect
+    scene.background = new THREE.Color(0x17281f);
+    scene.fog = new THREE.Fog(0x17281f, 18, 38);
+
+    camera = dummyCamera();
+
+    // Direct camera controls, implemented without addons.
+    const controls = {
+      target: new THREE.Vector3(0, 1.2, 0),
+      theta: 0.72,
+      phi: 1.18,
+      radius: 16.5,
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    container.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      container.setPointerCapture(event.pointerId);
+    });
+
+    container.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(
+        controls.phi - dy * 0.005,
+        0.42,
+        1.48
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && container.hasPointerCapture(event.pointerId)) {
+        container.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    container.addEventListener("pointerup", endDrag);
+    container.addEventListener("pointercancel", endDrag);
+
+    container.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius + event.deltaY * 0.012,
+          9,
+          25
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // Lighting.
+    scene.add(new THREE.HemisphereLight(0xc9e7d0, 0x33432e, 2.1));
+
+    const sun = new THREE.DirectionalLight(0xfff0c7, 3.2);
+    sun.position.set(8, 13, 7);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -12;
+    sun.shadow.camera.right = 12;
+    sun.shadow.camera.top = 12;
+    sun.shadow.camera.bottom = -12;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8fc8d1, 1.1);
+    fill.position.set(-8, 6, -7);
+    scene.add(fill);
+
+    // Materials.
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x78b84f,
+        roughness: 0.92
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x4f9438,
+        roughness: 0.95
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x91c95d,
+        roughness: 0.9
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x594632,
+        roughness: 1
+      }),
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x74837c,
+        roughness: 0.9
+      }),
+      stoneLight: new THREE.MeshStandardMaterial({
+        color: 0xa5b3a6,
+        roughness: 0.86
+      }),
+      stoneDark: new THREE.MeshStandardMaterial({
+        color: 0x43544d,
+        roughness: 0.95
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x8a542e,
+        roughness: 0.92
+      }),
+      woodLight: new THREE.MeshStandardMaterial({
+        color: 0xb47843,
+        roughness: 0.88
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x4f9d37,
+        roughness: 0.9
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x74b94c,
+        roughness: 0.88
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf1f3d6,
+        roughness: 0.8
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x39a9df,
+        roughness: 0.4
+      }),
+      blueDark: new THREE.MeshStandardMaterial({
+        color: 0x176b9e,
+        roughness: 0.5
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xd99a66,
+        roughness: 0.82
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x26332d,
+        roughness: 0.9
+      })
+    };
+
+    // A small helper to add box geometry and assign a material.
+    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = scene) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // Pixelated rounded-ish water using a grid of small tiles.
+    function createWaterPatch(width, depth, x, z, y, material = materials.blue) {
+      const cols = Math.ceil(width / 0.34);
+      const rows = Math.ceil(depth / 0.34);
+      const water = new THREE.Group();
+
+      for (let ix = 0; ix < cols; ix++) {
+        for (let iz = 0; iz < rows; iz++) {
+          const px = (ix / cols - 0.5) * width;
+          const pz = (iz / rows - 0.5) * depth;
+
+          const tile = box(
+            0.31,
+            0.055,
+            0.31,
+            material,
+            x + px,
+            y + Math.sin(ix * 0.85 + iz * 0.45) * 0.018,
+            z + pz,
+            water
+          );
+          tile.rotation.y = (ix * 0.17 + iz * 0.09) % 1;
+        }
+      }
+
+      scene.add(water);
+      return water;
+    }
+
+    // Main platform.
+    const island = new THREE.Group();
+    scene.add(island);
+
+    box(19, 0.75, 13, materials.grassDark, 0, -0.42, 0, island);
+    box(18.4, 0.18, 12.4, materials.grass, 0, 0.02, 0, island);
+
+    // Main cliff wall.
+    const cliff = new THREE.Group();
+    cliff.position.set(-1.3, 0, -1.1);
+    scene.add(cliff);
+
+    box(11.8, 7.4, 2.4, materials.stone, 0, 3.7, 0, cliff);
+    box(12.2, 0.35, 2.8, materials.stoneDark, 0, 7.45, 0, cliff);
+    box(12.2, 0.28, 2.8, materials.grass, 0, 7.7, 0, cliff);
+
+    // Individual stone blocks and decorative seams.
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 6; col++) {
+        const x = -5.25 + col * 1.95;
+        const y = 0.55 + row * 1.75;
+        const offset = row % 2 ? 0.96 : 0;
+
+        for (let side = 0; side < 3; side++) {
+          const z = -0.72 + side * 0.72;
+          const material =
+            (row + col + side) % 4 === 0
+              ? materials.stoneDark
+              : materials.stone;
+
+          box(
+            1.72,
+            1.5,
+            0.48,
+            material,
+            x + offset,
+            y,
+            z,
+            cliff
+          );
+        }
+      }
+    }
+
+    // Water channel outlet.
+    box(2.2, 1.05, 1.6, materials.stoneDark, 1.2, 6.65, -1.1, cliff);
+    box(1.65, 0.12, 1.05, materials.stoneLight, 1.2, 6.08, -1.1, cliff);
+
+    createWaterPatch(3.2, 4.2, 1.2, 1.2, 0.13);
+
+    // Waterfall, constructed as descending pixel tiles.
+    const waterfall = new THREE.Group();
+    waterfall.position.set(1.2, 5.95, -0.85);
+    scene.add(waterfall);
+
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 7; col++) {
+        const material =
+          (row + col) % 3 === 0
+            ? materials.blueDark
+            : materials.blue;
+
+        const tile = box(
+          0.34,
+          0.31,
+          0.34,
+          material,
+          (col - 3) * 0.38,
+          -row * 0.34,
+          0,
+          waterfall
+        );
+        tile.rotation.z = (col % 2 ? 1 : -1) * 0.035;
+      }
+    }
+
+    // Foam at the bottom.
+    const foam = new THREE.Group();
+    foam.position.set(1.2, 0.2, 1.25);
+    scene.add(foam);
+
+    for (let i = 0; i < 18; i++) {
+      const bubble = box(
+        0.12 + Math.random() * 0.22,
+        0.08,
+        0.12 + Math.random() * 0.2,
+        materials.white,
+        (Math.random() - 0.5) * 2.6,
+        0.12 + Math.random() * 0.15,
+        (Math.random() - 0.5) * 2.1,
+        foam
+      );
+      bubble.rotation.y = Math.random() * Math.PI;
+    }
+
+    // Raised garden beds.
+    function createGardenBed(x, z, w = 2.2, d = 1.5) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      scene.add(group);
+
+      box(w, 0.22, d, materials.soil, 0, 0.16, 0, group);
+      box(w + 0.12, 0.34, 0.18, materials.leaf, 0, 0.34, -d / 2, group);
+      box(w + 0.12, 0.34, 0.18, materials.leaf, 0, 0.34, d / 2, group);
+      box(0.18, 0.34, d, materials.leaf, -w / 2, 0.34, 0, group);
+      box(0.18, 0.34, d, materials.leaf, w / 2, 0.34, 0, group);
+
+      // Flowers.
+      for (let i = 0; i < 8; i++) {
+        const flower = new THREE.Group();
+        flower.position.set(
+          (Math.random() - 0.5) * (w - 0.35),
+          0.4,
+          (Math.random() - 0.5) * (d - 0.3)
+        );
+        scene.add(flower);
+
+        const petal = box(
+          0.13,
+          0.055,
+          0.1,
+          materials.leafLight,
+          0,
+          0.08,
+          0,
+          flower
+        );
+        petal.rotation.y = Math.random() * Math.PI;
+        box(0.08, 0.07, 0.08, materials.white, 0, 0.1, 0, flower);
+      }
+    }
+
+    createGardenBed(-4.45, 1.2, 2.4, 1.55);
+    createGardenBed(-4.5, -1.0, 1.6, 1.15);
+
+    // Wooden fence along the top of the cliff.
+    const fence = new THREE.Group();
+    scene.add(fence);
+
+    for (let i = 0; i < 18; i++) {
+      const x = -5.6 + i * 0.65;
+      box(0.18, 0.72, 0.18, materials.wood, x, 8.12, 1.15, fence);
+      box(0.1, 0.12, 0.1, materials.woodLight, x, 8.49, 1.15, fence);
+    }
+
+    box(11.8, 0.16, 0.16, materials.wood, 0, 7.96, 1.15, fence);
+
+    // Tiny wooden house.
+    const house = new THREE.Group();
+    house.position.set(2.6, 0, -0.7);
+    scene.add(house);
+
+    box(2.4, 2.3, 2.1, materials.wood, 0, 1.15, 0, house);
+    box(2.65, 0.2, 2.35, materials.woodLight, 0, 2.35, 0, house);
+
+    // Roof made from stacked, rotated timber blocks.
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 5; col++) {
+        const roofTile = box(
+          0.62,
+          0.32,
+          0.56,
+          row % 2 ? materials.wood : materials.woodLight,
+          (col - 2) * 0.61,
+          2.75 + row * 0.31,
+          (row - 1) * 0.36,
+          house
+        );
+        roofTile.rotation.y = (col - 2) * 0.08;
+      }
+    }
+
+    // Door and window.
+    box(0.85, 1.45, 0.12, materials.black, 0, 0.73, 1.08, house);
+    box(0.13, 0.13, 0.1, materials.woodLight, 0, 0.75, 1.17, house);
+    box(0.48, 0.48, 0.12, materials.stoneLight, 0.72, 1.75, 1.08, house);
+    box(0.12, 0.12, 0.13, materials.woodLight, 0.72, 1.75, 1.17, house);
+
+    // Chimney.
+    box(0.45, 1.1, 0.45, materials.stoneDark, -0.65, 3.1, -0.25, house);
+
+    // Large foreground stone pillar.
+    const pillar = new THREE.Group();
+    pillar.position.set(4.15, 0, 1.0);
+    scene.add(pillar);
+
+    box(2.7, 3.8, 2.6, materials.stone, 0, 1.9, 0, pillar);
+    box(2.95, 0.28, 2.85, materials.stoneDark, 0, 3.9, 0, pillar);
+    box(2.95, 0.25, 2.85, materials.grass, 0, 4.08, 0, pillar);
+
+    // Pixelated face on the pillar.
+    box(1.45, 0.75, 0.22, materials.stoneLight, 0, 3.0, 1.35, pillar);
+    box(0.34, 0.42, 0.24, materials.black, -0.36, 3.0, 1.44, pillar);
+    box(0.34, 0.42, 0.24, materials.black, 0.36, 3.0, 1.44, pillar);
+    box(0.7, 0.2, 0.24, materials.stoneDark, 0, 2.62, 1.44, pillar);
+    box(0.18, 0.55, 0.25, materials.wood, -0.55, 2.05, 1.4, pillar);
+    box(0.18, 0.55, 0.25, materials.wood, 0.55, 2.05, 1.4, pillar);
+
+    // Smaller background tower.
+    const tower = new THREE.Group();
+    tower.position.set(4.1, 0, -2.0);
+    scene.add(tower);
+
+    box(2.1, 3.3, 2.1, materials.stone, 0, 1.65, 0, tower);
+    box(2.35, 0.25, 2.35, materials.stoneDark, 0, 3.35, 0, tower);
+    box(2.35, 0.22, 2.35, materials.grass, 0, 3.52, 0, tower);
+
+    for (let i = 0; i < 5; i++) {
+      const tile = box(
+        1.75,
+        0.48,
+        0.52,
+        i % 2 ? materials.stone : materials.stoneLight,
+        0,
+        0.55 + i * 0.66,
+        0,
+        tower
+      );
+      tile.rotation.y = (i % 2 ? 1 : -1) * 0.025;
+    }
+
+    box(1.3, 0.18, 1.3, materials.wood, 0, 3.8, 0, tower);
+
+    // Small fence in the foreground.
+    const smallFence = new THREE.Group();
+    smallFence.position.set(5.7, 0, 3.2);
+    scene.add(smallFence);
+
+    for (let i = 0; i < 5; i++) {
+      const x = 4.85 + i * 0.48;
+      box(0.15, 0.75, 0.15, materials.wood, x, 0.38, 0, smallFence);
+      box(0.1, 0.12, 0.1, materials.woodLight, x, 0.78, 0, smallFence);
+    }
+
+    box(2.65, 0.15, 0.15, materials.wood, 5.3, 0.78, 0, smallFence);
+
+    // Voxel Link.
+    const link = new THREE.Group();
+    link.position.set(-0.45, 0, 2.45);
+    link.rotation.y = -0.45;
+    scene.add(link);
+
+    // Boots.
+    box(0.38, 0.25, 0.48, materials.black, -0.18, 0.13, 0.08, link);
+    box(0.38, 0.25, 0.48, materials.black, 0.18, 0.13, -0.08, link);
+
+    // Legs.
+    box(0.22, 0.65, 0.32, materials.blueDark, -0.18, 0.5, 0, link);
+    box(0.22, 0.65, 0.32, materials.blueDark, 0.18, 0.5, 0, link);
+
+    // Tunic torso.
+    box(0.7, 0.72, 0.43, materials.leaf, 0, 1.05, 0, link);
+
+    // Sleeves.
+    box(0.22, 0.58, 0.3, materials.leaf, -0.48, 1.05, 0, link);
+    box(0.22, 0.58, 0.3, materials.leaf, 0.48, 1.05, 0, link);
+
+    // Belt.
+    box(0.77, 0.16, 0.47, materials.wood, 0, 0.82, 0, link);
+
+    // Arms, one holding a sword and the other a shield.
+    const armA = box(0.2, 0.65, 0.25, materials.leaf, -0.5, 1.35, 0, link);
+    armA.rotation.z = -0.32;
+
+    const armB = box(0.2, 0.62, 0.25, materials.leaf, 0.5, 1.4, 0, link);
+    armB.rotation.z = 0.34;
+
+    // Sword.
+    const sword = new THREE.Group();
+    sword.position.set(-0.67, 1.42, 0.02);
+    sword.rotation.z = -0.55;
+    link.add(sword);
+
+    box(0.075, 0.88, 0.075, materials.stoneLight, 0, 0, 0, sword);
+    box(0.23, 0.1, 0.1, materials.stoneLight, 0, 0.49, 0, sword);
+    box(0.34, 0.08, 0.08, materials.stone, 0, 0.02, 0, sword);
+
+    // Head and hair.
+    const head = new THREE.Group();
+    head.position.set(0, 1.88, 0);
+    link.add(head);
+
+    box(0.48, 0.42, 0.36, materials.skin, 0, 0, 0, head);
+    box(0.56, 0.2, 0.38, materials.leaf, 0, 0.16, 0, head);
+    box(0.13, 0.3, 0.13, materials.leaf, 0.13, 0.2, 0, head);
+
+    // Eyes.
+    box(0.055, 0.055, 0.035, materials.black, -0.09, 0.02, 0.19, head);
+    box(0.055, 0.055, 0.035, materials.black, 0.09, 0.02, 0.19, head);
+
+    // Hat brim.
+    box(0.67, 0.08, 0.43, materials.leaf, 0, 0.28, 0, head);
+
+    // Shield.
+    const shield = new THREE.Group();
+    shield.position.set(0.66, 1.35, 0.18);
+    shield.rotation.z = -0.42;
+    link.add(shield);
+
+    const shieldDisc = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.34, 0.34, 0.12, 12),
+      materials.wood
+    );
+    shieldDisc.rotation.x = Math.PI / 2;
+    shieldDisc.position.z = 0.04;
+    shield.add(shieldDisc);
+
+    const shieldCrest = new THREE.Mesh(
+      new THREE.ConeGeometry(0.13, 0.28, 3),
+      materials.woodLight
+    );
+    shieldCrest.rotation.z = Math.PI / 2;
+    shieldCrest.position.z = 0.13;
+    shield.add(shieldCrest);
+
+    box(0.045, 0.3, 0.045, materials.wood, 0, 0, 0.16, shield);
+
+    // Floating blue berry / sprite near Link.
+    const berry = new THREE.Mesh(
+      new THREE.SphereGeometry(0.13, 10, 8),
+      materials.blue
+    );
+    berry.position.set(0.25, 2.25, 1.15);
+    berry.castShadow = true;
+    scene.add(berry);
+
+    // Small reeds by the water.
+    for (let i = 0; i < 9; i++) {
+      const reed = new THREE.Group();
+      reed.position.set(
+        2.7 + (Math.random() - 0.5) * 1.4,
+        0,
+        3.15 + (Math.random() - 0.5) * 0.8
+      );
+      scene.add(reed);
+
+      const stem = box(
+        0.07,
+        0.65 + Math.random() * 0.45,
+        0.07,
+        materials.leafLight,
+        0,
+        0.3,
+        0,
+        reed
+      );
+      stem.rotation.z = (Math.random() - 0.5) * 0.25;
+    }
+
+    // A few scattered grass tufts and flowers.
+    for (let i = 0; i < 32; i++) {
+      const x = (Math.random() - 0.5) * 17;
+      const z = (Math.random() - 0.5) * 10;
+
+      if (x > 3.5 && z > -1.5 && z < 3.5) continue;
+      if (x > -5.8 && x < -3.8 && z > -1.4 && z < 1.5) continue;
+
+      const tuft = new THREE.Group();
+      tuft.position.set(x, 0.1, z);
+      scene.add(tuft);
+
+      for (let j = 0; j < 3; j++) {
+        const blade = box(
+          0.08,
+          0.28,
+          0.08,
+          j % 2 ? materials.leaf : materials.grassDark,
+          (Math.random() - 0.5) * 0.2,
+          0.14,
+          (Math.random() - 0.5) * 0.2,
+          tuft
+        );
+        blade.rotation.z = (Math.random() - 0.5) * 0.5;
+      }
+    }
+
+    // Pixel-style rain.
+    const rain = new THREE.Group();
+    scene.add(rain);
+
+    const rainMaterial = new THREE.MeshBasicMaterial({
+      color: 0xb8d7d0,
+      transparent: true,
+      opacity: 0.38
+    });
+
+    for (let i = 0; i < 100; i++) {
+      const drop = box(
+        0.035,
+        0.22,
+        0.035,
+        rainMaterial,
+        (Math.random() - 0.5) * 18,
+        Math.random() * 8 + 0.5,
+        (Math.random() - 0.5) * 12,
+        rain
+      );
+      drop.castShadow = false;
+      drop.receiveShadow = false;
+    }
+
+    // Ground details.
+    for (let i = 0; i < 18; i++) {
+      const x = (Math.random() - 0.5) * 17;
+      const z = (Math.random() - 0.5) * 10;
+
+      if (x > 3.5 && z > -1.5 && z < 3.5) continue;
+      if (x > -5.8 && x < -3.8 && z > -1.4 && z < 1.5) continue;
+
+      const flower = new THREE.Group();
+      flower.position.set(x, 0.13, z);
+      scene.add(flower);
+
+      const petals = box(
+        0.15,
+        0.045,
+        0.1,
+        materials.leafLight,
+        0,
+        0.06,
+        0,
+        flower
+      );
+      petals.rotation.y = Math.random() * Math.PI;
+      box(0.08, 0.07, 0.08, materials.white, 0, 0.1, 0, flower);
+    }
+
+    // Pixel stones scattered around the path.
+    const stonePositions = [
+      [-2.1, 2.8], [-1.7, 3.1], [0.2, 3.2], [0.5, 2.8],
+      [-3.2, -2.8], [-2.8, -3.1], [2.9, -2.8], [3.2, -3.1],
+      [-6.2, 2.4], [6.1, 2.5], [-6.2, -2.8], [6.3, -2.7]
+    ];
+
+    for (const [x, z] of stonePositions) {
+      const stone = box(
+        0.55,
+        0.28,
+        0.55,
+        materials.stoneDark,
+        x,
+        0.15,
+        z
+      );
+      stone.rotation.y = Math.random() * Math.PI;
+    }
+
+    // Animation.
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      berry.position.x = 0.25 + Math.sin(elapsed * 1.7) * 0.18;
+      berry.position.y = 2.25 + Math.sin(elapsed * 2.1) * 0.18;
+      berry.rotation.y = elapsed * 0.8;
+
+      for (let i = 0; i < rain.children.length; i++) {
+        const drop = rain.children[i];
+        drop.position.y -= 0.008 + (i % 5) * 0.001;
+        drop.rotation.z += 0.0003;
+
+        if (drop.position.y < 0.05) {
+          drop.position.y = 8.5;
+          drop.position.x = (Math.random() - 0.5) * 18;
+          drop.position.z = (Math.random() - 0.5) * 12;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // Resize handling.
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "The Legend of Zelda: Ocarina of Time Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x17281f, fogColor: 0x17281f, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 },
+      east: { x: 12.0, z: 10.0 },
+      west: { x: -12.0, z: -10.0 }
+    }
+  };
+}

@@ -1,0 +1,1268 @@
+// @world {"id": "1079", "title": "Resident Evil", "sub": "Spencer Mansion \u2014 Main Hall", "system": "3D Render"}
+// Converted from 1079-resident_evil_spencer_mansion_main_hall.html into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    remove: (...objs) => objs.forEach(o => o && group.remove(o)),
+    traverse: (cb) => group.traverse(cb),
+    getObjectByName: (n) => group.getObjectByName(n),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+  Object.defineProperty(scene, "children", { get: () => group.children });
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {},
+      setAnimationLoop: (cb) => { updateHook = cb; },
+    };
+  }
+
+  function dummyVec() {
+    const v = { x: 0, y: 0, z: 0,
+      set: (x, y, z) => { v.x = x || 0; v.y = y || 0; v.z = z || 0; return v; },
+      copy: (o) => { if (o) { v.x = o.x || 0; v.y = o.y || 0; v.z = o.z || 0; } return v; },
+      add: (o) => { if (o) { v.x += o.x || 0; v.y += o.y || 0; v.z += o.z || 0; } return v; },
+      sub: (o) => { if (o) { v.x -= o.x || 0; v.y -= o.y || 0; v.z -= o.z || 0; } return v; },
+      addScaledVector: (o, s) => { if (o) { v.x += (o.x || 0) * s; v.y += (o.y || 0) * s; v.z += (o.z || 0) * s; } return v; },
+      setFromSpherical: () => v,
+      setFromSphericalCoords: () => v,
+      length: () => Math.hypot(v.x, v.y, v.z),
+      normalize: () => v,
+      clone: () => { const c = dummyVec(); c.x = v.x; c.y = v.y; c.z = v.z; return c; }
+    };
+    return v;
+  }
+
+  function dummyCamera() {
+    return {
+      position: dummyVec(),
+      up: dummyVec(),
+      rotation: { x: 0, y: 0, z: 0, set: () => {} },
+      quaternion: { set: () => {}, copy: () => {} },
+      fov: 60, aspect: 16 / 9, near: 0.1, far: 2000,
+      lookAt: () => {},
+      getWorldDirection: (target) => { const t = target || dummyVec(); if (t.set) t.set(0, 0, -1); return t; },
+      updateProjectionMatrix: () => {},
+      updateMatrixWorld: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  let container = dummyEl();
+  let stage = dummyEl();
+  let app = dummyEl();
+  let window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  let document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    // scene redirect
+    scene.background = new THREE.Color(0x242321);
+    scene.fog = new THREE.FogExp2(0x242321, 0.012);
+
+    camera = dummyCamera();
+
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x9b9078,
+        roughness: 0.93,
+        metalness: 0
+      }),
+      wallDark: new THREE.MeshStandardMaterial({
+        color: 0x493e34,
+        roughness: 0.88
+      }),
+      trim: new THREE.MeshStandardMaterial({
+        color: 0xd7c8a8,
+        roughness: 0.8
+      }),
+      carpet: new THREE.MeshStandardMaterial({
+        color: 0x7f2f25,
+        roughness: 1
+      }),
+      carpetDark: new THREE.MeshStandardMaterial({
+        color: 0x3e1715,
+        roughness: 1
+      }),
+      carpetLight: new THREE.MeshStandardMaterial({
+        color: 0xa44b35,
+        roughness: 1
+      }),
+      rug: new THREE.MeshStandardMaterial({
+        color: 0x9c4b32,
+        roughness: 1
+      }),
+      rugBorder: new THREE.MeshStandardMaterial({
+        color: 0xc17a50,
+        roughness: 1
+      }),
+      rugCenter: new THREE.MeshStandardMaterial({
+        color: 0x6f2720,
+        roughness: 1
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x493022,
+        roughness: 0.82
+      }),
+      woodLight: new THREE.MeshStandardMaterial({
+        color: 0x705038,
+        roughness: 0.76
+      }),
+      woodDark: new THREE.MeshStandardMaterial({
+        color: 0x2d1d17,
+        roughness: 0.9
+      }),
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x8e887b,
+        roughness: 0.95
+      }),
+      stoneLight: new THREE.MeshStandardMaterial({
+        color: 0xb5aa91,
+        roughness: 0.9
+      }),
+      metal: new THREE.MeshStandardMaterial({
+        color: 0x454545,
+        roughness: 0.52,
+        metalness: 0.65
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xc69a45,
+        roughness: 0.48,
+        metalness: 0.6
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x284c67,
+        roughness: 0.72,
+        metalness: 0.08
+      }),
+      lamp: new THREE.MeshStandardMaterial({
+        color: 0xffe1a0,
+        emissive: 0xffb84d,
+        emissiveIntensity: 2.4,
+        roughness: 0.35
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helper functions
+    // -------------------------------------------------------------------------
+
+    const voxelSize = 0.5;
+
+    function addVoxelBox(
+      width,
+      height,
+      depth,
+      material,
+      x = 0,
+      y = 0,
+      z = 0,
+      parent = scene
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addStairFlight(
+      start,
+      end,
+      width,
+      material = materials.wood
+    ) {
+      const direction = new THREE.Vector3().subVectors(end, start);
+      const runCount = Math.max(2, Math.ceil(direction.x / voxelSize));
+      const rise = direction.y / runCount;
+      const flight = new THREE.Group();
+
+      for (let i = 0; i <= runCount; i++) {
+        const p = new THREE.Vector3().lerpVectors(start, end, i / runCount);
+        const t = i / runCount;
+
+        addVoxelBox(
+          width,
+          0.34,
+          voxelSize * 0.9,
+          material,
+          p.x,
+          p.y,
+          p.z,
+          flight
+        );
+      }
+
+      const handrailPoints = [
+        new THREE.Vector3().lerpVectors(start, end, 0).add(
+          new THREE.Vector3(0, 0.85, 0)
+        ),
+        new THREE.Vector3().lerpVectors(start, end, 1).add(
+          new THREE.Vector3(0, 0.85, 0)
+        )
+      ];
+
+      const rail = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(handrailPoints),
+        new THREE.LineBasicMaterial({ color: 0x6b5038 })
+      );
+      flight.add(rail);
+
+      for (let i = 1; i < runCount; i++) {
+        const p = new THREE.Vector3().lerpVectors(start, end, i / runCount);
+        const baluster = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.075, 0.09, 0.65, 6),
+          materials.woodLight
+        );
+        baluster.position.set(p.x, p.y + 0.38, p.z);
+        baluster.castShadow = true;
+        flight.add(baluster);
+      }
+
+      scene.add(flight);
+      return flight;
+    }
+
+    function addRug(
+      x,
+      y,
+      z,
+      width,
+      depth,
+      rotation = 0
+    ) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      addVoxelBox(
+        width,
+        0.08,
+        depth,
+        materials.carpetDark,
+        0,
+        0,
+        0,
+        group
+      );
+
+      const insetWidth = Math.max(0.4, width * 0.68);
+      const insetDepth = Math.max(0.4, depth * 0.68);
+
+      addVoxelBox(
+        insetWidth,
+        0.095,
+        insetDepth,
+        materials.rugBorder,
+        0,
+        0.085,
+        0,
+        group
+      );
+
+      addVoxelBox(
+        insetWidth - 0.22,
+        0.105,
+        insetDepth - 0.22,
+        materials.rug,
+        0,
+        0.11,
+        0,
+        group
+      );
+
+      const center = Math.min(insetWidth - 0.5, insetDepth - 0.5);
+      addVoxelBox(
+        center,
+        0.12,
+        center,
+        materials.rugCenter,
+        0,
+        0.14,
+        0,
+        group
+      );
+
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        const radius = center * 0.58;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const small = Math.max(0.12, center * 0.13);
+
+        addVoxelBox(
+          small,
+          0.14,
+          small,
+          materials.rugCenter,
+          x,
+          0.16,
+          z,
+          group
+        );
+      }
+
+      scene.add(group);
+      return group;
+    }
+
+    function addDoor(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      addVoxelBox(
+        1.25,
+        2.45,
+        0.18,
+        materials.woodDark,
+        0,
+        1.22,
+        0,
+        group
+      );
+
+      for (let i = 0; i < 6; i++) {
+        addVoxelBox(
+          0.035,
+          1.85,
+          0.04,
+          materials.wood,
+          -0.4 + i * 0.2,
+          1.25,
+          0.115,
+          group
+        );
+      }
+
+      addVoxelBox(
+        0.06,
+        0.55,
+        0.06,
+        materials.gold,
+        0.48,
+        1.25,
+        0.16,
+        group
+      );
+
+      scene.add(group);
+      return group;
+    }
+
+    function addPicture(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      addVoxelBox(
+        1.25,
+        1.7,
+        0.16,
+        materials.woodDark,
+        0,
+        0,
+        0,
+        group
+      );
+
+      addVoxelBox(
+        1.0,
+        1.42,
+        0.18,
+        new THREE.MeshStandardMaterial({
+          color: 0x6f6250,
+          roughness: 1
+        }),
+        0,
+        0,
+        0.01,
+        group
+      );
+
+      // Stylized portrait made from small colored voxels.
+      const skin = new THREE.MeshStandardMaterial({
+        color: 0xc98f67,
+        roughness: 1
+      });
+      const hair = new THREE.MeshStandardMaterial({
+        color: 0x3a241d,
+        roughness: 1
+      });
+
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 5; col++) {
+          const x = (col - 2) * 0.16;
+          const y = (row - 1.5) * 0.15;
+          const mask =
+            row === 3 ||
+            (row === 2 && col === 0 || col === 4) ||
+            (row === 0 && col === 1 || col === 3);
+
+          if (mask) {
+            addVoxelBox(
+              0.145,
+              0.135,
+              0.035,
+              hair,
+              x,
+              y,
+              0.115,
+              group
+            );
+          } else {
+            addVoxelBox(
+              0.145,
+              0.135,
+              0.035,
+              skin,
+              x,
+              y,
+              0.115,
+              group
+            );
+          }
+        }
+      }
+
+      scene.add(group);
+      return group;
+    }
+
+    function addWindow(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      addVoxelBox(
+        1.65,
+        2.35,
+        0.22,
+        materials.woodDark,
+        0,
+        0,
+        0,
+        group
+      );
+
+      // Stained-glass panels.
+      const glassColors = [
+        0x8c2736,
+        0xd06a32,
+        0x315d78,
+        0x4a8b68,
+        0x8a4b78,
+        0xd1a44c
+      ];
+
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 5; col++) {
+          const material = new THREE.MeshStandardMaterial({
+            color: glassColors[(row + col) % glassColors.length],
+            emissive: glassColors[(row + col) % glassColors.length],
+            emissiveIntensity: 0.35,
+            roughness: 0.55
+          });
+
+          addVoxelBox(
+            0.28,
+            0.48,
+            0.12,
+            material,
+            (col - 2) * 0.3,
+            (row - 1.5) * 0.48,
+            0.14,
+            group
+          );
+        }
+      }
+
+      addVoxelBox(
+        0.06,
+        2.1,
+        0.16,
+        materials.gold,
+        0,
+        0,
+        0.2,
+        group
+      );
+
+      scene.add(group);
+      return group;
+    }
+
+    function addColumn(x, z, height = 3.1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      addVoxelBox(
+        0.62,
+        0.28,
+        0.62,
+        materials.stone,
+        0,
+        0.14,
+        0,
+        group
+      );
+
+      addVoxelBox(
+        0.42,
+        height,
+        0.42,
+        materials.stoneLight,
+        0,
+        height / 2 + 0.28,
+        0,
+        group
+      );
+
+      addVoxelBox(
+        0.6,
+        0.25,
+        0.6,
+        materials.stone,
+        0,
+        height + 0.28,
+        0,
+        group
+      );
+
+      scene.add(group);
+      return group;
+    }
+
+    function addArch(x, z, width = 2.2, height = 3.4) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      // Side columns.
+      addVoxelBox(
+        0.55,
+        height,
+        0.55,
+        materials.stoneLight,
+        -width / 2,
+        height / 2,
+        0,
+        group
+      );
+
+      addVoxelBox(
+        0.55,
+        height,
+        0.55,
+        materials.stoneLight,
+        width / 2,
+        height / 2,
+        0,
+        group
+      );
+
+      // Arched top made from stacked blocks.
+      const segments = 7;
+      for (let i = 0; i < segments; i++) {
+        const angle = (i / (segments - 1)) * Math.PI;
+        const px = Math.cos(angle) * width * 0.47;
+        const py = Math.sin(angle) * height * 0.82;
+
+        addVoxelBox(
+          0.55,
+          0.55,
+          0.55,
+          materials.stoneLight,
+          px,
+          py,
+          0,
+          group
+        );
+      }
+
+      // Blue door behind the arch.
+      addVoxelBox(
+        width * 0.64,
+        height * 0.72,
+        0.16,
+        materials.blue,
+        0,
+        height * 0.36,
+        0.12,
+        group
+      );
+
+      scene.add(group);
+      return group;
+    }
+
+    function addLight(x, y, z, intensity = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      addVoxelBox(
+        0.34,
+        0.16,
+        0.34,
+        materials.lamp,
+        0,
+        0,
+        0,
+        group
+      );
+
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 12, 8),
+        new THREE.MeshBasicMaterial({
+          color: 0xffd68a,
+          transparent: true,
+          opacity: 0.35
+        })
+      );
+      glow.scale.set(1.5, 1, 1.5);
+      group.add(glow);
+
+      scene.add(group);
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // Main hall
+    // -------------------------------------------------------------------------
+
+    const hall = new THREE.Group();
+    scene.add(hall);
+
+    // Ground floor.
+    addVoxelBox(
+      22,
+      0.5,
+      18,
+      materials.stone,
+      0,
+      -0.25,
+      0,
+      hall
+    );
+
+    // Upper mezzanine.
+    const mezzanineTop = 4.1;
+    addVoxelBox(
+      18,
+      0.35,
+      13,
+      materials.stone,
+      0,
+      mezzanineTop,
+      0,
+      hall
+    );
+
+    // Mezzanine walls and lower walls.
+    addVoxelBox(
+      18,
+      4.1,
+      0.35,
+      materials.wall,
+      0,
+      2.05,
+      -6.5,
+      hall
+    );
+
+    addVoxelBox(
+      18,
+      0.35,
+      13,
+      materials.wall,
+      0,
+      4.1,
+      0,
+      hall
+    );
+
+    addVoxelBox(
+      18,
+      0.35,
+      13,
+      materials.wall,
+      0,
+      4.1,
+      6.5,
+      hall
+    );
+
+    addVoxelBox(
+      18,
+      4.1,
+      0.35,
+      materials.wall,
+      0,
+      2.05,
+      6.5,
+      hall
+    );
+
+    // Dark wainscot.
+    addVoxelBox(
+      18,
+      2.1,
+      0.25,
+      materials.wallDark,
+      0,
+      1.05,
+      -6.32,
+      hall
+    );
+
+    addVoxelBox(
+      18,
+      2.1,
+      0.25,
+      materials.wallDark,
+      0,
+      1.05,
+      6.32,
+      hall
+    );
+
+    addVoxelBox(
+      18,
+      0.25,
+      12.6,
+      materials.wallDark,
+      0,
+      2.1,
+      0,
+      hall
+    );
+
+    // Upper floor carpet.
+    addRug(
+      -1.8,
+      mezzanineTop + 0.2,
+      1.7,
+      12.5,
+      8.5,
+      Math.PI / 2
+    );
+
+    addRug(
+      1.8,
+      mezzanineTop + 0.2,
+      -1.7,
+      12.5,
+      8.5,
+      Math.PI / 2
+    );
+
+    // Lower floor carpets.
+    addRug(-1.8, 0.2, -1.7, 11.5, 7.5, Math.PI / 2);
+    addRug(1.8, 0.2, 1.7, 11.5, 7.5, Math.PI / 2);
+
+    // Main central staircase.
+    const lowerStart = new THREE.Vector3(-5.5, 0.2, -4.2);
+    const upperStart = new THREE.Vector3(-5.5, 4.2, -4.2);
+    const upperEnd = new THREE.Vector3(4.5, 4.2, -4.2);
+    const lowerEnd = new THREE.Vector3(4.5, 0.2, -4.2);
+
+    addStairFlight(lowerStart, lowerEnd, 3.2);
+    addStairFlight(upperStart, upperEnd, 3.2);
+
+    // Balustrades.
+    addStairFlight(
+      new THREE.Vector3(-7.4, 0.2, -4.2),
+      new THREE.Vector3(-7.4, 4.2, -4.2),
+      0.35,
+      materials.woodDark
+    );
+
+    addStairFlight(
+      new THREE.Vector3(-7.4, 4.2, -4.2),
+      new THREE.Vector3(-7.4, 4.2, 4.2),
+      0.35,
+      materials.woodDark
+    );
+
+    addStairFlight(
+      new THREE.Vector3(6.4, 4.2, -4.2),
+      new THREE.Vector3(6.4, 4.2, 4.2),
+      0.35,
+      materials.woodDark
+    );
+
+    // Lower side staircase.
+    addStairFlight(
+      new THREE.Vector3(-4.4, 0.2, 4.2),
+      new THREE.Vector3(-4.4, 4.2, 4.2),
+      2.7
+    );
+
+    addStairFlight(
+      new THREE.Vector3(4.4, 0.2, 4.2),
+      new THREE.Vector3(4.4, 4.2, 4.2),
+      2.7
+    );
+
+    // Mezzanine rails.
+    addStairFlight(
+      new THREE.Vector3(-9.4, 4.2, -5.8),
+      new THREE.Vector3(-9.4, 4.2, 5.8),
+      0.35,
+      materials.woodDark
+    );
+
+    addStairFlight(
+      new THREE.Vector3(9.4, 4.2, -5.8),
+      new THREE.Vector3(9.4, 4.2, 5.8),
+      0.35,
+      materials.woodDark
+    );
+
+    // Columns and arches on the lower level.
+    addColumn(-7.2, -4.4, 3.8);
+    addColumn(7.2, -4.4, 3.8);
+    addColumn(-7.2, 4.4, 3.8);
+    addColumn(7.2, 4.4, 3.8);
+
+    addArch(-2.0, 0, 2.4, 3.6);
+    addArch(2.0, 0, 2.4, 3.6);
+
+    // Doors on upper level.
+    addDoor(-5.7, 5.7, 0);
+    addDoor(5.7, 5.7, 0);
+
+    // Doors on lower level.
+    addDoor(-5.8, -5.8, Math.PI);
+    addDoor(5.8, 5.8, Math.PI);
+
+    // Wall decorations.
+    addPicture(-6.5, 3.1, -6.1, Math.PI);
+    addPicture(6.5, 3.1, -6.1, Math.PI);
+    addPicture(-6.5, 3.1, 6.1, 0);
+    addPicture(6.5, 3.1, 6.1, 0);
+
+    addWindow(-1.6, 3.4, -6.1, Math.PI);
+
+    // Ceiling beams.
+    for (let x = -9; x <= 9; x += 3) {
+      addVoxelBox(
+        0.45,
+        0.4,
+        15,
+        materials.woodDark,
+        x,
+        8.25,
+        0,
+        hall
+      );
+    }
+
+    // Ceiling plane.
+    addVoxelBox(
+      18.5,
+      0.35,
+      13.5,
+      materials.woodDark,
+      0,
+      8.45,
+      0,
+      hall
+    );
+
+    // Ceiling lamps.
+    addLight(-6.5, 7.9, -2.5, 1.15);
+    addLight(6.5, 7.9, -2.5, 1.15);
+    addLight(-6.5, 7.9, 2.5, 1.15);
+    addLight(6.5, 7.9, 2.5, 1.15);
+    addLight(-2.5, 7.9, 0, 1.15);
+    addLight(2.5, 7.9, 0, 1.15);
+
+    // Small side tables and decorative objects.
+    function addSideTable(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      addVoxelBox(
+        1.1,
+        0.12,
+        1.1,
+        materials.woodLight,
+        0,
+        0.75,
+        0,
+        group
+      );
+
+      addVoxelBox(
+        0.18,
+        0.75,
+        0.18,
+        materials.woodDark,
+        0,
+        0.38,
+        0,
+        group
+      );
+
+      const vase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.3, 0.65, 10),
+        materials.gold
+      );
+      vase.position.y = 1.1;
+      vase.castShadow = true;
+      group.add(vase);
+
+      scene.add(group);
+    }
+
+    addSideTable(-4.6, 4.2, -2.2);
+    addSideTable(4.6, 4.2, -2.2);
+    addSideTable(-4.6, 0.2, 2.2);
+    addSideTable(4.6, 0.2, 2.2);
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0xd9d0bd, 0x302720, 1.4));
+
+    const ambient = new THREE.AmbientLight(0xffe5c4, 0.35);
+    scene.add(ambient);
+
+    const sun = new THREE.DirectionalLight(0xffe0b0, 2.2);
+    sun.position.set(-7, 12, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -14;
+    sun.shadow.camera.right = 14;
+    sun.shadow.camera.top = 14;
+    sun.shadow.camera.bottom = -14;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 2.1, 0),
+      radius: 22,
+      theta: Math.PI * 0.75,
+      phi: Math.PI * 0.28,
+      minRadius: 11,
+      maxRadius: 34,
+      minPhi: 0.18,
+      maxPhi: Math.PI * 0.82
+    };
+
+    const defaultControls = {
+      target: controls.target.clone(),
+      radius: controls.radius,
+      theta: controls.theta,
+      phi: controls.phi
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    let dragging = false;
+    let panning = false;
+    let previousX = 0;
+    let previousY = 0;
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (pinchDistance > 0) {
+          controls.radius = THREE.MathUtils.clamp(
+            controls.radius * (pinchDistance / Math.max(distance, 1)),
+            controls.minRadius,
+            controls.maxRadius
+          );
+        }
+
+        pinchDistance = distance;
+        updateCamera();
+        return;
+      }
+
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const scale = controls.radius * 0.0015;
+        controls.target.addScaledVector(right, -dx * scale);
+        controls.target.addScaledVector(up, dy * scale);
+        controls.target.y = THREE.MathUtils.clamp(
+          controls.target.y,
+          0.5,
+          7
+        );
+      } else {
+        controls.theta -= dx * 0.006;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - dy * 0.005,
+          controls.minPhi,
+          controls.maxPhi
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endPointer(event) {
+      activePointers.delete(event.pointerId);
+
+      if (activePointers.size < 2) {
+        pinchDistance = 0;
+      }
+
+      if (activePointers.size === 0) {
+        dragging = false;
+        panning = false;
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endPointer);
+    renderer.domElement.addEventListener("pointercancel", endPointer);
+    renderer.domElement.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius * Math.exp(event.deltaY * 0.001),
+          controls.minRadius,
+          controls.maxRadius
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    function resetView() {
+      controls.target.copy(defaultControls.target);
+      controls.radius = defaultControls.radius;
+      controls.theta = defaultControls.theta;
+      controls.phi = defaultControls.phi;
+      updateCamera();
+    }
+
+    dummyEl().addEventListener("click", resetView);
+
+    let lightsOn = true;
+    const toggleButton = dummyEl();
+
+    toggleButton.addEventListener("click", () => {
+      lightsOn = !lightsOn;
+      toggleButton.textContent = lightsOn ? "Lights on" : "Lights off";
+
+      for (const child of scene.children) {
+        if (child.isGroup && child.children.length > 0) {
+          const lampMaterial = child.material;
+          if (lampMaterial && lampMaterial.emissiveIntensity) {
+            lampMaterial.emissiveIntensity = lightsOn ? 2.4 : 0;
+          }
+        }
+      }
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key.toLowerCase() === "r") {
+        resetView();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      for (const light of scene.children) {
+        if (light.isGroup && light.children.length === 1) {
+          const glow = light.children[0];
+          glow.material.opacity = 0.3 + Math.sin(elapsed * 0.7 + light.position.x) * 0.05;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+
+    requestAnimationFrame(() => {
+      dummyEl().style.opacity = "0";
+      setTimeout(() => {
+        dummyEl().remove();
+      }, 500);
+    });
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Resident Evil Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x242321, fogColor: 0x242321, fogDensity: 0.012 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 },
+      east: { x: 12.0, z: 10.0 },
+      west: { x: -12.0, z: -10.0 }
+    }
+  };
+}

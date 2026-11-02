@@ -1,0 +1,965 @@
+// @world {"id": "1072", "title": "Mortal Kombat X", "sub": "Training Room Stage", "system": "3D Render"}
+// Converted from 1072-mortal_kombat_x_training_room_stage.html into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    remove: (...objs) => objs.forEach(o => o && group.remove(o)),
+    traverse: (cb) => group.traverse(cb),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {},
+      setAnimationLoop: (cb) => { updateHook = cb; },
+    };
+  }
+
+  function dummyVec() {
+    const v = { x: 0, y: 0, z: 0,
+      set: (x, y, z) => { v.x = x || 0; v.y = y || 0; v.z = z || 0; return v; },
+      copy: (o) => { if (o) { v.x = o.x || 0; v.y = o.y || 0; v.z = o.z || 0; } return v; },
+      add: (o) => { if (o) { v.x += o.x || 0; v.y += o.y || 0; v.z += o.z || 0; } return v; },
+      sub: (o) => { if (o) { v.x -= o.x || 0; v.y -= o.y || 0; v.z -= o.z || 0; } return v; },
+      addScaledVector: (o, s) => { if (o) { v.x += (o.x || 0) * s; v.y += (o.y || 0) * s; v.z += (o.z || 0) * s; } return v; },
+      setFromSpherical: () => v,
+      setFromSphericalCoords: () => v,
+      length: () => Math.hypot(v.x, v.y, v.z),
+      normalize: () => v,
+      clone: () => { const c = dummyVec(); c.x = v.x; c.y = v.y; c.z = v.z; return c; }
+    };
+    return v;
+  }
+
+  function dummyCamera() {
+    return {
+      position: dummyVec(),
+      up: dummyVec(),
+      rotation: { x: 0, y: 0, z: 0, set: () => {} },
+      quaternion: { set: () => {}, copy: () => {} },
+      fov: 60, aspect: 16 / 9, near: 0.1, far: 2000,
+      lookAt: () => {},
+      getWorldDirection: (target) => { const t = target || dummyVec(); if (t.set) t.set(0, 0, -1); return t; },
+      updateProjectionMatrix: () => {},
+      updateMatrixWorld: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  let container = dummyEl();
+  let stage = dummyEl();
+  let app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0x05080d);
+    scene.fog = new THREE.FogExp2(0x07101a, 0.018);
+
+    camera = dummyCamera();
+
+    const cameraState = {
+      target: new THREE.Vector3(0, 1.3, 0),
+      radius: 13.8,
+      theta: -0.62,
+      phi: 1.02,
+      yaw: 0
+    };
+
+    function updateCamera() {
+      const { target, radius, theta, phi } = cameraState;
+      camera.position.set(
+        target.x + radius * Math.sin(phi) * Math.cos(theta),
+        target.y + radius * Math.cos(phi),
+        target.z + radius * Math.sin(phi) * Math.sin(theta)
+      );
+      camera.lookAt(target);
+    }
+
+    updateCamera();
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const materials = {
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x26313b,
+        roughness: 0.9,
+        metalness: 0.25
+      }),
+      wallInset: new THREE.MeshStandardMaterial({
+        color: 0x111920,
+        roughness: 0.95,
+        metalness: 0.15
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x18242d,
+        roughness: 0.72,
+        metalness: 0.38
+      }),
+      floorLine: new THREE.MeshBasicMaterial({
+        color: 0x62dfff,
+        transparent: true,
+        opacity: 0.82
+      }),
+      floorLineDim: new THREE.MeshBasicMaterial({
+        color: 0x1c6178,
+        transparent: true,
+        opacity: 0.65
+      }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x9ceeff,
+        emissive: 0x22bfff,
+        emissiveIntensity: 2.4,
+        roughness: 0.35,
+        metalness: 0.25
+      }),
+      cyanDark: new THREE.MeshStandardMaterial({
+        color: 0x3d91b0,
+        emissive: 0x0b6680,
+        emissiveIntensity: 1.1,
+        roughness: 0.5,
+        metalness: 0.4
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xd9f3ff,
+        emissive: 0x5bc8ef,
+        emissiveIntensity: 0.75,
+        roughness: 0.45
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x721318,
+        emissive: 0x8d080b,
+        emissiveIntensity: 0.65,
+        roughness: 0.8
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x1b6c9a,
+        emissive: 0x083550,
+        emissiveIntensity: 0.8,
+        roughness: 0.35,
+        metalness: 0.55
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x05080b,
+        roughness: 0.9
+      }),
+      redDark: new THREE.MeshStandardMaterial({
+        color: 0x23090c,
+        roughness: 0.95
+      })
+    };
+
+    function voxel(material, size = 1, position = [0, 0, 0], rotation = null) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(...position);
+      if (rotation) mesh.rotation.set(...rotation);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function addVoxel(parent, material, size, position, rotation = null) {
+      const mesh = voxel(material, size, position, rotation);
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addBox(parent, material, size, position, rotation = null) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size[0], size[1], size[2]),
+        material
+      );
+      mesh.position.set(...position);
+      if (rotation) mesh.rotation.set(...rotation);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x8acfff, 0x090b10, 1.2));
+
+    const ambient = new THREE.AmbientLight(0x6b91b3, 0.35);
+    scene.add(ambient);
+
+    const rimLight = new THREE.DirectionalLight(0x63d8ff, 2.3);
+    rimLight.position.set(-7, 10, -5);
+    rimLight.castShadow = true;
+    rimLight.shadow.mapSize.set(2048, 2048);
+    rimLight.shadow.camera.left = -12;
+    rimLight.shadow.camera.right = 12;
+    rimLight.shadow.camera.top = 12;
+    rimLight.shadow.camera.bottom = -12;
+    scene.add(rimLight);
+
+    const centerLight = new THREE.PointLight(0x52d9ff, 16, 18, 2);
+    centerLight.position.set(0, 2.4, 0);
+    scene.add(centerLight);
+
+    // ------------------------------------------------------------
+    // Room shell: a ring of square wall blocks
+    // ------------------------------------------------------------
+    const room = new THREE.Group();
+    scene.add(room);
+
+    const wallSegments = 32;
+    const wallHeight = 8;
+    const wallThickness = 1.25;
+    const wallRadius = 11.5;
+    const blockWidth = 1.32;
+
+    for (let i = 0; i < wallSegments; i++) {
+      const angle = (i / wallSegments) * Math.PI * 2;
+      const x = Math.cos(angle) * wallRadius;
+      const z = Math.sin(angle) * wallRadius;
+
+      addBox(
+        room,
+        materials.wall,
+        [blockWidth, wallHeight, blockWidth],
+        [x, wallHeight / 2, z]
+      );
+
+      addBox(
+        room,
+        materials.wallInset,
+        [blockWidth - 0.16, wallHeight - 0.2, blockWidth - 0.16],
+        [x, wallHeight / 2, z]
+      );
+
+      const light = addBox(
+        room,
+        materials.cyanDark,
+        [0.06, 0.06, 0.06],
+        [x + 0.45, wallHeight - 0.65, z + 0.45]
+      );
+      light.castShadow = false;
+    }
+
+    // Back wall panels and structural ribs.
+    for (let i = 0; i < 16; i++) {
+      const x = -10.5 + i * 1.4;
+      addBox(
+        room,
+        materials.wallInset,
+        [1.1, 6.8, 0.18],
+        [x, 3.4, -11.35]
+      );
+    }
+
+    for (let x = -11; x <= 11; x += 2.2) {
+      addBox(
+        room,
+        materials.wall,
+        [0.12, 7.4, 0.25],
+        [x, 3.7, -11.45]
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Floor grid: concentric circles and radial lines
+    // ------------------------------------------------------------
+    const floor = new THREE.Group();
+    floor.rotation.x = -Math.PI / 2;
+    room.add(floor);
+
+    for (let radius = 2.1; radius <= 10.4; radius += 1.25) {
+      const points = 128;
+      const positions = [];
+
+      for (let i = 0; i <= points; i++) {
+        const angle = (i / points) * Math.PI * 2;
+        positions.push(
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius
+        );
+      }
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(positions);
+      const material = radius < 5 ? materials.floorLine : materials.floorLineDim;
+      const line = new THREE.LineLoop(geometry, material);
+      floor.add(line);
+    }
+
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const inner = 1.1;
+      const outer = 10.8;
+      const positions = [];
+
+      for (let j = 0; j <= 48; j++) {
+        const t = j / 48;
+        const radius = THREE.MathUtils.lerp(inner, outer, t);
+        positions.push(
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius
+        );
+      }
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(positions);
+      const line = new THREE.Line(geometry, materials.floorLineDim);
+      floor.add(line);
+    }
+
+    // Hexagonal floor texture made from small cubes.
+    const hexRadius = 6.2;
+    const hexStep = 0.34;
+
+    for (let y = -hexRadius; y <= hexRadius; y++) {
+      for (let x = -hexRadius; x <= hexRadius; x++) {
+        const py = y * hexStep;
+        const px = x * hexStep;
+        const distance = Math.sqrt(px * px + py * py);
+        const normalized = distance / (hexStep * 1.5);
+        const inHex = normalized <= 1;
+
+        if (inHex) {
+          addBox(
+            floor,
+            materials.wallInset,
+            [hexStep * 0.92, 0.08, hexStep * 0.92],
+            [px, 0.05, py]
+          );
+        }
+      }
+    }
+
+    // Central floor emblem.
+    const emblem = new THREE.Group();
+    floor.add(emblem);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const radius = 1.35;
+      addBox(
+        emblem,
+        materials.cyan,
+        [0.11, 0.08, 0.72],
+        [
+          Math.cos(angle) * radius,
+          0.13,
+          Math.sin(angle) * radius
+        ],
+        [0, -angle, 0]
+      );
+    }
+
+    addBox(
+      emblem,
+      materials.cyan,
+      [0.85, 0.1, 0.85],
+      [0, 0.15, 0]
+    );
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      addBox(
+        emblem,
+        materials.cyan,
+        [0.12, 0.08, 0.38],
+        [
+          Math.cos(angle) * 1.55,
+          0.13,
+          Math.sin(angle) * 1.55
+        ],
+        [0, -angle, 0]
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Wall screens
+    // ------------------------------------------------------------
+    function createScreen(parent, position, rotationY, width, height) {
+      const group = new THREE.Group();
+      group.position.set(...position);
+      group.rotation.y = rotationY;
+      parent.add(group);
+
+      addBox(
+        group,
+        materials.black,
+        [width + 0.18, height + 0.18, 0.22],
+        [0, 0, 0]
+      );
+
+      addBox(
+        group,
+        materials.wallInset,
+        [width, height, 0.08],
+        [0, 0, 0.13]
+      );
+
+      const screen = addBox(
+        group,
+        materials.cyanDark,
+        [width - 0.12, height - 0.12, 0.05],
+        [0, 0, 0.18]
+      );
+      screen.castShadow = false;
+
+      return group;
+    }
+
+    const screens = [];
+
+    function makeWaveScreen(parent, position, rotationY, accent = 0x67e8ff) {
+      const group = createScreen(parent, position, rotationY, 2.3, 1.45);
+
+      const canvasTexture = document.createElement("canvas");
+      canvasTexture.width = 256;
+      canvasTexture.height = 144;
+      const context = canvasTexture.getContext("2d");
+
+      context.fillStyle = "#06131c";
+      context.fillRect(0, 0, 256, 144);
+      context.strokeStyle = accent;
+      context.lineWidth = 2;
+      context.strokeRect(8, 8, 240, 128);
+
+      context.beginPath();
+      for (let x = 0; x <= 256; x += 8) {
+        const y = 72 + Math.sin(x * 0.13) * 27 + Math.sin(x * 0.04) * 12;
+        if (x === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.stroke();
+
+      context.fillStyle = accent;
+      context.font = "monospace 18px";
+      context.fillText("LIVE", 20, 30);
+      context.fillText("STABLE", 20, 118);
+
+      const texture = new THREE.CanvasTexture(canvasTexture);
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      const screenMaterial = new THREE.MeshBasicMaterial({
+        map: texture
+      });
+
+      const face = addBox(
+        group,
+        screenMaterial,
+        [2.05, 1.2, 0.03],
+        [0, 0, 0.22]
+      );
+      face.castShadow = false;
+
+      screens.push(group);
+      return group;
+    }
+
+    function makeMapScreen(parent, position, rotationY, accent = 0x67e8ff) {
+      const group = createScreen(parent, position, rotationY, 2.5, 1.55);
+
+      const canvasTexture = document.createElement("canvas");
+      canvasTexture.width = 384;
+      canvasTexture.height = 220;
+      const context = canvasTexture.getContext("2d");
+
+      context.fillStyle = "#06131c";
+      context.fillRect(0, 0, 384, 220);
+
+      context.strokeStyle = accent;
+      context.lineWidth = 2;
+      context.strokeRect(8, 8, 368, 204);
+
+      context.beginPath();
+      for (let i = 0; i <= 32; i++) {
+        const x = 22 + i * 11.5;
+        const y = 120 + Math.sin(i * 0.45) * 45;
+        if (i === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.stroke();
+
+      context.fillStyle = accent;
+      context.font = "monospace 20px";
+      context.fillText("BAY 07", 20, 30);
+      context.fillText("TARGET ACQUIRED", 20, 178);
+
+      const texture = new THREE.CanvasTexture(canvasTexture);
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      const screenMaterial = new THREE.MeshBasicMaterial({
+        map: texture
+      });
+
+      const face = addBox(
+        group,
+        screenMaterial,
+        [2.3, 1.3, 0.03],
+        [0, 0, 0.22]
+      );
+      face.castShadow = false;
+
+      screens.push(group);
+      return group;
+    }
+
+    makeWaveScreen(room, [-5.2, 4.1, -10.7], 0.28);
+    makeMapScreen(room, [-5.2, 2.55, -10.7], 0.28);
+    makeWaveScreen(room, [5.2, 4.1, -10.7], -0.28);
+    makeMapScreen(room, [5.2, 2.55, -10.7], -0.28);
+
+    // Central wall emblem.
+    const emblemGroup = new THREE.Group();
+    emblemGroup.position.set(0, 5.15, -11.1);
+    room.add(emblemGroup);
+
+    for (let i = 0; i < 14; i++) {
+      const angle = (i / 14) * Math.PI * 2;
+      const radius = 1.35;
+      addBox(
+        emblemGroup,
+        materials.cyanDark,
+        [0.11, 0.72, 0.18],
+        [
+          Math.cos(angle) * radius,
+          0,
+          Math.sin(angle) * radius
+        ],
+        [0, -angle, 0]
+      );
+    }
+
+    addBox(
+      emblemGroup,
+      materials.cyan,
+      [0.62, 0.62, 0.2],
+      [0, 0, 0]
+    );
+
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      addBox(
+        emblemGroup,
+        materials.cyanDark,
+        [0.1, 0.3, 0.2],
+        [
+          Math.cos(angle) * 0.95,
+          0,
+          Math.sin(angle) * 0.95
+        ],
+        [0, -angle, 0]
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Equipment around the room
+    // ------------------------------------------------------------
+    const equipment = new THREE.Group();
+    room.add(equipment);
+
+    // Left analysis pod.
+    const pod = new THREE.Group();
+    pod.position.set(-5.1, 0, 1.7);
+    pod.rotation.y = -0.35;
+    equipment.add(pod);
+
+    addBox(
+      pod,
+      materials.blue,
+      [1.75, 0.35, 1.45],
+      [0, 0.25, 0]
+    );
+
+    addBox(
+      pod,
+      materials.cyan,
+      [1.4, 0.16, 1.15],
+      [0, 0.48, 0]
+    );
+
+    addBox(
+      pod,
+      materials.cyan,
+      [0.12, 0.25, 1.25],
+      [0, 0.65, 0]
+    );
+
+    for (let i = 0; i < 4; i++) {
+      addBox(
+        pod,
+        materials.cyanDark,
+        [0.06, 0.06, 0.06],
+        [0.72, 0.55, -0.45 + i * 0.28]
+      );
+    }
+
+    // Center sample cubes.
+    const sampleCubes = new THREE.Group();
+    sampleCubes.position.set(0, 0, 0);
+    equipment.add(sampleCubes);
+
+    for (let layer = 0; layer < 3; layer++) {
+      for (let x = -1; x <= 1; x++) {
+        for (let z = -1; z <= 1; z++) {
+          const corner = Math.abs(x) + Math.abs(z) > 1;
+          if (layer === 0 && corner) continue;
+
+          addBox(
+            sampleCubes,
+            layer === 1 ? materials.cyanDark : materials.blue,
+            [0.58, 0.58, 0.58],
+            [x * 0.78, 0.38 + layer * 0.62, z * 0.78]
+          );
+        }
+      }
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      addBox(
+        sampleCubes,
+        materials.cyan,
+        [0.08, 0.32, 0.08],
+        [
+          Math.cos(angle) * 1.7,
+          1.75,
+          Math.sin(angle) * 1.7
+        ]
+      );
+    }
+
+    // Right holographic display.
+    const display = new THREE.Group();
+    display.position.set(5.1, 0, -1.6);
+    display.rotation.y = 0.35;
+    equipment.add(display);
+
+    addBox(
+      display,
+      materials.black,
+      [1.45, 2.25, 0.25],
+      [0, 1.2, 0]
+    );
+
+    addBox(
+      display,
+      materials.cyan,
+      [1.1, 1.7, 0.08],
+      [0, 1.25, 0.17]
+    );
+
+    for (let i = 0; i < 5; i++) {
+      addBox(
+        display,
+        materials.cyanDark,
+        [0.07, 0.07, 0.07],
+        [-0.45 + i * 0.225, 2.42, 0.35]
+      );
+    }
+
+    // Blood-like voxel stains on the floor.
+    const stainMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3d090b,
+      emissive: 0x260305,
+      emissiveIntensity: 0.25,
+      roughness: 1
+    });
+
+    function addStain(parent, position, scale = 1) {
+      const stain = new THREE.Group();
+      stain.position.set(...position);
+      stain.scale.setScalar(scale);
+      parent.add(stain);
+
+      for (let i = 0; i < 9; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 1.15;
+        addBox(
+          stain,
+          stainMaterial,
+          [0.12 + Math.random() * 0.28, 0.025, 0.08 + Math.random() * 0.2],
+          [
+            Math.cos(angle) * radius,
+            0.12,
+            Math.sin(angle) * radius
+          ],
+          [0, Math.random() * Math.PI, 0]
+        );
+      }
+    }
+
+    addStain(equipment, [-3.3, 0, 2.7], 1.15);
+    addStain(equipment, [3.4, 0, 2.8], 0.95);
+    addStain(equipment, [-3.5, 0, -3.1], 0.7);
+    addStain(equipment, [3.6, 0, -3.2], 0.8);
+
+    // Small floor lamps.
+    const lampPositions = [
+      [-9.7, 0.65, -6.4],
+      [9.7, 0.65, -6.4],
+      [-9.7, 0.65, 6.4],
+      [9.7, 0.65, 6.4]
+    ];
+
+    for (const position of lampPositions) {
+      addBox(
+        equipment,
+        materials.cyanDark,
+        [0.28, 0.1, 0.28],
+        [position[0], position[1], position[2]]
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Floating particles
+    // ------------------------------------------------------------
+    const particleCount = 320;
+    const particlePositions = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      const radius = 8 + Math.random() * 5;
+      const angle = Math.random() * Math.PI * 2;
+      particlePositions[i * 3] = Math.cos(angle) * radius;
+      particlePositions[i * 3 + 1] = 0.5 + Math.random() * 7;
+      particlePositions[i * 3 + 2] = Math.sin(angle) * radius;
+    }
+
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(particlePositions, 3)
+    );
+
+    const particleMaterial = new THREE.PointsMaterial({
+      color: 0x78dfff,
+      size: 0.045,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false
+    });
+
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    // ------------------------------------------------------------
+    // Direct camera controls
+    // ------------------------------------------------------------
+    const pointer = new THREE.Vector2();
+    const pointerState = {
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    const keys = new Set();
+
+    function onPointerDown(event) {
+      pointerState.dragging = true;
+      pointerState.lastX = event.clientX;
+      pointerState.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    }
+
+    function onPointerMove(event) {
+      if (!pointerState.dragging) return;
+
+      const dx = event.clientX - pointerState.lastX;
+      const dy = event.clientY - pointerState.lastY;
+
+      pointerState.lastX = event.clientX;
+      pointerState.lastY = event.clientY;
+
+      cameraState.theta -= dx * 0.006;
+      cameraState.phi = THREE.MathUtils.clamp(
+        cameraState.phi - dy * 0.005,
+        0.25,
+        Math.PI * 0.48
+      );
+    }
+
+    function onPointerUp(event) {
+      pointerState.dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerup", onPointerUp);
+    renderer.domElement.addEventListener("pointercancel", onPointerUp);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        cameraState.radius = THREE.MathUtils.clamp(
+          cameraState.radius + event.deltaY * 0.008,
+          6.5,
+          22
+        );
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("keydown", (event) => {
+      keys.add(event.code);
+    });
+
+    window.addEventListener("keyup", (event) => {
+      keys.delete(event.code);
+    });
+
+    function updateControls(delta) {
+      const speed = 0.8 * delta;
+
+      if (keys.has("KeyW")) cameraState.target.z -= speed;
+      if (keys.has("KeyS")) cameraState.target.z += speed;
+      if (keys.has("KeyA")) cameraState.target.x -= speed;
+      if (keys.has("KeyD")) cameraState.target.x += speed;
+      if (keys.has("KeyQ")) cameraState.target.y -= speed;
+      if (keys.has("KeyE")) cameraState.target.y += speed;
+
+      cameraState.target.x = THREE.MathUtils.clamp(
+        cameraState.target.x,
+        -4,
+        4
+      );
+      cameraState.target.y = THREE.MathUtils.clamp(
+        cameraState.target.y,
+        0.4,
+        4
+      );
+      cameraState.target.z = THREE.MathUtils.clamp(
+        cameraState.target.z,
+        -4,
+        4
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Resize and animation
+    // ------------------------------------------------------------
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+
+      updateControls(delta);
+      updateCamera();
+
+      particles.rotation.y = elapsed * 0.025;
+      particles.position.y = Math.sin(elapsed * 0.35) * 0.12;
+
+      centerLight.intensity = 15 + Math.sin(elapsed * 1.7) * 1.5;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Mortal Kombat X Relic", x: -10.0, z: 12.0 },
+    env:   { background: 0x05080d, fogColor: 0x07101a, fogDensity: 0.018 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 },
+      east: { x: 12.0, z: 10.0 },
+      west: { x: -12.0, z: -10.0 }
+    }
+  };
+}

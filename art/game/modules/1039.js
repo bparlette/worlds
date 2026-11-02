@@ -1,0 +1,720 @@
+// @world {"id": "1039", "title": "Super Mario 64", "sub": "Bob-omb Battlefield", "system": "3D Render"}
+// Converted from 1039-super_mario_64_bob_omb_battlefield.html into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    remove: (...objs) => objs.forEach(o => o && group.remove(o)),
+    traverse: (cb) => group.traverse(cb),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {},
+      setAnimationLoop: (cb) => { updateHook = cb; },
+    };
+  }
+
+  function dummyVec() {
+    const v = { x: 0, y: 0, z: 0,
+      set: (x, y, z) => { v.x = x || 0; v.y = y || 0; v.z = z || 0; return v; },
+      copy: (o) => { if (o) { v.x = o.x || 0; v.y = o.y || 0; v.z = o.z || 0; } return v; },
+      add: (o) => { if (o) { v.x += o.x || 0; v.y += o.y || 0; v.z += o.z || 0; } return v; },
+      sub: (o) => { if (o) { v.x -= o.x || 0; v.y -= o.y || 0; v.z -= o.z || 0; } return v; },
+      addScaledVector: (o, s) => { if (o) { v.x += (o.x || 0) * s; v.y += (o.y || 0) * s; v.z += (o.z || 0) * s; } return v; },
+      setFromSpherical: () => v,
+      setFromSphericalCoords: () => v,
+      length: () => Math.hypot(v.x, v.y, v.z),
+      normalize: () => v,
+      clone: () => { const c = dummyVec(); c.x = v.x; c.y = v.y; c.z = v.z; return c; }
+    };
+    return v;
+  }
+
+  function dummyCamera() {
+    return {
+      position: dummyVec(),
+      up: dummyVec(),
+      rotation: { x: 0, y: 0, z: 0, set: () => {} },
+      quaternion: { set: () => {}, copy: () => {} },
+      fov: 60, aspect: 16 / 9, near: 0.1, far: 2000,
+      lookAt: () => {},
+      getWorldDirection: (target) => { const t = target || dummyVec(); if (t.set) t.set(0, 0, -1); return t; },
+      updateProjectionMatrix: () => {},
+      updateMatrixWorld: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  let container = dummyEl();
+  let stage = dummyEl();
+  let app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): d, h, px, py, pz, w, x2, z2
+  let d = 0;
+  let h = 0;
+  let px = 0;
+  let py = 0;
+  let pz = 0;
+  let w = 0;
+  let x2 = 0;
+  let z2 = 0;
+
+    
+
+    // Renderer
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    
+
+    // Scene
+    // scene redirect
+    scene.background = new THREE.Color(0xd9c4a8);
+    scene.fog = new THREE.Fog(0xd9c4a8, 25, 55);
+
+    // Camera
+    camera = dummyCamera();
+
+    // Custom orbit controls
+    const controls = {
+      target: new THREE.Vector3(0, 1.2, 0),
+      radius: 15.5,
+      theta: 0.72,
+      phi: 1.08,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.panning = event.button === 2;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = controls.panning ? "move" : "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const scale = controls.radius * 0.0015;
+        controls.target.addScaledVector(right, -dx * scale);
+        controls.target.addScaledVector(up, dy * scale);
+      } else {
+        controls.theta -= dx * 0.006;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - dy * 0.005,
+          0.25,
+          Math.PI * 0.48
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      controls.panning = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        const factor = Math.exp(event.deltaY * 0.001);
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius * factor,
+          7,
+          30
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    renderer.domElement.style.cursor = "grab";
+
+    // Materials
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x78b85b,
+        roughness: 0.95
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x91c971,
+        roughness: 0.95
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x568d43,
+        roughness: 0.95
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x9b6340,
+        roughness: 1
+      }),
+      soilLight: new THREE.MeshStandardMaterial({
+        color: 0xb97b4e,
+        roughness: 1
+      }),
+      path: new THREE.MeshStandardMaterial({
+        color: 0xc28a57,
+        roughness: 1
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf0ead8,
+        roughness: 0.85
+      }),
+      dark: new THREE.MeshStandardMaterial({
+        color: 0x34463d,
+        roughness: 0.95
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x69a8c4,
+        roughness: 0.55,
+        metalness: 0.05
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x777b73,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x477b3f,
+        roughness: 0.95
+      }),
+      flowerYellow: new THREE.MeshStandardMaterial({
+        color: 0xe9bc5b,
+        roughness: 0.85
+      }),
+      flowerPink: new THREE.MeshStandardMaterial({
+        color: 0xd98b9b,
+        roughness: 0.85
+      })
+    };
+
+    // Voxel helpers
+    const island = new THREE.Group();
+    scene.add(island);
+
+    function voxelBox(
+      width,
+      height,
+      depth,
+      material,
+      x = 0,
+      y = 0,
+      z = 0,
+      parent = island
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function blockColumn(
+      x,
+      z,
+      levels,
+      width,
+      depth,
+      material,
+      parent = island
+    ) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      parent.add(group);
+
+      for (let i = 0; i < levels; i++) {
+        const materialToUse =
+          i === levels - 1 ? materials.soilLight : material;
+
+        voxelBox(
+          width,
+          0.38,
+          depth,
+          materialToUse,
+          0,
+          i * 0.38 + 0.19,
+          0,
+          group
+        );
+      }
+
+      return group;
+    }
+
+    // Main island: a low, irregular voxel landmass
+    const islandShape = [
+      [-7, -4, 1],
+      [-6, -3, 1],
+      [-5, -2, 1],
+      [-4, -1, 1],
+      [-3, 0, 1],
+      [-2, 1, 1],
+      [-1, 2, 1],
+      [0, 2, 1],
+      [1, 2, 1],
+      [2, 1, 1],
+      [3, 0, 1],
+      [4, -1, 1],
+      [5, -2, 1],
+      [6, -3, 1],
+      [7, -4, 1],
+      [6, -5, 1],
+      [4, -6, 1],
+      [2, -6, 1],
+      [0, -6, 1],
+      [-2, -6, 1],
+      [-4, -6, 1],
+      [-6, -5, 1],
+      [-7, -4, 1]
+    ];
+
+    // Build the base from a grid, with a slightly irregular footprint
+    const cell = 0.72;
+    const baseGrid = [
+      [-7, -4], [-6, -3], [-5, -2], [-4, -1], [-3, 0],
+      [-2, 1], [-1, 2], [0, 2], [1, 2], [2, 1], [3, 0],
+      [4, -1], [5, -2], [6, -3], [7, -4], [6, -5],
+      [4, -6], [2, -6], [0, -6], [-2, -6], [-4, -6],
+      [-6, -5], [-7, -4]
+    ];
+
+    for (const [x, z] of baseGrid) {
+      voxelBox(
+        cell * 0.88,
+        0.7,
+        cell * 0.88,
+        materials.soil,
+        x * cell,
+        -0.35,
+        z * cell
+      );
+      voxelBox(
+        cell * 0.8,
+        0.28,
+        cell * 0.8,
+        materials.grass,
+        x * cell,
+        0.1,
+        z * cell
+      );
+    }
+
+    // Main stepped pyramid on the right
+    blockColumn(
+      2.1,
+      -0.4,
+      5,
+      4.8,
+      4.8,
+      materials.soil,
+      island
+    );
+
+    // Upper pyramid tiers
+    blockColumn(
+      2.1,
+      -0.4,
+      2,
+      3.55,
+      3.55,
+      materials.soilLight,
+      island
+    );
+
+    blockColumn(
+      2.1,
+      -0.4,
+      1,
+      2.3,
+      2.3,
+      materials.grassDark,
+      island
+    );
+
+    // Central cliff and path
+    blockColumn(
+      -0.8,
+      0.2,
+      3,
+      3.2,
+      3.2,
+      materials.soil,
+      island
+    );
+
+    blockColumn(
+      -0.8,
+      0.2,
+      1,
+      2.1,
+      2.1,
+      materials.soilLight,
+      island
+    );
+
+    // Winding path made from small blocks
+    const pathPoints = [
+      [-5.8, -2.3],
+      [-5.2, -1.6],
+      [-4.4, -0.8],
+      [-3.3, 0.2],
+      [-2.1, 0.7],
+      [-0.8, 0.2],
+      [0.3, -0.5],
+      [1.4, -0.9],
+      [2.7, -0.5],
+      [3.9, -1.4],
+      [5.0, -2.2]
+    ];
+
+    for (let i = 0; i < pathPoints.length - 1; i++) {
+      const [x1, z1] = pathPoints[i];
+      const [x2, z2] = pathPoints[i + 1];
+      const length = Math.hypot(x2 - x1, z2 - z1);
+      const count = Math.max(2, Math.floor(length / 0.58));
+
+      for (let j = 0; j <= count; j++) {
+        const t = j / count;
+        const x = THREE.MathUtils.lerp(x1, x2, t);
+        const z = THREE.MathUtils.lerp(z1, z2, t);
+
+        voxelBox(
+          0.56,
+          0.18,
+          0.56,
+          materials.path,
+          x,
+          0.34,
+          z
+        );
+      }
+    }
+
+    // Left house / cottage
+    const house = new THREE.Group();
+    house.position.set(-3.7, 0, 0.9);
+    island.add(house);
+
+    voxelBox(2.3, 0.35, 2.1, materials.soilLight, 0, 0.18, 0, house);
+    voxelBox(1.9, 1.35, 1.7, materials.soil, 0, 0.9, 0, house);
+    voxelBox(2.1, 0.22, 1.9, materials.grassLight, 0, 1.62, 0, house);
+    voxelBox(1.35, 0.16, 1.25, materials.grass, 0, 1.79, 0, house);
+
+    // Roof
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(1.55, 1.05, 4),
+      materials.dark
+    );
+    roof.position.y = 2.05;
+    roof.rotation.y = Math.PI / 4;
+    roof.scale.z = 0.78;
+    roof.castShadow = true;
+    house.add(roof);
+
+    // Front door
+    voxelBox(0.42, 0.78, 0.12, materials.dark, 0, 0.61, 0.9, house);
+
+    // Windows
+    voxelBox(
+      0.42,
+      0.42,
+      0.12,
+      materials.flowerYellow,
+      -0.58,
+      1.12,
+      0.88,
+      house
+    );
+
+    voxelBox(
+      0.42,
+      0.42,
+      0.12,
+      materials.flowerYellow,
+      0.58,
+      1.12,
+      0.88,
+      house
+    );
+
+    // Small fence on left
+    for (let i = 0; i < 7; i++) {
+      const x = -5.5 + i * 0.48;
+      voxelBox(0.12, 0.55, 0.12, materials.white, x, 0.4, 2.2, island);
+    }
+    voxelBox(4.2, 0.1, 0.1, materials.white, -3.7, 0.68, 2.2, island);
+
+    // Water pool
+    voxelBox(1.65, 0.18, 1.35, materials.blue, -4.9, 0.36, -2.5);
+    voxelBox(1.9, 0.12, 1.6, materials.soilLight, -4.9, 0.25, -2.5);
+
+    // Tree
+    const tree = new THREE.Group();
+    tree.position.set(-1.4, 0, -2.7);
+    island.add(tree);
+
+    voxelBox(1.15, 0.28, 1.15, materials.soilLight, 0, 0.15, 0, tree);
+    voxelBox(0.42, 1.65, 0.42, materials.leaf, 0, 1.05, 0, tree);
+    voxelBox(0.7, 0.38, 0.7, materials.leaf, 0, 1.95, 0, tree);
+    voxelBox(0.95, 0.28, 0.95, materials.leaf, 0, 2.35, 0, tree);
+
+    // Small dark shrubs
+    function addShrub(x, z, scale = 1) {
+      const shrub = new THREE.Group();
+      shrub.position.set(x, 0, z);
+      shrub.scale.setScalar(scale);
+      island.add(shrub);
+
+      voxelBox(0.65, 0.18, 0.65, materials.soilLight, 0, 0.1, 0, shrub);
+      voxelBox(0.48, 0.48, 0.48, materials.leaf, 0, 0.42, 0, shrub);
+      voxelBox(0.32, 0.32, 0.32, materials.leaf, 0.2, 0.75, 0.05, shrub);
+    }
+
+    addShrub(-5.7, 1.1, 0.9);
+    addShrub(4.8, 1.6, 0.75);
+    addShrub(-0.2, 3.2, 0.65);
+
+    // Rocks
+    function addRock(x, z, scale = 1) {
+      const rock = new THREE.Group();
+      rock.position.set(x, 0, z);
+      rock.scale.setScalar(scale);
+      island.add(rock);
+
+      const pieces = [
+        [0, 0.22, 0, 0.55, 0.42, 0.5],
+        [0.2, 0.38, 0.05, 0.38, 0.3, 0.36],
+        [-0.15, 0.36, 0.1, 0.34, 0.28, 0.34]
+      ];
+
+      for (const [px, py, pz, w, h, d] of pieces) {
+        voxelBox(w, h, d, materials.rock, px, py, pz, rock);
+      }
+    }
+
+    addRock(-6.1, -3.4, 0.8);
+    addRock(5.4, -3.9, 0.75);
+    addRock(3.9, 2.5, 0.55);
+    addRock(-5.2, 3.1, 0.45);
+
+    // Flowers
+    function addFlower(x, z, material = materials.flowerYellow) {
+      voxelBox(0.16, 0.18, 0.16, materials.soilLight, x, 0.2, z);
+      voxelBox(0.1, 0.28, 0.1, material, x, 0.39, z);
+    }
+
+    addFlower(-6.2, 0.7);
+    addFlower(-5.95, 0.95);
+    addFlower(3.5, 1.7);
+    addFlower(4.2, 1.9);
+    addFlower(-0.4, -3.2);
+    addFlower(0.8, -3.3);
+    addFlower(-4.7, 2.1);
+
+    // Tiny voxel figure near the path
+    const figure = new THREE.Group();
+    figure.position.set(-2.7, 0, 0.3);
+    island.add(figure);
+
+    voxelBox(0.32, 0.55, 0.32, materials.blue, 0, 0.3, 0, figure);
+    voxelBox(0.36, 0.7, 0.36, materials.white, 0, 0.95, 0, figure);
+    voxelBox(0.4, 0.18, 0.4, materials.blue, 0, 1.4, 0, figure);
+    voxelBox(0.12, 0.35, 0.12, materials.dark, -0.18, 1.03, 0, figure);
+    voxelBox(0.12, 0.35, 0.12, materials.dark, 0.18, 1.03, 0, figure);
+
+    // Small flagpole and flag
+    voxelBox(0.08, 1.4, 0.08, materials.white, 4.4, 0.7, -1.7);
+    const flag = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.35),
+      materials.flowerPink
+    );
+    flag.position.set(4.69, 1.25, -1.7);
+    flag.rotation.y = -0.15;
+    island.add(flag);
+
+    // Ground decorations around island
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2;
+      const radius = 8.2 + Math.sin(i * 2.1) * 0.8;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      if (i % 3 === 0) {
+        addRock(x, z, 0.45 + (i % 2) * 0.15);
+      } else {
+        addFlower(x, z, i % 2 ? materials.flowerPink : materials.flowerYellow);
+      }
+    }
+
+    // Lighting
+    const hemisphere = new THREE.HemisphereLight(
+      0xf7ead5,
+      0x6c8b63,
+      2.1
+    );
+    scene.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight(0xffe4b5, 3.2);
+    sun.position.set(-8, 14, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -15;
+    sun.shadow.camera.right = 15;
+    sun.shadow.camera.top = 15;
+    sun.shadow.camera.bottom = -15;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9fc5df, 0.75);
+    fill.position.set(10, 7, -8);
+    scene.add(fill);
+
+    // Resize handling
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // Animation
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const time = clock.getElapsedTime();
+      flag.rotation.z = Math.sin(time * 1.2) * 0.08;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Super Mario 64 Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0xd9c4a8, fogColor: 0xd9c4a8, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 },
+      east: { x: 12.0, z: 10.0 },
+      west: { x: -12.0, z: -10.0 }
+    }
+  };
+}

@@ -1,0 +1,942 @@
+// @world {"id": "1086", "title": "Dark Souls", "sub": "Bonfire Shrine", "system": "3D Render"}
+// Converted from 1086-dark_souls_bonfire_shrine.html into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    remove: (...objs) => objs.forEach(o => o && group.remove(o)),
+    traverse: (cb) => group.traverse(cb),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {},
+      setAnimationLoop: (cb) => { updateHook = cb; },
+    };
+  }
+
+  function dummyVec() {
+    const v = { x: 0, y: 0, z: 0,
+      set: (x, y, z) => { v.x = x || 0; v.y = y || 0; v.z = z || 0; return v; },
+      copy: (o) => { if (o) { v.x = o.x || 0; v.y = o.y || 0; v.z = o.z || 0; } return v; },
+      add: (o) => { if (o) { v.x += o.x || 0; v.y += o.y || 0; v.z += o.z || 0; } return v; },
+      sub: (o) => { if (o) { v.x -= o.x || 0; v.y -= o.y || 0; v.z -= o.z || 0; } return v; },
+      addScaledVector: (o, s) => { if (o) { v.x += (o.x || 0) * s; v.y += (o.y || 0) * s; v.z += (o.z || 0) * s; } return v; },
+      setFromSpherical: () => v,
+      setFromSphericalCoords: () => v,
+      length: () => Math.hypot(v.x, v.y, v.z),
+      normalize: () => v,
+      clone: () => { const c = dummyVec(); c.x = v.x; c.y = v.y; c.z = v.z; return c; }
+    };
+    return v;
+  }
+
+  function dummyCamera() {
+    return {
+      position: dummyVec(),
+      up: dummyVec(),
+      rotation: { x: 0, y: 0, z: 0, set: () => {} },
+      quaternion: { set: () => {}, copy: () => {} },
+      fov: 60, aspect: 16 / 9, near: 0.1, far: 2000,
+      lookAt: () => {},
+      getWorldDirection: (target) => { const t = target || dummyVec(); if (t.set) t.set(0, 0, -1); return t; },
+      updateProjectionMatrix: () => {},
+      updateMatrixWorld: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  let container = dummyEl();
+  let stage = dummyEl();
+  let app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): bones
+  let bones = 0;
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0x080709);
+    scene.fog = new THREE.FogExp2(0x09080b, 0.026);
+
+    camera = dummyCamera();
+    camera.position.set(13, 10.5, 15);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const mat = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x4a4743, roughness: 0.96, metalness: 0.02
+      }),
+      stoneDark: new THREE.MeshStandardMaterial({
+        color: 0x292927, roughness: 1, metalness: 0.01
+      }),
+      stoneLight: new THREE.MeshStandardMaterial({
+        color: 0x696357, roughness: 0.94
+      }),
+      mortar: new THREE.MeshStandardMaterial({
+        color: 0x171817, roughness: 1
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x3b3a35, roughness: 0.98
+      }),
+      iron: new THREE.MeshStandardMaterial({
+        color: 0x252728, roughness: 0.72, metalness: 0.72
+      }),
+      copper: new THREE.MeshStandardMaterial({
+        color: 0x8d4e25, roughness: 0.58, metalness: 0.58
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd6a84c, roughness: 0.45, metalness: 0.62
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x6e1717, roughness: 0.9
+      }),
+      cream: new THREE.MeshStandardMaterial({
+        color: 0xc7a46a, roughness: 0.88
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x34452b, roughness: 0.98
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x4d6538, roughness: 0.96
+      }),
+      bone: new THREE.MeshStandardMaterial({
+        color: 0xd6c49b, roughness: 0.94
+      }),
+      candle: new THREE.MeshStandardMaterial({
+        color: 0xe1c998, roughness: 0.82
+      }),
+      flame: new THREE.MeshBasicMaterial({
+        color: 0xff9b24, toneMapped: false
+      }),
+      flameCore: new THREE.MeshBasicMaterial({
+        color: 0xffd266, toneMapped: false
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+    const voxel = (x, y, z, sx, sy, sz, material, castShadow = true) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    const voxels = [];
+
+    function addVoxel(x, y, z, sx = 0.5, sy = 0.5, sz = 0.5, material = mat.stone) {
+      voxels.push({ x, y, z, sx, sy, sz, material });
+    }
+
+    function buildVoxelGeometry() {
+      const geo = new THREE.BufferGeometry();
+      const positions = [];
+      const colors = [];
+      const materials = [];
+
+      for (const v of voxels) {
+        positions.push(
+          v.x - v.sx / 2,
+          v.y - v.sy / 2,
+          v.z - v.sz / 2,
+          v.x + v.sx / 2,
+          v.y + v.sy / 2,
+          v.z + v.sz / 2
+        );
+        colors.push(
+          v.material.color.r, v.material.color.g, v.material.color.b,
+          v.material.color.r, v.material.color.g, v.material.color.b,
+          v.material.color.r, v.material.color.g, v.material.color.b
+        );
+        materials.push(v.material);
+      }
+
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      geo.setIndex([0, 1, 2, 0, 2, 3]);
+      geo.computeVertexNormals();
+
+      const mesh = new THREE.Mesh(
+        geo,
+        new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 0.96,
+          metalness: 0.02
+        })
+      );
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+    }
+
+    // Build the chapel shell with a central nave and broken side walls.
+    const wallY = 0.25;
+
+    // Rear wall and arch.
+    for (let x = -6; x <= 6; x++) {
+      addVoxel(x, 0.25, 4.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 0.8, 4.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+    for (let x = -5; x <= 5; x++) {
+      addVoxel(x, 1.35, 4.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+    for (let x = -4; x <= 4; x++) {
+      addVoxel(x, 1.9, 4.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+    for (let x = -3; x <= 3; x++) {
+      addVoxel(x, 2.45, 4.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+
+    // Side walls.
+    for (let x = -5; x <= 5; x++) {
+      addVoxel(x, 0.25, 2.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 0.8, 2.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 1.35, 2.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 1.9, 2.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+
+    // Broken right wall.
+    for (let x = 5; x <= 7; x++) {
+      addVoxel(x, 0.25, 1.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 0.8, 1.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+    for (let x = 6; x <= 7; x++) {
+      addVoxel(x, 1.35, 1.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+    for (let x = 7; x <= 8; x++) {
+      addVoxel(x, 1.9, 1.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+
+    // Left wall mostly intact.
+    for (let x = -7; x <= -5; x++) {
+      addVoxel(x, 0.25, 2.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 0.8, 2.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 1.35, 2.5, 0.55, 0.55, 0.55, mat.stone);
+      addVoxel(x, 1.9, 2.5, 0.55, 0.55, 0.55, mat.stone);
+    }
+
+    // Floor slabs.
+    for (let x = -7; x <= 7; x++) {
+      for (let z = -3; z <= 4; z++) {
+        let present = true;
+        if (x === 4 && z === -2) present = false;
+        if (x === -6 && z === 1) present = false;
+        if (x === 6 && z === 2) present = false;
+        if (x === -5 && z === 3) present = false;
+
+        if (present) {
+          addVoxel(
+            x + (Math.random() - 0.5) * 0.03,
+            0.12,
+            z + (Math.random() - 0.5) * 0.03,
+            0.52,
+            0.24,
+            0.52,
+            Math.random() > 0.3 ? mat.floor : mat.stoneDark
+          );
+        }
+      }
+    }
+
+    // Front steps.
+    for (let i = 0; i < 3; i++) {
+      for (let x = -3; x <= 3; x++) {
+        addVoxel(
+          x + (i % 2) * 0.04,
+          0.04 + i * 0.16,
+          5.4 + i * 0.62,
+          0.56,
+          0.28,
+          0.66,
+          i === 0 ? mat.stoneLight : mat.stone
+        );
+      }
+    }
+
+    // Arched doorway on the right.
+    const archSteps = [
+      { y: 0.35, radius: 2.05 },
+      { y: 0.8, radius: 1.85 },
+      { y: 1.25, radius: 1.65 },
+      { y: 1.7, radius: 1.45 },
+      { y: 2.15, radius: 1.25 }
+    ];
+
+    for (const step of archSteps) {
+      for (let x = -3; x <= 3; x++) {
+        const dx = x / step.radius;
+        if (dx <= 1 && dx >= -1) {
+          addVoxel(
+            x,
+            step.y,
+            2.7,
+            0.55,
+            0.55,
+            0.55,
+            mat.stone
+          );
+        }
+      }
+    }
+
+    // Stained-glass window.
+    const windowGroup = new THREE.Group();
+    windowGroup.position.set(-3.5, 2.3, 4.38);
+    scene.add(windowGroup);
+
+    const glassMaterials = [
+      new THREE.MeshBasicMaterial({ color: 0xffb24d, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0xff7857, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0xffd16a, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0xff9d45, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0x9e3132, toneMapped: false })
+    ];
+
+    function glassVoxel(x, y, z, sx, sy, sz, material) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
+      mesh.position.set(x, y, z);
+      windowGroup.add(mesh);
+    }
+
+    // Outer frame.
+    glassVoxel(-1.25, 0, 0, 0.2, 2.2, 0.16, glassMaterials[0]);
+    glassVoxel(1.25, 0, 0, 0.2, 2.2, 0.16, glassMaterials[0]);
+    glassVoxel(0, 1.1, 0, 2.7, 0.2, 0.16, glassMaterials[0]);
+
+    // Sunburst.
+    glassVoxel(0, 0.2, 0.04, 0.42, 0.42, 0.18, glassMaterials[1]);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const x = Math.cos(a) * 0.78;
+      const y = 0.2 + Math.sin(a) * 0.78;
+      glassVoxel(x, y, 0.04, 0.14, 0.14, 0.18, glassMaterials[i % 3]);
+    }
+
+    // Radial panes.
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const x = Math.cos(a) * 1.15;
+      const y = 0.2 + Math.sin(a) * 1.15;
+      glassVoxel(x, y, 0.06, 0.34, 0.34, 0.18, glassMaterials[(i + 1) % 5]);
+    }
+
+    // Lower panel.
+    for (let i = 0; i < 5; i++) {
+      glassVoxel(-1.1 + i * 0.55, -1.1, 0.08, 0.5, 0.22, 0.18, glassMaterials[(i + 2) % 4]);
+    }
+
+    // Stone tracery around the window.
+    for (let y = 1.75; y <= 3.4; y += 0.5) {
+      addVoxel(-1.32, y, 4.25, 0.24, 0.48, 0.38, mat.stoneLight);
+      addVoxel(1.32, y, 4.25, 0.24, 0.48, 0.38, mat.stoneLight);
+    }
+    for (let x = -2.1; x <= -0.8; x += 0.5) {
+      addVoxel(x, 3.3, 4.25, 0.48, 0.24, 0.38, mat.stoneLight);
+    }
+    for (let x = 0.8; x <= 2.1; x += 0.5) {
+      addVoxel(x, 3.3, 4.25, 0.48, 0.24, 0.38, mat.stoneLight);
+    }
+
+    // Central pillar.
+    for (let y = 0.25; y <= 3.4; y += 0.5) {
+      addVoxel(0, y, 2.2, 0.58, 0.5, 0.58, mat.stone);
+      addVoxel(0, y + 0.25, 2.2, 0.7, 0.22, 0.7, mat.stoneLight);
+    }
+
+    // Hanging chains and sconces.
+    function chain(x, y, z) {
+      for (let i = 0; i < 4; i++) {
+        const mesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.025, 0.025, 0.3, 6),
+          mat.iron
+        );
+        mesh.position.set(x, y - i * 0.27, z);
+        mesh.rotation.z = Math.sin(i * 1.7) * 0.12;
+        scene.add(mesh);
+      }
+    }
+
+    chain(-1.3, 3.5, 4.05);
+    chain(1.3, 3.5, 4.05);
+
+    function candle(x, y, z, scale = 1) {
+      const holder = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11 * scale, 0.13 * scale, 0.18 * scale, 10),
+        mat.iron
+      );
+      holder.position.set(x, y, z);
+      holder.castShadow = true;
+      scene.add(holder);
+
+      const wax = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.065 * scale, 0.075 * scale, 0.58 * scale, 10),
+        mat.candle
+      );
+      wax.position.set(x, y + 0.29 * scale, z);
+      wax.castShadow = true;
+      scene.add(wax);
+
+      const flame = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055 * scale, 8, 8),
+        mat.flame
+      );
+      flame.position.set(x, y + 0.61 * scale, z);
+      flame.scale.y = 1.8;
+      scene.add(flame);
+
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(0.037 * scale, 8, 8),
+        mat.flameCore
+      );
+      core.position.set(x, y + 0.61 * scale, z + 0.015);
+      core.scale.y = 1.5;
+      scene.add(core);
+
+      return flame;
+    }
+
+    candle(-1.3, 3.55, 4.05, 0.9);
+    candle(1.3, 3.55, 4.05, 0.9);
+    candle(-4.1, 1.55, 1.8, 0.72);
+    candle(4.1, 1.55, 1.8, 0.72);
+    candle(-4.1, 0.55, 1.8, 0.55);
+    candle(4.1, 0.55, 1.8, 0.55);
+
+    // Books on side shelves.
+    function shelf(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      const wood = new THREE.MeshStandardMaterial({ color: 0x35271f, roughness: 0.95 });
+      const bookColors = [0x5b241e, 0x263a36, 0x3c2d35, 0x6a4523, 0x242c35];
+
+      for (let i = 0; i < 5; i++) {
+        const h = 0.18 + (i % 2) * 0.06;
+        const book = new THREE.Mesh(
+          new THREE.BoxGeometry(0.32, h, 0.22),
+          new THREE.MeshStandardMaterial({
+            color: bookColors[i % bookColors.length],
+            roughness: 0.9
+          })
+        );
+        book.position.set((i - 2) * 0.34, h / 2, 0);
+        book.rotation.z = (Math.random() - 0.5) * 0.08;
+        book.castShadow = true;
+        group.add(book);
+      }
+
+      scene.add(group);
+    }
+
+    shelf(-4.15, 1.9, 2.25, 0.12);
+    shelf(4.15, 1.9, 2.25, -0.12);
+
+    // Banners.
+    function banner(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.055, 3.1, 8),
+        mat.iron
+      );
+      pole.position.y = 1.55;
+      group.add(pole);
+
+      const cloth = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.72, 2.35, 8, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0x6e1717,
+          roughness: 0.96,
+          side: THREE.DoubleSide
+        })
+      );
+      cloth.position.y = 2.25;
+      cloth.castShadow = true;
+      group.add(cloth);
+
+      for (let i = 0; i < 7; i++) {
+        const px = -0.33 + i * 0.11;
+        const py = 1.45 + Math.sin(i * 0.9) * 0.13;
+        const star = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.075, 0),
+          mat.gold
+        );
+        star.position.set(px, py, 0.08);
+        star.scale.set(0.7, 1.2, 0.35);
+        group.add(star);
+      }
+
+      const top = new THREE.Mesh(
+        new THREE.ConeGeometry(0.22, 0.3, 4),
+        mat.gold
+      );
+      top.position.y = 3.45;
+      group.add(top);
+
+      scene.add(group);
+    }
+
+    banner(-4.1, 2.25, 2.05, 0.1);
+    banner(4.1, 2.25, 2.05, -0.1);
+
+    // Vines and leaves.
+    function vine(x, y, z, length = 1.8) {
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(x, y, z),
+        new THREE.Vector3(x + 0.25, y + length * 0.5, z + 0.1),
+        new THREE.Vector3(x + 0.55, y + length, z)
+      );
+
+      const tube = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 18, 0.045, 6, false),
+        mat.green
+      );
+      tube.castShadow = true;
+      scene.add(tube);
+
+      for (let i = 0; i < 8; i++) {
+        const t = i / 7;
+        const p = curve.getPoint(t);
+        const leaf = new THREE.Mesh(
+          new THREE.SphereGeometry(0.13, 7, 5),
+          mat.leaf
+        );
+        leaf.scale.set(0.35, 1.3, 0.22);
+        leaf.position.copy(p);
+        leaf.rotation.set(Math.random(), Math.random(), Math.random());
+        leaf.castShadow = true;
+        scene.add(leaf);
+      }
+    }
+
+    vine(-0.65, 3.5, 2.2, 2.2);
+    vine(0.65, 3.5, 2.2, 1.8);
+    vine(4.5, 3.4, 2.2, 1.4);
+
+    // Skull and crossbones.
+    const skull = new THREE.Group();
+    skull.position.set(-3.55, 1.2, 3.9);
+    skull.rotation.y = 0.18;
+
+    const skullMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.24, 10, 8),
+      mat.bone
+    );
+    skullMesh.scale.set(0.75, 1.25, 0.5);
+    skull.add(skullMesh);
+
+    const eyeHole = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 6, 5),
+      mat.mortar
+    );
+    eyeHole.scale.set(0.45, 1.4, 0.15);
+    eyeHole.position.set(0, 0.16, 0.235);
+    skull.add(eyeHole);
+
+    const bone = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.035, 0.65, 6),
+      mat.bone
+    );
+    bone.rotation.z = Math.PI / 2;
+    bone.position.y = -0.35;
+    skull.add(bone);
+
+    scene.add(skull);
+
+    // A small altar or shrine.
+    const altar = new THREE.Group();
+    altar.position.set(0, 0, 1.95);
+    altar.rotation.y = 0.08;
+
+    const altarBase = new THREE.Mesh(
+      new THREE.BoxGeometry(1.25, 0.28, 0.85),
+      mat.copper
+    );
+    altarBase.position.y = 0.14;
+    altar.add(altarBase);
+
+    const altarTop = new THREE.Mesh(
+      new THREE.BoxGeometry(1.05, 0.12, 0.65),
+      mat.gold
+    );
+    altarTop.position.y = 0.34;
+    altar.add(altarTop);
+
+    const bowl = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2, 0.13, 0.12, 12),
+      mat.gold
+    );
+    bowl.position.y = 0.46;
+    altar.add(bowl);
+
+    scene.add(altar);
+
+    // Scattered debris, bones, and candles.
+    for (let i = 0; i < 13; i++) {
+      const x = (Math.random() - 0.5) * 11;
+      const z = (Math.random() - 0.5) * 7;
+      if (Math.abs(x) < 2.2 && Math.abs(z) < 2.8) continue;
+
+      const bone = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.06, 0.48, 6),
+        mat.bone
+      );
+      bone.rotation.set(Math.random(), Math.random(), Math.random());
+      bone.position.set(x, 0.25 + Math.random() * 0.1, z);
+      bone.castShadow = true;
+      scene.add(bone);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      const x = (Math.random() - 0.5) * 10;
+      const z = (Math.random() - 0.5) * 6;
+      if (Math.abs(x) < 2.2 && Math.abs(z) < 2.8) continue;
+      candle(x, 0.18, z, 0.65);
+    }
+
+    // Broken columns along the right wall.
+    for (let i = 0; i < 3; i++) {
+      for (let y = 0.2; y < 2.2; y += 0.55) {
+        addVoxel(3.7 + i * 0.35, y, 1.5, 0.36, 0.52, 0.36, mat.stoneDark);
+      }
+    }
+
+    // Build a single connected instanced voxel shell.
+    // To make individual colors and materials visible, use InstancedMesh per material.
+    const groups = new Map();
+    for (const v of voxels) {
+      if (!groups.has(v.material)) groups.set(v.material, []);
+      groups.get(v.material).push(v);
+    }
+
+    for (const [material, items] of groups) {
+      const geo = new THREE.BoxGeometry(1, 1, 1);
+      const mesh = new THREE.InstancedMesh(geo, material, items.length);
+      const matrix = new THREE.Matrix4();
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+
+      items.forEach((v, i) => {
+        position.set(v.x, v.y, v.z);
+        scale.set(v.sx, v.sy, v.sz);
+        matrix.compose(position, quaternion, scale);
+        mesh.setMatrixAt(i, matrix);
+      });
+
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+    }
+
+    // -------------------------------------------------------------------------
+    // Fire
+    // -------------------------------------------------------------------------
+    const fireGroup = new THREE.Group();
+    fireGroup.position.set(0, 0.32, 1.35);
+    scene.add(fireGroup);
+
+    const logs = [];
+    for (let i = 0; i < 5; i++) {
+      const log = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.065, 0.08, 0.75, 7),
+        mat.wood || mat.iron
+      );
+      log.rotation.z = Math.PI / 2;
+      log.rotation.y = (i / 5) * Math.PI * 2;
+      log.position.x = Math.cos((i / 5) * Math.PI * 2) * 0.13;
+      log.position.y = 0.08 + (i % 2) * 0.05;
+      log.castShadow = true;
+      fireGroup.add(log);
+    }
+
+    const flames = [];
+    const flameMaterials = [
+      new THREE.MeshBasicMaterial({ color: 0xff5b13, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0xff9d24, toneMapped: false }),
+      new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false })
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      const flame = new THREE.Mesh(
+        new THREE.SphereGeometry(0.11 + Math.random() * 0.09, 7, 6),
+        flameMaterials[i % flameMaterials.length]
+      );
+      flame.position.set(
+        (Math.random() - 0.5) * 0.55,
+        0.25 + Math.random() * 0.35,
+        (Math.random() - 0.5) * 0.45
+      );
+      flame.scale.y = 1.7 + Math.random() * 1.4;
+      fireGroup.add(flame);
+      flames.push(flame);
+    }
+
+    const fireLight = new THREE.PointLight(0xff6a18, 18, 8, 2);
+    fireLight.position.set(0, 1.2, 1.35);
+    fireLight.castShadow = true;
+    fireLight.shadow.mapSize.set(1024, 1024);
+    fireLight.shadow.bias = -0.002;
+    scene.add(fireLight);
+
+    // -------------------------------------------------------------------------
+    // Floating dust motes
+    // -------------------------------------------------------------------------
+    const dustCount = 240;
+    const dustPositions = new Float32Array(dustCount * 3);
+    const dustBase = [];
+
+    for (let i = 0; i < dustCount; i++) {
+      const x = (Math.random() - 0.5) * 13;
+      const y = 0.4 + Math.random() * 7;
+      const z = (Math.random() - 0.5) * 10;
+      dustPositions.set([x, y, z], i * 3);
+      dustBase.push({ x, y, z, phase: Math.random() * Math.PI * 2 });
+    }
+
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+
+    const dust = new THREE.Points(
+      dustGeo,
+      new THREE.PointsMaterial({
+        color: 0xffd28a,
+        size: 0.035,
+        transparent: true,
+        opacity: 0.45,
+        depthWrite: false
+      })
+    );
+    scene.add(dust);
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+    const hemisphere = new THREE.HemisphereLight(0x6b5870, 0x151116, 0.48);
+    scene.add(hemisphere);
+
+    const coolFill = new THREE.DirectionalLight(0x7184a1, 0.55);
+    coolFill.position.set(-6, 8, 5);
+    scene.add(coolFill);
+
+    const rimLight = new THREE.DirectionalLight(0x9a6345, 0.75);
+    rimLight.position.set(7, 5, -6);
+    scene.add(rimLight);
+
+    const windowLight = new THREE.PointLight(0xff9d45, 8, 7, 2);
+    windowLight.position.set(-3.5, 2.3, 3.4);
+    scene.add(windowLight);
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 1.4, 0.5),
+      radius: 16.5,
+      theta: 0.68,
+      phi: 1.08,
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(controls.phi - dy * 0.005, 0.35, 1.42);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius + event.deltaY * 0.012,
+        8,
+        25
+      );
+      updateCamera();
+    }, { passive: false });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Gentle fire flicker.
+      const flicker = 0.88 + Math.sin(t * 11.2) * 0.08 + Math.sin(t * 19.7) * 0.045;
+      for (let i = 0; i < flames.length; i++) {
+        const flame = flames[i];
+        flame.scale.x = 0.9 + Math.sin(t * 8 + i) * 0.12;
+        flame.scale.z = 0.88 + Math.cos(t * 7 + i * 0.7) * 0.1;
+        flame.position.y += (Math.sin(t * 9 + i) * 0.0009) * 0.3;
+      }
+
+      fireLight.intensity = 15 * flicker;
+      fireLight.position.y = 1.15 + Math.sin(t * 8) * 0.08;
+
+      // Slow dust drift.
+      const positions = dustGeo.attributes.position.array;
+      for (let i = 0; i < dustCount; i++) {
+        const base = dustBase[i];
+        positions[i * 3] = base.x + Math.sin(t * 0.28 + base.phase) * 0.18;
+        positions[i * 3 + 1] = base.y + Math.sin(t * 0.35 + base.phase) * 0.12;
+        positions[i * 3 + 2] = base.z + Math.cos(t * 0.22 + base.phase) * 0.16;
+      }
+      dustGeo.attributes.position.needsUpdate = true;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: -13.5, yaw: 0 },
+    relic: { id: "generic", name: "Dark Souls Relic", x: -10.0, z: 12.5 },
+    env:   { background: 0x080709, fogColor: 0x09080b, fogDensity: 0.026 },
+    doors: {
+      next: { x: 12.0, z: -9.5 },
+      prev: { x: -12.0, z: 10.5 },
+      east: { x: 12.0, z: 10.5 },
+      west: { x: -12.0, z: -9.5 }
+    }
+  };
+}
