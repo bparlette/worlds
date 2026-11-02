@@ -30,7 +30,7 @@
 <body>
 <header>
   <h1>Super Mario Bros. <span>World 1-1</span> — the build attempts</h1>
-  <p class="sub">Four ways of asking a small local AI to build the same place, plus a fifth on the way. Drag to orbit, scroll or pinch to zoom. Judge each against the reference screen below.</p>
+  <p class="sub">Four ways of asking a small local AI to build the same place, Drag to orbit, scroll or pinch to zoom. Judge each against the reference screen below.</p>
 </header>
 <div class="ref">
   <img src="https://mario.wiki.gallery/images/1/13/SMB_NES_World_1-1_Screenshot.png" alt="Reference: SMB World 1-1 screenshot">
@@ -39,7 +39,7 @@
 <nav id="tabs"></nav>
 <div id="note"></div>
 <div id="stage"><div id="wrap"><canvas id="cv"></canvas><div id="hud">drag to orbit · scroll / pinch to zoom</div></div></div>
-<footer>Attempts 1–4 are the 2×2 test (commit c38f8ab9), checked in as generated. Attempt 4's module was regenerated after a converter harness fix (see its note). Attempt 5 arrives when the Mac run lands.</footer>
+<footer>Attempts 1–4 are the 2×2 test (commit c38f8ab9), checked in as generated. Attempt 4's module was regenerated after a converter harness fix (see its note). Attempt 5 (vision description → parts) is commit 12d7b936.</footer>
 
 <script type="importmap">
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }
@@ -56,8 +56,8 @@ const ATTEMPTS = [
     note:'<b>Built cleanly, faithfully to its text.</b> The description it was given lists ingredients only (brick floor, green pipes, gold blocks, hills — no layout), so it arranged them as a plaza and named it "Warp World". Brick blocks became boundary walls; the clouds went missing.' },
   { key:'text-js', label:'4 · Text → JS', kind:'module', file:'./text-js.module.js',
     note:'<b>Built — after a harness fix.</b> The 2×2 scored this as a crash, but the crash was in our converter\'s test dummy (a camera stub that could not chain vector calls), not in the scene. With the stub fixed, the scene converts and validates. Its content tracks the same description as attempt 3.' },
-  { key:'fifth', label:'5 · Vision description → JSON', kind:'pending',
-    note:'<b>Being produced now</b> on the Mac: the model first writes a description from the image, then builds parts from its own description. This card activates when it is checked in.' },
+  { key:'fifth', label:'5 · Vision description → JSON', kind:'json', file:'./image-text-json.json',
+    note:'<b>Failed too.</b> The model described the image in words, then built parts from its own description — and still ran to the token cap: 207 of its parts landed outside the world and had to be clamped, so the gate rejected it (repair ratio 1.02). Shown here from the salvaged parts, like attempt 1. The two-step idea did not rescue the small model.' },
 ];
 
 const canvas = document.getElementById('cv');
@@ -124,7 +124,7 @@ async function loadAttempt(a) {
       scene.fog = env.fog ? new THREE.Fog(env.fog, 60, 160) : null;
       show(built.group, built.update);
     } else if (a.kind === 'json') {
-      const raw = await (await fetch('./image-json.json')).text();
+      const raw = await (await fetch(a.file || './image-json.json')).text();
       const parts = salvageParts(raw);
       const { buildParts } = await import('../parts.js');
       const data = { id:'ab-image-json', title:'Image JSON (salvaged)', game:'Super Mario Bros.', sky:'#87b5dd', fog:'#87b5dd', ground:'#59624e', parts };
