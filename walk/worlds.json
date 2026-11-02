@@ -273,6 +273,13 @@
     "module": "modules/090.js"
   },
   {
+    "id": "092",
+    "title": "Halo 4",
+    "sub": "Haven",
+    "system": "Console",
+    "module": "modules/092.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
