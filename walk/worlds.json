@@ -119,6 +119,13 @@
     "module": "modules/034.js"
   },
   {
+    "id": "039",
+    "title": "Super Mario 64",
+    "sub": "Bob-omb Battlefield",
+    "system": "Console",
+    "module": "modules/039.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
