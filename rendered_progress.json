@@ -382,5 +382,13 @@
     "status": "pass",
     "filename": "1048-secret_of_mana_the_mana_tree.html",
     "updated_at": "2026-11-02 04:21 EST"
+  },
+  "49": {
+    "rank": 49,
+    "game": "Cuphead",
+    "name": "Inkwell Isle Two",
+    "status": "pass",
+    "filename": "1049-cuphead_inkwell_isle_two.html",
+    "updated_at": "2026-11-02 04:29 EST"
   }
 }

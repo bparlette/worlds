@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Island</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b9d8ef;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    #info {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 2;
+      padding: 12px 15px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      color: #17324f;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 8px 25px rgba(30, 65, 100, 0.14);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    #info h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+
+    #info p {
+      margin: 0;
+      font-size: 12px;
+      color: #54708a;
+    }
+
+    #hint {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 2;
+      padding: 9px 12px;
+      border-radius: 9px;
+      color: #31506b;
+      background: rgba(255, 255, 255, 0.68);
+      box-shadow: 0 6px 18px rgba(30, 65, 100, 0.12);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      #info {
+        top: 10px;
+        left: 10px;
+      }
+
+      #hint {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="info">
+    <h1>Little Voxel Island</h1>
+    <p>A miniature block-built fantasy scene</p>
+  </div>
+  <div id="hint">Drag to orbit · Wheel to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const container = document.getElementById("scene");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb9d8ef);
+    scene.fog = new THREE.Fog(0xb9d8ef, 45, 85);
+
+    const camera = new THREE.OrthographicCamera(
+      -28,
+      28,
+      20,
+      -20,
+      0.1,
+      150
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
+
+    // Materials
+    const material = (color, roughness = 0.85, metalness = 0) =>
+      new THREE.MeshStandardMaterial({
+        color,
+        roughness,
+        metalness
+      });
+
+    const mats = {
+      grass: material(0x9ed39a),
+      grassLight: material(0xc3e6ae),
+      grassDark: material(0x78a967),
+      soil: material(0x9b6c45),
+      rock: material(0x8c8882),
+      rockLight: material(0xa8a39a),
+      cream: material(0xf4ead5),
+      white: material(0xf8fbf4),
+      red: material(0xe75f55),
+      pink: material(0xf2a3a8),
+      blue: material(0x63a9d5),
+      teal: material(0x57b4aa),
+      green: material(0x66a95b),
+      greenDark: material(0x3f7c48),
+      yellow: material(0xf2c85b),
+      orange: material(0xed8952),
+      purple: material(0x9a75c8),
+      brown: material(0x866044),
+      wood: material(0x9b6941),
+      woodDark: material(0x684b35),
+      black: material(0x354852),
+      water: material(0x66b8c9, 0.35, 0.05),
+      leaf: material(0x5f9d55)
+    };
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // Box geometry helper
+    function box(name, size, position, mat, parent = world, castShadow = true) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size[0], size[1], size[2]),
+        mat
+      );
+      mesh.name = name;
+      mesh.position.set(...position);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function cylinder(name, radiusTop, radiusBottom, height, position, mat, parent = world, segments = 12) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments),
+        mat
+      );
+      mesh.name = name;
+      mesh.position.set(...position);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // Rounded voxel spheres
+    function voxelSphere(name, radius, position, mat, parent = world, detail = 2) {
+      const mesh = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(radius, detail),
+        mat
+      );
+      mesh.name = name;
+      mesh.position.set(...position);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // Ground island
+    const island = new THREE.Group();
+    world.add(island);
+
+    // Main island shape is assembled from large flat blocks and rounded voxel banks.
+    const islandShape = [
+      [-13, 0], [-11, 1], [-9, 2], [-7, 3], [-5, 3], [-3, 3], [-1, 3], [1, 3], [3, 3], [5, 3],
+      [7, 3], [9, 2], [11, 1], [13, 0], [12.5, -2], [10, -3], [7, -3], [4, -3], [1, -3],
+      [-2, -3], [-5, -3], [-8, -3], [-11, -2], [-13, -1]
+    ];
+
+    for (let i = 0; i < islandShape.length - 1; i++) {
+      const x1 = islandShape[i][0];
+      const x2 = islandShape[i + 1][0];
+      const z1 = islandShape[i][1];
+      const z2 = islandShape[i + 1][1];
+      const length = x2 - x1;
+      const depth = z2 - z1;
+      const centerX = (x1 + x2) * 0.5;
+      const centerZ = (z1 + z2) * 0.5;
+
+      box(
+        `island-block-${i}`,
+        [length, 1.15, depth],
+        [centerX, -0.55, centerZ],
+        i % 3 === 0 ? mats.soil : mats.grass
+      );
+    }
+
+    // Rounded front and side voxel banks
+    for (let i = 0; i < 14; i++) {
+      const angle = THREE.MathUtils.degToRad(195 + i * 13);
+      const radius = 3.3;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      box(
+        `bank-${i}`,
+        [1.15, 1.35, 1.15],
+        [x, -0.72, z],
+        mats.soil
+      );
+      voxelSphere(
+        `bank-leaf-${i}`,
+        0.8,
+        [x + Math.cos(angle) * 0.35, 0.25, z + Math.sin(angle) * 0.35],
+        i % 2 ? mats.leaf : mats.green
+      );
+    }
+
+    // Main path
+    box("main path", [25, 0.18, 3.1], [0, 0.12, 1.2], mats.cream);
+    box("front path", [4.8, 0.18, 7], [-1.2, 0.12, 5.3], mats.cream);
+
+    // Path curves via little stepping blocks
+    for (let i = 0; i < 12; i++) {
+      const x = -6 + i * 1.65;
+      const z = 2.3 + Math.sin(i * 0.85) * 0.65;
+      box(`path-step-${i}`, [0.85, 0.18, 0.65], [x, 0.13, z], mats.cream);
+    }
+
+    // Mountains
+    const mountainGroup = new THREE.Group();
+    mountainGroup.position.set(0, 0, -3.7);
+    world.add(mountainGroup);
+
+    const mountainPeaks = [
+      [-6.8, 7.6, 0, 4.8, 2.2],
+      [-2.7, 9.5, 0.5, 5.5, 3.0],
+      [2.8, 8.4, -0.4, 5.0, 2.6],
+      [7.0, 6.8, 0.3, 4.3, 2.1],
+      [0.5, 10.8, -0.8, 6.0, 3.5],
+      [-9.0, 5.8, 1.0, 3.8, 1.8],
+      [9.5, 5.5, -0.8, 3.6, 1.8]
+    ];
+
+    mountainPeaks.forEach((peak, i) => {
+      const [x, height, z, width, depth] = peak;
+      const layers = 4;
+
+      for (let layer = 0; layer < layers; layer++) {
+        const w = width * (1 - layer * 0.18);
+        const d = depth * (1 - layer * 0.16);
+        const h = height * (1 - layer * 0.24);
+        const y = 0.6 + layer * 1.65;
+
+        const rockMat = i % 2 ? mats.rock : mats.rockLight;
+        box(
+          `mountain-${i}-${layer}`,
+          [w, h, d],
+          [x, y, z],
+          rockMat,
+          mountainGroup
+        );
+
+        const cap = box(
+          `mountain-${i}-${layer}-cap`,
+          [w * 0.76, 0.38, d * 0.76],
+          [x, y + h * 0.48, z],
+          mats.rock,
+          mountainGroup
+        );
+        cap.rotation.y = i * 0.31 + layer * 0.12;
+      }
+    });
+
+    // Mountain snow cap
+    box("snow cap", [4.2, 1.1, 3.4], [0, 7.2, -4.5], mats.white, mountainGroup);
+    box("snow cap 2", [2.8, 0.65, 2.4], [0, 8.45, -4.6], mats.white, mountainGroup);
+
+    // Castle / lighthouse
+    const castle = new THREE.Group();
+    castle.position.set(3.0, 0, -4.5);
+    world.add(castle);
+
+    box("castle base", [3.8, 1.2, 3.4], [0, 0.6, 0], mats.cream, castle);
+    box("castle tower", [1.55, 4.8, 1.55], [0, 3.1, 0], mats.cream, castle);
+    box("tower roof", [2.1, 1.1, 2.1], [0, 5.8, 0], mats.blue, castle);
+    box("tower roof cap", [2.4, 0.45, 2.4], [0, 6.45, 0], mats.cream, castle);
+    box("window", [0.34, 0.8, 0.34], [0, 3.25, 0.84], mats.orange, castle);
+    box("window 2", [0.34, 0.8, 0.34], [0, 3.25, -0.84], mats.orange, castle);
+    box("window 3", [0.34, 0.8, 0.34], [1.15, 3.25, 0], mats.orange, castle);
+    box("window 4", [0.34, 0.8, 0.34], [-1.15, 3.25, 0], mats.orange, castle);
+    box("flag pole", [0.08, 1.2, 0.08], [0, 7.1, 0], mats.woodDark, castle);
+    box("flag", [0.75, 0.48, 0.08], [0.38, 7.35, 0], mats.red, castle);
+
+    // Lighthouse tower
+    cylinder("lighthouse", 1.15, 1.4, 4.2, [-8.2, 2.1, -4.4], mats.cream);
+    cylinder("lighthouse roof", 1.45, 1.45, 0.75, [-8.2, 4.45, -4.4], mats.blue);
+    cylinder("lighthouse cap", 1.7, 1.7, 0.35, [-8.2, 4.9, -4.4], mats.cream);
+    box("lighthouse window", [0.32, 0.7, 0.32], [-8.2, 2.7, -3.25], mats.orange);
+    box("lighthouse window 2", [0.32, 0.7, 0.32], [-8.2, 2.7, -5.55], mats.orange);
+
+    // Trees
+    function tree(x, z, scale = 1, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      cylinder("trunk", 0.25, 0.38, 2.1, [0, 1.05, 0], mats.woodDark, group);
+      box("branches", [1.15, 0.8, 1.15], [0, 2.2, 0], mats.wood, group);
+      voxelSphere("crown", 1.45, [0, 3.15, 0], mats.leaf, group, 1);
+      voxelSphere("crown top", 0.85, [0.25, 4.05, -0.1], mats.green, group, 1);
+      return group;
+    }
+
+    tree(-11.5, 1.2, 0.95);
+    tree(-6.8, 3.2, 0.8);
+    tree(-4.2, 3.7, 0.72);
+    tree(0.1, 3.8, 0.8);
+    tree(4.7, 3.3, 0.75);
+    tree(9.2, 2.3, 0.85);
+    tree(-12, -6.5, 0.7);
+    tree(-7.5, -6.8, 0.65);
+    tree(5.5, -6.5, 0.7);
+    tree(10.5, -5.8, 0.65);
+
+    // Ferris wheel
+    const ferrisWheel = new THREE.Group();
+    ferrisWheel.position.set(-1.4, 0.25, 1.2);
+    world.add(ferrisWheel);
+
+    const wheel = new THREE.Mesh(
+      new THREE.TorusGeometry(2.35, 0.13, 8, 48),
+      mats.woodDark
+    );
+    wheel.rotation.y = Math.PI / 2;
+    wheel.castShadow = true;
+    ferrisWheel.add(wheel);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const x = Math.cos(angle) * 2.35;
+      const y = Math.sin(angle) * 2.35;
+
+      const spoke = box(
+        `spoke-${i}`,
+        [0.11, 4.7, 0.11],
+        [x * 0.5, 2.35 + y * 0.5, 0],
+        mats.woodDark,
+        ferrisWheel
+      );
+      spoke.rotation.z = angle;
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const x = Math.cos(angle) * 2.35;
+      const y = Math.sin(angle) * 2.35;
+
+      const gondola = new THREE.Group();
+      gondola.position.set(x, y, 0);
+      gondola.rotation.z = angle;
+      ferrisWheel.add(gondola);
+
+      box("gondola body", [0.7, 0.85, 0.6], [0, 0, 0], mats.red, gondola);
+      box("gondola roof", [0.78, 0.2, 0.72], [0, 0.48, 0], mats.cream, gondola);
+      box("gondola window", [0.36, 0.35, 0.05], [0, 0.08, 0.32], mats.blue, gondola);
+    }
+
+    box("wheel support", [0.28, 5.2, 0.28], [-1.4, 2.8, 1.2], mats.woodDark);
+    box("wheel base", [3.2, 0.5, 3.2], [-1.4, 0.3, 1.2], mats.woodDark);
+
+    // Carousel
+    const carousel = new THREE.Group();
+    carousel.position.set(-6.4, 0.2, -1.5);
+    world.add(carousel);
+
+    cylinder("carousel floor", 2.35, 2.35, 0.45, [0, 0.25, 0], mats.cream, carousel);
+    cylinder("carousel pole", 0.18, 0.25, 3.4, [0, 2.0, 0], mats.woodDark, carousel);
+    cylinder("carousel top", 1.4, 1.4, 0.35, [0, 3.75, 0], mats.wood, carousel);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const x = Math.cos(angle) * 1.65;
+      const z = Math.sin(angle) * 1.65;
+
+      const horse = new THREE.Group();
+      horse.position.set(x, 0.55, z);
+      horse.rotation.y = -angle;
+      carousel.add(horse);
+
+      box("horse body", [0.72, 0.55, 0.48], [0, 0, 0], mats.pink, horse);
+      box("horse head", [0.48, 0.45, 0.3], [0.42, 0.1, 0], mats.pink, horse);
+      box("horse mane", [0.25, 0.32, 0.42], [0.3, 0.2, 0], mats.woodDark, horse);
+      box("horse tail", [0.28, 0.32, 0.45], [-0.42, 0.18, 0], mats.woodDark, horse);
+      cylinder("horse horn", 0.04, 0.04, 0.35, [-0.2, 0.55, 0], mats.woodDark, horse, 8);
+    }
+
+    // Bunting flags
+    const bunting = new THREE.Group();
+    bunting.position.set(-2.4, 2.4, -1.5);
+    world.add(bunting);
+
+    cylinder("bunting pole", 0.07, 0.09, 3.8, [0, 1.9, 0], mats.woodDark, bunting);
+
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8;
+      const x = Math.sin(t * Math.PI) * 1.25;
+      const y = 3.8 - t * 1.2;
+      const flag = box(
+        `bunting-${i}`,
+        [0.75, 0.42, 0.08],
+        [x, y, 0],
+        i % 2 ? mats.pink : mats.blue,
+        bunting
+      );
+      flag.rotation.z = -t * 0.4;
+    }
+
+    // Shops
+    function shop(x, z, roofColor, label) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      box("shop base", [3.5, 1.8, 2.7], [0, 0.9, 0], mats.cream, group);
+      box("shop roof", [4.1, 0.45, 3.1], [0, 1.95, 0], roofColor, group);
+      box("shop roof 2", [4.35, 0.22, 3.3], [0, 1.72, 0], roofColor, group);
+
+      for (const px of [-1.1, 1.1]) {
+        box("shop window", [0.85, 0.95, 0.12], [px, 1.05, 1.38], mats.blue, group);
+        box("shop door", [0.72, 1.55, 0.12], [0, 0.78, 1.38], mats.woodDark, group);
+      }
+
+      box("shop sign", [2.7, 0.38, 0.16], [0, 1.55, 1.45], mats.woodDark, group);
+      box("shop sign text", [2.25, 0.2, 0.08], [0, 1.55, 1.55], mats.cream, group);
+
+      // Display
+      box("display", [1.1, 0.65, 0.75], [0, 1.3, 1.5], mats.wood, group);
+      for (let i = 0; i < 3; i++) {
+        voxelSphere(
+          `shop item-${i}`,
+          0.2,
+          [-0.32 + i * 0.32, 1.75, 1.5],
+          i % 2 ? mats.pink : mats.yellow,
+          group,
+          1
+        );
+      }
+    }
+
+    shop(-5.7, 0.3, mats.red, "TEA");
+    shop(2.1, -0.5, mats.blue, "CAFE");
+    shop(5.3, 1.8, mats.pink, "GIFT");
+
+    // Pal Mugnan sign
+    const sign = new THREE.Group();
+    sign.position.set(3.7, 0, 2.6);
+    world.add(sign);
+
+    cylinder("sign post", 0.1, 0.14, 2.1, [0, 1.05, 0], mats.woodDark, sign);
+    box("sign board", [2.1, 0.75, 0.16], [0, 1.65, 0], mats.woodDark, sign);
+    box("sign text", [1.75, 0.42, 0.08], [0, 1.65, 0.1], mats.cream, sign);
+    box("PAL MUGNAN", [1.75, 0.42, 0.08], [0, 1.65, 0.1], mats.cream, sign);
+
+    // Water pool
+    const pool = new THREE.Group();
+    pool.position.set(10.1, 0, 2.6);
+    world.add(pool);
+
+    cylinder("pool basin", 2.7, 2.9, 0.55, [0, 0.28, 0], mats.woodDark, pool);
+    cylinder("pool water", 2.35, 2.35, 0.18, [0, 0.62, 0], mats.water, pool);
+    cylinder("pool rim", 2.75, 2.75, 0.3, [0, 0.55, 0], mats.cream, pool);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      box(
+        "pool step",
+        [0.7, 0.12, 0.8],
+        [Math.cos(angle) * 2.4, 0.1, Math.sin(angle) * 2.4],
+        mats.cream,
+        pool
+      );
+    }
+
+    // Slide
+    const slide = new THREE.Group();
+    slide.position.set(4.5, 0, 1.2);
+    world.add(slide);
+
+    box("slide entrance", [2.2, 1.5, 2.0], [0, 0.75, 0], mats.wood, slide);
+    box("slide roof", [2.8, 0.35, 2.5], [0, 1.65, 0], mats.red, slide);
+
+    const slideRamp = box(
+      "slide ramp",
+      [1.6, 0.35, 4.2],
+      [0, 1.2, 2.2],
+      mats.wood,
+      slide
+    );
+    slideRamp.rotation.x = -0.55;
+
+    box("slide rail", [0.12, 1.0, 4.2], [0.7, 1.75, 2.2], mats.woodDark, slide);
+    box("slide rail 2", [0.12, 1.0, 4.2], [-0.7, 1.75, 2.2], mats.woodDark, slide);
+
+    // Dice house
+    const dice = new THREE.Group();
+    dice.position.set(7.7, 0, -3.1);
+    world.add(dice);
+
+    box("dice house", [2.8, 2.0, 2.8], [0, 1.0, 0], mats.cream, dice);
+    box("dice roof", [3.4, 0.55, 3.4], [0, 2.15, 0], mats.red, dice);
+    box("dice roof cap", [3.7, 0.25, 3.7], [0, 2.5, 0], mats.cream, dice);
+
+    for (let i = 0; i < 6; i++) {
+      const face = box(
+        `dice face-${i}`,
+        [0.35, 0.35, 0.08],
+        [0, 1.05, 1.45],
+        i % 2 ? mats.white : mats.blue,
+        dice
+      );
+      face.rotation.y = (i * Math.PI) / 3;
+    }
+
+    // Small house on left
+    const cottage = new THREE.Group();
+    cottage.position.set(-10.3, 0, -5.2);
+    world.add(cottage);
+
+    box("cottage base", [3.4, 2.2, 3.2], [0, 1.1, 0], mats.cream, cottage);
+    box("cottage roof", [4.0, 0.5, 3.8], [0, 2.35, 0], mats.red, cottage);
+    box("cottage chimney", [0.65, 1.4, 0.65], [0.9, 3.0, -0.3], mats.woodDark, cottage);
+    box("cottage window", [0.7, 0.8, 0.12], [0, 1.45, 1.65], mats.blue, cottage);
+    box("cottage door", [0.7, 1.35, 0.12], [0, 0.67, 1.65], mats.woodDark, cottage);
+
+    // Lamp posts
+    function lamp(x, z, height = 3.1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      world.add(group);
+
+      cylinder("lamp post", 0.08, 0.13, height, [0, height / 2, 0], mats.woodDark, group);
+      box("lamp arm", [0.55, 0.12, 0.12], [0.22, height, 0], mats.woodDark, group);
+      box("lamp glow", [0.36, 0.36, 0.36], [0.48, height - 0.1, 0], mats.yellow, group);
+      box("lamp glow 2", [0.45, 0.48, 0.45], [0.48, height - 0.1, 0], mats.orange, group);
+    }
+
+    lamp(-9.4, 3.2);
+    lamp(-3.8, 4.1);
+    lamp(7.9, 4.5);
+    lamp(12.0, 5.1);
+    lamp(-2.0, -4.8);
+
+    // Benches
+    function bench(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      world.add(group);
+
+      box("bench seat", [2.2, 0.18, 0.75], [0, 0.7, 0], mats.wood, group);
+      box("bench back", [2.2, 0.75, 0.16], [0, 1.15, -0.3], mats.wood, group);
+      box("bench legs 1", [0.16, 0.7, 0.55], [-0.8, 0.35, 0], mats.woodDark, group);
+      box("bench legs 2", [0.16, 0.7, 0.55], [0.8, 0.35, 0], mats.woodDark, group);
+    }
+
+    bench(-3.0, 3.4, 0.2);
+    bench(0.0, 3.7, -0.25);
+    bench(7.4, 3.2, 0.4);
+
+    // Flower patches
+    function flowers(x, z, count = 12) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 1.8;
+        const fx = x + Math.cos(angle) * radius;
+        const fz = z + Math.sin(angle) * radius;
+        const mat = [mats.pink, mats.yellow, mats.white, mats.purple][
+          Math.floor(Math.random() * 4)
+        ];
+
+        voxelSphere(`flower-${i}`, 0.12, [fx, 0.35, fz], mat, world, 1);
+      }
+    }
+
+    flowers(-4.7, 2.8, 15);
+    flowers(1.4, 3.8, 12);
+    flowers(8.4, 4.2, 14);
+    flowers(-12.2, -0.5, 10);
+
+    // Clouds
+    const cloudMat = material(0xf5f4e8);
+    function cloud(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      world.add(group);
+
+      voxelSphere("cloud 1", 1.1, [0, 0, 0], cloudMat, group, 1);
+      voxelSphere("cloud 2", 0.85, [-0.9, 0.15, 0], cloudMat, group, 1);
+      voxelSphere("cloud 3", 0.8, [0.9, 0.15, 0], cloudMat, group, 1);
+      voxelSphere("cloud 4", 0.65, [0, 0.55, 0], cloudMat, group, 1);
+    }
+
+    cloud(-7.5, 7.0, -12, 1.2);
+    cloud(6.2, 8.3, -15, 1.0);
+    cloud(13.0, 5.8, 1.0, 0.75);
+
+    // Small birds
+    const birdMat = material(0x315b72);
+    for (let i = 0; i < 5; i++) {
+      const bird = new THREE.Group();
+      bird.position.set(-4 + i * 1.6, 4.2 + (i % 2) * 0.3, 6.5);
+      bird.rotation.y = i * 0.5;
+      world.add(bird);
+
+      box("bird body", [0.45, 0.16, 0.12], [0, 0, 0], birdMat, bird);
+      box("bird wing", [0.3, 0.08, 0.16], [0.12, 0, 0.08], birdMat, bird);
+      box("bird beak", [0.12, 0.08, 0.1], [0.38, 0, 0], mats.yellow, bird);
+    }
+
+    // Path details and fences
+    function fence(x, z, length = 5, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      world.add(group);
+
+      for (let i = 0; i <= 6; i++) {
+        const px = -length / 2 + (i / 6) * length;
+        box("fence post", [0.12, 0.85, 0.12], [px, 0.42, 0], mats.white, group);
+      }
+
+      for (const y of [0.35, 0.68]) {
+        box("fence rail", [length, 0.1, 0.1], [0, y, 0], mats.white, group);
+      }
+    }
+
+    fence(-8.2, 0.1, 5.5, 0.1);
+    fence(1.0, 4.8, 6.0, -0.1);
+    fence(8.8, -0.4, 4.5, 0.2);
+    fence(-12.0, 5.7, 3.8, 0.2);
+
+    // Decorative stepping stones
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.PI * 0.75 + i * 0.22;
+      const radius = 5.4 + i * 0.28;
+      const stone = box(
+        `stone-${i}`,
+        [1.25, 0.22, 0.75],
+        [Math.cos(angle) * radius, 0.25, Math.sin(angle) * radius],
+        mats.cream
+      );
+      stone.rotation.y = -angle + 0.2;
+    }
+
+    // Small foreground sign
+    const welcome = new THREE.Group();
+    welcome.position.set(-1.6, 0, 8.2);
+    world.add(welcome);
+
+    cylinder("welcome post", 0.1, 0.15, 2.6, [0, 1.3, 0], mats.woodDark, welcome);
+    box("welcome sign", [2.2, 0.8, 0.16], [0, 2.25, 0], mats.woodDark, welcome);
+    box("WELCOME", [1.85, 0.52, 0.08], [0, 2.25, 0.1], mats.cream, welcome);
+
+    // Voxel people
+    function person(x, z, shirtColor, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      world.add(group);
+
+      voxelSphere("head", 0.28, [0, 1.45, 0], mats.pink, group, 1);
+      box("hair", [0.34, 0.28, 0.34], [0, 1.7, 0], mats.woodDark, group);
+      box("shirt", [0.48, 0.58, 0.36], [0, 0.95, 0], shirtColor, group);
+      box("legs 1", [0.16, 0.65, 0.2], [-0.12, 0.35, 0], mats.blue, group);
+      box("legs 2", [0.16, 0.65, 0.2], [0.12, 0.35, 0], mats.blue, group);
+      box("arms 1", [0.15, 0.55, 0.17], [-0.37, 1.0, 0], shirtColor, group);
+      box("arms 2", [0.15, 0.55, 0.17], [0.37, 1.0, 0], shirtColor, group);
+    }
+
+    person(-3.0, 1.2, mats.red, 0.3);
+    person(1.3, -1.8, mats.blue, -0.5);
+    person(5.2, 2.2, mats.yellow, 0.8);
+    person(-7.8, 2.4, mats.green, -0.4);
+    person(9.2, 1.4, mats.pink, 0.2);
+
+    // Trees with colorful fruit
+    function fruitTree(x, z, fruitColor) {
+      tree(x, z, 0.85);
+
+      const fruitMat = material(fruitColor);
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        const radius = 1.6 + (i % 2) * 0.35;
+        voxelSphere(
+          `fruit-${i}`,
+          0.22,
+          [
+            Math.cos(angle) * radius,
+            3.4 + (i % 3) * 0.35,
+            Math.sin(angle) * radius
+          ],
+          fruitMat,
+          world,
+          1
+        );
+      }
+    }
+
+    fruitTree(-5.0, 3.4, mats.red);
+    fruitTree(4.3, 3.6, mats.yellow);
+
+    // Small wind chime
+    const windChime = new THREE.Group();
+    windChime.position.set(6.4, 3.8, -2.4);
+    world.add(windChime);
+
+    cylinder("wind chime pole", 0.05, 0.07, 2.4, [0, 1.2, 0], mats.woodDark, windChime);
+    for (let i = 0; i < 5; i++) {
+      const bell = cylinder(
+        `wind chime bell-${i}`,
+        0.12,
+        0.2,
+        0.35,
+        [0, 1.1 - i * 0.18, 0],
+        mats.yellow,
+        windChime,
+        8
+      );
+      bell.rotation.z = 0.15;
+    }
+
+    // Small waterfall
+    const waterfall = new THREE.Group();
+    waterfall.position.set(7.0, 0, 4.4);
+    world.add(waterfall);
+
+    box("waterfall pool", [3.2, 0.35, 1.7], [0, 0.25, 0], mats.water, waterfall);
+    for (let i = 0; i < 4; i++) {
+      const drop = box(
+        `waterfall drop-${i}`,
+        [0.75, 0.12, 0.55],
+        [-0.7 + i * 0.7, 1.15 - i * 0.23, 0],
+        mats.water,
+        waterfall
+      );
+      drop.rotation.z = (i - 1.5) * 0.08;
+    }
+
+    // Island side details
+    for (let i = 0; i < 7; i++) {
+      const angle = THREE.MathUtils.degToRad(210 + i * 28);
+      const radius = 3.0 + (i % 2) * 0.4;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      const rock = voxelSphere(
+        `island rock-${i}`,
+        0.75,
+        [x, 0.15, z],
+        i % 2 ? mats.rock : mats.rockLight
+      );
+      rock.scale.set(1.2, 0.8, 1);
+    }
+
+    // Lighting
+    const hemisphere = new THREE.HemisphereLight(0xe8f5ff, 0x78926b, 2.2);
+    scene.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight(0xfff4d6, 3.2);
+    sun.position.set(-10, 18, 12);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -25;
+    sun.shadow.camera.right = 25;
+    sun.shadow.camera.top = 25;
+    sun.shadow.camera.bottom = -25;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 60;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9fc9ff, 0.8);
+    fill.position.set(12, 8, -10);
+    scene.add(fill);
+
+    // Orthographic camera controls implemented directly
+    const target = new THREE.Vector3(0, 1.5, 0);
+    const spherical = new THREE.Spherical(32, Math.PI * 0.36, Math.PI * 0.25);
+    const initialTarget = target.clone();
+    const initialSpherical = spherical.clone();
+
+    let dragging = false;
+    let panning = false;
+    let previousX = 0;
+    let previousY = 0;
+    let pointerId = null;
+
+    function updateCamera() {
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.18, Math.PI * 0.82);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 18, 55);
+      spherical.makeSafe();
+
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    function resetCamera() {
+      target.copy(initialTarget);
+      spherical.copy(initialSpherical);
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      pointerId = event.pointerId;
+      renderer.domElement.setPointerCapture(pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const scale = 0.025 * spherical.radius / 30;
+        target.addScaledVector(right, -dx * scale);
+        target.addScaledVector(up, dy * scale);
+
+        target.x = THREE.MathUtils.clamp(target.x, -12, 12);
+        target.y = THREE.MathUtils.clamp(target.y, -1, 8);
+        target.z = THREE.MathUtils.clamp(target.z, -12, 12);
+      } else {
+        spherical.theta -= dx * 0.006;
+        spherical.phi -= dy * 0.005;
+      }
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      panning = false;
+      if (pointerId !== null && renderer.domElement.hasPointerCapture(pointerId)) {
+        renderer.domElement.releasePointerCapture(pointerId);
+      }
+      pointerId = null;
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        spherical.radius *= Math.exp(event.deltaY * 0.001);
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    renderer.domElement.addEventListener("dblclick", resetCamera);
+
+    window.addEventListener("resize", () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const aspect = width / height;
+      camera.left = -24 / aspect;
+      camera.right = 24 / aspect;
+      camera.top = 18;
+      camera.bottom = -18;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+
+    // Gentle idle animation
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Slowly rotate the wind chime.
+      windChime.rotation.y = elapsed * 0.45;
+
+      // Gentle water shimmer.
+      waterfall.children.forEach((child, index) => {
+        child.position.y = 1.15 - index * 0.23 + Math.sin(elapsed * 1.4 + index) * 0.035;
+      });
+
+      // Very subtle cloud drift.
+      cloud(-7.5, 7.0, -12).position.x = -7.5 + Math.sin(elapsed * 0.12) * 0.8;
+      cloud(6.2, 8.3, -15).position.x = 6.2 + Math.cos(elapsed * 0.1) * 0.6;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
