@@ -717,6 +717,11 @@ def run_gate(module_js, candidates, expected_meshes):
         os.makedirs(parts_dir)
         shutil.copy(parts_js, os.path.join(walk_dir, "parts.js"))
         shutil.copy(three_src, os.path.join(parts_dir, "three.module.min.js"))
+        # Newer three builds split into module + core; stage the siblings too.
+        for sibling in ("three.core.js", "three.core.min.js"):
+            sib = os.path.join(os.path.dirname(three_src), sibling)
+            if os.path.exists(sib):
+                shutil.copy(sib, os.path.join(parts_dir, sibling))
         module_stage = os.path.join(parts_dir, "mod.js")
         # Stage-only rewrite (same trick as the R9 thumbnail bake): the
         # real module keeps the R1 CDN import; the headless gate imports
