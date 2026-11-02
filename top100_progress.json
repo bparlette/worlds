@@ -1,0 +1,21 @@
+{
+  "1": {
+    "rank": 1,
+    "game": "Sonic the Hedgehog",
+    "name": "Green Hill Zone",
+    "status": "parked",
+    "filename": "1001_sonic_the_hedgehog_green_hill_zone.html",
+    "measured": {},
+    "vision": {
+      "character": true,
+      "text_or_hud": false
+    },
+    "fails": [
+      "runtime: ['[29281:16909475:1101/193446.304794:INFO:CONSOLE:113] \"Uncaught TypeError: parent.add is not a function\", source: file:///Users/braidpairlette/worlds/scenes/10",
+      "conversion: {'status': 'validation_failed', 'error': 'parent.add is not a function'}",
+      "no relic in scene"
+    ],
+    "attempts": 2,
+    "updated_at": "2026-11-01 19:35 EST"
+  }
+}
