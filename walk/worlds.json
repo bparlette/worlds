@@ -245,6 +245,13 @@
     "module": "modules/085.js"
   },
   {
+    "id": "086",
+    "title": "Dark Souls",
+    "sub": "Bonfire Shrine",
+    "system": "Console",
+    "module": "modules/086.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
