@@ -133,6 +133,13 @@
     "module": "modules/040.js"
   },
   {
+    "id": "045",
+    "title": "Pokémon Ruby/Sapphire/Emerald",
+    "sub": "Pokémon Center",
+    "system": "Console",
+    "module": "modules/045.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
