@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Street Scene</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b9d8e6;
+      font-family: system-ui, sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    #title {
+      position: fixed;
+      top: 20px;
+      left: 22px;
+      padding: 12px 16px;
+      color: #fff9e8;
+      background: rgba(32, 48, 57, 0.82);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      user-select: none;
+    }
+    #title h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    #title p {
+      margin: 0;
+      color: #d8e4e4;
+      font-size: 11px;
+    }
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      padding: 8px 11px;
+      color: #26363a;
+      background: rgba(255,255,255,.74);
+      border: 1px solid rgba(40,55,60,.16);
+      border-radius: 6px;
+      font-size: 11px;
+      pointer-events: none;
+      user-select: none;
+    }
+    @media (max-width: 600px) {
+      #title { top: 12px; left: 12px; }
+      #title h1 { font-size: 14px; }
+      #help { right: 10px; bottom: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="title">
+    <h1>Pixel Market Street</h1>
+    <p>A block-built urban scene</p>
+  </div>
+  <div id="help">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb9d8e6);
+    scene.fog = new THREE.Fog(0xb9d8e6, 26, 52);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const hemi = new THREE.HemisphereLight(0xdaf4ff, 0x82705a, 2.25);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff1cf, 3.2);
+    sun.position.set(-12, 18, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -25;
+    sun.shadow.camera.right = 25;
+    sun.shadow.camera.top = 20;
+    sun.shadow.camera.bottom = -20;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 55;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x91bfdc, 0.75);
+    fill.position.set(15, 8, -12);
+    scene.add(fill);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const mat = {
+      ground: new THREE.MeshStandardMaterial({ color: 0xb6a978, roughness: 0.95 }),
+      groundDark: new THREE.MeshStandardMaterial({ color: 0x998b61, roughness: 1 }),
+      paving: new THREE.MeshStandardMaterial({ color: 0xc7b98d, roughness: 0.95 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0xc9c2ac, roughness: 0.92 }),
+      wallLight: new THREE.MeshStandardMaterial({ color: 0xe1d8bd, roughness: 0.9 }),
+      wallShade: new THREE.MeshStandardMaterial({ color: 0x9b9a89, roughness: 1 }),
+      roof: new THREE.MeshStandardMaterial({ color: 0x647b78, roughness: 0.85 }),
+      roofDark: new THREE.MeshStandardMaterial({ color: 0x3e5554, roughness: 0.9 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xb92f27, roughness: 0.8 }),
+      redLight: new THREE.MeshStandardMaterial({ color: 0xd95540, roughness: 0.8 }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x397b9a, roughness: 0.75 }),
+      blueDark: new THREE.MeshStandardMaterial({ color: 0x244d68, roughness: 0.85 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x658b43, roughness: 0.88 }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xe4b63d, roughness: 0.8 }),
+      orange: new THREE.MeshStandardMaterial({ color: 0xd77736, roughness: 0.85 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x242829, roughness: 0.9 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xe9e5d2, roughness: 0.9 }),
+      skin: new THREE.MeshStandardMaterial({ color: 0xc98f65, roughness: 0.9 }),
+      hair: new THREE.MeshStandardMaterial({ color: 0x342c27, roughness: 1 }),
+      shirt: new THREE.MeshStandardMaterial({ color: 0x315b72, roughness: 0.95 }),
+      pants: new THREE.MeshStandardMaterial({ color: 0x304c57, roughness: 1 }),
+      hat: new THREE.MeshStandardMaterial({ color: 0x6b7842, roughness: 1 }),
+      meat: new THREE.MeshStandardMaterial({ color: 0x8f3025, roughness: 0.9 }),
+      meatLight: new THREE.MeshStandardMaterial({ color: 0xb55336, roughness: 0.9 }),
+      egg: new THREE.MeshStandardMaterial({ color: 0xf0dfb0, roughness: 0.8 }),
+      water: new THREE.MeshStandardMaterial({ color: 0x79b9c8, roughness: 0.35 }),
+      glass: new THREE.MeshStandardMaterial({
+        color: 0xb9e2e8,
+        roughness: 0.18,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.82
+      }),
+      skinDark: new THREE.MeshStandardMaterial({ color: 0x8e583d, roughness: 0.95 }),
+      skinLight: new THREE.MeshStandardMaterial({ color: 0xe1aa7d, roughness: 0.95 }),
+      blueSkin: new THREE.MeshStandardMaterial({ color: 0x6f9eb3, roughness: 0.95 }),
+      purple: new THREE.MeshStandardMaterial({ color: 0x8a5b9b, roughness: 0.9 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x876247, roughness: 0.95 }),
+      woodLight: new THREE.MeshStandardMaterial({ color: 0xb38a58, roughness: 0.95 }),
+      copper: new THREE.MeshStandardMaterial({ color: 0xa95532, roughness: 0.7 }),
+      sign: new THREE.MeshStandardMaterial({ color: 0x31484a, roughness: 0.8 }),
+      poster: new THREE.MeshStandardMaterial({ color: 0x82b9c7, roughness: 0.9 })
+    };
+
+    // ------------------------------------------------------------
+    // Tiny block helpers
+    // ------------------------------------------------------------
+    const unit = 0.18;
+
+    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = scene) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function blockPerson({
+      x, z, skin = mat.skin, shirt = mat.shirt, pants = mat.pants,
+      hair = mat.hair, scale = 1, pose = "front"
+    }) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      // Legs
+      box(0.23, 0.54, 0.22, pants, -0.12, 0.27, 0, group);
+      box(0.23, 0.54, 0.22, pants, 0.12, 0.27, 0, group);
+      box(0.12, 0.09, 0.35, mat.white, -0.12, 0.06, 0.05, group);
+      box(0.12, 0.09, 0.35, mat.white, 0.12, 0.06, 0.05, group);
+
+      // Torso
+      const torso = box(0.48, 0.64, 0.34, shirt, 0, 0.87, 0, group);
+      torso.rotation.z = pose === "right" ? -0.12 : pose === "left" ? 0.12 : 0;
+
+      // Head
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), skin);
+      head.scale.set(0.9, 1.1, 0.9);
+      head.position.set(0, 1.29, 0);
+      head.castShadow = true;
+      group.add(head);
+
+      // Hair
+      const hairPiece = new THREE.Mesh(new THREE.SphereGeometry(0.205, 10, 8), hair);
+      hairPiece.scale.set(0.94, 1.05, 0.92);
+      hairPiece.position.set(0, 1.43, -0.015);
+      hairPiece.castShadow = true;
+      group.add(hairPiece);
+
+      // Nose
+      box(0.045, 0.055, 0.05, skin, 0, 1.27, 0.19, group);
+
+      // Arms
+      const leftArm = box(0.16, 0.52, 0.17, shirt, -0.34, 0.83, 0, group);
+      const rightArm = box(0.16, 0.52, 0.17, shirt, 0.34, 0.83, 0, group);
+      leftArm.rotation.z = pose === "right" ? -0.32 : pose === "left" ? 0.32 : 0;
+      rightArm.rotation.z = pose === "right" ? 0.32 : pose === "left" ? -0.32 : 0;
+
+      // Hands
+      const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), skin);
+      const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), skin);
+      leftHand.position.set(-0.39, 0.59, 0.02);
+      rightHand.position.set(0.39, 0.59, 0.02);
+      group.add(leftHand, rightHand);
+
+      return group;
+    }
+
+    function blockChicken(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.23, 10, 8), mat.egg);
+      body.scale.set(1.15, 0.75, 0.8);
+      body.castShadow = true;
+      group.add(body);
+
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.22, 8), mat.egg);
+      neck.rotation.z = -0.35;
+      neck.position.set(0.12, 0.12, 0);
+      group.add(neck);
+
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 8), mat.orange);
+      beak.rotation.z = Math.PI / 2;
+      beak.position.set(0.22, 0.18, 0);
+      group.add(beak);
+
+      return group;
+    }
+
+    function blockSign(text, width, height, color = "#31484a", x, y, z, parent = scene) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      parent.add(group);
+
+      const sign = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.85,
+          map: makeTextTexture(text, width / 2, height / 2)
+        })
+      );
+      sign.position.z = 0.012;
+      group.add(sign);
+
+      const backing = box(width + 0.08, height + 0.08, 0.08, mat.sign, 0, 0, -0.04, group);
+      backing.castShadow = true;
+      return group;
+    }
+
+    function makeTextTexture(text, w, h) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#f7e8b7";
+      ctx.font = "bold 72px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 256, 66);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return texture;
+    }
+
+    function blockCloth(x, y, z, colorMat, w = 0.55, h = 0.38) {
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), colorMat);
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = Math.PI / 2;
+      mesh.castShadow = true;
+      scene.add(mesh);
+    }
+
+    // ------------------------------------------------------------
+    // Ground and paving
+    // ------------------------------------------------------------
+    box(48, 0.35, 18, mat.ground, 0, -0.25, 0);
+
+    const paving = new THREE.Mesh(new THREE.PlaneGeometry(48, 18), mat.paving);
+    paving.rotation.x = -Math.PI / 2;
+    paving.position.y = -0.055;
+    paving.receiveShadow = true;
+    scene.add(paving);
+
+    // Curved tile seams using repeated small blocks.
+    for (let x = -22; x <= 22; x += 1.25) {
+      for (let z = -7.5; z <= 7.5; z += 1.25) {
+        if (Math.abs(x) < 1.1 && Math.abs(z) < 1.1) continue;
+        const tile = box(
+          0.93, 0.025, 0.93,
+          Math.random() > 0.5 ? mat.paving : mat.groundDark,
+          x + (Math.random() - 0.5) * 0.08,
+          -0.035,
+          z + (Math.random() - 0.5) * 0.08
+        );
+        tile.rotation.y = (Math.random() - 0.5) * 0.08;
+      }
+    }
+
+    // ------------------------------------------------------------
+    // Left storefront: bottles and household goods
+    // ------------------------------------------------------------
+    const leftStore = new THREE.Group();
+    leftStore.position.set(-11.5, 0, -2.6);
+    scene.add(leftStore);
+
+    // Building shell
+    box(6.2, 5.2, 0.45, mat.wall, 0, 2.55, 0, leftStore);
+    box(6.5, 0.35, 0.7, mat.roofDark, 0, 5.25, 0, leftStore);
+    box(0.35, 5.2, 0.7, mat.wallShade, -3.05, 2.55, 0, leftStore);
+    box(0.35, 5.2, 0.7, mat.wallShade, 3.05, 2.55, 0, leftStore);
+
+    // Open front and interior
+    box(4.9, 0.18, 0.45, mat.wallShade, 0, 1.15, 0.25, leftStore);
+    box(4.5, 3.4, 0.35, mat.wallShade, 0, 2.85, -0.45, leftStore);
+
+    // Back shelves
+    for (let i = 0; i < 4; i++) {
+      box(0.16, 3.2, 0.16, mat.wood, -1.75 + i * 0.62, 2.85, -0.68, leftStore);
+    }
+    box(5.1, 0.15, 0.18, mat.wood, 0, 4.35, -0.68, leftStore);
+
+    // Bottle stacks
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 3; col++) {
+        const x = -1.55 + col * 0.78;
+        const y = 1.42 + row * 0.34;
+        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.46, 8), mat.blue);
+        bottle.position.set(x, y, 0.2);
+        bottle.castShadow = true;
+        leftStore.add(bottle);
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.08, 8), mat.green);
+        cap.position.set(x, y + 0.28, 0.2);
+        cap.castShadow = true;
+        leftStore.add(cap);
+      }
+    }
+
+    // Hanging signs
+    blockSign("汽水", 1.05, 0.55, "#7e2d25", -1.45, 3.15, 0.28, leftStore);
+    blockSign("酱油", 0.82, 0.45, "#31484a", 1.55, 3.15, 0.28, leftStore);
+
+    // Clothesline
+    const line = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 5.4, 8), mat.wood);
+    line.rotation.z = Math.PI / 2;
+    line.position.set(0, 4.95, 0.15);
+    leftStore.add(line);
+
+    const clothMats = [mat.blue, mat.yellow, mat.white, mat.green, mat.orange];
+    for (let i = 0; i < 4; i++) {
+      blockCloth(-2.05 + i * 1.18, 4.72, 0.2, clothMats[i], 0.68, 0.44);
+    }
+
+    // Side window
+    box(0.08, 1.35, 1.15, mat.wood, 3.13, 2.65, -0.25, leftStore);
+    const windowPane = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.72), mat.glass);
+    windowPane.position.set(3.18, 2.7, -0.25);
+    leftStore.add(windowPane);
+
+    // ------------------------------------------------------------
+    // Center butcher shop
+    // ------------------------------------------------------------
+    const butcher = new THREE.Group();
+    butcher.position.set(0, 0, -2.65);
+    scene.add(butcher);
+
+    // Building
+    box(6.2, 5.4, 0.45, mat.wall, 0, 2.65, 0, butcher);
+    box(6.55, 0.38, 0.72, mat.roof, 0, 5.45, 0, butcher);
+    box(0.35, 5.4, 0.72, mat.wallShade, -3.05, 2.65, 0, butcher);
+    box(0.35, 5.4, 0.72, mat.wallShade, 3.05, 2.65, 0, butcher);
+
+    // Front opening and counter
+    box(5.0, 0.2, 0.5, mat.wood, 0, 1.25, 0.28, butcher);
+    box(4.7, 0.16, 0.75, mat.wood, 0, 1.35, 0.65, butcher);
+
+    // Hanging meat
+    for (let i = 0; i < 7; i++) {
+      const x = -1.72 + i * 0.65;
+      const meat = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 8), i % 2 ? mat.meat : mat.meatLight);
+      meat.scale.set(0.72, 1.25, 0.38);
+      meat.position.set(x, 2.75 - (i % 2) * 0.08, 0.35);
+      meat.rotation.z = (i - 3) * 0.045;
+      meat.castShadow = true;
+      butcher.add(meat);
+    }
+
+    // Sign
+    blockSign("廈門肉食公司", 3.25, 0.48, "#7d2824", 0, 3.75, 0.25, butcher);
+
+    // Side sign
+    blockSign("不落地吐棄", 0.64, 1.25, "#31484a", 3.18, 2.7, 0.2, butcher);
+
+    // Counter and tools
+    box(2.2, 0.16, 0.75, mat.wood, -0.8, 1.55, 0.8, butcher);
+    box(0.12, 0.5, 0.12, mat.wood, -1.25, 1.85, 0.8, butcher);
+    const knife = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 8), mat.copper);
+    knife.rotation.z = -0.7;
+    knife.position.set(-0.4, 1.85, 0.8);
+    butcher.add(knife);
+
+    // Barrels
+    for (let i = 0; i < 2; i++) {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.68, 10), mat.wood);
+      barrel.position.set(1.25, 0.34, 0.72 + i * 0.58);
+      barrel.castShadow = true;
+      butcher.add(barrel);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.315, 0.025, 6, 12), mat.woodLight);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(1.25, 0.34, 0.72 + i * 0.58);
+      butcher.add(ring);
+    }
+
+    // Butcher characters
+    const butcher1 = blockPerson({
+      x: -1.15, z: 1.45,
+      shirt: mat.green,
+      pants: mat.pants,
+      scale: 0.95
+    });
+    butcher1.rotation.y = -0.35;
+
+    const butcher2 = blockPerson({
+      x: 1.1, z: 1.35,
+      shirt: mat.shirt,
+      pants: mat.pants,
+      scale: 0.93
+    });
+    butcher2.rotation.y = 0.35;
+
+    // ------------------------------------------------------------
+    // Right side: barbershop and washer
+    // ------------------------------------------------------------
+    const barbershop = new THREE.Group();
+    barbershop.position.set(12.2, 0, -2.7);
+    scene.add(barbershop);
+
+    box(5.2, 4.8, 0.45, mat.wall, 0, 2.35, 0, barbershop);
+    box(5.55, 0.36, 0.72, mat.roof, 0, 4.85, 0, barbershop);
+    box(0.3, 4.8, 0.72, mat.wallShade, -2.55, 2.35, 0, barbershop);
+    box(0.3, 4.8, 0.72, mat.wallShade, 2.55, 2.35, 0, barbershop);
+
+    // Open shop
+    box(4.25, 0.16, 0.5, mat.wood, 0, 1.25, 0.25, barbershop);
+    box(3.95, 0.12, 0.65, mat.wood, 0, 1.34, 0.58, barbershop);
+
+    // Barber pole
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1.15, 12), mat.white);
+    pole.position.set(2.1, 2.45, 0.35);
+    barbershop.add(pole);
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 1.15, 12, 1, true), mat.blue);
+    stripe.position.set(2.1, 2.45, 0.351);
+    barbershop.add(stripe);
+
+    blockSign("上海发廊", 2.25, 0.55, "#31484a", 0, 3.75, 0.25, barbershop);
+    blockSign("剪", 0.48, 0.7, "#31484a", 2.1, 1.8, 0.3, barbershop);
+
+    // Side window
+    box(0.08, 1.45, 1.2, mat.wood, 2.62, 2.65, -0.2, barbershop);
+    const sideWindow = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 0.75), mat.glass);
+    sideWindow.position.set(2.67, 2.7, -0.2);
+    barbershop.add(sideWindow);
+
+    // Washer area
+    const washer = new THREE.Group();
+    washer.position.set(7.6, 0, 1.45);
+    scene.add(washer);
+
+    box(1.5, 1.35, 0.8, mat.blueDark, 0, 0.67, 0, washer);
+    const washerDoor = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.07, 16), mat.glass);
+    washerDoor.rotation.x = Math.PI / 2;
+    washerDoor.position.set(0, 0.75, 0.43);
+    washer.add(washerDoor);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 8), mat.copper);
+    handle.rotation.x = Math.PI / 2;
+    handle.position.set(0, 0.75, 0.49);
+    washer.add(handle);
+
+    // Laundry
+    const laundryMats = [mat.white, mat.blue, mat.yellow, mat.purple];
+    for (let i = 0; i < 4; i++) {
+      const cloth = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), laundryMats[i]);
+      cloth.scale.set(0.8, 1.15, 0.18);
+      cloth.position.set(-0.38 + i * 0.31, 1.02 + (i % 2) * 0.1, 0.75);
+      cloth.castShadow = true;
+      washer.add(cloth);
+    }
+
+    // ------------------------------------------------------------
+    // Street characters
+    // ------------------------------------------------------------
+    const shopper = blockPerson({
+      x: -7.8, z: 0.7,
+      skin: mat.skinLight,
+      shirt: mat.blue,
+      pants: mat.blueDark,
+      scale: 0.96
+    });
+    shopper.rotation.y = -0.7;
+
+    const child = blockPerson({
+      x: -6.75, z: 0.95,
+      skin: mat.skin,
+      shirt: mat.yellow,
+      pants: mat.pants,
+      scale: 0.62
+    });
+    child.rotation.y = -0.4;
+
+    const cyclist = blockPerson({
+      x: 6.2, z: 1.2,
+      skin: mat.skinDark,
+      shirt: mat.orange,
+      pants: mat.pants,
+      scale: 0.88,
+      pose: "right"
+    });
+    cyclist.rotation.y = 0.2;
+
+    const barber = blockPerson({
+      x: 9.65, z: 0.25,
+      skin: mat.skin,
+      shirt: mat.white,
+      pants: mat.pants,
+      hat: mat.hat,
+      scale: 0.9
+    });
+    barber.rotation.y = -0.6;
+
+    const washerPerson = blockPerson({
+      x: 7.2, z: 1.75,
+      skin: mat.skinDark,
+      shirt: mat.yellow,
+      pants: mat.pants,
+      scale: 0.82
+    });
+    washerPerson.rotation.y = -0.8;
+
+    // Bicycle
+    const bike = new THREE.Group();
+    bike.position.set(6.2, 0, 1.2);
+    bike.rotation.y = -0.2;
+    scene.add(bike);
+
+    const wheelGeometry = new THREE.TorusGeometry(0.42, 0.035, 6, 16);
+    const wheel1 = new THREE.Mesh(wheelGeometry, mat.black);
+    wheel1.position.set(-0.48, 0.42, 0);
+    bike.add(wheel1);
+    const wheel2 = new THREE.Mesh(wheelGeometry, mat.black);
+    wheel2.position.set(0.48, 0.42, 0);
+    bike.add(wheel2);
+
+    const frameMat = mat.blue;
+    const framePieces = [
+      [new THREE.CylinderGeometry(0.025, 0.025, 0.72, 6), 0, 0.75, 0, frameMat],
+      [new THREE.CylinderGeometry(0.025, 0.025, 0.72, 6), 0, 0.75, 0, frameMat],
+      [new THREE.CylinderGeometry(0.025, 0.025, 0.72, 6), 0, 0.75, 0, frameMat]
+    ];
+    for (const piece of framePieces) {
+      const mesh = new THREE.Mesh(piece[0], piece[1]);
+      mesh.position.copy(piece[1][2]);
+      bike.add(mesh);
+    }
+
+    // ------------------------------------------------------------
+    // Background buildings
+    // ------------------------------------------------------------
+    function backgroundBuilding(x, z, w, h, colorMat) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      scene.add(group);
+
+      box(w, h, 0.45, colorMat, 0, h / 2, 0, group);
+      box(w + 0.35, 0.3, 0.7, mat.roofDark, 0, h + 0.15, 0, group);
+      box(0.3, h, 0.7, mat.wallShade, -w / 2, h / 2, 0, group);
+      box(0.3, h, 0.7, mat.wallShade, w / 2, h / 2, 0, group);
+
+      // Windows
+      const windowMat = mat.glass;
+      for (let y = 1.2; y < h - 0.5; y += 1.25) {
+        const pane = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.65), windowMat);
+        pane.position.set(-w / 2 + 0.2, y, 0.24);
+        group.add(pane);
+      }
+    }
+
+    backgroundBuilding(-15.5, -8.5, 7, 7.5, mat.wall);
+    backgroundBuilding(-7.2, -9, 5.5, 6.2, mat.wallLight);
+    backgroundBuilding(8.5, -9, 6.5, 7.8, mat.wall);
+    backgroundBuilding(16.5, -8.5, 7, 6.8, mat.wallLight);
+    backgroundBuilding(23, -8.5, 5, 8, mat.wall);
+
+    // Utility poles and wires
+    function utilityPole(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      scene.add(group);
+
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.17, 6.5, 8), mat.wood);
+      pole.position.y = 3.25;
+      pole.castShadow = true;
+      group.add(pole);
+
+      for (let y = 1.8; y <= 6.1; y += 1.1) {
+        const arm = box(0.75, 0.08, 0.08, mat.wood, 0.35, y, 0, group);
+        arm.rotation.z = -0.12;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const insulator = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), mat.white);
+        insulator.position.set(0.6, 2.3 + i * 1.1, 0);
+        group.add(insulator);
+      }
+    }
+
+    utilityPole(-3.4, 1.1);
+    utilityPole(4.2, 1.15);
+    utilityPole(10.2, 1.1);
+    utilityPole(16.5, 1.1);
+
+    const wireMat = mat.black;
+    for (let i = 0; i < 3; i++) {
+      const points = [
+        new THREE.Vector3(-3.4, 2.3 + i * 1.1, 1.1),
+        new THREE.Vector3(4.2, 2.3 + i * 1.1, 1.15),
+        new THREE.Vector3(10.2, 2.3 + i * 1.1, 1.1),
+        new THREE.Vector3(16.5, 2.3 + i * 1.1, 1.1)
+      ];
+      const curve = new THREE.CatmullRomCurve3(points);
+      const wire = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 40, 0.012, 4, false),
+        wireMat
+      );
+      scene.add(wire);
+    }
+
+    // Street details
+    // Drain channel
+    box(20, 0.025, 0.24, mat.groundDark, 1, 0.015, 6.7);
+    for (let x = -8; x < 12; x += 0.55) {
+      const grate = box(0.23, 0.035, 0.24, mat.black, x, 0.03, 6.7);
+      for (let j = 0; j < 3; j++) {
+        box(0.025, 0.015, 0.2, mat.woodLight, x - 0.06 + j * 0.06, 0.05, 6.7);
+      }
+    }
+
+    // Trash bin
+    const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.28, 0.72, 10), mat.green);
+    bin.position.set(-3.8, 0.36, 4.7);
+    bin.castShadow = true;
+    scene.add(bin);
+    const binLid = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.08, 10), mat.green);
+    binLid.position.set(-3.8, 0.77, 4.7);
+    binLid.castShadow = true;
+    scene.add(binLid);
+
+    // Small plant
+    const plantPot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.13, 0.25, 10), mat.orange);
+    plantPot.position.set(3.9, 0.125, 5.2);
+    plantPot.castShadow = true;
+    scene.add(plantPot);
+    const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), mat.green);
+    leaves.scale.set(0.65, 1.2, 0.55);
+    leaves.position.set(3.9, 0.42, 5.2);
+    leaves.castShadow = true;
+    scene.add(leaves);
+
+    // ------------------------------------------------------------
+    // Small foreground figures and props
+    // ------------------------------------------------------------
+    const foregroundPerson = blockPerson({
+      x: -1.7, z: 3.3,
+      skin: mat.skinDark,
+      shirt: mat.blue,
+      pants: mat.pants,
+      scale: 0.82
+    });
+    foregroundPerson.rotation.y = 0.6;
+
+    // Market basket
+    const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.23, 0.28, 10), mat.wood);
+    basket.position.set(3.6, 0.14, 4.25);
+    basket.castShadow = true;
+    scene.add(basket);
+    for (let i = 0; i < 4; i++) {
+      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), i % 2 ? mat.orange : mat.red);
+      fruit.position.set(3.6, 0.33 + (i % 2) * 0.08, 4.25 + (i % 2) * 0.04);
+      fruit.castShadow = true;
+      scene.add(fruit);
+    }
+
+    // ------------------------------------------------------------
+    // A small fighter-inspired figure on the left
+    // ------------------------------------------------------------
+    const fighter = new THREE.Group();
+    fighter.position.set(-13.7, 0, 1.0);
+    scene.add(fighter);
+
+    const fighterBody = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.95, 10), mat.blue);
+    fighterBody.position.y = 0.78;
+    fighterBody.castShadow = true;
+    fighter.add(fighterBody);
+
+    const fighterHead = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), mat.blueSkin);
+    fighterHead.position.y = 1.43;
+    fighterHead.scale.set(0.85, 1.05, 0.85);
+    fighterHead.castShadow = true;
+    fighter.add(fighterHead);
+
+    const fighterHair = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 10), mat.hair);
+    fighterHair.position.set(0, 1.58, -0.04);
+    fighterHair.scale.set(0.75, 0.45, 0.8);
+    fighter.add(fighterHair);
+
+    const fighterArm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.65, 8), mat.blue);
+    fighterArm.rotation.z = -0.8;
+    fighterArm.position.set(-0.28, 0.9, 0);
+    fighter.add(fighterArm);
+
+    const fighterLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.55, 8), mat.blue);
+    fighterLeg.rotation.z = 0.25;
+    fighterLeg.position.set(0.12, 0.28, 0);
+    fighter.add(fighterLeg);
+
+    // ------------------------------------------------------------
+    // Pixel-style clouds
+    // ------------------------------------------------------------
+    const cloudMat = new THREE.MeshStandardMaterial({ color: 0xf4f4ed, roughness: 1 });
+    function cloud(x, y, z, scale) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      const pieces = [
+        [-0.8, 0, 0, 0.55],
+        [0, 0.15, 0, 0.75],
+        [0.8, 0, 0, 0.58],
+        [0.2, -0.1, 0.05, 0.48]
+      ];
+      for (const p of pieces) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), cloudMat);
+        puff.position.set(p[0], p[1], p[2]);
+        puff.scale.set(p[3] * 1.4, p[3] * 0.65, p[3] * 0.55);
+        group.add(puff);
+      }
+    }
+
+    cloud(-14, 11, -18, 1.2);
+    cloud(5, 13, -22, 1.55);
+    cloud(17, 10, -17, 1.0);
+    cloud(25, 12, -20, 0.9);
+
+    // ------------------------------------------------------------
+    // Animation
+    // ------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Gentle idle motion
+      shopper.position.y = Math.sin(t * 1.4) * 0.012;
+      child.position.y = Math.sin(t * 2.1 + 1) * 0.015;
+      barber.position.y = Math.sin(t * 1.2 + 1.4) * 0.008;
+
+      // Washer drum rotation
+      washerDoor.rotation.z = Math.sin(t * 1.7) * 0.13;
+
+      renderer.render(scene, camera);
+    }
+
+    // ------------------------------------------------------------
+    // Camera controls implemented directly, without addons
+    // ------------------------------------------------------------
+    const controls = {
+      azimuth: Math.PI * 0.22,
+      polar: Math.PI * 0.43,
+      radius: 34,
+      target: new THREE.Vector3(0, 1.6, -0.8)
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let zoomStart = 0;
+    let zoomEnd = 0;
+    let zoomActive = false;
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      controls.azimuth -= dx * 0.006;
+      controls.polar = THREE.MathUtils.clamp(
+        controls.polar - dy * 0.005,
+        0.35,
+        1.35
+      );
+      updateCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", event => {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+    });
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      zoomActive = true;
+      zoomStart = controls.radius;
+      zoomEnd = Math.max(18, Math.min(48, controls.radius + event.deltaY * 0.025));
+      renderer.domElement.style.cursor = "waiting";
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("lostpointercapture", () => {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

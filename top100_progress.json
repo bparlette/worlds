@@ -38,5 +38,15 @@
     "fails": [],
     "attempts": 2,
     "updated_at": "2026-11-01 23:11 EST"
+  },
+  "3": {
+    "rank": 3,
+    "game": "Street Fighter II",
+    "name": "China \u2014 Chun-Li",
+    "status": "pass",
+    "filename": "1003-street_fighter_ii_china_chun_li.html",
+    "fails": [],
+    "attempts": 1,
+    "updated_at": "2026-11-01 23:21 EST"
   }
 }
