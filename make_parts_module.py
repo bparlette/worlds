@@ -222,16 +222,48 @@ def load_parts_data(path):
 # ---------------------------------------------------------------------------
 # Validation + repair. Every repair is logged; a part that cannot be
 # repaired is dropped and logged. Nothing raises on bad part data.
+# String-typed numeric/array fields are coerced before validation
+# (pilot 2 emitted every array as a JSON string); each coercion is
+# logged and counted exactly like any other repair.
 # ---------------------------------------------------------------------------
 
 def _is_num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
-def _vec3(v):
-    if isinstance(v, (list, tuple)) and len(v) >= 3 and all(_is_num(x) for x in v[:3]):
-        return [float(v[0]), float(v[1]), float(v[2])]
-    return None
+def _num_array(v, count):
+    """Numeric-array field (p/z/r: count values; ap: 2). Returns
+    (values, coerced) — values None when unusable. A string value is
+    first tried as a JSON array: pilot 2 emitted array fields as
+    strings ('"[3,0,0.2]"'), and a string that parses to numbers of
+    the expected length is a type slip, not bad data."""
+    src = v
+    coerced = False
+    if isinstance(v, str):
+        try:
+            src = json.loads(v)
+        except Exception:
+            return None, False
+        coerced = True
+    if (isinstance(src, (list, tuple)) and len(src) >= count
+            and all(_is_num(x) for x in src[:count])):
+        return [float(x) for x in src[:count]], coerced
+    return None, False
+
+
+def _coerce_num(v):
+    """Scalar numeric field (ry/rx/rz/n). Returns (value, coerced) —
+    value None when v is neither numeric nor a numeric string."""
+    if _is_num(v):
+        return float(v), False
+    if isinstance(v, str):
+        try:
+            parsed = float(v.strip())
+        except Exception:
+            return None, False
+        if math.isfinite(parsed):
+            return parsed, True
+    return None, False
 
 
 def _clamp(v, lo, hi):
@@ -277,12 +309,16 @@ def validate_parts(data):
             rep(f"{label}: unknown shape {shape!r}, dropped")
             dropped += 1
             continue
-        p = _vec3(raw.get("p"))
-        z = _vec3(raw.get("z"))
+        p, p_coerced = _num_array(raw.get("p"), 3)
+        z, z_coerced = _num_array(raw.get("z"), 3)
         if p is None or z is None:
             rep(f"{label} ({shape}): missing/invalid p or z, dropped")
             dropped += 1
             continue
+        if p_coerced:
+            rep(f"{label} ({shape}): coerced string array for field p")
+        if z_coerced:
+            rep(f"{label} ({shape}): coerced string array for field z")
         part = {"s": shape}
         clamped_here = False
         # position: clamp |p| <= 80
@@ -316,10 +352,16 @@ def validate_parts(data):
         # rotations (degrees)
         for axis in ("ry", "rx", "rz"):
             v = raw.get(axis)
-            if _is_num(v) and float(v) != 0.0:
-                part[axis] = float(v)
-            elif v is not None and not _is_num(v):
+            if v is None:
+                continue
+            num, was_coerced = _coerce_num(v)
+            if num is None:
                 rep(f"{label} ({shape}): bad {axis} {v!r} -> 0")
+                continue
+            if was_coerced:
+                rep(f"{label} ({shape}): coerced string number for field {axis}")
+            if num != 0.0:
+                part[axis] = num
         # role
         if raw.get("role") == "wall":
             part["role"] = "wall"
@@ -336,25 +378,37 @@ def validate_parts(data):
         if a != "none":
             part["a"] = a
             ap = raw.get("ap")
-            apv = _vec3([ap[0], ap[1], 0]) if isinstance(ap, (list, tuple)) and len(ap) >= 2 and _is_num(ap[0]) and _is_num(ap[1]) else None
+            apv, ap_coerced = _num_array(ap, 2) if ap is not None else (None, False)
             if apv is not None:
-                part["ap"] = [apv[0], apv[1]]
-            elif raw.get("ap") is not None:
-                rep(f"{label} ({shape}): bad ap {raw.get('ap')!r} removed (defaults apply)")
+                if ap_coerced:
+                    rep(f"{label} ({shape}): coerced string array for field ap")
+                part["ap"] = apv
+            elif ap is not None:
+                rep(f"{label} ({shape}): bad ap {ap!r} removed (defaults apply)")
         # name (debug/gate aid only)
         if isinstance(raw.get("name"), str) and raw["name"]:
             part["name"] = raw["name"]
         # repeat expansion
-        step = _vec3(raw.get("r")) if raw.get("r") is not None else [0.0, 0.0, 0.0]
-        if raw.get("r") is not None and step is None:
-            rep(f"{label} ({shape}): bad repeat step {raw.get('r')!r} -> single instance")
+        r_raw = raw.get("r")
+        if r_raw is None:
             step = [0.0, 0.0, 0.0]
-        n = raw.get("n", 1)
-        if not (_is_num(n) and int(n) >= 1):
+        else:
+            step, r_coerced = _num_array(r_raw, 3)
+            if step is None:
+                rep(f"{label} ({shape}): bad repeat step {r_raw!r} -> single instance")
+                step = [0.0, 0.0, 0.0]
+            elif r_coerced:
+                rep(f"{label} ({shape}): coerced string array for field r")
+        n_raw = raw.get("n", 1)
+        n_num, n_coerced = _coerce_num(n_raw)
+        if n_num is not None and int(n_num) >= 1:
+            if n_coerced:
+                rep(f"{label} ({shape}): coerced string number for field n")
+            n = int(n_num)
+        else:
             if raw.get("n") is not None:
-                rep(f"{label} ({shape}): bad repeat count {n!r} -> 1")
+                rep(f"{label} ({shape}): bad repeat count {n_raw!r} -> 1")
             n = 1
-        n = int(n)
         if n > MAX_REPEAT:
             rep(f"{label} ({shape}): repeat count {n} clamped to {MAX_REPEAT}")
             n = MAX_REPEAT

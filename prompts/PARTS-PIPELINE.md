@@ -113,6 +113,17 @@ z: footprint z[0]×z[2], height z[1], low edge at +z, high edge at −z,
 computed normals. Materials: MeshStandardMaterial, roughness .85,
 metalness 0; emissive + emissiveIntensity 1 when `e` is present.
 
+**Type coercion.** Pilot 2 emitted array fields as JSON strings
+(`"r":"[3,0,0.2]"`). Before the checks above run, the converter
+coerces string-typed fields: a string in an array field (`p`, `z`,
+`r`, `ap`) is parsed as a JSON array and accepted when it yields
+numbers of the expected length; a numeric string in a scalar field
+(`ry`, `rx`, `rz`, `n`) is parsed as a number. Every coercion is
+logged (`coerced string array for field …` / `coerced string number
+for field …`) and counted as a repair, exactly like a clamp. A string
+that does not parse to the right shape follows the normal bad-field
+path above.
+
 ---
 
 ## 4. Builder contract
@@ -141,8 +152,10 @@ place anchors, or stamp relics — that is the converter's job.
    Salvaging zero parts is a hard error, exactly like an unparseable
    file.
 1. **Validate + repair** per §3; log every repair; drop unrepairable
-   parts. Repeat expansion, the 800 cap and dedupe happen here, so the
-   part list inlined into the module is exactly the built list.
+   parts. String-typed fields are coerced to numbers/arrays first
+   (§3, Type coercion) — each coercion logged and counted as a
+   repair. Repeat expansion, the 800 cap and dedupe happen here, so
+   the part list inlined into the module is exactly the built list.
 2. **Bounds + normalization (mechanical size).** Analytic AABB over the
    expanded parts (for yaw/pitch/roll that are not multiples of 90°,
    the conservative diagonal radius). Scale
@@ -253,7 +266,91 @@ other world, do not register anything, do not overwrite anything.
 
 ---
 
-## 7. Non-goals
+## 7. Constrained generation (pilot 3+)
+
+Pilots 1 and 2 failed on **schema validity, not content**: the raw
+output arrived wrapped in a markdown fence, was cut off mid-object at
+the token cap, and — in pilot 2 — carried every array field as a
+string (`"r":"[3,0,0.2]"`), a runaway `n:33` repeat on every part,
+and `role:"wall"` on all 203 parts. The converter's input repair
+(§4 step 0) and type coercion (§3) rescue what is rescuable, but they
+are a net under a trapeze: free-form generation was asked to produce
+a rigid structure with nothing enforcing the structure while it
+writes.
+
+Pilot 3 therefore constrains the generation itself.
+**`prompts/parts.schema.json`** is a JSON Schema describing exactly
+the §2 document — the root object requiring `id`/`title`/`game`/
+`parts` (with `sky`/`fog`/`ground` optional strings); each part
+requiring `s`/`p`/`z`/`c`; the shape, role and anim enums; exact
+array lengths (`p`/`z`/`r`: 3 numbers, `ap`: 2); the `#rrggbb`
+colour pattern on `c` and `e`; `n` an integer from 1 to 64. It uses
+only the draft-07 subset llama.cpp's `json-schema-to-grammar`
+accepts (`type`, `properties`, `required`, `items`, `enum`,
+`minItems`/`maxItems`, `minimum`/`maximum`, plus the anchored
+character-class `pattern` for colours). Handed to llama-server, the
+schema compiles to a GBNF grammar the sampler cannot leave: a string
+where an array belongs is not unlikely — it is **un-emittable**.
+Fences and prose around the JSON are likewise outside the grammar.
+
+Two schema choices, made deliberately:
+
+- **`additionalProperties` is omitted entirely.** Rather than risk a
+  build that mishandles the keyword, extra keys are simply
+  unconstrained by the grammar — and the converter ignores unknown
+  part keys anyway (only `name` is carried, as a debug label).
+- **Colour `pattern`.** The anchored class `^#[0-9a-fA-F]{6}$` is
+  within the regex subset llama.cpp converts. If a particular build
+  rejects `pattern`, drop those two lines from the schema — the
+  converter still validates every colour before anything is built.
+
+**Server usage** (the Mac's llama-server on :8082). Pass the schema
+with the request — no server restart, no change to the §2 prompt:
+
+```json
+POST http://localhost:8082/v1/chat/completions
+{
+  "messages": [
+    { "role": "user",
+      "content": "…the §2 prompt, verbatim, with the screenshot…" }
+  ],
+  "temperature": 0.6,
+  "max_tokens": 14000,
+  "json_schema": { "…the full contents of prompts/parts.schema.json…" }
+}
+```
+
+Equivalently, start the server with `--json-schema-file
+prompts/parts.schema.json` to constrain every request. The grammar
+constrains **form only**: repetition, degeneracy and fidelity to the
+screenshot are still judged by the §5 gates and the report's
+screenshot, exactly as before.
+
+**Pilot-3 protocol.** Run §6 with these substitutions — one variable
+changes, everything else is held identical to pilot 2:
+
+1. **Image:** the SAME SMB 1-1 screen as pilot 2 (`art/top100.json`
+   rank 2; the 256×224 native frame and the standard resize — do NOT
+   upscale this run).
+2. **Sampling:** the SAME locked configuration as §6 step 2
+   (temperature 0.6, max_tokens 14000). The ONLY change from pilot 2
+   is the `json_schema` constraint above.
+3. **Files:** save the raw output to `walk/parts/t100-002g.json` and
+   convert to `walk/parts/t100-002g.module.js`. The §6 prohibitions
+   stand: do NOT overwrite anything in `walk/modules/`, do NOT
+   register in the walker manifest.
+4. **Report:** the §6 step-4 metrics (parts kept/dropped, every
+   repair, bounds + scale, gate results, relic line) and the rendered
+   screenshot beside the reference — plus one explicit line: whether
+   the raw output needed ANY input repair or coercion at all. With
+   the grammar on, the expected count is zero.
+5. **Kill criterion:** if the §5 gates reject the pilot-3 list, stop
+   — do not tune, do not retry: the parts format is then shelved for
+   this model, and the JS-scene pipeline remains the production path.
+
+---
+
+## 8. Non-goals
 
 - No changes to `walker.html`, `walk/relics.js`, `walk/relics.json`,
   or the JS-scene converter (`make_walker_module.py`). The JS pipeline
