@@ -190,5 +190,13 @@
     "status": "pass",
     "filename": "1024-metroid_metroid_diorama.html",
     "updated_at": "2026-11-02 02:16 EST"
+  },
+  "25": {
+    "rank": 25,
+    "game": "Mario Kart 64",
+    "name": "Rainbow Road",
+    "status": "pass",
+    "filename": "1025-mario_kart_64_rainbow_road.html",
+    "updated_at": "2026-11-02 02:19 EST"
   }
 }

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Rainbow Run</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #030306;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hud {
+      position: fixed;
+      top: 24px;
+      left: 26px;
+      z-index: 10;
+      color: #fff;
+      pointer-events: none;
+      text-shadow: 0 2px 16px #000;
+    }
+
+    .hud h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .hud p {
+      margin: 7px 0 0;
+      color: #a9b7ff;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      position: fixed;
+      right: 22px;
+      bottom: 20px;
+      z-index: 10;
+      padding: 10px 14px;
+      border: 1px solid #ffffff1c;
+      border-radius: 999px;
+      color: #dce8ff;
+      background: #090b14cc;
+      box-shadow: 0 10px 35px #0008;
+      backdrop-filter: blur(10px);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 16px;
+        left: 16px;
+      }
+
+      .controls {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hud">
+    <h1>Rainbow Run</h1>
+    <p>Pixel chase · voxel arena</p>
+  </div>
+
+  <div class="controls">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x030306);
+    scene.fog = new THREE.FogExp2(0x030306, 0.035);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+
+    const materials = {
+      star: new THREE.MeshStandardMaterial({
+        color: 0xffe7a3,
+        emissive: 0xffb82e,
+        emissiveIntensity: 1.8,
+        roughness: 0.45,
+        metalness: 0.05
+      }),
+      ghost: new THREE.MeshStandardMaterial({
+        color: 0xe8f4ff,
+        emissive: 0x83baff,
+        emissiveIntensity: 1.55,
+        roughness: 0.35
+      }),
+      ghostPink: new THREE.MeshStandardMaterial({
+        color: 0xff72d4,
+        emissive: 0xf02b9e,
+        emissiveIntensity: 2.2,
+        roughness: 0.3
+      }),
+      ghostGreen: new THREE.MeshStandardMaterial({
+        color: 0x64ffb5,
+        emissive: 0x19d77b,
+        emissiveIntensity: 2,
+        roughness: 0.3
+      }),
+      ghostYellow: new THREE.MeshStandardMaterial({
+        color: 0xffd36a,
+        emissive: 0xffa21b,
+        emissiveIntensity: 1.8,
+        roughness: 0.35
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x8ba9ff,
+        emissive: 0x244dff,
+        emissiveIntensity: 1.25,
+        roughness: 0.5
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Voxel helpers
+    // ---------------------------------------------------------------------
+
+    const voxelSize = 0.28;
+    const voxelGap = 0.018;
+    const voxel = (x, y, z, material, size = voxelSize) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    };
+
+    // ---------------------------------------------------------------------
+    // Pixelated star
+    // ---------------------------------------------------------------------
+
+    function createStar() {
+      const starGroup = new THREE.Group();
+      const starMaterial = materials.star;
+      const layers = [
+        [
+          [0, 0, 0],
+          [-1, 0, 0],
+          [1, 0, 0],
+          [-1, 0, 1],
+          [1, 0, 1],
+          [-1, 0, -1],
+          [1, 0, -1]
+        ],
+        [
+          [-1, 1, 0],
+          [1, 1, 0],
+          [-1, 1, 1],
+          [1, 1, 1],
+          [-1, 1, -1],
+          [1, 1, -1]
+        ],
+        [
+          [0, 2, 0],
+          [0, 2, 1],
+          [0, 2, -1]
+        ]
+      ];
+
+      for (const layer of layers) {
+        for (const [x, y, z] of layer) {
+          const mesh = voxel(
+            x * voxelSize,
+            y * voxelSize,
+            z * voxelSize,
+            starMaterial
+          );
+          starGroup.add(mesh);
+        }
+      }
+
+      return starGroup;
+    }
+
+    const star = createStar();
+    star.position.set(-0.35, -0.08, 0.25);
+    star.rotation.y = 0.18;
+    scene.add(star);
+
+    // ---------------------------------------------------------------------
+    // Ghost constructed from voxels
+    // ---------------------------------------------------------------------
+
+    function createGhost() {
+      const ghost = new THREE.Group();
+      const head = new THREE.Group();
+      ghost.add(head);
+
+      // Head outline and cheeks
+      const outline = [
+        [0, 1.45, 0],
+        [-0.72, 1.15, 0],
+        [-0.83, 0.72, 0],
+        [-0.65, 0.28, 0],
+        [-0.2, 0.16, 0],
+        [0.2, 0.16, 0],
+        [0.65, 0.28, 0],
+        [0.83, 0.72, 0],
+        [0.72, 1.15, 0],
+        [0, 1.45, 0],
+        [-0.45, 1.45, 0]
+      ];
+
+      for (const [x, y, z] of outline) {
+        head.add(voxel(x * 0.36, y * 0.36, z * 0.36, materials.ghost));
+      }
+
+      // Eyes
+      head.add(voxel(-0.2, 1.18, 0.23, materials.blue));
+      head.add(voxel(0.2, 1.18, 0.23, materials.blue));
+      head.add(voxel(-0.2, 1.18, 0.27, materials.ghostPink));
+      head.add(voxel(0.2, 1.18, 0.27, materials.ghostPink));
+
+      // Mouth
+      head.add(voxel(0, 0.88, 0.25, materials.ghostGreen));
+      head.add(voxel(-0.1, 0.85, 0.25, materials.ghostGreen));
+      head.add(voxel(0.1, 0.85, 0.25, materials.ghostGreen));
+
+      // Hair
+      const hair = [
+        [-0.72, 1.55, 0.02],
+        [-0.55, 1.67, 0.02],
+        [-0.3, 1.72, 0.02],
+        [0.05, 1.68, 0.02],
+        [0.35, 1.72, 0.02],
+        [0.64, 1.55, 0.02],
+        [-0.72, 1.55, 0.02],
+        [-0.55, 1.67, 0.02],
+        [-0.3, 1.72, 0.02],
+        [0.05, 1.68, 0.02],
+        [0.35, 1.72, 0.02],
+        [0.64, 1.55, 0.02]
+      ];
+
+      for (const [x, y, z] of hair) {
+        head.add(voxel(x * 0.36, y * 0.36, z * 0.36, materials.ghost));
+      }
+
+      // Hair tuft
+      head.add(voxel(-0.28, 1.82, 0.03, materials.ghost));
+      head.add(voxel(-0.1, 1.82, 0.03, materials.ghost));
+
+      return head;
+    }
+
+    const ghost = createGhost();
+    ghost.position.set(1.45, 0.15, 0.2);
+    ghost.rotation.y = -0.55;
+    scene.add(ghost);
+
+    // ---------------------------------------------------------------------
+    // Rainbow track made from voxels
+    // ---------------------------------------------------------------------
+
+    const trackGroup = new THREE.Group();
+
+    function addTrackVoxel(x, y, z, colorIndex, material) {
+      const trackMesh = voxel(
+        x,
+        y,
+        z,
+        material
+      );
+      trackGroup.add(trackMesh);
+    }
+
+    const colors = [
+      0xff334f,
+      0xffb347,
+      0x7dfff0,
+      0x55e6ff,
+      0x4a91ff,
+      0x4d8cff,
+      0x8b5cff,
+      0xe85cff
+    ];
+
+    const materialsArray = colors.map(
+      (color) =>
+        new THREE.MeshStandardMaterial({
+          color,
+          emissive: color,
+          emissiveIntensity: 1.25,
+          roughness: 0.4
+        })
+    );
+
+    function makeTrackPoint(x, y, z) {
+      const point = new THREE.Vector3(x, y, z);
+      const tangent = new THREE.Vector3();
+
+      if (point.previous) {
+        tangent.subVectors(point, point.previous).normalize();
+      }
+
+      const normal = new THREE.Vector3()
+        .crossVectors(tangent, new THREE.Vector3(0, 1, 0))
+        .normalize();
+
+      const center = new THREE.Vector3()
+        .crossVectors(tangent, normal)
+        .normalize();
+
+      const radius = 0.53;
+
+      return {
+        point,
+        normal,
+        center,
+        radius
+      };
+    }
+
+    // The path is a continuous spline-like sequence.
+    const trackPoints = [
+      new THREE.Vector3(-6.5, 1.7, 2.2),
+      new THREE.Vector3(-4.8, 1.7, 2.4),
+      new THREE.Vector3(-2.5, 1.7, 2.1),
+      new THREE.Vector3(-0.2, 1.7, 1.9),
+      new THREE.Vector3(2.0, 1.7, 1.7),
+      new THREE.Vector3(4.2, 1.7, 1.5),
+      new THREE.Vector3(6.2, 1.7, 1.2),
+      new THREE.Vector3(7.2, 1.7, 0.2),
+      new THREE.Vector3(6.9, 1.7, -0.8),
+      new THREE.Vector3(5.4, 1.7, -1.0),
+      new THREE.Vector3(3.2, 1.7, -0.8),
+      new THREE.Vector3(0.8, 1.7, -0.6),
+      new THREE.Vector3(-1.6, 1.7, -0.4),
+      new THREE.Vector3(-3.5, 1.7, 0.0),
+      new THREE.Vector3(-4.9, 1.7, 0.5),
+      new THREE.Vector3(-5.5, 1.7, 1.2)
+    ];
+
+    const trackPointsWithNormals = trackPoints.map(makeTrackPoint);
+
+    // Main track surface: colored rectangular voxel tiles.
+    for (let i = 0; i < trackPointsWithNormals.length - 1; i++) {
+      const a = trackPointsWithNormals[i];
+      const b = trackPointsWithNormals[i + 1];
+
+      const tangent = new THREE.Vector3().subVectors(b, a).normalize();
+      const normal = new THREE.Vector3()
+        .crossVectors(tangent, new THREE.Vector3(0, 1, 0))
+        .normalize();
+      const center = new THREE.Vector3()
+        .crossVectors(tangent, normal)
+        .normalize();
+
+      const radius = 0.53;
+
+      for (let j = 0; j < 8; j++) {
+        const t = j / 7;
+        const centerPoint = a.clone().lerp(b, t);
+        const side = centerPoint
+          .clone()
+          .addScaledVector(normal, center.clone().multiplyScalar(radius));
+
+        const colorIndex = (j + Math.floor(t * 2)) % colors.length;
+
+        addTrackVoxel(
+          side.x,
+          side.y,
+          side.z,
+          colorIndex,
+          materialsArray[colorIndex]
+        );
+      }
+    }
+
+    // Raised center stripe, also made from colored voxels.
+    for (let i = 0; i < trackPointsWithNormals.length - 1; i++) {
+      const a = trackPointsWithNormals[i];
+      const b = trackPointsWithNormals[i + 1];
+
+      const tangent = new THREE.Vector3().subVectors(b, a).normalize();
+      const normal = new THREE.Vector3()
+        .crossVectors(tangent, new THREE.Vector3(0, 1, 0))
+        .normalize();
+      const center = new THREE.Vector3()
+        .crossVectors(tangent, normal)
+        .normalize();
+
+      const radius = 0.53;
+
+      for (let j = 0; j < 7; j++) {
+        const t = j / 6;
+        const centerPoint = a.clone().lerp(b, t);
+        const side = centerPoint
+          .clone()
+          .addScaledVector(center, radius);
+
+        const colorIndex = j % colors.length;
+
+        addTrackVoxel(
+          side.x,
+          side.y + 0.09,
+          side.z,
+          colorIndex,
+          materialsArray[colorIndex]
+        );
+      }
+    }
+
+    // Decorative side lights.
+    const lightColors = [
+      0xff334f,
+      0xffb347,
+      0x7dfff0,
+      0x55e6ff,
+      0x4a91ff,
+      0x4d8cff,
+      0x8b5cff,
+      0xe85cff
+    ];
+
+    for (let i = 0; i < trackPointsWithNormals.length; i++) {
+      const point = trackPointsWithNormals[i];
+      const side = point.center.clone().multiplyScalar(-0.9);
+
+      for (let j = 0; j < 3; j++) {
+        const lightPoint = side.clone().addScaledVector(
+          point.normal,
+          j * 0.22
+        );
+
+        const lightMaterial = new THREE.MeshStandardMaterial({
+          color: lightColors[(i + j) % lightColors.length],
+          emissive: lightColors[(i + j) % lightColors.length],
+          emissiveIntensity: 2.5,
+          roughness: 0.25
+        });
+
+        addTrackVoxel(
+          lightPoint.x,
+          lightPoint.y,
+          lightPoint.z,
+          0,
+          lightMaterial
+        );
+      }
+    }
+
+    // Background platform made from dark voxels.
+    const platform = new THREE.Group();
+
+    for (let x = -9; x <= 9; x += voxelSize) {
+      for (let z = -3; z <= 3; z += voxelSize) {
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x111827,
+          emissive: 0x07101f,
+          emissiveIntensity: 0.5,
+          roughness: 0.8
+        });
+
+        platform.add(voxel(x, -0.22, z, material, voxelSize * 0.9));
+      }
+    }
+
+    scene.add(platform);
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x7188ff, 0x080312, 0.65));
+
+    const keyLight = new THREE.PointLight(0x8ba9ff, 45, 18, 2);
+    keyLight.position.set(-2, 5, 3);
+    scene.add(keyLight);
+
+    const rimLight = new THREE.PointLight(0xff334f, 55, 16, 2);
+    rimLight.position.set(5, 2, -4);
+    scene.add(rimLight);
+
+    const starLight = new THREE.PointLight(0xffbd58, 45, 10, 2);
+    starLight.position.set(-0.35, 0.6, 0.25);
+    scene.add(starLight);
+
+    // ---------------------------------------------------------------------
+    // Direct camera controls
+    // ---------------------------------------------------------------------
+
+    const cameraState = {
+      theta: 0.68,
+      phi: 1.12,
+      radius: 13.5,
+      target: new THREE.Vector3(0, 1.1, 0)
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+
+      camera.position.set(
+        cameraState.target.x +
+          cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y +
+          cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z +
+          cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+
+      camera.lookAt(cameraState.target);
+    }
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const deltaX = event.clientX - previousX;
+      const deltaY = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      cameraState.theta -= deltaX * 0.006;
+      cameraState.phi = THREE.MathUtils.clamp(
+        cameraState.phi + deltaY * 0.005,
+        0.35,
+        Math.PI * 0.48
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+
+      if (
+        event.pointerId !== undefined &&
+        renderer.domElement.hasPointerCapture(event.pointerId)
+      ) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+
+        cameraState.radius = THREE.MathUtils.clamp(
+          cameraState.radius + event.deltaY * 0.008,
+          8,
+          22
+        );
+
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // ---------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle star bob and rotation.
+      star.position.y = Math.sin(elapsed * 1.25) * 0.08;
+      star.rotation.y = 0.18 + elapsed * 0.3;
+      star.rotation.z = Math.sin(elapsed * 0.8) * 0.08;
+
+      // Ghost follows the track and bobs.
+      ghost.position.x = 1.35 + Math.sin(elapsed * 0.72) * 0.18;
+      ghost.position.y = 0.15 + Math.sin(elapsed * 1.35) * 0.12;
+      ghost.rotation.y = -0.55 + Math.sin(elapsed * 0.55) * 0.12;
+      ghost.rotation.z = Math.sin(elapsed * 1.1) * 0.06;
+
+      // Pulsing emissive materials.
+      materials.ghost.emissiveIntensity =
+        1.45 + Math.sin(elapsed * 2.1) * 0.25;
+
+      materials.ghostPink.emissiveIntensity =
+        2.0 + Math.sin(elapsed * 2.1 + 0.8) * 0.45;
+
+      materials.ghostGreen.emissiveIntensity =
+        1.8 + Math.sin(elapsed * 2.1 + 1.4) * 0.4;
+
+      materials.star.emissiveIntensity =
+        1.75 + Math.sin(elapsed * 1.7) * 0.2;
+
+      renderer.render(scene, camera);
+    }
+
+    // ---------------------------------------------------------------------
+    // Resize
+    // ---------------------------------------------------------------------
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
