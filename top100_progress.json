@@ -17,5 +17,27 @@
     ],
     "attempts": 2,
     "updated_at": "2026-11-01 19:35 EST"
+  },
+  "2": {
+    "rank": 2,
+    "game": "Super Mario Bros.",
+    "name": "World 1-1",
+    "status": "parked",
+    "filename": "1002_super_mario_bros_world_1_1.html",
+    "measured": {
+      "x": 29.85,
+      "z": 29.87,
+      "y_max": 13.9,
+      "y_min": 0
+    },
+    "vision": {
+      "character": true,
+      "text_or_hud": true
+    },
+    "fails": [
+      "height 13.9 > 13"
+    ],
+    "attempts": 2,
+    "updated_at": "2026-11-01 19:47 EST"
   }
 }

@@ -61,5 +61,12 @@
     "sub": "Neutral Area Military Base",
     "system": "NES",
     "module": "modules/020.js"
+  },
+  {
+    "id": "1002",
+    "title": "Super Mario Bros.",
+    "sub": "World 1-1",
+    "system": "",
+    "module": "modules/1002.js"
   }
 ]
