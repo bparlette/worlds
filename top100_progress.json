@@ -48,5 +48,15 @@
     "fails": [],
     "attempts": 1,
     "updated_at": "2026-11-01 23:21 EST"
+  },
+  "4": {
+    "rank": 4,
+    "game": "Super Mario Bros. 3",
+    "name": "World 1-1 (gameplay)",
+    "status": "pass",
+    "filename": "1004-super_mario_bros_3_world_1_1_gameplay.html",
+    "fails": [],
+    "attempts": 1,
+    "updated_at": "2026-11-01 23:25 EST"
   }
 }

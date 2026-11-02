@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Mario Scene</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b8d8e8;
+      font-family: monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    #ui {
+      position: fixed;
+      left: 12px;
+      bottom: 12px;
+      z-index: 10;
+      padding: 12px 14px;
+      color: #f7f5e8;
+      background: #101820;
+      border: 4px solid #344650;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    #ui .label {
+      color: #8ba9bd;
+      font-size: 10px;
+    }
+
+    #ui .value {
+      color: #f7f5e8;
+      font-size: 12px;
+    }
+
+    #ui .stars {
+      margin-left: 14px;
+      color: #ffd76b;
+    }
+
+    #ui .items {
+      margin-left: 14px;
+    }
+
+    .item {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      margin-left: 4px;
+      border: 2px solid #71828f;
+      border-radius: 4px;
+      background: #26333d;
+    }
+
+    .item.mushroom {
+      background: #b94b55;
+      border-radius: 50%;
+    }
+
+    .item.heart {
+      background: #d84848;
+      border-radius: 50%;
+    }
+
+    #hint {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      color: #18313d;
+      background: rgba(235, 245, 249, 0.72);
+      border: 2px solid rgba(24, 49, 61, 0.2);
+      padding: 8px 10px;
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 650px) {
+      #ui {
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
+      }
+
+      #hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="hint">Drag to move • Scroll to zoom</div>
+  <div id="ui">
+    <div class="label">WORLD <span class="value">1</span></div>
+    <div class="label">M <span class="value">4</span></div>
+    <div class="label">C <span class="value">0017250</span></div>
+    <div class="label">T <span class="value">0252</span></div>
+    <div class="stars"><span>★</span><span>★</span><span>★</span><span>★★</span></div>
+    <div class="items">
+      <div class="item mushroom"></div>
+      <div class="item heart"></div>
+      <div class="item heart"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb8d8e8);
+    scene.fog = new THREE.Fog(0xb8d8e8, 22, 48);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    document.body.appendChild(renderer.domElement);
+
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x39b64a,
+        roughness: 0.95
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x55d65e,
+        roughness: 0.95
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x288a43,
+        roughness: 0.95
+      }),
+      brown: new THREE.MeshStandardMaterial({
+        color: 0x9a5a35,
+        roughness: 0.9
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xd67b55,
+        roughness: 0.85
+      }),
+      hat: new THREE.MeshStandardMaterial({
+        color: 0xdb453f,
+        roughness: 0.8
+      }),
+      shirt: new THREE.MeshStandardMaterial({
+        color: 0xe5c65c,
+        roughness: 0.8
+      }),
+      brick: new THREE.MeshStandardMaterial({
+        color: 0xc77842,
+        roughness: 0.95
+      }),
+      brickLight: new THREE.MeshStandardMaterial({
+        color: 0xe2a066,
+        roughness: 0.95
+      }),
+      pipe: new THREE.MeshStandardMaterial({
+        color: 0x38b649,
+        roughness: 0.85
+      }),
+      pipeDark: new THREE.MeshStandardMaterial({
+        color: 0x247a3f,
+        roughness: 0.9
+      }),
+      coin: new THREE.MeshStandardMaterial({
+        color: 0xe7b84f,
+        metalness: 0.25,
+        roughness: 0.45
+      }),
+      cloud: new THREE.MeshStandardMaterial({
+        color: 0xf3fbff,
+        roughness: 1
+      })
+    };
+
+    const voxel = (size, material, x, y, z, castShadow = true) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    const groundY = 0;
+    const groundZ = 0;
+
+    // Ground platform made from many small voxel tiles.
+    for (let x = -12; x <= 12; x += 1) {
+      for (let z = -8; z <= 8; z += 1) {
+        const edge = Math.max(0, 12 - Math.abs(x));
+        const side = z > 4 ? 1 : 0;
+        const height = side + (x > 7 ? 1 : 0);
+
+        if (x > 9 && z > 1) continue;
+
+        voxel(
+          0.88,
+          Math.random() > 0.22 ? materials.grass : materials.grassLight,
+          x,
+          height * 0.48,
+          z,
+          false
+        );
+      }
+    }
+
+    // Sloped hill on the right.
+    for (let x = 9; x <= 15; x += 1) {
+      for (let z = -6; z <= 6; z += 1) {
+        const y = Math.max(0, 1 - (x - 9) * 0.45 + (z > 3 ? 1 : 0));
+        voxel(
+          0.9,
+          Math.random() > 0.3 ? materials.grass : materials.grassDark,
+          x,
+          y * 0.5,
+          z,
+          false
+        );
+      }
+    }
+
+    // Ground grass tufts.
+    const tuftColors = [materials.grassLight, materials.grassDark];
+    for (let i = 0; i < 22; i++) {
+      const x = -11 + Math.random() * 22;
+      const z = -6 + Math.random() * 12;
+      const y = 0.55;
+      const tuft = new THREE.Group();
+
+      for (let j = 0; j < 3; j++) {
+        const blade = new THREE.Mesh(
+          new THREE.ConeGeometry(0.18, 0.65 + Math.random() * 0.3, 3),
+          tuftColors[j % 2]
+        );
+        blade.position.set(
+          (Math.random() - 0.5) * 0.45,
+          0.28,
+          (Math.random() - 0.5) * 0.45
+        );
+        blade.rotation.y = Math.random() * Math.PI;
+        tuft.add(blade);
+      }
+
+      tuft.position.set(x, y, z);
+      scene.add(tuft);
+    }
+
+    // Blocky clouds.
+    function makeCloud(x, y, z, scale = 1) {
+      const cloud = new THREE.Group();
+      const pieces = [
+        [-1.4, 0, 0, 1.1],
+        [-0.45, 0.25, 0, 1.45],
+        [0.65, 0.1, 0, 1.2],
+        [1.55, -0.05, 0, 0.75],
+        [0.15, -0.35, 0, 1.35]
+      ];
+
+      for (const [px, py, pz, size] of pieces) {
+        const puff = new THREE.Mesh(
+          new THREE.BoxGeometry(size, size * 0.65, size * 0.75),
+          materials.cloud
+        );
+        puff.position.set(px, py, pz);
+        cloud.add(puff);
+      }
+
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
+      scene.add(cloud);
+    }
+
+    makeCloud(-5, 7.5, -3, 1.15);
+    makeCloud(4, 10, -5, 0.9);
+    makeCloud(10, 6.5, -2, 0.8);
+
+    // Brick wall.
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 4; col++) {
+        const x = -4.5 + col;
+        const y = 1.1 + row * 0.55;
+        const material = row % 2 === 0 ? materials.brick : materials.brickLight;
+        voxel(
+          0.58,
+          material,
+          x,
+          y,
+          -1.4,
+          true
+        );
+      }
+    }
+
+    // Pipe structure.
+    const pipeX = -2.5;
+    const pipeY = 5.6;
+    const pipeZ = 0.3;
+
+    for (let layer = 0; layer < 4; layer++) {
+      voxel(
+        1.15,
+        materials.pipeDark,
+        pipeX,
+        pipeY + layer * 0.8,
+        pipeZ,
+        true
+      );
+
+      voxel(
+        0.12,
+        materials.pipe,
+        pipeX + 0.58,
+        pipeY + layer * 0.8,
+        pipeZ,
+        false
+      );
+    }
+
+    // Pipe cap.
+    const cap = new THREE.Mesh(
+      new THREE.BoxGeometry(1.25, 0.28, 1.25),
+      materials.pipe
+    );
+    cap.position.set(pipeX, pipeY + 3.2, pipeZ);
+    cap.castShadow = true;
+    scene.add(cap);
+
+    // Flower on pipe cap.
+    const flower = new THREE.Group();
+    const petals = [
+      [-0.24, 0.05, 0, 0.2],
+      [0.02, 0.12, 0, 0.22],
+      [0.25, 0.03, 0, 0.2],
+      [-0.08, -0.08, 0.02, 0.2],
+      [0.08, -0.08, -0.02, 0.2]
+    ];
+
+    for (const [x, y, z, size] of petals) {
+      const petal = new THREE.Mesh(
+        new THREE.ConeGeometry(size, 0.32, 3),
+        materials.grassLight
+      );
+      petal.position.set(x, y, z);
+      petal.rotation.z = x * 2.5;
+      flower.add(petal);
+    }
+
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 10, 8),
+      materials.brickLight
+    );
+    center.position.y = 0.12;
+    flower.add(center);
+    flower.position.set(pipeX, pipeY + 3.42, pipeZ);
+    scene.add(flower);
+
+    // Mario voxel character.
+    const mario = new THREE.Group();
+    mario.position.set(0.25, 0.55, 0.1);
+
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.31, 0.38, 0.75, 8),
+      materials.shirt
+    );
+    body.position.y = 0.42;
+    body.castShadow = true;
+    mario.add(body);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 12, 10),
+      materials.skin
+    );
+    head.position.y = 1.05;
+    head.castShadow = true;
+    mario.add(head);
+
+    const hat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.39, 0.43, 0.18, 12),
+      materials.hat
+    );
+    hat.position.y = 1.37;
+    hat.castShadow = true;
+    mario.add(hat);
+
+    const hatBrim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.48, 0.48, 0.07, 12),
+      materials.hat
+    );
+    hatBrim.position.y = 1.28;
+    hatBrim.castShadow = true;
+    mario.add(hatBrim);
+
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.065, 0.18, 8),
+      materials.skin
+    );
+    nose.position.set(0, 1.04, 0.34);
+    nose.rotation.x = -Math.PI / 2;
+    mario.add(nose);
+
+    const leftEye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 8, 6),
+      materials.skin
+    );
+    leftEye.position.set(-0.11, 1.1, 0.31);
+    mario.add(leftEye);
+
+    const rightEye = leftEye.clone();
+    rightEye.position.x = 0.11;
+    mario.add(rightEye);
+
+    const leftArm = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.15, 0.55, 8),
+      materials.shirt
+    );
+    leftArm.position.set(-0.38, 0.45, 0);
+    leftArm.rotation.z = -0.35;
+    leftArm.castShadow = true;
+    mario.add(leftArm);
+
+    const rightArm = leftArm.clone();
+    rightArm.position.x = 0.38;
+    rightArm.rotation.z = 0.35;
+    mario.add(rightArm);
+
+    const leftLeg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.16, 0.45, 8),
+      materials.hat
+    );
+    leftLeg.position.set(-0.14, 0.12, 0.02);
+    leftLeg.rotation.z = -0.1;
+    leftLeg.castShadow = true;
+    mario.add(leftLeg);
+
+    const rightLeg = leftLeg.clone();
+    rightLeg.position.x = 0.14;
+    rightLeg.rotation.z = 0.1;
+    mario.add(rightLeg);
+
+    mario.rotation.y = -0.45;
+    scene.add(mario);
+
+    // Coin.
+    const coin = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.27, 0.27, 0.12, 16),
+      materials.coin
+    );
+    coin.position.set(-4.7, 3.25, 1.2);
+    coin.rotation.z = -0.2;
+    coin.castShadow = true;
+    scene.add(coin);
+
+    // Small pixel coin ring.
+    const coinRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.29, 0.045, 6, 18),
+      materials.coin
+    );
+    coinRing.position.set(-4.7, 3.3, 1.2);
+    coinRing.rotation.x = Math.PI / 2;
+    scene.add(coinRing);
+
+    // Floating particle.
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.11, 8, 6),
+      materials.coin
+    );
+    particle.position.set(-1.7, 7.4, 1.6);
+    scene.add(particle);
+
+    // Custom orbit controls.
+    let target = new THREE.Vector3(0, 3, 0);
+    let azimuth = 0.55;
+    let polar = 1.35;
+    let radius = 23;
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      camera.position.set(
+        target.x + radius * Math.sin(polar) * Math.sin(azimuth),
+        target.y + radius * Math.cos(polar),
+        target.z + radius * Math.sin(polar) * Math.cos(azimuth)
+      );
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const deltaX = event.clientX - previousX;
+      const deltaY = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      azimuth -= deltaX * 0.006;
+      polar = THREE.MathUtils.clamp(polar + deltaY * 0.005, 0.75, 2.1);
+      updateCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      dragging = false;
+    });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      radius = THREE.MathUtils.clamp(radius + event.deltaY * 0.012, 12, 34);
+      updateCamera();
+    }, { passive: false });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // Gentle animation.
+    const clock = new THREE.Clock();
+    let elapsed = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      elapsed += delta;
+
+      mario.position.x = 0.25 + Math.sin(elapsed * 1.8) * 0.08;
+      mario.rotation.y = -0.45 + Math.sin(elapsed * 1.8) * 0.12;
+      mario.position.y = 0.55 + Math.sin(elapsed * 2.2) * 0.025;
+
+      coin.rotation.z += delta * 0.45;
+      particle.position.y += delta * 0.22;
+      particle.position.x += Math.sin(elapsed * 1.4) * delta * 0.08;
+      if (particle.position.y > 7.9) particle.position.y = 6.7;
+
+      flower.rotation.y += delta * 0.25;
+
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
