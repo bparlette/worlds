@@ -231,6 +231,13 @@
     "module": "modules/083.js"
   },
   {
+    "id": "084",
+    "title": "World of Warcraft: Legion",
+    "sub": "Azsuna",
+    "system": "Console",
+    "module": "modules/084.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
