@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>The Back Rooms — Walk the Rendered 100</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #17130b;
+    font-family: Georgia, 'Times New Roman', serif; color: #e8dcc0; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; touch-action: none; }
+  .hud { position: fixed; z-index: 10; pointer-events: none; }
+  #title { top: 10px; left: 12px; font-size: 15px; letter-spacing: 2px; color: #d8c690;
+    text-shadow: 0 1px 3px #000; }
+  #title small { display: block; letter-spacing: 0; font-size: 11px; color: #a8976e; margin-top: 2px; }
+  #title a { color: #d8c690; pointer-events: auto; }
+  #picker { top: 10px; right: 12px; pointer-events: auto; display: flex; gap: 6px; }
+  #picker select { max-width: 46vw; background: #241c10; color: #e8dcc0; border: 1px solid #6b5a33;
+    border-radius: 6px; padding: 6px; font-size: 13px; }
+  #picker button { background: #6b5a33; color: #fff8e6; border: 0; border-radius: 6px;
+    padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  #readout { left: 50%; bottom: 18px; transform: translateX(-50%); text-align: center;
+    background: rgba(16, 12, 6, .78); border: 1px solid #6b5a33; border-radius: 10px;
+    padding: 8px 16px; font-size: 15px; max-width: 92vw; }
+  #readout .sub { font-size: 12px; color: #bfae85; margin-top: 2px; }
+  #hint { left: 12px; bottom: 18px; font-size: 12px; color: #a8976e; text-shadow: 0 1px 2px #000;
+    transition: opacity 1.2s; }
+  #cross { left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 14px; color: rgba(232,220,192,.65); }
+  #start { position: fixed; inset: 0; z-index: 20; background: radial-gradient(ellipse at center, #2b2113 0%, #17130b 75%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; }
+  #start h1 { font-size: clamp(26px, 6vw, 44px); letter-spacing: 4px; margin: 0 0 6px; color: #e8d28a; font-weight: normal; }
+  #start p { margin: 4px 20px; color: #bfae85; font-size: clamp(13px, 2.6vw, 16px); max-width: 560px; line-height: 1.5; }
+  #start .go { margin-top: 18px; border: 1px solid #a8894a; color: #ffe9ad; padding: 10px 26px;
+    border-radius: 8px; font-size: 17px; letter-spacing: 2px; background: rgba(107, 90, 51, .35); }
+  #err { position: fixed; z-index: 30; left: 50%; top: 40%; transform: translateX(-50%);
+    background: #3a1414; border: 1px solid #a33; color: #fdd; padding: 12px 18px; border-radius: 8px; display: none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="hud" id="title">THE BACK ROOMS<small>walk the rendered 100 · <a href="rendered.html">grid view</a></small></div>
+<div class="hud" id="picker">
+  <select id="jump"></select>
+  <button id="jumpBtn">Walk to it</button>
+</div>
+<div class="hud" id="cross">·</div>
+<div class="hud" id="readout"><div id="roMain">…</div><div class="sub" id="roSub"></div></div>
+<div class="hud" id="hint">WASD / arrows to walk · drag to look · Shift runs<br>on touch: left thumb walks, right thumb looks</div>
+<div id="start">
+  <h1>THE BACK ROOMS</h1>
+  <p>One hundred beloved game worlds, re-rendered in 3D by their fans, hung in ten
+     long yellow halls. Walk them in order, or jump straight to a favorite.
+     Face a painting and tap it to open the original 3D model.</p>
+  <div class="go">ENTER</div>
+</div>
+<div id="err"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const HALLS = 10, PER_HALL = 10;
+const HALL_LEN = 64, HALL_W = 7, HALL_H = 4.2, PITCH = 12;
+const EYE = 1.6, RADIUS = 0.35;
+const SLOT_X = [8, 19, 30, 41, 52];
+
+let entries = [];
+try {
+  const r = await fetch('rendered100.json');
+  entries = await r.json();
+} catch (e) {
+  document.getElementById('err').style.display = 'block';
+  document.getElementById('err').textContent = 'Could not load rendered100.json — the paintings are missing.';
+  throw e;
+}
+entries = entries.slice(0, HALLS * PER_HALL);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x17130b);
+scene.fog = new THREE.Fog(0x17130b, 18, 55);
+const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 120);
+
+scene.add(new THREE.HemisphereLight(0xfff2cf, 0x3a2c17, 1.05));
+const fill = new THREE.DirectionalLight(0xffe9bb, 0.5);
+fill.position.set(10, 20, 6);
+scene.add(fill);
+
+// ---------------------------------------------------------------- materials
+const wallMat  = new THREE.MeshStandardMaterial({ color: 0xb39b58, roughness: 0.94 });
+const wallMat2 = new THREE.MeshStandardMaterial({ color: 0xa8904f, roughness: 0.94 });
+const trimMat  = new THREE.MeshStandardMaterial({ color: 0x6e5626, roughness: 0.8 });
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x77683f, roughness: 1 });
+const ceilMat  = new THREE.MeshStandardMaterial({ color: 0xcfc096, roughness: 0.95 });
+const lightMat = new THREE.MeshStandardMaterial({ color: 0xfff6da, emissive: 0xffedb8, emissiveIntensity: 1.6 });
+const frameMat = new THREE.MeshStandardMaterial({ color: 0x2e2113, roughness: 0.6, metalness: 0.25 });
+const frameHot = new THREE.MeshStandardMaterial({ color: 0x8a6a24, roughness: 0.45, metalness: 0.4, emissive: 0x664d12, emissiveIntensity: 0.4 });
+const plaqueMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
+
+// ------------------------------------------------------------ walkable area
+// Union of axis-aligned rectangles (halls + end connectors), shrunk by RADIUS
+// at test time. Movement is accepted only inside the union -> no wall clipping.
+const walkRects = [];
+const hallZ = i => i * PITCH;
+for (let i = 0; i < HALLS; i++) walkRects.push({ x0: 0, x1: HALL_LEN, z0: hallZ(i) - HALL_W / 2, z1: hallZ(i) + HALL_W / 2 });
+// connector between hall i and i+1 sits at the east end for even i, west for odd i
+const connEnd = i => (i % 2 === 0 ? HALL_LEN : 0); // end shared by hall i -> i+1
+for (let i = 0; i < HALLS - 1; i++) {
+  const cx = connEnd(i);
+  walkRects.push({ x0: cx - 1.7, x1: cx + 1.7, z0: hallZ(i) - HALL_W / 2, z1: hallZ(i + 1) + HALL_W / 2 });
+}
+function inside(x, z) {
+  for (const r of walkRects) {
+    if (x >= r.x0 + RADIUS && x <= r.x1 - RADIUS && z >= r.z0 + RADIUS && z <= r.z1 - RADIUS) return true;
+  }
+  return false;
+}
+
+// ------------------------------------------------------------------- shells
+const box = (w, h, d, mat, x, y, z, parent = scene) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z); parent.add(m); return m;
+};
+for (let i = 0; i < HALLS; i++) {
+  const zc = hallZ(i), g = new THREE.Group(); scene.add(g);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(HALL_LEN + 4, HALL_W), floorMat);
+  floor.rotation.x = -Math.PI / 2; floor.position.set(HALL_LEN / 2, 0, zc); g.add(floor);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(HALL_LEN + 4, HALL_W), ceilMat);
+  ceil.rotation.x = Math.PI / 2; ceil.position.set(HALL_LEN / 2, HALL_H, zc); g.add(ceil);
+  box(HALL_LEN + 4, HALL_H, 0.3, i % 2 ? wallMat2 : wallMat, HALL_LEN / 2, HALL_H / 2, zc - HALL_W / 2 - 0.15, g);
+  box(HALL_LEN + 4, HALL_H, 0.3, i % 2 ? wallMat : wallMat2, HALL_LEN / 2, HALL_H / 2, zc + HALL_W / 2 + 0.15, g);
+  box(HALL_LEN + 4, 0.5, 0.06, trimMat, HALL_LEN / 2, 0.25, zc - HALL_W / 2 + 0.02, g);
+  box(HALL_LEN + 4, 0.5, 0.06, trimMat, HALL_LEN / 2, 0.25, zc + HALL_W / 2 - 0.02, g);
+  for (let x = 4; x < HALL_LEN; x += 8) box(3.4, 0.06, 1.1, lightMat, x, HALL_H - 0.03, zc, g);
+  // end walls, leaving a 3.4-wide gap where a connector joins
+  const gapW = HALL_W / 2 - 1.7;
+  const ends = [
+    { x: -0.15, gap: i > 0 && connEnd(i - 1) === 0 },
+    { x: HALL_LEN + 0.15, gap: i < HALLS - 1 && connEnd(i) === HALL_LEN },
+  ];
+  for (const e of ends) {
+    if (e.gap) {
+      box(0.3, HALL_H, gapW, wallMat, e.x, HALL_H / 2, zc - HALL_W / 2 + gapW / 2, g);
+      box(0.3, HALL_H, gapW, wallMat, e.x, HALL_H / 2, zc + HALL_W / 2 - gapW / 2, g);
+      box(0.3, 0.7, 3.4, wallMat, e.x, HALL_H - 0.35, zc, g); // lintel above the doorway
+    } else {
+      box(0.3, HALL_H, HALL_W, wallMat, e.x, HALL_H / 2, zc, g);
+    }
+  }
+  // hall number carved over each doorway end
+  const tag = document.createElement('canvas'); tag.width = 256; tag.height = 96;
+  const tc = tag.getContext('2d');
+  tc.fillStyle = '#241a0c'; tc.fillRect(0, 0, 256, 96);
+  tc.fillStyle = '#e8d28a'; tc.font = '44px Georgia'; tc.textAlign = 'center';
+  tc.fillText('HALL ' + (i + 1), 128, 60);
+  const tagTex = new THREE.CanvasTexture(tag);
+  const tagMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.82),
+    new THREE.MeshStandardMaterial({ map: tagTex, roughness: 0.85 }));
+  tagMesh.position.set(HALL_LEN / 2, HALL_H - 0.75, zc - HALL_W / 2 + 0.02);
+  g.add(tagMesh);
+}
+// connector shells
+for (let i = 0; i < HALLS - 1; i++) {
+  const cx = connEnd(i), z0 = hallZ(i), z1 = hallZ(i + 1), zm = (z0 + z1) / 2, len = z1 - z0;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(3.4, len), floorMat);
+  floor.rotation.x = -Math.PI / 2; floor.position.set(cx, 0, zm); scene.add(floor);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(3.4, len), ceilMat);
+  ceil.rotation.x = Math.PI / 2; ceil.position.set(cx, HALL_H, zm); scene.add(ceil);
+  box(0.3, HALL_H, len, wallMat, cx - 1.85, HALL_H / 2, zm);
+  box(0.3, HALL_H, len, wallMat, cx + 1.85, HALL_H / 2, zm);
+  box(3.4, 0.06, 1.1, lightMat, cx, HALL_H - 0.03, zm);
+}
+
+// ------------------------------------------------------------------ murals
+const murals = [];      // {plane, frame, entry, n, hall, texLoaded}
+const loader = new THREE.TextureLoader();
+loader.setCrossOrigin('anonymous');
+
+function plaqueTexture(e, n) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 144;
+  const x = c.getContext('2d');
+  x.fillStyle = '#171208'; x.fillRect(0, 0, 512, 144);
+  x.strokeStyle = '#a8894a'; x.lineWidth = 4; x.strokeRect(4, 4, 504, 136);
+  x.fillStyle = '#e8d28a'; x.font = 'bold 34px Georgia'; x.textAlign = 'center';
+  x.fillText('#' + n + '  ' + e.game, 256, 48, 480);
+  x.fillStyle = '#f2ead2'; x.font = '28px Georgia';
+  x.fillText(e.name, 256, 86, 480);
+  x.fillStyle = '#a8976e'; x.font = '22px Georgia';
+  x.fillText('by ' + (e.author || '?') + '  ·  ♥ ' + (e.likes ?? ''), 256, 120, 480);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+for (let i = 0; i < entries.length; i++) {
+  const e = entries[i], n = i + 1;
+  const hall = Math.floor(i / PER_HALL), slot = i % PER_HALL;
+  const side = slot < 5 ? -1 : 1;                    // -1 north wall, +1 south wall
+  const x = SLOT_X[slot % 5], zc = hallZ(hall);
+  const z = zc + side * (HALL_W / 2 - 0.06);
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  g.rotation.y = side < 0 ? 0 : Math.PI;
+  scene.add(g);
+  const frame = box(4.1, 2.62, 0.1, frameMat, 0, 2.15, 0, g);
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 2.08),
+    new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 }));
+  plane.position.set(0, 2.15, 0.06);
+  g.add(plane);
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.53),
+    new THREE.MeshStandardMaterial({ map: plaqueTexture(e, n), roughness: 0.85 }));
+  plaque.position.set(0, 0.62, 0.06);
+  g.add(plaque);
+  plane.userData.mural = murals.length;
+  murals.push({ plane, frame, entry: e, n, hall, texLoaded: false });
+}
+
+const texFor = m => {
+  if (m.texLoaded) return;
+  m.texLoaded = true;
+  loader.load(m.entry.image_url, t => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    m.plane.material.map = t;
+    m.plane.material.color.set(0xffffff);
+    m.plane.material.needsUpdate = true;
+    m.tex = t;
+  }, undefined, () => { m.texLoaded = false; });
+};
+const dropTex = m => {
+  if (m.tex) { m.tex.dispose(); m.tex = null; m.plane.material.map = null; m.plane.material.color.set(0x3a3a3a); m.plane.material.needsUpdate = true; }
+  m.texLoaded = false;
+};
+
+// ------------------------------------------------------------------ picker
+const jump = document.getElementById('jump');
+for (const m of murals) {
+  const o = document.createElement('option');
+  o.value = m.n - 1;
+  o.textContent = '#' + m.n + ' ' + m.entry.game + ' — ' + m.entry.name;
+  jump.appendChild(o);
+}
+
+// ------------------------------------------------------------------ player
+const player = { x: 3, z: hallZ(0), yaw: -Math.PI / 2, pitch: 0, vx: 0, vz: 0 };
+function faceMural(idx) {
+  const m = murals[idx];
+  const p = new THREE.Vector3(); m.plane.getWorldPosition(p);
+  const back = new THREE.Vector3(0, 0, 1).applyQuaternion(m.plane.getWorldQuaternion(new THREE.Quaternion()));
+  player.x = p.x + back.x * 3.4;
+  player.z = p.z + back.z * 3.4;
+  const dx = p.x - player.x, dz = p.z - player.z;
+  player.yaw = Math.atan2(-dx, -dz);
+  player.pitch = 0; player.vx = player.vz = 0;
+}
+document.getElementById('jumpBtn').addEventListener('click', () => faceMural(+jump.value));
+jump.addEventListener('change', () => faceMural(+jump.value));
+
+const keys = {};
+addEventListener('keydown', e => { keys[e.code] = true; });
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+// pointer look + tap detection + floating joystick (gamepress standard)
+const canvas = renderer.domElement;
+let lookId = null, lookLX = 0, lookLY = 0, downT = 0, downX = 0, downY = 0;
+let joyId = null, joyAX = 0, joyAY = 0, joyDX = 0, joyDY = 0;
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  if (e.clientX < window.innerWidth * 0.45 && joyId === null && e.pointerType === 'touch') {
+    joyId = e.pointerId; joyAX = e.clientX; joyAY = e.clientY; joyDX = joyDY = 0;
+  } else if (lookId === null) {
+    lookId = e.pointerId; lookLX = e.clientX; lookLY = e.clientY;
+    downT = performance.now(); downX = e.clientX; downY = e.clientY;
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerId === lookId) {
+    player.yaw -= (e.clientX - lookLX) * 0.0032;
+    player.pitch -= (e.clientY - lookLY) * 0.0032;
+    player.pitch = Math.max(-1.25, Math.min(1.25, player.pitch));
+    lookLX = e.clientX; lookLY = e.clientY;
+  } else if (e.pointerId === joyId) {
+    joyDX = Math.max(-52, Math.min(52, e.clientX - joyAX));
+    joyDY = Math.max(-52, Math.min(52, e.clientY - joyAY));
+  }
+});
+const endPointer = e => {
+  if (e.pointerId === lookId) {
+    if (performance.now() - downT < 400 && Math.hypot(e.clientX - downX, e.clientY - downY) < 6 && targeted) {
+      window.open(targeted.entry.page_url, '_blank');
+    }
+    lookId = null;
+  }
+  if (e.pointerId === joyId) { joyId = null; joyDX = joyDY = 0; }
+};
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// ---------------------------------------------------------------- targeting
+const ray = new THREE.Raycaster();
+ray.far = 6.5;
+let targeted = null;
+const roMain = document.getElementById('roMain'), roSub = document.getElementById('roSub');
+function updateTarget() {
+  ray.setFromCamera({ x: 0, y: 0 }, camera);
+  const hits = ray.intersectObjects(murals.map(m => m.plane), false);
+  const m = hits.length ? murals[hits[0].object.userData.mural] : null;
+  if (m !== targeted) {
+    if (targeted) targeted.frame.material = frameMat;
+    targeted = m;
+    if (targeted) targeted.frame.material = frameHot;
+  }
+  const hall = Math.max(0, Math.min(HALLS - 1, Math.round(player.z / PITCH)));
+  if (targeted) {
+    roMain.textContent = '#' + targeted.n + '  ' + targeted.entry.game + ' — ' + targeted.entry.name;
+    roSub.textContent = 'by ' + (targeted.entry.author || '?') + ' · ♥ ' + (targeted.entry.likes ?? '') + ' · tap the painting to open the 3D model';
+  } else {
+    const a = hall * PER_HALL + 1, b = Math.min(entries.length, a + PER_HALL - 1);
+    roMain.textContent = 'Hall ' + (hall + 1) + ' · paintings #' + a + '–' + b;
+    roSub.textContent = 'face a painting to see its name';
+  }
+}
+
+// -------------------------------------------------------------------- loop
+const clock = new THREE.Clock();
+let texTimer = 0;
+function currentHall() { return Math.max(0, Math.min(HALLS - 1, Math.round(player.z / PITCH))); }
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  // input vector in camera space
+  let ix = 0, iz = 0;
+  if (keys.KeyW || keys.ArrowUp) iz -= 1;
+  if (keys.KeyS || keys.ArrowDown) iz += 1;
+  if (keys.KeyA || keys.ArrowLeft) ix -= 1;
+  if (keys.KeyD || keys.ArrowRight) ix += 1;
+  if (joyId !== null) { ix += joyDX / 52; iz += joyDY / 52; }
+  const run = (keys.ShiftLeft || keys.ShiftRight) ? 2.1 : 1;
+  const speed = 3.4 * run;
+  const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
+  // Ground basis for a YXZ camera: forward F = (-sin(yaw), -cos(yaw)); right R = (-F.z, F.x)
+  const fx = -sin, fz = -cos;
+  const rx = -fz, rz = fx;
+  const mx = (rx * ix + fx * -iz) * speed;
+  const mz = (rz * ix + fz * -iz) * speed;
+  player.vx += (mx - player.vx) * Math.min(1, dt * 10);
+  player.vz += (mz - player.vz) * Math.min(1, dt * 10);
+  const nx = player.x + player.vx * dt, nz = player.z + player.vz * dt;
+  if (inside(nx, player.z)) player.x = nx;
+  if (inside(player.x, nz)) player.z = nz;
+  camera.position.set(player.x, EYE, player.z);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = player.yaw;
+  camera.rotation.x = player.pitch;
+  texTimer -= dt;
+  if (texTimer <= 0) {
+    texTimer = 0.3;
+    const h = currentHall();
+    for (const m of murals) {
+      if (Math.abs(m.hall - h) <= 1) texFor(m); else dropTex(m);
+    }
+  }
+  updateTarget();
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+const startEl = document.getElementById('start');
+startEl.addEventListener('click', () => {
+  startEl.style.display = 'none';
+  setTimeout(() => { document.getElementById('hint').style.opacity = '0'; }, 7000);
+});
+</script>
+</body>
+</html>
