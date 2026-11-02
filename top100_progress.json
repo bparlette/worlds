@@ -58,5 +58,15 @@
     "fails": [],
     "attempts": 1,
     "updated_at": "2026-11-01 23:25 EST"
+  },
+  "7": {
+    "rank": 7,
+    "game": "Marvel Super Heroes vs. Street Fighter",
+    "name": "Death Valley",
+    "status": "pass",
+    "filename": "1007-marvel_super_heroes_vs_street_fighter_death_valley.html",
+    "fails": [],
+    "attempts": 1,
+    "updated_at": "2026-11-01 23:30 EST"
   }
 }

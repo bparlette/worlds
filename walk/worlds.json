@@ -14,13 +14,6 @@
     "module": "modules/002.js"
   },
   {
-    "id": "003",
-    "title": "H.E.R.O.",
-    "sub": "Level 12",
-    "system": "Atari 2600",
-    "module": "modules/003.js"
-  },
-  {
     "id": "004",
     "title": "YARS' REVENGE",
     "sub": "Neutral Zone & Shield",
@@ -36,9 +29,9 @@
   },
   {
     "id": "007",
-    "title": "Mountain King",
-    "sub": "Diamond Caverns",
-    "system": "Atari 2600",
+    "title": "Marvel Super Heroes vs. Street Fighter",
+    "sub": "Death Valley",
+    "system": "Arcade",
     "module": "modules/007.js"
   },
   {
