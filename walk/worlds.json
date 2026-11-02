@@ -287,6 +287,13 @@
     "module": "modules/093.js"
   },
   {
+    "id": "096",
+    "title": "Tomb Raider",
+    "sub": "Croft Manor — Pool Room",
+    "system": "Console",
+    "module": "modules/096.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",

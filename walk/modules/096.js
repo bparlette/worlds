@@ -1,0 +1,1088 @@
+// @world {"id": "096", "title": "Tomb Raider", "sub": "Croft Manor \u2014 Pool Room", "system": "Console"}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    return {
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0x090909);
+    scene.fog = new THREE.FogExp2(0x090909, 0.022);
+
+    camera = dummyCamera();
+
+    // Direct, dependency-free camera controls.
+    const controls = {
+      yaw: -0.52,
+      pitch: 0.22,
+      distance: 13.5,
+      target: new THREE.Vector3(0, 2.2, 0),
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+      keys: new Set(),
+      speed: 4.5
+    };
+
+    function updateCamera() {
+      const horizontal = Math.cos(controls.pitch) * controls.distance;
+      camera.position.set(
+        controls.target.x + Math.sin(controls.yaw) * horizontal,
+        controls.target.y + Math.sin(controls.pitch) * controls.distance,
+        controls.target.z - Math.cos(controls.yaw) * horizontal
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    // -------------------------------------------------------------------------
+    // Deterministic random helpers
+    // -------------------------------------------------------------------------
+
+    let randomSeed = 481516;
+
+    function random() {
+      randomSeed =
+        (randomSeed * 1664525 + 1013904223) >>> 0;
+      return randomSeed / 4294967296;
+    }
+
+    function randomRange(min, max) {
+      return min + (max - min) * random();
+    }
+
+    function hash(x, z) {
+      const value = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+      return value - Math.floor(value);
+    }
+
+    // -------------------------------------------------------------------------
+    // Procedural textures
+    // -------------------------------------------------------------------------
+
+    function makeFrescoTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 384;
+
+      const ctx = canvas.getContext("2d");
+
+      // Warm plaster background.
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#a97845");
+      gradient.addColorStop(0.5, "#76502e");
+      gradient.addColorStop(1, "#3d2b20");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Layered decorative bands.
+      ctx.fillStyle = "#241c17";
+      ctx.fillRect(0, 0, canvas.width, 22);
+      ctx.fillRect(0, 362, canvas.width, 22);
+      ctx.fillRect(0, 332, canvas.width, 8);
+      ctx.fillRect(0, 93, canvas.width, 5);
+
+      // Painted figures.
+      const figureColors = ["#b77b45", "#8f5932", "#c18a50", "#6d4930"];
+
+      function drawFigure(x, y, scale, rotation = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation);
+
+        ctx.fillStyle = figureColors[Math.floor(random() * figureColors.length)];
+        ctx.globalAlpha = 0.78;
+
+        // Draped body.
+        ctx.beginPath();
+        ctx.moveTo(0, 12);
+        ctx.bezierCurveTo(-4, 2, -3, -18, 0, -42);
+        ctx.bezierCurveTo(3, -18, 4, 2, 0, 12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Head and shoulders.
+        ctx.beginPath();
+        ctx.arc(0, 15, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#332820";
+        ctx.fillRect(-4.2, 18.4, 8.4, 2.4);
+
+        // Arms.
+        ctx.strokeStyle = figureColors[Math.floor(random() * figureColors.length)];
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-3.4, 20);
+        ctx.lineTo(-7, -8);
+        ctx.lineTo(-8, 7);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(3.4, 20);
+        ctx.lineTo(7, -8);
+        ctx.lineTo(8, 7);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      for (let x = 70; x < canvas.width - 70; x += 48) {
+        drawFigure(x, 218, randomRange(0.85, 1.15), randomRange(-0.18, 0.18));
+      }
+
+      // Decorative motifs.
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = "#493729";
+      ctx.lineWidth = 3;
+
+      for (let x = 70; x < canvas.width; x += 48) {
+        for (let y = 98; y < 315; y += 38) {
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(x - 11, y - 8);
+          ctx.lineTo(x + 11, y + 8);
+          ctx.moveTo(x + 11, y - 8);
+          ctx.lineTo(x - 11, y + 8);
+          ctx.stroke();
+        }
+      }
+
+      ctx.globalAlpha = 1;
+
+      // Cracked, aged surface.
+      ctx.globalAlpha = 0.16;
+      ctx.strokeStyle = "#241b15";
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i < 190; i++) {
+        const x = random() * canvas.width;
+        const y = random() * canvas.height;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          x + randomRange(-18, 18),
+          y + randomRange(-18, 18)
+        );
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(3, 1);
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return texture;
+    }
+
+    function makeStoneTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#817766";
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let i = 0; i < 1800; i++) {
+        const shade = Math.floor(randomRange(85, 175));
+        ctx.fillStyle = `rgba(${shade},${shade - 4},${shade - 13},${randomRange(0.04, 0.22)})`;
+        const size = randomRange(1, 8);
+        ctx.fillRect(random() * 512, random() * 512, size, size);
+      }
+
+      for (let i = 0; i < 70; i++) {
+        ctx.strokeStyle = "rgba(35,30,25,0.15)";
+        ctx.lineWidth = randomRange(0.5, 2);
+        ctx.beginPath();
+        const x = random() * 512;
+        const y = random() * 512;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + randomRange(-20, 20), y + randomRange(-20, 20));
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(4, 4);
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return texture;
+    }
+
+    function makeWaterTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext("2d");
+
+      const gradient = ctx.createRadialGradient(256, 256, 10, 256, 256, 360);
+      gradient.addColorStop(0, "#143c49");
+      gradient.addColorStop(0.55, "#082835");
+      gradient.addColorStop(1, "#04131d");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let i = 0; i < 180; i++) {
+        const x = random() * 512;
+        const y = random() * 512;
+        const length = randomRange(4, 35);
+
+        ctx.strokeStyle = `rgba(76,183,205,${randomRange(0.08, 0.38)})`;
+        ctx.lineWidth = randomRange(0.6, 2.2);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.bezierCurveTo(
+          x + length * 0.3,
+          y - randomRange(5, 18),
+          x - length * 0.3,
+          y + randomRange(5, 18),
+          x + length,
+          y
+        );
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(5, 5);
+      return texture;
+    }
+
+    const frescoTexture = makeFrescoTexture();
+    const stoneTexture = makeStoneTexture();
+    const waterTexture = makeWaterTexture();
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const frescoMaterial = new THREE.MeshStandardMaterial({
+      map: frescoTexture,
+      color: 0xffffff,
+      roughness: 0.92,
+      metalness: 0
+    });
+
+    const darkPlasterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x29211c,
+      roughness: 0.96
+    });
+
+    const stoneMaterial = new THREE.MeshStandardMaterial({
+      map: stoneTexture,
+      color: 0xb5aa91,
+      roughness: 0.88,
+      metalness: 0
+    });
+
+    const darkStoneMaterial = new THREE.MeshStandardMaterial({
+      map: stoneTexture,
+      color: 0x514a40,
+      roughness: 0.94
+    });
+
+    const bronzeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x80602e,
+      roughness: 0.48,
+      metalness: 0.68
+    });
+
+    const waterMaterial = new THREE.MeshPhysicalMaterial({
+      map: waterTexture,
+      color: 0x173b49,
+      roughness: 0.2,
+      metalness: 0.15,
+      transmission: 0.18,
+      transparent: true,
+      opacity: 0.88,
+      clearcoat: 0.7,
+      clearcoatRoughness: 0.2
+    });
+
+    // -------------------------------------------------------------------------
+    // Voxel construction helpers
+    // -------------------------------------------------------------------------
+
+    const voxelSize = 0.5;
+    const voxelGeometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+
+    const objects = [];
+    const clickableObjects = [];
+
+    function addVoxelBox({
+      x,
+      y,
+      z,
+      width,
+      height,
+      depth,
+      material,
+      name,
+      inspectable = false
+    }) {
+      const mesh = new THREE.Mesh(voxelGeometry, material);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(width, height, depth);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.inspectable = inspectable;
+      mesh.userData.name = name;
+
+      scene.add(mesh);
+      clickableObjects.push(mesh);
+      return mesh;
+    }
+
+    function addWallWithFrescoes(width, height, depth, x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.rotation.y = rotation;
+      group.position.set(x, 0, z);
+
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        frescoMaterial
+      );
+      wall.position.y = height / 2;
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      group.add(wall);
+
+      // Dark lower wainscot.
+      addVoxelBox({
+        x: 0,
+        y: 0.38,
+        z: 0,
+        width,
+        height: 0.76,
+        depth: depth + 0.08,
+        material: darkStoneMaterial,
+        name: "Fresco wall wainscot"
+      });
+
+      // Upper cornice.
+      addVoxelBox({
+        x: 0,
+        y: height - 0.18,
+        z: 0,
+        width,
+        height: 0.36,
+        depth: depth + 0.12,
+        material: stoneMaterial,
+        name: "Fresco wall cornice"
+      });
+
+      scene.add(group);
+      return group;
+    }
+
+    function addColumn(x, z, height = 6.4) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      // Block-built shaft with alternating stone bands.
+      for (let y = 0.35; y < height; y += 0.5) {
+        const shaft = new THREE.Mesh(voxelGeometry, stoneMaterial);
+        shaft.position.set(0, y, 0);
+        shaft.scale.set(1.25, 0.48, 1.25);
+        shaft.castShadow = true;
+        shaft.receiveShadow = true;
+        group.add(shaft);
+      }
+
+      // Dark base and capital.
+      addVoxelBox({
+        x: 0,
+        y: 0.25,
+        z: 0,
+        width: 2.2,
+        height: 0.5,
+        depth: 2.2,
+        material: darkStoneMaterial,
+        name: "Column base"
+      });
+
+      addVoxelBox({
+        x: 0,
+        y: height - 0.25,
+        z: 0,
+        width: 2.1,
+        height: 0.5,
+        depth: 2.1,
+        material: stoneMaterial,
+        name: "Column capital"
+      });
+
+      // Painted figure bands around the shaft.
+      for (const y of [2.25, 4.55]) {
+        const band = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.34, 1.34, 0.55, 12),
+          frescoMaterial
+        );
+        band.position.y = y;
+        band.castShadow = true;
+        band.receiveShadow = true;
+        group.add(band);
+      }
+
+      scene.add(group);
+      return group;
+    }
+
+    function addStep(width, depth, height, x, z) {
+      addVoxelBox({
+        x,
+        y: height / 2,
+        z,
+        width,
+        height,
+        depth,
+        material: stoneMaterial,
+        name: "Stone step"
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Room layout
+    // -------------------------------------------------------------------------
+
+    const room = new THREE.Group();
+    scene.add(room);
+
+    // Main floor.
+    addVoxelBox({
+      x: 0,
+      y: 0.05,
+      z: 0,
+      width: 22,
+      height: 0.25,
+      depth: 18,
+      material: stoneMaterial,
+      name: "Hall floor"
+    });
+
+    // Side walls with painted narrative scenes.
+    addWallWithFrescoes(18, 7.2, 0.75, 0, -8.8, Math.PI);
+    addWallWithFrescoes(18, 7.2, 0.75, 0, 8.8, Math.PI);
+
+    // End wall.
+    addWallWithFrescoes(0.75, 7.2, 18, -9.25, 0, -Math.PI / 2);
+
+    // Far end opening and adjacent rooms.
+    addVoxelBox({
+      x: 0,
+      y: 3.6,
+      z: 9.45,
+      width: 4.5,
+      height: 7.2,
+      depth: 0.25,
+      material: darkPlasterMaterial,
+      name: "Far wall opening frame"
+    });
+
+    // Ceiling beams and roof structure.
+    for (let x = -8; x <= 8; x += 2) {
+      addVoxelBox({
+        x,
+        y: 7.55,
+        z: 0,
+        width: 1.1,
+        height: 0.55,
+        depth: 18.5,
+        material: darkStoneMaterial,
+        name: "Ceiling beam"
+      });
+    }
+
+    // Exposed roof ribs.
+    for (let z = -7.5; z <= 7.5; z += 2.5) {
+      for (let x = -8; x <= 8; x += 2) {
+        addVoxelBox({
+          x,
+          y: 8.15,
+          z,
+          width: 0.65,
+          height: 0.55,
+          depth: 0.65,
+          material: darkStoneMaterial,
+          name: "Roof rib"
+        });
+      }
+    }
+
+    // Skylight glass panels.
+    const glassMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x9bc7c8,
+      roughness: 0.18,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.34,
+      transmission: 0.25
+    });
+
+    for (let x = -6; x <= 6; x += 2) {
+      for (let z = -5; z <= 5; z += 2) {
+        const panel = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.35, 1.35),
+          glassMaterial
+        );
+        panel.rotation.x = -Math.PI / 2;
+        panel.position.set(x, 8.48, z);
+        room.add(panel);
+      }
+    }
+
+    // Large columns framing the central view.
+    addColumn(-4.2, -4.3, 6.4);
+    addColumn(4.2, -4.3, 6.4);
+    addColumn(-4.2, 4.3, 6.4);
+    addColumn(4.2, 4.3, 6.4);
+
+    // Central aisle and broad steps leading to the far opening.
+    addStep(8.4, 2.2, 0.35, 0, 5.6);
+    addStep(7.2, 2.2, 0.35, 0, 7.8);
+    addStep(6.0, 2.2, 0.35, 0, 10.0);
+
+    // Side benches.
+    for (const side of [-1, 1]) {
+      addVoxelBox({
+        x: side * 6.35,
+        y: 0.35,
+        z: 0.3,
+        width: 2.1,
+        height: 0.7,
+        depth: 7.4,
+        material: stoneMaterial,
+        name: "Side bench"
+      });
+
+      addVoxelBox({
+        x: side * 6.35,
+        y: 0.86,
+        z: 0.3,
+        width: 2.35,
+        height: 0.28,
+        depth: 7.6,
+        material: darkStoneMaterial,
+        name: "Bench cushion"
+      });
+    }
+
+    // Bronze artifacts on the side walls.
+    for (const side of [-1, 1]) {
+      for (let z = -4.8; z <= 4.8; z += 3.2) {
+        const artifact = new THREE.Mesh(
+          new THREE.TorusGeometry(0.32, 0.08, 8, 18),
+          bronzeMaterial
+        );
+        artifact.rotation.x = Math.PI / 2;
+        artifact.position.set(side * 5.75, 1.25, z);
+        artifact.castShadow = true;
+        room.add(artifact);
+
+        const smallArtifact = new THREE.Mesh(
+          new THREE.TorusGeometry(0.22, 0.06, 8, 16),
+          bronzeMaterial
+        );
+        smallArtifact.rotation.x = Math.PI / 2;
+        smallArtifact.position.set(side * 5.75, 1.25, z + 0.55);
+        smallArtifact.castShadow = true;
+        room.add(smallArtifact);
+      }
+    }
+
+    // Central pool, cut into the floor.
+    const pool = new THREE.Group();
+    pool.position.set(0, 0, 1.1);
+    room.add(pool);
+
+    // Pool coping.
+    addVoxelBox({
+      x: 0,
+      y: 0.22,
+      z: 0,
+      width: 7.4,
+      height: 0.44,
+      depth: 4.3,
+      material: stoneMaterial,
+      name: "Pool coping"
+    });
+
+    // Darker inner basin.
+    addVoxelBox({
+      x: 0,
+      y: 0.05,
+      z: 0,
+      width: 6.65,
+      height: 0.16,
+      depth: 3.55,
+      material: darkStoneMaterial,
+      name: "Pool basin"
+    });
+
+    // Water surface.
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(6.6, 3.5, 32, 18),
+      waterMaterial
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(0, 0.145, 0);
+    water.receiveShadow = true;
+    pool.add(water);
+
+    // Subtle water-edge stones.
+    for (let i = 0; i < 24; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const stone = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(randomRange(0.18, 0.38), 0),
+        darkStoneMaterial
+      );
+      stone.position.set(
+        side * randomRange(3.65, 4.05),
+        0.2,
+        randomRange(-1.75, 1.75)
+      );
+      stone.scale.y = randomRange(0.35, 0.7);
+      stone.castShadow = true;
+      pool.add(stone);
+    }
+
+    // A few submerged-looking artifacts below the water plane.
+    const submergedMaterial = new THREE.MeshStandardMaterial({
+      color: 0x26333a,
+      roughness: 0.75,
+      metalness: 0.15
+    });
+
+    for (let i = 0; i < 8; i++) {
+      const artifact = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(randomRange(0.12, 0.3), 0),
+        submergedMaterial
+      );
+      artifact.position.set(
+        randomRange(-2.8, 2.8),
+        randomRange(0.05, 0.16),
+        randomRange(-1.2, 1.2)
+      );
+      artifact.scale.y = randomRange(0.3, 0.8);
+      pool.add(artifact);
+    }
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    const hemisphere = new THREE.HemisphereLight(0x9ab7b8, 0x261a12, 1.15);
+    scene.add(hemisphere);
+
+    const ambient = new THREE.AmbientLight(0xffe0b0, 0.28);
+    scene.add(ambient);
+
+    // Warm directional light from the skylight.
+    const sun = new THREE.DirectionalLight(0xffd7a0, 3.2);
+    sun.position.set(-4, 11, 2);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -12;
+    sun.shadow.camera.right = 12;
+    sun.shadow.camera.top = 12;
+    sun.shadow.camera.bottom = -12;
+    sun.shadow.camera.near = 0.5;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    // Cool fill from the far opening.
+    const coolFill = new THREE.DirectionalLight(0x9bc9d1, 1.0);
+    coolFill.position.set(0, 6, 13);
+    scene.add(coolFill);
+
+    // Low warm point lights under the ceiling.
+    for (const x of [-4.2, 4.2]) {
+      const lamp = new THREE.PointLight(0xffb55f, 8, 10, 2);
+      lamp.position.set(x, 5.6, 0);
+      scene.add(lamp);
+    }
+
+    // -------------------------------------------------------------------------
+    // Interaction: WASD movement and drag-to-look
+    // -------------------------------------------------------------------------
+
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+
+    function updateKeyboardMovement(delta) {
+      forward.set(0, 0, -1).applyAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        controls.yaw
+      );
+
+      right.set(1, 0, 0).applyAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        controls.yaw
+      );
+
+      const movement = new THREE.Vector3();
+
+      if (controls.keys.has("KeyW")) movement.add(forward);
+      if (controls.keys.has("KeyS")) movement.sub(forward);
+      if (controls.keys.has("KeyD")) movement.add(right);
+      if (controls.keys.has("KeyA")) movement.sub(right);
+
+      if (movement.lengthSq() > 0) {
+        movement.normalize().multiplyScalar(controls.speed * delta);
+        controls.target.add(movement);
+        controls.target.x = THREE.MathUtils.clamp(
+          controls.target.x,
+          -8,
+          8
+        );
+        controls.target.z = THREE.MathUtils.clamp(
+          controls.target.z,
+          -7,
+          7
+        );
+      }
+
+      // Gentle head movement while dragging.
+      if (controls.dragging) {
+        controls.yaw -= (controls.lastX - controls.lastY) * 0.006;
+        controls.pitch = THREE.MathUtils.clamp(
+          controls.pitch + (controls.lastY - controls.lastX) * 0.006,
+          -1.25,
+          1.25
+        );
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.distance = THREE.MathUtils.clamp(
+        controls.distance + event.deltaY * 0.012,
+        4.2,
+        24
+      );
+    }, { passive: false });
+
+    // -------------------------------------------------------------------------
+    // Clickable object inspection
+    // -------------------------------------------------------------------------
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const inspection = new THREE.Group();
+    scene.add(inspection);
+
+    function inspectObject(object) {
+      const name = object.userData.name;
+      const description = object.userData.description || "";
+
+      inspection.position.copy(object.position);
+      inspection.rotation.copy(object.rotation);
+      inspection.scale.copy(object.scale);
+
+      const title = document.createElement("div");
+      title.textContent = name;
+
+      const text = document.createElement("div");
+      text.textContent = description;
+
+      inspection.appendChild(title);
+      inspection.appendChild(text);
+      renderer.domElement.style.cursor = "pointer";
+      document.body.appendChild(inspection);
+    }
+
+    renderer.domElement.addEventListener("click", (event) => {
+      pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(clickableObjects, false);
+
+      if (hits.length) {
+        const object = hits[0].object;
+        const name = object.userData.name;
+        const description = object.userData.description || "";
+
+        inspection.position.copy(object.position);
+        inspection.rotation.copy(object.rotation);
+        inspection.scale.copy(object.scale);
+
+        const title = document.createElement("div");
+        title.textContent = name;
+
+        const text = document.createElement("div");
+        text.textContent = description;
+
+        inspection.appendChild(title);
+        inspection.appendChild(text);
+        renderer.domElement.style.cursor = "pointer";
+        document.body.appendChild(inspection);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // Resize and animation
+    // -------------------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.05);
+      updateKeyboardMovement(delta);
+      updateCamera();
+
+      // Very subtle water movement.
+      waterMaterial.map.offset.x = clock.elapsedTime * 0.018;
+      waterMaterial.map.offset.y = Math.sin(clock.elapsedTime * 0.45) * 0.035;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // -------------------------------------------------------------------------
+    // Scene descriptions for interactive objects
+    // -------------------------------------------------------------------------
+
+    clickableObjects.forEach((object, index) => {
+      const names = {
+        "Fresco wall":
+          "A block-built wall covered in faded narrative frescoes. Drag across the painted figures to inspect the scene.",
+        "Column":
+          "A square column assembled from stone voxels, with painted narrative bands around its shaft.",
+        "Pool":
+          "A shallow reflecting pool cut into the central floor. The water hides bronze artifacts from the surface.",
+        "Step":
+          "Broad stone steps lead toward the illuminated opening in the far wall.",
+        "Benches":
+          "Low benches frame the central pool and provide a place to rest."
+      };
+
+      object.userData.description = names[object.userData.name] || "";
+    });
+
+    // -------------------------------------------------------------------------
+    // A small foreground voxel figure for scale
+    // -------------------------------------------------------------------------
+
+    const figure = new THREE.Group();
+    figure.position.set(-5.2, 0.15, 2.1);
+    figure.rotation.y = -0.65;
+
+    const figureMaterial = new THREE.MeshStandardMaterial({
+      color: 0x342a22,
+      roughness: 0.9
+    });
+
+    const robe = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.25, 0.42, 1.25, 8),
+      figureMaterial
+    );
+    robe.position.y = 0.65;
+    robe.castShadow = true;
+    figure.add(robe);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x8a6848, roughness: 0.95 })
+    );
+    head.position.y = 1.42;
+    head.castShadow = true;
+    figure.add(head);
+
+    const staff = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 1.6, 6),
+      bronzeMaterial
+    );
+    staff.position.set(0.32, 0.8, 0);
+    staff.rotation.z = -0.12;
+    staff.castShadow = true;
+    figure.add(staff);
+
+    scene.add(figure);
+    clickableObjects.push(figure);
+
+    figure.userData.name = "Traveler";
+    figure.userData.description =
+      "A small voxel traveler provides a sense of scale inside the frescoed hall.";
+
+    // -------------------------------------------------------------------------
+    // Optional ambient motion: a floating dust mote above the pool
+    // -------------------------------------------------------------------------
+
+    const dust = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 6, 6),
+      new THREE.MeshBasicMaterial({
+        color: 0xffe3a6,
+        transparent: true,
+        opacity: 0.65
+      })
+    );
+    dust.position.set(0, 3.8, 0.5);
+    scene.add(dust);
+
+    animate(() => {
+      dust.position.y = 3.8 + Math.sin(clock.elapsedTime * 0.7) * 0.18;
+      dust.position.x = Math.sin(clock.elapsedTime * 0.35) * 0.25;
+    });
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Tomb Raider Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x090909, fogColor: 0x090909, fogDensity: 0.022 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
+  };
+}
