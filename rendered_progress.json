@@ -526,5 +526,13 @@
     "status": "pass",
     "filename": "1066-donkey_kong_classic_donkey_kong_level_nes.html",
     "updated_at": "2026-11-02 05:53 EST"
+  },
+  "67": {
+    "rank": 67,
+    "game": "Mega Man 2",
+    "name": "Wily Castle",
+    "status": "pass",
+    "filename": "1067-mega_man_2_wily_castle.html",
+    "updated_at": "2026-11-02 05:57 EST"
   }
 }

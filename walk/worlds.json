@@ -182,6 +182,13 @@
     "module": "modules/064.js"
   },
   {
+    "id": "067",
+    "title": "Mega Man 2",
+    "sub": "Wily Castle",
+    "system": "Console",
+    "module": "modules/067.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
