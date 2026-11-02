@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Foot — Rooftop Showdown</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f5f1df;
+      --muted: #b5b4a8;
+      --accent: #f2ad3d;
+      --panel: rgba(16, 18, 18, 0.78);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #111415;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .brand {
+      position: absolute;
+      top: 26px;
+      left: 28px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      color: var(--ink);
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 39px;
+      height: 39px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      background: rgba(242, 173, 61, 0.13);
+      box-shadow: inset 0 0 0 4px rgba(242, 173, 61, 0.2);
+    }
+
+    .brand-mark::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border: 5px solid var(--accent);
+      border-radius: 8px;
+      transform: rotate(-0.35rad);
+    }
+
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      top: 14px;
+      width: 8px;
+      height: 13px;
+      background: var(--accent);
+      clip-path: polygon(50% 0, 100% 42%, 100% 100%, 0 100%, 0 42%);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1;
+      letter-spacing: 0.18em;
+      font-weight: 850;
+    }
+
+    .brand p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      position: absolute;
+      top: 28px;
+      right: 30px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--ink);
+      backdrop-filter: blur(12px);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #63d6a4;
+      box-shadow: 0 0 12px #63d6a4;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 24px;
+      left: 28px;
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 10px;
+      padding: 10px 13px;
+      background: rgba(17, 19, 19, 0.78);
+      color: var(--ink);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    button:hover {
+      background: rgba(242, 173, 61, 0.18);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .hint {
+      position: absolute;
+      right: 28px;
+      bottom: 27px;
+      color: rgba(245, 241, 223, 0.62);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-align: right;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 45%, transparent 48%, rgba(0, 0, 0, 0.28) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 25%, transparent 72%, rgba(0, 0, 0, 0.3));
+    }
+
+    @media (max-width: 600px) {
+      .brand {
+        top: 18px;
+        left: 18px;
+      }
+
+      .brand h1 {
+        font-size: 12px;
+      }
+
+      .status {
+        top: 18px;
+        right: 18px;
+      }
+
+      .hint {
+        display: none;
+      }
+
+      .controls {
+        bottom: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage" aria-label="Interactive 3D voxel rooftop scene"></div>
+
+  <div class="hud">
+    <div class="vignette"></div>
+
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div>
+        <h1>FOOT</h1>
+        <p>Block City · Rooftop Series</p>
+      </div>
+    </div>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      <span>Live scene</span>
+    </div>
+
+    <div class="controls">
+      <button id="resetView" type="button">Reset view</button>
+      <button id="toggleSpin" type="button">Auto rotate</button>
+      <button id="toggleSound" type="button">Sound on</button>
+    </div>
+
+    <div class="hint">
+      Drag to orbit · Scroll to zoom<br />
+      WASD to move · R to reset
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const stage = document.getElementById("stage");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111517);
+    scene.fog = new THREE.Fog(0x111517, 17, 35);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    stage.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0x9eb5c7, 0x3c3025, 1.75);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffd9a1, 3.2);
+    sun.position.set(7, 13, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -14;
+    sun.shadow.camera.right = 14;
+    sun.shadow.camera.top = 14;
+    sun.shadow.camera.bottom = -14;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0x78b8ff, 1.25);
+    rim.position.set(-9, 6, -8);
+    scene.add(rim);
+
+    const materials = {
+      brick: new THREE.MeshStandardMaterial({
+        color: 0x655348,
+        roughness: 0.92,
+        metalness: 0.02
+      }),
+      brickLight: new THREE.MeshStandardMaterial({
+        color: 0x806b59,
+        roughness: 0.9
+      }),
+      brickDark: new THREE.MeshStandardMaterial({
+        color: 0x493d36,
+        roughness: 0.95
+      }),
+      roof: new THREE.MeshStandardMaterial({
+        color: 0x343738,
+        roughness: 0.96
+      }),
+      roofEdge: new THREE.MeshStandardMaterial({
+        color: 0x555757,
+        roughness: 0.9
+      }),
+      metal: new THREE.MeshStandardMaterial({
+        color: 0x252a2b,
+        roughness: 0.62,
+        metalness: 0.55
+      }),
+      steel: new THREE.MeshStandardMaterial({
+        color: 0x8d9698,
+        roughness: 0.48,
+        metalness: 0.72
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xf2ad3d,
+        roughness: 0.42,
+        metalness: 0.18
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x111516,
+        roughness: 0.78
+      }),
+      window: new THREE.MeshStandardMaterial({
+        color: 0x1b2931,
+        roughness: 0.25,
+        metalness: 0.45
+      }),
+      turtleShell: new THREE.MeshStandardMaterial({
+        color: 0x3c633b,
+        roughness: 0.82
+      }),
+      turtleSkin: new THREE.MeshStandardMaterial({
+        color: 0x417447,
+        roughness: 0.78
+      }),
+      turtleBand: new THREE.MeshStandardMaterial({
+        color: 0x9a6b2f,
+        roughness: 0.7
+      }),
+      turtleEye: new THREE.MeshStandardMaterial({
+        color: 0x251b11,
+        roughness: 0.5
+      }),
+      mask: new THREE.MeshStandardMaterial({
+        color: 0x9f4f31,
+        roughness: 0.58
+      }),
+      footSkin: new THREE.MeshStandardMaterial({
+        color: 0x3d5e2b,
+        roughness: 0.82
+      }),
+      footBand: new THREE.MeshStandardMaterial({
+        color: 0x714322,
+        roughness: 0.72
+      }),
+      footEye: new THREE.MeshStandardMaterial({
+        color: 0x171817,
+        roughness: 0.55
+      }),
+      footShell: new THREE.MeshStandardMaterial({
+        color: 0x344c2d,
+        roughness: 0.8
+      }),
+      footBand: new THREE.MeshStandardMaterial({
+        color: 0x8a4d29,
+        roughness: 0.72
+      }),
+      footEye: new THREE.MeshStandardMaterial({
+        color: 0x171817,
+        roughness: 0.55
+      }),
+      footShell: new THREE.MeshStandardMaterial({
+        color: 0x344c2d,
+        roughness: 0.8
+      }),
+      footBand: new THREE.MeshStandardMaterial({
+        color: 0x8a4d29,
+        roughness: 0.72
+      })
+    };
+
+    function roundedBox(w, h, d, material, x, y, z, radius = 0.08) {
+      const geometry = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function voxelColumn(x, y, z, size, material, count = 1) {
+      const group = new THREE.Group();
+      const geometry = new THREE.BoxGeometry(size, size, size);
+
+      for (let i = 0; i < count; i++) {
+        const block = new THREE.Mesh(geometry, material);
+        block.position.y = (i + 0.5) * size;
+        block.castShadow = true;
+        block.receiveShadow = true;
+        group.add(block);
+      }
+
+      group.position.set(x, y, z);
+      scene.add(group);
+      return group;
+    }
+
+    function makeVoxelPerson({
+      x,
+      z,
+      rotation = 0,
+      shellMaterial = materials.turtleShell,
+      bandMaterial = materials.turtleBand,
+      eyeMaterial = materials.turtleEye,
+      maskMaterial = materials.mask
+    }) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      const shell = new THREE.Mesh(
+        new THREE.BoxGeometry(1.35, 0.58, 1.05),
+        shellMaterial
+      );
+      shell.position.y = 1.58;
+      shell.castShadow = true;
+      shell.receiveShadow = true;
+      group.add(shell);
+
+      const shellTop = new THREE.Mesh(
+        new THREE.BoxGeometry(1.02, 0.14, 0.78),
+        bandMaterial
+      );
+      shellTop.position.y = 1.89;
+      shellTop.castShadow = true;
+      group.add(shellTop);
+
+      const leftLeg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.68, 0.5),
+        shellMaterial
+      );
+      leftLeg.position.set(-0.48, 0.96, 0.03);
+      leftLeg.castShadow = true;
+      group.add(leftLeg);
+
+      const rightLeg = leftLeg.clone();
+      rightLeg.position.x = 0.48;
+      group.add(rightLeg);
+
+      const leftArm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.34, 0.58, 0.38),
+        shellMaterial
+      );
+      leftArm.position.set(-0.88, 1.05, 0.02);
+      leftArm.rotation.z = -0.12;
+      leftArm.castShadow = true;
+      group.add(leftArm);
+
+      const rightArm = leftArm.clone();
+      rightArm.position.x = 0.88;
+      rightArm.rotation.z = 0.12;
+      group.add(rightArm);
+
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.58, 0.58, 0.58),
+        shellMaterial
+      );
+      head.position.y = 2.42;
+      head.castShadow = true;
+      group.add(head);
+
+      const mask = new THREE.Mesh(
+        new THREE.BoxGeometry(0.49, 0.34, 0.58),
+        maskMaterial
+      );
+      mask.position.set(0, 2.43, 0.3);
+      mask.castShadow = true;
+      group.add(mask);
+
+      const eyeLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.14, 0.05),
+        eyeMaterial
+      );
+      eyeLeft.position.set(-0.12, 2.46, 0.585);
+      group.add(eyeLeft);
+
+      const eyeRight = eyeLeft.clone();
+      eyeRight.position.x = 0.12;
+      group.add(eyeRight);
+
+      const nose = new THREE.Mesh(
+        new THREE.BoxGeometry(0.11, 0.1, 0.08),
+        eyeMaterial
+      );
+      nose.position.set(0, 2.25, 0.59);
+      group.add(nose);
+
+      const shoulder = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 0.28, 0.38),
+        shellMaterial
+      );
+      shoulder.position.set(0, 2.85, -0.12);
+      shoulder.castShadow = true;
+      group.add(shoulder);
+
+      const weapon = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 1.25, 0.2),
+        bandMaterial
+      );
+      weapon.position.set(0.48, 2.0, 0.04);
+      weapon.rotation.z = -0.16;
+      weapon.castShadow = true;
+      group.add(weapon);
+
+      const weaponTip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.2, 0.24),
+        yellow
+      );
+      weaponTip.position.set(0.5, 1.62, 0.04);
+      weaponTip.rotation.z = -0.16;
+      weaponTip.castShadow = true;
+      group.add(weaponTip);
+
+      return group;
+    }
+
+    function makeVoxelFoot({
+      x,
+      z,
+      rotation = 0,
+      shellMaterial = materials.footShell,
+      bandMaterial = materials.footBand,
+      eyeMaterial = materials.footEye
+    }) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      const torso = new THREE.Mesh(
+        new THREE.BoxGeometry(1.02, 0.72, 0.82),
+        shellMaterial
+      );
+      torso.position.y = 1.2;
+      torso.castShadow = true;
+      group.add(torso);
+
+      const chestBand = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 0.2, 0.9),
+        bandMaterial
+      );
+      chestBand.position.y = 1.57;
+      chestBand.castShadow = true;
+      group.add(chestBand);
+
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.68, 0.68, 0.68),
+        shellMaterial
+      );
+      head.position.y = 2.25;
+      head.castShadow = true;
+      group.add(head);
+
+      const mask = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.39, 0.68),
+        maskMaterial || materials.black
+      );
+      mask.position.set(0, 2.25, 0.34);
+      mask.castShadow = true;
+      group.add(mask);
+
+      const eyeLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.16, 0.06),
+        eyeMaterial
+      );
+      eyeLeft.position.set(-0.16, 2.31, 0.69);
+      group.add(eyeLeft);
+
+      const eyeRight = eyeLeft.clone();
+      eyeRight.position.x = 0.16;
+      group.add(eyeRight);
+
+      const nose = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.1, 0.08),
+        eyeMaterial
+      );
+      nose.position.set(0, 2.1, 0.7);
+      group.add(nose);
+
+      const armLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.38, 0.68, 0.42),
+        shellMaterial
+      );
+      armLeft.position.set(-0.72, 1.35, 0.02);
+      armLeft.rotation.z = -0.13;
+      armLeft.castShadow = true;
+      group.add(armLeft);
+
+      const armRight = armLeft.clone();
+      armRight.position.x = 0.72;
+      armRight.rotation.z = 0.13;
+      group.add(armRight);
+
+      const legLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.44, 0.75, 0.55),
+        shellMaterial
+      );
+      legLeft.position.set(-0.47, 0.67, 0.02);
+      legLeft.rotation.z = 0.08;
+      legLeft.castShadow = true;
+      group.add(legLeft);
+
+      const legRight = legLeft.clone();
+      legRight.position.x = 0.47;
+      legRight.rotation.z = -0.08;
+      group.add(legRight);
+
+      const footLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.65, 0.2, 0.55),
+        bandMaterial
+      );
+      footLeft.position.set(-0.49, 0.29, 0.04);
+      footLeft.rotation.z = 0.08;
+      footLeft.castShadow = true;
+      group.add(footLeft);
+
+      const footRight = footLeft.clone();
+      footRight.position.x = 0.49;
+      footRight.rotation.z = -0.08;
+      group.add(footRight);
+
+      const shoulder = new THREE.Mesh(
+        new THREE.BoxGeometry(0.78, 0.3, 0.42),
+        shellMaterial
+      );
+      shoulder.position.set(0, 1.95, -0.22);
+      shoulder.castShadow = true;
+      group.add(shoulder);
+
+      const weapon = new THREE.Mesh(
+        new THREE.BoxGeometry(0.19, 1.25, 0.22),
+        bandMaterial
+      );
+      weapon.position.set(0.48, 1.18, 0.02);
+      weapon.rotation.z = -0.18;
+      weapon.castShadow = true;
+      group.add(weapon);
+
+      const weaponTip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.23, 0.2, 0.25),
+        yellow
+      );
+      weaponTip.position.set(0.5, 0.63, 0.02);
+      weaponTip.rotation.z = -0.18;
+      weaponTip.castShadow = true;
+      group.add(weaponTip);
+
+      return group;
+    }
+
+    // Building shell and rooftop.
+    const building = new THREE.Group();
+    scene.add(building);
+
+    const brickGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    function brickWall(width, depth, height, x, y, z, material = materials.brick) {
+      const wall = new THREE.Group();
+
+      for (let layer = 0; layer < height; layer++) {
+        for (let column = 0; column < 8; column++) {
+          const variation = (column + layer) % 3;
+          const materialToUse =
+            variation === 0
+              ? materials.brickLight
+              : variation === 1
+              ? materials.brickDark
+              : material;
+
+          const block = new THREE.Mesh(brickGeometry, materialToUse);
+          block.scale.set(
+            width / 8 - 0.035,
+            0.48,
+            depth / 8 - 0.035
+          );
+          block.position.set(
+            -width / 2 + width * (column + 0.5) / 8,
+            layer * 0.5 + 0.25,
+            -depth / 2 + depth * (column + 0.5) / 8
+          );
+          block.castShadow = true;
+          block.receiveShadow = true;
+          wall.add(block);
+        }
+      }
+
+      wall.position.set(x, y, z);
+      building.add(wall);
+      return wall;
+    }
+
+    brickWall(12.8, 7.2, 10, 0, 3.9, 0);
+    brickWall(7.2, 7.2, 10, -6.4, 3.9, 0);
+    brickWall(7.2, 7.2, 10, 6.4, 3.9, 0);
+    brickWall(12.8, 7.2, 10, 0, 3.9, -3.6);
+    brickWall(12.8, 7.2, 10, 0, 3.9, 3.6);
+
+    const roof = new THREE.Mesh(
+      new THREE.BoxGeometry(13.6, 0.45, 8.2),
+      materials.roof
+    );
+    roof.position.set(0, 10.15, 0);
+    roof.receiveShadow = true;
+    roof.castShadow = true;
+    building.add(roof);
+
+    const roofEdgeGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    for (let i = 0; i < 14; i++) {
+      const block = new THREE.Mesh(roofEdgeGeometry, materials.roofEdge);
+      block.scale.set(0.58, 0.24, 0.24);
+      block.position.set(-6.2 + i * 0.97, 10.42, 4.06);
+      block.castShadow = true;
+      building.add(block);
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const block = new THREE.Mesh(roofEdgeGeometry, materials.roofEdge);
+      block.scale.set(0.24, 0.24, 0.58);
+      block.position.set(-3.1 + i * 1.55, 10.42, -4.08);
+      block.castShadow = true;
+      building.add(block);
+    }
+
+    // Rooftop utility details.
+    const utility = new THREE.Group();
+    building.add(utility);
+
+    for (const x of [-4.6, 4.6]) {
+      for (const z of [-2.9, 2.9]) {
+        const pipe = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 1.2, 0.12),
+          materials.metal
+        );
+        pipe.position.set(x, 11.1, z);
+        pipe.castShadow = true;
+        utility.add(pipe);
+      }
+    }
+
+    const utilityBox = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 1.1, 1.2),
+      materials.metal
+    );
+    utilityBox.position.set(-5.3, 11.15, -2.6);
+    utilityBox.castShadow = true;
+    utility.add(utilityBox);
+
+    const utilityDoor = new THREE.Mesh(
+      new THREE.BoxGeometry(0.75, 1.35, 0.08),
+      materials.black
+    );
+    utilityDoor.position.set(-5.3, 11.2, -1.98);
+    utilityDoor.castShadow = true;
+    utility.add(utilityDoor);
+
+    // Rooftop sign: a large blocky FOOT billboard.
+    const sign = new THREE.Group();
+    sign.position.set(0, 11.35, -3.35);
+    building.add(sign);
+
+    const signFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(7.4, 3.6, 0.55),
+      materials.metal
+    );
+    signFrame.castShadow = true;
+    sign.add(signFrame);
+
+    const signBack = new THREE.Mesh(
+      new THREE.BoxGeometry(7.1, 3.35, 0.18),
+      materials.black
+    );
+    signBack.position.z = 0.31;
+    sign.add(signBack);
+
+    const panelGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 6; i++) {
+        const panel = new THREE.Mesh(panelGeometry, materials.black);
+        panel.scale.set(0.83, 0.16, 0.08);
+        panel.position.set(
+          side * 2.75,
+          1.35 + i * 0.49,
+          0.43
+        );
+        sign.add(panel);
+      }
+    }
+
+    const centerPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(1.45, 3.25, 0.12),
+      materials.black
+    );
+    centerPanel.position.z = 0.45;
+    sign.add(centerPanel);
+
+    const footIcon = new THREE.Mesh(
+      new THREE.BoxGeometry(0.62, 0.62, 0.16),
+      materials.yellow
+    );
+    footIcon.position.set(0, 1.83, 0.54);
+    footIcon.rotation.z = -0.12;
+    sign.add(footIcon);
+
+    const footIconToe = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.32, 0.18),
+      materials.yellow
+    );
+    footIconToe.position.set(0, 1.42, 0.56);
+    footIconToe.rotation.z = -0.12;
+    sign.add(footIconToe);
+
+    const signTextMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf5f1df,
+      roughness: 0.6,
+      emissive: 0x4a3610,
+      emissiveIntensity: 0.25
+    });
+
+    const textGeometry = new THREE.BoxGeometry(0.82, 0.36, 0.18);
+    const text = new THREE.Mesh(textGeometry, signTextMaterial);
+    text.position.set(0, 0.64, 0.58);
+    sign.add(text);
+
+    const signSupports = new THREE.Group();
+    signSupports.position.set(0, 10.2, -3.25);
+    building.add(signSupports);
+
+    for (const x of [-2.8, 2.8]) {
+      const support = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 1.1, 0.18),
+        materials.metal
+      );
+      support.position.set(x, 0.55, 0);
+      support.castShadow = true;
+      signSupports.add(support);
+    }
+
+    // Two rooftop figures.
+    const turtle = makeVoxelPerson({
+      x: -2.15,
+      z: 0.7,
+      rotation: -0.25,
+      shellMaterial: materials.turtleShell,
+      bandMaterial: materials.turtleBand,
+      eyeMaterial: materials.turtleEye,
+      maskMaterial: materials.mask
+    });
+
+    const foot = makeVoxelFoot({
+      x: 2.15,
+      z: 0.7,
+      rotation: 0.25,
+      shellMaterial: materials.footShell,
+      bandMaterial: materials.footBand,
+      eyeMaterial: materials.footEye
+    });
+
+    turtle.castShadow = true;
+    foot.castShadow = true;
+    scene.add(turtle, foot);
+
+    // Small foreground wall and rooftop details for depth.
+    const foreground = new THREE.Group();
+    building.add(foreground);
+
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(13.4, 2.2, 0.65),
+      materials.brick
+    );
+    wall.position.set(0, 1.1, 4.05);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    foreground.add(wall);
+
+    for (let i = 0; i < 14; i++) {
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.2, 0.75),
+        materials.brickDark
+      );
+      block.position.set(-6.2 + i * 0.97, 2.25, 4.42);
+      block.castShadow = true;
+      foreground.add(block);
+    }
+
+    const vent = new THREE.Mesh(
+      new THREE.BoxGeometry(1.3, 0.7, 0.8),
+      materials.metal
+    );
+    vent.position.set(5.2, 11.25, 2.7);
+    vent.castShadow = true;
+    building.add(vent);
+
+    for (let i = 0; i < 4; i++) {
+      const slat = new THREE.Mesh(
+        new THREE.BoxGeometry(1.05, 0.1, 0.1),
+        materials.black
+      );
+      slat.position.set(5.2, 11.65 + i * 0.17, 3.12);
+      slat.castShadow = true;
+      building.add(slat);
+    }
+
+    // A few blocky rooftop plants.
+    const plant = new THREE.Group();
+    plant.position.set(-5.7, 10.45, 2.1);
+    building.add(plant);
+
+    const pot = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 0.55, 0.7),
+      materials.brickDark
+    );
+    pot.position.y = 0.28;
+    pot.castShadow = true;
+    plant.add(pot);
+
+    for (let i = 0; i < 9; i++) {
+      const leaf = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.55, 0.3),
+        i % 2 ? materials.turtleShell : materials.footSkin
+      );
+      leaf.position.set(
+        Math.sin(i * 2.3) * 0.2,
+        0.72 + (i % 3) * 0.3,
+        Math.cos(i * 1.7) * 0.18
+      );
+      leaf.rotation.y = i * 0.8;
+      leaf.rotation.z = (i % 2 ? 1 : -1) * 0.2;
+      leaf.castShadow = true;
+      plant.add(leaf);
+    }
+
+    // Camera controls implemented directly, without addons.
+    const target = new THREE.Vector3(0, 7.3, 0);
+    const spherical = new THREE.Spherical(15.8, Math.PI * 0.39, Math.PI * 0.28);
+    const defaultTarget = target.clone();
+    const defaultSpherical = spherical.clone();
+    const pointer = new THREE.Vector2();
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    let autoRotate = false;
+    let soundEnabled = true;
+
+    function applyCamera() {
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.22, Math.PI * 0.49);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 8.5, 25);
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    function resetView() {
+      target.copy(defaultTarget);
+      spherical.copy(defaultSpherical);
+      applyCamera();
+    }
+
+    function toggleRotation() {
+      autoRotate = !autoRotate;
+      const button = document.getElementById("toggleSpin");
+      button.textContent = autoRotate ? "Pause rotation" : "Auto rotate";
+      button.setAttribute("aria-pressed", String(autoRotate));
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const button = document.getElementById("toggleSound");
+      button.textContent = soundEnabled ? "Sound on" : "Sound off";
+      button.setAttribute("aria-pressed", String(soundEnabled));
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      lastX = event.clientX;
+      lastY = event.clientY;
+
+      spherical.theta -= dx * 0.006;
+      spherical.phi -= dy * 0.005;
+      applyCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      dragging = false;
+    });
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        spherical.radius *= Math.exp(event.deltaY * 0.001);
+        applyCamera();
+      },
+      { passive: false }
+    );
+
+    const keys = new Set();
+
+    window.addEventListener("keydown", (event) => {
+      keys.add(event.key.toLowerCase());
+
+      if (event.key.toLowerCase() === "r") {
+        resetView();
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    function updateKeyboard(delta) {
+      const speed = 4.2 * delta;
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
+
+      const right = new THREE.Vector3()
+        .crossVectors(forward, camera.up)
+        .normalize();
+
+      let movement = 0;
+      if (keys.has("arrowleft") || keys.has("a")) movement -= 1;
+      if (keys.has("arrowright") || keys.has("d")) movement += 1;
+      if (keys.has("arrowup") || keys.has("w")) movement += 1;
+      if (keys.has("arrowdown") || keys.has("s")) movement -= 1;
+
+      if (movement !== 0) {
+        const direction = new THREE.Vector3(movement, 0, 0);
+        const normalized = direction.clone().normalize();
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+        const diagonal = Math.hypot(forward.x, forward.z);
+        const rightAmount = Math.abs(movement) / diagonal;
+        const forwardAmount = Math.abs(movement) / diagonal;
+
+        camera.position.addScaledVector(forward, speed * forwardAmount);
+        camera.position.addScaledVector(right, speed * rightAmount);
+        applyCamera();
+      }
+    }
+
+    document.getElementById("resetView").addEventListener("click", resetView);
+    document.getElementById("toggleSpin").addEventListener("click", toggleRotation);
+    document.getElementById("toggleSound").addEventListener("click", toggleSound);
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    applyCamera();
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+
+      updateKeyboard(delta);
+
+      if (autoRotate && !dragging) {
+        spherical.theta += delta * 0.085;
+        applyCamera();
+      }
+
+      turtle.position.y = Math.sin(elapsed * 1.7) * 0.018;
+      foot.position.y = -Math.sin(elapsed * 1.7 + 0.8) * 0.018;
+      turtle.rotation.z = Math.sin(elapsed * 1.7) * 0.012;
+      foot.rotation.z = -Math.sin(elapsed * 1.7 + 0.8) * 0.012;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
