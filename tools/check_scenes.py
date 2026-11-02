@@ -30,8 +30,9 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scene_report.jso
 def discover():
     r = subprocess.run(['curl', '-s', f'https://api.github.com/repos/{REPO}/contents/scenes'],
                        capture_output=True, text=True)
+    import re
     names = [x['name'] for x in json.loads(r.stdout)
-             if x['name'].startswith('100') and x['name'].endswith('.html')]
+             if re.match(r'^10\d\d-', x['name']) and x['name'].endswith('.html')]
     return sorted(names)
 
 FILES = discover()

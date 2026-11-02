@@ -11,7 +11,8 @@
   "downloadable": true,
   "image_url": "https://media.sketchfab.com/models/d1bff0c5b5ea4362a0f68ef1ecb7fdaa/thumbnails/c7c668ab356d4359aa39e1284b84f4d1/71bfe8c8aeea4c3e846149b3d3083e1e.jpeg",
   "page_url": "https://sketchfab.com/3d-models/d1bff0c5b5ea4362a0f68ef1ecb7fdaa",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1001-sonic_the_hedgehog_green_hill_zone.html"
  },
  {
   "rank": 2,
@@ -25,7 +26,8 @@
   "downloadable": true,
   "image_url": "https://media.sketchfab.com/models/b0d3fac19ecb4220866af47237e79c13/thumbnails/561305d2b86042c6b8a453108e62b39c/661d5d8b4d9846d5800d235c09252eb6.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b0d3fac19ecb4220866af47237e79c13",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1002-super_mario_bros_world_1_1.html"
  },
  {
   "rank": 5,
@@ -39,7 +41,8 @@
   "downloadable": true,
   "image_url": "https://media.sketchfab.com/models/2148fb6a3fe7454b901fcea67d70b318/thumbnails/25b6eb59403a416ea7f477ea63a8b382/004a7a1a23bf45c8ac5684bffb0f288a.jpeg",
   "page_url": "https://sketchfab.com/3d-models/2148fb6a3fe7454b901fcea67d70b318",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1003-doom_e1m1_hangar.html"
  },
  {
   "rank": 8,
@@ -53,7 +56,8 @@
   "downloadable": false,
   "image_url": "https://media.sketchfab.com/models/e47c2d9f032244c0ab1f6b669d629031/thumbnails/acf3eba6222c4029b048aacc0355e3bc/bbdf405d8e794c91b7eef3c4a0361ce9.jpeg",
   "page_url": "https://sketchfab.com/3d-models/e47c2d9f032244c0ab1f6b669d629031",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1004-super_mario_world_yoshix27s_island_1.html"
  },
  {
   "rank": 10,
@@ -67,7 +71,8 @@
   "downloadable": true,
   "image_url": "https://media.sketchfab.com/models/9516f4cf1c244837b2b072b40eab3f2e/thumbnails/365a047c32c14c89a36ee40ad4eab225/8f138e19863c41f69d4ff477ac5d3dc3.jpeg",
   "page_url": "https://sketchfab.com/3d-models/9516f4cf1c244837b2b072b40eab3f2e",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1005-pac_man_the_maze.html"
  },
  {
   "game": "Sonic the Hedgehog 2",
@@ -80,7 +85,8 @@
   "downloadable": false,
   "image_url": "https://media.sketchfab.com/models/2c71818bb05b43bfb64bc436df28c024/thumbnails/f2d219cb6cf84f8fae54983a0763118f/dc5aa7c745724fbd96966e0880a92e53.jpeg",
   "page_url": "https://sketchfab.com/3d-models/2c71818bb05b43bfb64bc436df28c024",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1006-sonic_the_hedgehog_2_emerald_hill_zone.html"
  },
  {
   "game": "Mortal Kombat",
@@ -93,7 +99,8 @@
   "downloadable": false,
   "image_url": "https://media.sketchfab.com/models/8e776fa4c557470d874ee7be7fa134d8/thumbnails/618b44e354724ae1947128676a007e1e/7a389be4a8034bca8d7351aeb5611016.jpeg",
   "page_url": "https://sketchfab.com/3d-models/8e776fa4c557470d874ee7be7fa134d8",
-  "source": "Sketchfab"
+  "source": "Sketchfab",
+  "scene_file": "1007-mortal_kombat_the_courtyard.html"
  },
  {
   "game": "Kingdom Hearts",
@@ -106,7 +113,8 @@
   "image_url": "https://media.sketchfab.com/models/9f44072c7bf14e0aac02e8c90a8bb03b/thumbnails/c22cb3ffc35c4ef3ab4bec3d9172e048/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/9f44072c7bf14e0aac02e8c90a8bb03b",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1008-kingdom_hearts_traverse_town.html"
  },
  {
   "game": "Super Mario Bros. 3",
@@ -119,7 +127,8 @@
   "image_url": "https://media.sketchfab.com/models/2cda7d2a36bc44c1848ea6a90a883d0a/thumbnails/61813549daf44d3b8a9ce9d164072e0c/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/2cda7d2a36bc44c1848ea6a90a883d0a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1009-super_mario_bros_3_world_1_2.html"
  },
  {
   "game": "Sonic the Hedgehog 2",
@@ -132,7 +141,8 @@
   "image_url": "https://media.sketchfab.com/models/d43b5c6c6d0c4b209c4d682b75fdf215/thumbnails/5194b9b0b99949689878f4898e7b205d/f466a7d4af6d4c78b62831f09bcd65ab.jpeg",
   "page_url": "https://sketchfab.com/3d-models/d43b5c6c6d0c4b209c4d682b75fdf215",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1010-sonic_the_hedgehog_2_chemical_plant_zone.html"
  },
  {
   "game": "The Legend of Zelda: Majora's Mask",
@@ -145,7 +155,8 @@
   "image_url": "https://media.sketchfab.com/models/7d1394698b744551a06fe8dcd2fe1c15/thumbnails/b662ab86d14248ed9e614f5e4530d134/e623852adf4b4f35bf0dba843fe1a2a3.jpeg",
   "page_url": "https://sketchfab.com/3d-models/7d1394698b744551a06fe8dcd2fe1c15",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1011-the_legend_of_zelda_majorax27s_mask_clock_town_west.html"
  },
  {
   "game": "The Legend of Zelda: The Wind Waker",
@@ -158,7 +169,8 @@
   "image_url": "https://media.sketchfab.com/models/cfaed7d028b94b49b3adc9baa042d420/thumbnails/d9eb32e38d7f48f9bb204730e0eac68f/f59c8cfb959c45af9ed661ab45bde8a8.jpeg",
   "page_url": "https://sketchfab.com/3d-models/cfaed7d028b94b49b3adc9baa042d420",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1012-the_legend_of_zelda_the_wind_waker_outset_island.html"
  },
  {
   "game": "Pok\u00e9mon Red / Blue",
@@ -171,7 +183,8 @@
   "image_url": "https://media.sketchfab.com/models/318d78f230574278960f52a0398028fa/thumbnails/c9973ba224234ad28ce64d150a153cab/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/318d78f230574278960f52a0398028fa",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1013-pokmon_red_blue_pallet_town.html"
  },
  {
   "game": "Sonic the Hedgehog 3",
@@ -184,7 +197,8 @@
   "image_url": "https://media.sketchfab.com/models/025fd6562212439bb273c033dbfe29d1/thumbnails/df5b23603045409388dedfcb0be43966/0ceb369ca30f486ca8da7dc14e1bd72f.jpeg",
   "page_url": "https://sketchfab.com/3d-models/025fd6562212439bb273c033dbfe29d1",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1014-sonic_the_hedgehog_3_angel_island.html"
  },
  {
   "game": "Super Mario World 2: Yoshi's Island",
@@ -197,7 +211,8 @@
   "image_url": "https://media.sketchfab.com/models/c5f1d33f819742d09c5e12b26f104b96/thumbnails/f4675d9701ec409a99fd321460fb0086/86db89b1c3234ae0a88dcd79ad14af1d.jpeg",
   "page_url": "https://sketchfab.com/3d-models/c5f1d33f819742d09c5e12b26f104b96",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1015-super_mario_world_2_yoshix27s_island_yoshix27s_island.html"
  },
  {
   "game": "Mega Man",
@@ -210,7 +225,8 @@
   "image_url": "https://media.sketchfab.com/models/fcfb66342a1f49219bec299c6679c2dc/thumbnails/109c303eca22464887ed2ee4b79c998a/e186460fa0a64be9841ea1b052c6f85d.jpeg",
   "page_url": "https://sketchfab.com/3d-models/fcfb66342a1f49219bec299c6679c2dc",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1016-mega_man_dr_wilyx27s_castle.html"
  },
  {
   "game": "Super Mario",
@@ -223,7 +239,8 @@
   "image_url": "https://media.sketchfab.com/models/a21cffbe8b8c4ae9b1614f26f2da8fed/thumbnails/a9f0e435afd34aa183dcda906bfb788e/a92c6ee098cc48a4b57b3020863c64a4.jpeg",
   "page_url": "https://sketchfab.com/3d-models/a21cffbe8b8c4ae9b1614f26f2da8fed",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1017-super_mario_peachx27s_castle.html"
  },
  {
   "game": "DuckTales",
@@ -236,7 +253,8 @@
   "image_url": "https://media.sketchfab.com/models/3ab80845f5174075812d8521ed76fc0f/thumbnails/7baac31888a14e0cac08c137de0310b0/be8973ae48214b7fbba0a8d9d3caebb6.jpeg",
   "page_url": "https://sketchfab.com/3d-models/3ab80845f5174075812d8521ed76fc0f",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1018-ducktales_scroogex27s_money_bin.html"
  },
  {
   "game": "The Simpsons",
@@ -249,7 +267,8 @@
   "image_url": "https://media.sketchfab.com/models/f8e8d74b53ea46aa85bba49439a56ae2/thumbnails/2a7cf4b3aca441348feebdd5859aa1fd/01b02e3941c44aa4b12d6270710a00a6.jpeg",
   "page_url": "https://sketchfab.com/3d-models/f8e8d74b53ea46aa85bba49439a56ae2",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1019-the_simpsons_bartx27s_classroom.html"
  },
  {
   "game": "Kirby's Dream Land",
@@ -262,7 +281,8 @@
   "image_url": "https://media.sketchfab.com/models/c837ca6f99894a6eac849e0a6edc7895/thumbnails/b531ed43e20b45759f69eb44ae37f4fe/420922ef340747d58938b36981ee53f4.jpeg",
   "page_url": "https://sketchfab.com/3d-models/c837ca6f99894a6eac849e0a6edc7895",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1020-kirbyx27s_dream_land_dream_land_star_door_hill.html"
  },
  {
   "game": "Banjo-Kazooie",
@@ -275,7 +295,8 @@
   "image_url": "https://media.sketchfab.com/models/82a70586a16a410e949e4d134c7f48a0/thumbnails/d74e8a3ff9374f198442c4fab484163f/121f47b984fa4bd0b17303f8618238d0.jpeg",
   "page_url": "https://sketchfab.com/3d-models/82a70586a16a410e949e4d134c7f48a0",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1021-banjo_kazooie_spiral_mountain.html"
  },
  {
   "game": "The Legend of Zelda: Twilight Princess",
@@ -288,7 +309,8 @@
   "image_url": "https://media.sketchfab.com/models/5428004a91cc49a994c76a5b273f0416/thumbnails/2edac700ffee4779a2c83045e9fbbe8d/09b56988c28b4e279d0f6d35515f931b.jpeg",
   "page_url": "https://sketchfab.com/3d-models/5428004a91cc49a994c76a5b273f0416",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1022-the_legend_of_zelda_twilight_princess_temple_of_time.html"
  },
  {
   "game": "The Legend of Zelda",
@@ -301,7 +323,8 @@
   "image_url": "https://media.sketchfab.com/models/4f219bcb8e924d4d9102a440f21bfc9e/thumbnails/fe11dd2bceff460eb3a47b17fde9bd25/86d2bff0871a48bc9e54144111b05184.jpeg",
   "page_url": "https://sketchfab.com/3d-models/4f219bcb8e924d4d9102a440f21bfc9e",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1023-the_legend_of_zelda_hyrule_castle_interior.html"
  },
  {
   "game": "Metroid",
@@ -314,7 +337,8 @@
   "image_url": "https://media.sketchfab.com/models/bc65a97cac2c488e870efeae3401d22d/thumbnails/71d0907829bf4bbcb49fc201e4156231/e61e73139d0840c68e9e642e93a85bd2.jpeg",
   "page_url": "https://sketchfab.com/3d-models/bc65a97cac2c488e870efeae3401d22d",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1024-metroid_metroid_diorama.html"
  },
  {
   "game": "Mario Kart 64",
@@ -327,7 +351,8 @@
   "image_url": "https://media.sketchfab.com/models/4b8ea7043387429a95cb96da2a4a572b/thumbnails/5a5c5d797d7f442188511e70036d71bd/49e9cfe7aac74a79b9f9aebdd71d28db.jpeg",
   "page_url": "https://sketchfab.com/3d-models/4b8ea7043387429a95cb96da2a4a572b",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1025-mario_kart_64_rainbow_road.html"
  },
  {
   "game": "Castlevania: Symphony of the Night",
@@ -340,7 +365,8 @@
   "image_url": "https://media.sketchfab.com/models/a00672f5903c48b38404e8621cd3c207/thumbnails/e4dc80e44f8a48b38fec29ae3cd6c32a/93e3c54da4ce40d699c8f32e1a447aa3.jpeg",
   "page_url": "https://sketchfab.com/3d-models/a00672f5903c48b38404e8621cd3c207",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1026-castlevania_symphony_of_the_night_draculax27s_throne_room.html"
  },
  {
   "game": "Chrono Trigger",
@@ -353,7 +379,8 @@
   "image_url": "https://media.sketchfab.com/models/a120542c5e824edcb81ffbcc3969b3a4/thumbnails/98cc7d15973d4a518d276ed9b184624b/130c86a0986a45fc9d98ba78bcf9afd2.jpeg",
   "page_url": "https://sketchfab.com/3d-models/a120542c5e824edcb81ffbcc3969b3a4",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1027-chrono_trigger_the_kingdom_of_zeal.html"
  },
  {
   "game": "Luigi's Mansion",
@@ -366,7 +393,8 @@
   "image_url": "https://media.sketchfab.com/models/452b7a907afa467c8d0daef13aa6f955/thumbnails/a16da95de185420eaab7bdff668c37a2/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/452b7a907afa467c8d0daef13aa6f955",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1028-luigix27s_mansion_mansion_library_luigix27s_mansion_resident_evil.html"
  },
  {
   "game": "Super Mario Odyssey",
@@ -379,7 +407,8 @@
   "image_url": "https://media.sketchfab.com/models/5fce9c0c6790465fba80b18b7bbc2809/thumbnails/df4509830ac1407282722a13c7e0fea1/1fc16db5ee2944a1abb655b924f72883.jpeg",
   "page_url": "https://sketchfab.com/3d-models/5fce9c0c6790465fba80b18b7bbc2809",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1029-super_mario_odyssey_bowserx27s_airship.html"
  },
  {
   "game": "The Legend of Zelda: Ocarina of Time",
@@ -392,7 +421,8 @@
   "image_url": "https://media.sketchfab.com/models/6ef46d45927945259127a73484f10d24/thumbnails/7a64d7cdcb7342d68f5ae5eaf13f8c7e/65da3d000abc4bd5899837c02de98b90.jpeg",
   "page_url": "https://sketchfab.com/3d-models/6ef46d45927945259127a73484f10d24",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1030-the_legend_of_zelda_ocarina_of_time_kakariko_village.html"
  },
  {
   "game": "The Legend of Zelda: Link's Awakening",
@@ -405,7 +435,8 @@
   "image_url": "https://media.sketchfab.com/models/49e4afd763e44f078fd2a3bee4c6c317/thumbnails/af8766ab479045fe9aa4f3f8567d7f3c/1f9791567cb149e191a81f21b8d61cd0.jpeg",
   "page_url": "https://sketchfab.com/3d-models/49e4afd763e44f078fd2a3bee4c6c317",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1031-the_legend_of_zelda_linkx27s_awakening_koholint_island.html"
  },
  {
   "game": "Pok\u00e9mon",
@@ -418,7 +449,8 @@
   "image_url": "https://media.sketchfab.com/models/b25aa0b34e254759b95a4fe0dcae3f14/thumbnails/4b0bbf6490164daabed248aa0afe90c0/72d77319afc04ead9060e34a995f7465.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b25aa0b34e254759b95a4fe0dcae3f14",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1032-pokmon_pokmon_center.html"
  },
  {
   "game": "Teenage Mutant Ninja Turtles",
@@ -431,7 +463,8 @@
   "image_url": "https://media.sketchfab.com/models/b9a24ca8989b492581f2b066da4c0eeb/thumbnails/8261868baf02480d81290daf6aa93c87/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b9a24ca8989b492581f2b066da4c0eeb",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1033-teenage_mutant_ninja_turtles_rooftop_foot_billboard.html"
  },
  {
   "game": "Mario Kart 8",
@@ -444,7 +477,8 @@
   "image_url": "https://media.sketchfab.com/models/86b9094fb6864e73a0f1404d72536bac/thumbnails/a903576047c84dca8e8729f396ce11f1/c58e65570270406e9a4cbdd07c575b5e.jpeg",
   "page_url": "https://sketchfab.com/3d-models/86b9094fb6864e73a0f1404d72536bac",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1034-mario_kart_8_bowserx27s_castle.html"
  },
  {
   "game": "Kingdom Hearts",
@@ -457,7 +491,8 @@
   "image_url": "https://media.sketchfab.com/models/1b8f8146fb304a92ad2f5b15fecc9f9f/thumbnails/74ed924febcf4834948e5c08c9dfc15c/fa7dc324ab014f9dac483a3479c6f3a6.jpeg",
   "page_url": "https://sketchfab.com/3d-models/1b8f8146fb304a92ad2f5b15fecc9f9f",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1035-kingdom_hearts_destiny_islands.html"
  },
  {
   "game": "EarthBound",
@@ -470,7 +505,8 @@
   "image_url": "https://media.sketchfab.com/models/736bcdef3e7f46c7b0ca4dc262db5f00/thumbnails/1c36035d2e494adea672021db7f3454b/5ac201da1068427489145b3853923be1.jpeg",
   "page_url": "https://sketchfab.com/3d-models/736bcdef3e7f46c7b0ca4dc262db5f00",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1036-earthbound_peaceful_rest_valley.html"
  },
  {
   "game": "Super Mario Galaxy",
@@ -483,7 +519,8 @@
   "image_url": "https://media.sketchfab.com/models/c89a23b686214eccb25101df5c0640cb/thumbnails/b1a303203d614ed6833a9da5599aaeb4/5d15fe0c0fd24e5a8dd6ea3752da5f36.jpeg",
   "page_url": "https://sketchfab.com/3d-models/c89a23b686214eccb25101df5c0640cb",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1037-super_mario_galaxy_mushroom_kingdom.html"
  },
  {
   "game": "Pok\u00e9mon FireRed",
@@ -496,7 +533,8 @@
   "image_url": "https://media.sketchfab.com/models/b23b6b253207463c97db2a7092adff74/thumbnails/6aa21196479a4d42a52665d6bdcc4f09/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b23b6b253207463c97db2a7092adff74",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1038-pokmon_firered_playerx27s_room.html"
  },
  {
   "game": "Super Mario 64",
@@ -509,7 +547,8 @@
   "image_url": "https://media.sketchfab.com/models/78db994daec94d9fb46f322e71eaca00/thumbnails/93a0e8dc1942450cb6727f8b75449389/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/78db994daec94d9fb46f322e71eaca00",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1039-super_mario_64_bob_omb_battlefield.html"
  },
  {
   "game": "Super Mario 64",
@@ -522,7 +561,8 @@
   "image_url": "https://media.sketchfab.com/models/38a87167983943048b918fcdd415f9bf/thumbnails/a0968e9b99d644cfae4746c5c33c1833/9277e8def5f34230a011d4df6ad32aa4.jpeg",
   "page_url": "https://sketchfab.com/3d-models/38a87167983943048b918fcdd415f9bf",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1040-super_mario_64_peachx27s_castle_exterior.html"
  },
  {
   "game": "The Legend of Zelda: Ocarina of Time",
@@ -535,7 +575,8 @@
   "image_url": "https://media.sketchfab.com/models/28a6a38bb6e34b4095fea044fafc7a17/thumbnails/97ebfbe9988949fa8a3b5c149f270168/4ebad952c4a54a53a0222ea22dbfae9a.jpeg",
   "page_url": "https://sketchfab.com/3d-models/28a6a38bb6e34b4095fea044fafc7a17",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1041-the_legend_of_zelda_ocarina_of_time_kokiri_forest.html"
  },
  {
   "game": "The Simpsons",
@@ -548,7 +589,8 @@
   "image_url": "https://media.sketchfab.com/models/1763a1dc14d44861a090d59f7d83603f/thumbnails/ae9fa5c0de2e4e93a1a8d7ddf37f90ac/f70614140b144b5fb9251288f5b21a90.jpeg",
   "page_url": "https://sketchfab.com/3d-models/1763a1dc14d44861a090d59f7d83603f",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1042-the_simpsons_742_evergreen_terrace.html"
  },
  {
   "game": "Castlevania",
@@ -561,7 +603,8 @@
   "image_url": "https://media.sketchfab.com/models/efb02cb045b9430d84df3a578814c8fc/thumbnails/de724f18b4334b3f9b9c7dd1b0258227/eca81bffbfe44476931d14fd034d9d80.jpeg",
   "page_url": "https://sketchfab.com/3d-models/efb02cb045b9430d84df3a578814c8fc",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1043-castlevania_draculax27s_castle.html"
  },
  {
   "game": "Sonic Frontiers",
@@ -574,7 +617,8 @@
   "image_url": "https://media.sketchfab.com/models/bdd76098f01442818cef8645307adafb/thumbnails/55264c1b6bc0401e8ec5ce68b42a3c40/879a078262a44c5b84194c40085cc982.jpeg",
   "page_url": "https://sketchfab.com/3d-models/bdd76098f01442818cef8645307adafb",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1044-sonic_frontiers_casino_highway.html"
  },
  {
   "game": "Pok\u00e9mon Ruby/Sapphire/Emerald",
@@ -587,7 +631,8 @@
   "image_url": "https://media.sketchfab.com/models/ae2858d8d212406ebe95927d4f17d328/thumbnails/d9c57fea48354367b7d2503247f9066b/977b443b5c95455f9510dcdfb7361d32.jpeg",
   "page_url": "https://sketchfab.com/3d-models/ae2858d8d212406ebe95927d4f17d328",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1045-pokmon_ruby_sapphire_emerald_pokmon_center.html"
  },
  {
   "game": "Hollow Knight",
@@ -600,7 +645,8 @@
   "image_url": "https://media.sketchfab.com/models/ff25e88f8e784bf3baecdc76ef33fe5e/thumbnails/cadf88ce72044700aee2ad53c067324d/dbf2c63e199b4d39bc6be2dc4ef60645.jpeg",
   "page_url": "https://sketchfab.com/3d-models/ff25e88f8e784bf3baecdc76ef33fe5e",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1046-hollow_knight_the_knightx27s_shell_cavern.html"
  },
  {
   "game": "The Elder Scrolls V: Skyrim",
@@ -613,7 +659,8 @@
   "image_url": "https://media.sketchfab.com/models/b819181e3ca84671afb06541a6dd402d/thumbnails/153cbb0ec7a4455a8c1483b35ec5965e/1c9575782c5240a785d9b3d92e009aa9.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b819181e3ca84671afb06541a6dd402d",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1047-the_elder_scrolls_v_skyrim_skyrim_vg_remix_diorama.html"
  },
  {
   "game": "Secret of Mana",
@@ -626,7 +673,8 @@
   "image_url": "https://media.sketchfab.com/models/d87ed0664c764390bc5c09fbaf9ff0f2/thumbnails/4946141f48fb485b8b3bdf2058277406/46b68782795f474a88ff7e5571d8838e.jpeg",
   "page_url": "https://sketchfab.com/3d-models/d87ed0664c764390bc5c09fbaf9ff0f2",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1048-secret_of_mana_the_mana_tree.html"
  },
  {
   "game": "Cuphead",
@@ -639,7 +687,8 @@
   "image_url": "https://media.sketchfab.com/models/3899d642f19c487ba71d995f105f0901/thumbnails/f22f991ebd7a4ef1b292d848e1b54be0/4431e73e44e64ca099caab0113bd11f9.jpeg",
   "page_url": "https://sketchfab.com/3d-models/3899d642f19c487ba71d995f105f0901",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1049-cuphead_inkwell_isle_two.html"
  },
  {
   "game": "The Legend of Zelda",
@@ -652,7 +701,8 @@
   "image_url": "https://media.sketchfab.com/models/263c4ade495245e1913f10af68f864fc/thumbnails/e6515fab0b1d46f9ab9ed352881ffcba/1920x1080.jpeg",
   "page_url": "https://sketchfab.com/3d-models/263c4ade495245e1913f10af68f864fc",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1050-the_legend_of_zelda_linkx27s_house_voxel_diorama.html"
  },
  {
   "game": "The Legend of Zelda: Link's Awakening",
@@ -665,7 +715,8 @@
   "image_url": "https://media.sketchfab.com/models/a1137e798dc342199465ec30bb18726a/thumbnails/953a7a57949e4440acf8d4c3c271b54f/fc7f21c00269409790560278ea2d1cc2.jpeg",
   "page_url": "https://sketchfab.com/3d-models/a1137e798dc342199465ec30bb18726a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1051-the_legend_of_zelda_linkx27s_awakening_animal_village_kitchen.html"
  },
  {
   "game": "The Legend of Zelda: Link's Awakening DX",
@@ -678,7 +729,8 @@
   "image_url": "https://media.sketchfab.com/models/534951458de04bfaa6548c5deee98ac6/thumbnails/0cee03f7f3894d32a5908c0da78cf316/6618306870af4b138deec38710414934.jpeg",
   "page_url": "https://sketchfab.com/3d-models/534951458de04bfaa6548c5deee98ac6",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1052-the_legend_of_zelda_linkx27s_awakening_dx_mabe_village.html"
  },
  {
   "game": "Kingdom Hearts",
@@ -691,7 +743,8 @@
   "image_url": "https://media.sketchfab.com/models/384b68ec8d74404dba40c953cd321b35/thumbnails/7f59ac68f56a475e80436d51c42d71e9/6b9ba5fd40f04a2dbfa6b8f8359f2f27.jpeg",
   "page_url": "https://sketchfab.com/3d-models/384b68ec8d74404dba40c953cd321b35",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1053-kingdom_hearts_twilight_town_clock_tower.html"
  },
  {
   "game": "Chrono Trigger",
@@ -704,7 +757,8 @@
   "image_url": "https://media.sketchfab.com/models/046a0363c05446df8ab2353ab18a69ac/thumbnails/0bff698a5e77465bb449a14cc34e5f1b/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/046a0363c05446df8ab2353ab18a69ac",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1054-chrono_trigger_chronox27s_room.html"
  },
  {
   "game": "Super Mario 64 (Minecraft build)",
@@ -717,7 +771,8 @@
   "image_url": "https://media.sketchfab.com/models/c5850ff2b64e4c9dba649f37d7e14b89/thumbnails/18fcf6c05e444cccb05010dba73ae0bc/9d1bce019fb44c8298043a269e4d3d7b.jpeg",
   "page_url": "https://sketchfab.com/3d-models/c5850ff2b64e4c9dba649f37d7e14b89",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1055-super_mario_64_minecraft_build_peachx27s_castle_grounds.html"
  },
  {
   "game": "Mario Kart 8 Deluxe",
@@ -730,7 +785,8 @@
   "image_url": "https://media.sketchfab.com/models/ccdcee6b824c44ab8f90e7ed1090ad71/thumbnails/6214e25a013a48ae8dbe6335f4d8a496/cacdc27060c645faa8de3c945b671609.jpeg",
   "page_url": "https://sketchfab.com/3d-models/ccdcee6b824c44ab8f90e7ed1090ad71",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1056-mario_kart_8_deluxe_wii_moonview_highway.html"
  },
  {
   "game": "Super Mario Odyssey",
@@ -743,7 +799,8 @@
   "image_url": "https://media.sketchfab.com/models/52b81795246d45b7946632d140b401b2/thumbnails/7ed1afccecb34102854de87571c0a499/98796c663aba4750ab9ff40950d7d468.jpeg",
   "page_url": "https://sketchfab.com/3d-models/52b81795246d45b7946632d140b401b2",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1057-super_mario_odyssey_peachx27s_castle_interior.html"
  },
  {
   "game": "Super Mario",
@@ -756,7 +813,8 @@
   "image_url": "https://media.sketchfab.com/models/1defd6e214f64094a20ba43c0006536b/thumbnails/c24391c95d4944c8bc1b0530d0ec9810/1b139fa6fada40f78f6a2fdc177d5806.jpeg",
   "page_url": "https://sketchfab.com/3d-models/1defd6e214f64094a20ba43c0006536b",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1058-super_mario_small_mario_habitat_block_island.html"
  },
  {
   "game": "Super Mario",
@@ -769,7 +827,8 @@
   "image_url": "https://media.sketchfab.com/models/e7982f8372e84a88a54497b11d404edb/thumbnails/44643eb926d24f0494d4f9a7410c736b/8f3de802b40c4857ac4970832a284c8c.jpeg",
   "page_url": "https://sketchfab.com/3d-models/e7982f8372e84a88a54497b11d404edb",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1059-super_mario_mario_voxelland.html"
  },
  {
   "game": "Mario Kart 8 Deluxe",
@@ -782,7 +841,8 @@
   "image_url": "https://media.sketchfab.com/models/cd7bea3feaf14d8d86ebfc959b9b2b4d/thumbnails/89656bf3059e4853bc3935ae2a8fb9f1/cb69b7dd2c054075b4105465697b0042.jpeg",
   "page_url": "https://sketchfab.com/3d-models/cd7bea3feaf14d8d86ebfc959b9b2b4d",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1060-mario_kart_8_deluxe_yoshix27s_island_circuit.html"
  },
  {
   "game": "Super Mario Bros. 3",
@@ -795,7 +855,8 @@
   "image_url": "https://media.sketchfab.com/models/ba978b32dcaf47a58fbc3929657b4b7f/thumbnails/44dc0085726f4386aaf6effaee804534/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/ba978b32dcaf47a58fbc3929657b4b7f",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1061-super_mario_bros_3_world_1_diorama.html"
  },
  {
   "game": "Sonic the Hedgehog",
@@ -808,7 +869,8 @@
   "image_url": "https://media.sketchfab.com/models/669a92f1475444f596a846ba326655de/thumbnails/818ca6b1d16044e8a755735b6a86b7fa/2f046ff43c24466fb6a427716801c858.jpeg",
   "page_url": "https://sketchfab.com/3d-models/669a92f1475444f596a846ba326655de",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1062-sonic_the_hedgehog_green_hill_zone_loop_diorama.html"
  },
  {
   "game": "Sonic the Hedgehog",
@@ -821,7 +883,8 @@
   "image_url": "https://media.sketchfab.com/models/679a7e6dd87a45b382f6536e132988ac/thumbnails/ab8d29851e194101a8fd49814ed1febc/4f1e91e071c04ead958a18058dd8f67b.jpeg",
   "page_url": "https://sketchfab.com/3d-models/679a7e6dd87a45b382f6536e132988ac",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1063-sonic_the_hedgehog_green_hill_zone_diorama.html"
  },
  {
   "game": "Sonic Adventure 2",
@@ -834,7 +897,8 @@
   "image_url": "https://media.sketchfab.com/models/7607d807aad641c98a2c599886f79fe3/thumbnails/9be404a64ca94fa39e4ecbd63e3ba10b/bc26c4d79abc4e19bb0c7b5d0442ecf4.jpeg",
   "page_url": "https://sketchfab.com/3d-models/7607d807aad641c98a2c599886f79fe3",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1064-sonic_adventure_2_city_escape.html"
  },
  {
   "game": "Donkey Kong",
@@ -847,7 +911,8 @@
   "image_url": "https://media.sketchfab.com/models/372b7206c31146cebb5ff1e6bbbe5dac/thumbnails/efeeeb1525ad49dca16faad9298532ed/a5ac805d08a94cd0bec829569e36720b.jpeg",
   "page_url": "https://sketchfab.com/3d-models/372b7206c31146cebb5ff1e6bbbe5dac",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1065-donkey_kong_25m_level_1.html"
  },
  {
   "game": "Donkey Kong",
@@ -860,7 +925,8 @@
   "image_url": "https://media.sketchfab.com/models/83a8d8cb32b54cecbe082e343419a62e/thumbnails/d2b08b5984814d8fa1d7319aab810d9d/3af32ad0891a4d6db0e8e88846f55015.jpeg",
   "page_url": "https://sketchfab.com/3d-models/83a8d8cb32b54cecbe082e343419a62e",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1066-donkey_kong_classic_donkey_kong_level_nes.html"
  },
  {
   "game": "Mega Man 2",
@@ -873,7 +939,8 @@
   "image_url": "https://media.sketchfab.com/models/2c287e1496464357815d36270939818a/thumbnails/1d18a5b00f364978adef4448de11fd8a/9bc13a26a2424243a719d5794a6fa991.jpeg",
   "page_url": "https://sketchfab.com/3d-models/2c287e1496464357815d36270939818a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1067-mega_man_2_wily_castle.html"
  },
  {
   "game": "Mega Man",
@@ -886,7 +953,8 @@
   "image_url": "https://media.sketchfab.com/models/c9da6fa149b245bbb87b3b0b254b29e4/thumbnails/748614c5308840b7a4dde5c133fe2b47/b12a41c256d94e87b9ca5dbc90924024.jpeg",
   "page_url": "https://sketchfab.com/3d-models/c9da6fa149b245bbb87b3b0b254b29e4",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1068-mega_man_vg_remix_diorama.html"
  },
  {
   "game": "Super Ghouls 'n Ghosts",
@@ -899,7 +967,8 @@
   "image_url": "https://media.sketchfab.com/models/f0cc7bf1b6e147c3bbb594bba773d03a/thumbnails/3d2894f94dd54a32accb2a47ee8e3dc5/1024.jpeg",
   "page_url": "https://sketchfab.com/3d-models/f0cc7bf1b6e147c3bbb594bba773d03a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1069-super_ghouls_x27n_ghosts_the_graveyard_diorama.html"
  },
  {
   "game": "Ghosts 'n Goblins",
@@ -912,7 +981,8 @@
   "image_url": "https://media.sketchfab.com/models/cf8a913d319c4e7ab24014489b38d2c4/thumbnails/ee92421e0dec4d5d9d0986aa5b0694dc/0d4836d3fb52400789024802a92051b2.jpeg",
   "page_url": "https://sketchfab.com/3d-models/cf8a913d319c4e7ab24014489b38d2c4",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1070-ghosts_x27n_goblins_makaimura_stage_1_diorama.html"
  },
  {
   "game": "Ghosts 'n Goblins",
@@ -925,7 +995,8 @@
   "image_url": "https://media.sketchfab.com/models/8ef47160adb44ad9a1ac04c8656748cf/thumbnails/7bb3975ce5f54b07bdee3a4297fec56c/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/8ef47160adb44ad9a1ac04c8656748cf",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1071-ghosts_x27n_goblins_stage_1_forest.html"
  },
  {
   "game": "Mortal Kombat X",
@@ -938,7 +1009,8 @@
   "image_url": "https://media.sketchfab.com/models/3d970f299b0f4fcf8f8d61713d5104ce/thumbnails/6099c49c935f4430b5d28cc0e505ee3a/443a7b693ca64da5a3e010dac7d94344.jpeg",
   "page_url": "https://sketchfab.com/3d-models/3d970f299b0f4fcf8f8d61713d5104ce",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1072-mortal_kombat_x_training_room_stage.html"
  },
  {
   "game": "Kirby",
@@ -951,7 +1023,8 @@
   "image_url": "https://media.sketchfab.com/models/b7de46688c81485e8ef984644863aa41/thumbnails/2feb34beff394bcaad62b675b59c53fc/a12015c088234a2e9a7001970d56d3f6.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b7de46688c81485e8ef984644863aa41",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1073-kirby_battleship_halberd.html"
  },
  {
   "game": "Pok\u00e9mon Red & Blue",
@@ -964,7 +1037,8 @@
   "image_url": "https://media.sketchfab.com/models/f4b31c77335e4b5286af3937dcb2ca09/thumbnails/aa4ba2975fe84f8fa9f8b27727187780/ec89cc7b51c94adaaba860ae37abf765.jpeg",
   "page_url": "https://sketchfab.com/3d-models/f4b31c77335e4b5286af3937dcb2ca09",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1074-pokmon_red_amp_blue_lavender_town.html"
  },
  {
   "game": "Pok\u00e9mon Red & Blue",
@@ -977,7 +1051,8 @@
   "image_url": "https://media.sketchfab.com/models/f35615d9dc344a43b9f3b505a8f13991/thumbnails/570d2b18dcab475a8b98ebc974079d3d/9d121855b2da4536a82cbee8c0d42a93.jpeg",
   "page_url": "https://sketchfab.com/3d-models/f35615d9dc344a43b9f3b505a8f13991",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1075-pokmon_red_amp_blue_viridian_city.html"
  },
  {
   "game": "Super Mario 64",
@@ -990,7 +1065,8 @@
   "image_url": "https://media.sketchfab.com/models/09289ffdea4342b58cea10851f863033/thumbnails/1cbdfb8c1bcc4d9394621b9cf99b00b2/148b52deef974767b4303e15750fc2a7.jpeg",
   "page_url": "https://sketchfab.com/3d-models/09289ffdea4342b58cea10851f863033",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1076-super_mario_64_whompx27s_fortress.html"
  },
  {
   "game": "The Legend of Zelda: A Link Between Worlds",
@@ -1003,7 +1079,8 @@
   "image_url": "https://media.sketchfab.com/models/e6b2838ec7de486f96c90e81df890d7d/thumbnails/0bc958cb20f24999b8010aa797ef0be0/ed0b97f2cacb48b49d8c05d8e104e38c.jpeg",
   "page_url": "https://sketchfab.com/3d-models/e6b2838ec7de486f96c90e81df890d7d",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1077-the_legend_of_zelda_a_link_between_worlds_hyrule_castle.html"
  },
  {
   "game": "The Legend of Zelda: Breath of the Wild",
@@ -1016,7 +1093,8 @@
   "image_url": "https://media.sketchfab.com/models/6b82bd8da35449baba2bcdec8546bc08/thumbnails/478b6f81c1cd41eaa71002a5b983afe9/1ca4ff5197d94f0f820d634ce1a9a06f.jpeg",
   "page_url": "https://sketchfab.com/3d-models/6b82bd8da35449baba2bcdec8546bc08",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1078-the_legend_of_zelda_breath_of_the_wild_hyrule_full_world.html"
  },
  {
   "game": "Resident Evil",
@@ -1029,7 +1107,8 @@
   "image_url": "https://media.sketchfab.com/models/b43045bb1e05499ca2c5a2c3db071e0a/thumbnails/4509a2fa023e4e51acfe431922badcd8/703237932f2848bba1cc618b238cbcbb.jpeg",
   "page_url": "https://sketchfab.com/3d-models/b43045bb1e05499ca2c5a2c3db071e0a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1079-resident_evil_spencer_mansion_main_hall.html"
  },
  {
   "game": "Silent Hill 3",
@@ -1042,7 +1121,8 @@
   "image_url": "https://media.sketchfab.com/models/032d086b265c492eac3f92eb427cb60e/thumbnails/4a452d03562949cfb1999ae0ab13d65c/6210d7366f36444d964f9bf1b8569bfc.jpeg",
   "page_url": "https://sketchfab.com/3d-models/032d086b265c492eac3f92eb427cb60e",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1080-silent_hill_3_the_cathedral.html"
  },
  {
   "game": "Halo 4",
@@ -1055,7 +1135,8 @@
   "image_url": "https://media.sketchfab.com/models/2067e4323bcb4f4189cfa7d830cd4c0a/thumbnails/e03be74e8d9c4f2e970dae3e94cf509e/106cbfb6d1134a4aab96692caf08f6ab.jpeg",
   "page_url": "https://sketchfab.com/3d-models/2067e4323bcb4f4189cfa7d830cd4c0a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1081-halo_4_composer_ivanoff_station.html"
  },
  {
   "game": "Stardew Valley",
@@ -1068,7 +1149,8 @@
   "image_url": "https://media.sketchfab.com/models/75d4edbe7cef4642803cc9c2f9cd2d1a/thumbnails/8e31ef3816a04b4e8b7d92d74f21d8a0/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/75d4edbe7cef4642803cc9c2f9cd2d1a",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1082-stardew_valley_the_farm.html"
  },
  {
   "game": "Metal Gear Solid",
@@ -1081,7 +1163,8 @@
   "image_url": "https://media.sketchfab.com/models/a4ca0e3864e143af9bf1dffc7fc8029b/thumbnails/33a44d0a7d124b8f9babba2c33f35f37/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/a4ca0e3864e143af9bf1dffc7fc8029b",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1083-metal_gear_solid_shadow_moses_island_heliport.html"
  },
  {
   "game": "World of Warcraft: Legion",
@@ -1094,7 +1177,8 @@
   "image_url": "https://media.sketchfab.com/models/946e7d496abd400fa028a719f8df3b04/thumbnails/c2407311ab944e0f854fab197f897f35/1024x576.jpeg",
   "page_url": "https://sketchfab.com/3d-models/946e7d496abd400fa028a719f8df3b04",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1084-world_of_warcraft_legion_azsuna.html"
  },
  {
   "game": "Counter-Strike",
@@ -1107,7 +1191,8 @@
   "image_url": "https://media.sketchfab.com/models/056008d59eb849a29c0ab6884c0c3d87/thumbnails/85c888dcefb6422fb169117f741f14dd/5b6f0524e351455d93fc90cd14d9ddfa.jpeg",
   "page_url": "https://sketchfab.com/3d-models/056008d59eb849a29c0ab6884c0c3d87",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1085-counter_strike_dust_ii_de_dust2.html"
  },
  {
   "game": "Dark Souls",
@@ -1120,7 +1205,8 @@
   "image_url": "https://media.sketchfab.com/models/d823af63681b4e65b222606043ec81c7/thumbnails/1d167c28cf944ac78520a10fe0132ee4/d9ec1521a9a64059a12e61bfafab1f9e.jpeg",
   "page_url": "https://sketchfab.com/3d-models/d823af63681b4e65b222606043ec81c7",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1086-dark_souls_bonfire_shrine.html"
  },
  {
   "game": "GoldenEye 007",
@@ -1133,7 +1219,8 @@
   "image_url": "https://media.sketchfab.com/models/94a3dfb06fc2480fb19f1db3efa83169/thumbnails/e371873af58b439ebf10782de9893617/0605d05e9c104147a4ff3650ebe50ba2.jpeg",
   "page_url": "https://sketchfab.com/3d-models/94a3dfb06fc2480fb19f1db3efa83169",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1087-goldeneye_007_dam.html"
  },
  {
   "game": "Advance Wars 1+2: Re-Boot Camp",
@@ -1146,7 +1233,8 @@
   "image_url": "https://media.sketchfab.com/models/1717579a03634e948defa402ef777035/thumbnails/2e329c26ba91493bb8bde7564da52d20/b73809f6828344a1a127f4132951a0a6.jpeg",
   "page_url": "https://sketchfab.com/3d-models/1717579a03634e948defa402ef777035",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1088-advance_wars_12_re_boot_camp_battlefield_map.html"
  },
  {
   "game": "Halo: Reach",
@@ -1159,7 +1247,8 @@
   "image_url": "https://media.sketchfab.com/models/1bb5805ca27b4b3ea8cd317936247285/thumbnails/6bfb6397803844b487f9ff9b5748ebad/2a46b17ed9b64a1fa5d5e898d3d3120c.jpeg",
   "page_url": "https://sketchfab.com/3d-models/1bb5805ca27b4b3ea8cd317936247285",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1089-halo_reach_condemned_gamma_station.html"
  },
  {
   "game": "Resident Evil \u00d7 Silent Hill (tribute)",
@@ -1172,7 +1261,8 @@
   "image_url": "https://media.sketchfab.com/models/41c7f913b99643d695f0b3b09bab8382/thumbnails/ee329f21e23e484ab8e413bc5472c52b/307ae2dceba447ee9fbf74fa6c9b5f1e.jpeg",
   "page_url": "https://sketchfab.com/3d-models/41c7f913b99643d695f0b3b09bab8382",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1090-resident_evil_silent_hill_tribute_resident_hill_the_mansion.html"
  },
  {
   "game": "Pikmin 3",
@@ -1185,7 +1275,8 @@
   "image_url": "https://media.sketchfab.com/models/c0fdf298a18a45cdb809f6944336c9b3/thumbnails/5b5e364a44a7452ba809a4f2976ad5b1/2cff4f1a93dc491fbc3ec664858ac2b8.jpeg",
   "page_url": "https://sketchfab.com/3d-models/c0fdf298a18a45cdb809f6944336c9b3",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1091-pikmin_3_garden_of_hope.html"
  },
  {
   "game": "Halo 4",
@@ -1198,7 +1289,8 @@
   "image_url": "https://media.sketchfab.com/models/2b44a727804e404f8fb1e6d249fee9bf/thumbnails/4e861a898af347c3be7ea75c27d92f0b/c586e5f03aa341bc968634ac7c923301.jpeg",
   "page_url": "https://sketchfab.com/3d-models/2b44a727804e404f8fb1e6d249fee9bf",
   "source": "Sketchfab",
-  "status": "found"
+  "status": "found",
+  "scene_file": "1092-halo_4_haven.html"
  },
  {
   "game": "Portal",
