@@ -278,5 +278,13 @@
     "status": "pass",
     "filename": "1035-kingdom_hearts_destiny_islands.html",
     "updated_at": "2026-11-02 03:12 EST"
+  },
+  "36": {
+    "rank": 36,
+    "game": "EarthBound",
+    "name": "Peaceful Rest Valley",
+    "status": "pass",
+    "filename": "1036-earthbound_peaceful_rest_valley.html",
+    "updated_at": "2026-11-02 03:18 EST"
   }
 }

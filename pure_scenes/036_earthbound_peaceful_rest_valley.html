@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Fairy Pond</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080b18;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 10;
+      color: #fff8e8;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+      user-select: none;
+    }
+
+    .hud h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 38px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      font-weight: 800;
+    }
+
+    .hud p {
+      margin: 8px 0 0;
+      color: rgba(255, 248, 232, 0.72);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      position: fixed;
+      right: 22px;
+      bottom: 20px;
+      z-index: 10;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.65);
+      background: rgba(9, 12, 28, 0.55);
+      backdrop-filter: blur(10px);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 16px;
+        left: 17px;
+      }
+
+      .controls {
+        right: 14px;
+        bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <h1>Fairy Pond</h1>
+    <p>A tiny voxel world</p>
+  </div>
+  <div class="controls">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080b18);
+    scene.fog = new THREE.FogExp2(0x080b18, 0.045);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // ------------------------------------------------------------
+    // Direct camera controls, implemented without addons
+    // ------------------------------------------------------------
+    const cameraState = {
+      azimuth: Math.PI * 0.22,
+      polar: Math.PI * 0.31,
+      radius: 18,
+      target: new THREE.Vector3(0, 2.1, 0)
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(cameraState.polar);
+
+      camera.position.set(
+        cameraState.target.x + cameraState.radius * sinPolar * Math.sin(cameraState.azimuth),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.polar),
+        cameraState.target.z + cameraState.radius * sinPolar * Math.cos(cameraState.azimuth)
+      );
+
+      camera.lookAt(cameraState.target);
+    }
+
+    updateCamera();
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      cameraState.azimuth -= dx * 0.006;
+      cameraState.polar = THREE.MathUtils.clamp(
+        cameraState.polar - dy * 0.005,
+        Math.PI * 0.18,
+        Math.PI * 0.58
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        cameraState.radius = THREE.MathUtils.clamp(
+          cameraState.radius + event.deltaY * 0.012,
+          10,
+          27
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x9ebcff, 0x332215, 1.7));
+
+    const sun = new THREE.DirectionalLight(0xffe3b0, 3.2);
+    sun.position.set(-7, 12, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -14;
+    sun.shadow.camera.right = 14;
+    sun.shadow.camera.top = 14;
+    sun.shadow.camera.bottom = -14;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    const moonLight = new THREE.DirectionalLight(0x799dff, 1.2);
+    moonLight.position.set(8, 7, -10);
+    scene.add(moonLight);
+
+    const pondGlow = new THREE.PointLight(0xff5ee8, 18, 13, 2);
+    pondGlow.position.set(0.4, 0.55, 1.2);
+    scene.add(pondGlow);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const mat = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x8ab65b,
+        roughness: 0.9,
+        flatShading: true
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0xa8c972,
+        roughness: 0.9,
+        flatShading: true
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x527b3c,
+        roughness: 0.95,
+        flatShading: true
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x815a37,
+        roughness: 1,
+        flatShading: true
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0xc78a54,
+        roughness: 0.95,
+        flatShading: true
+      }),
+      rockLight: new THREE.MeshStandardMaterial({
+        color: 0xe0a168,
+        roughness: 0.9,
+        flatShading: true
+      }),
+      rockDark: new THREE.MeshStandardMaterial({
+        color: 0x8c5438,
+        roughness: 1,
+        flatShading: true
+      }),
+      crystal: new THREE.MeshStandardMaterial({
+        color: 0x7b68bd,
+        roughness: 0.35,
+        metalness: 0.15,
+        emissive: 0x24133e,
+        emissiveIntensity: 0.35,
+        flatShading: true
+      }),
+      crystalTop: new THREE.MeshStandardMaterial({
+        color: 0xb69aff,
+        roughness: 0.3,
+        emissive: 0x3b258f,
+        emissiveIntensity: 0.4,
+        flatShading: true
+      }),
+      pink: new THREE.MeshStandardMaterial({
+        color: 0xff79b5,
+        roughness: 0.75,
+        flatShading: true
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffd56b,
+        roughness: 0.75,
+        flatShading: true
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0x9b72ff,
+        roughness: 0.7,
+        flatShading: true
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x6aa8ff,
+        roughness: 0.7,
+        flatShading: true
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xff4d67,
+        roughness: 0.75,
+        flatShading: true
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xfff9e8,
+        roughness: 0.8,
+        flatShading: true
+      })
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+    const world = new THREE.Group();
+    scene.add(world);
+
+    function addBox(
+      size,
+      position,
+      material,
+      parent = world,
+      castShadow = true,
+      receiveShadow = true
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size[0], size[1], size[2]),
+        material
+      );
+
+      mesh.position.set(...position);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addCylinder(
+      radius,
+      height,
+      position,
+      material,
+      parent = world,
+      segments = 4,
+      castShadow = true
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, segments),
+        material
+      );
+
+      mesh.position.set(...position);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function voxelSphere(
+      radius,
+      position,
+      material,
+      parent = world,
+      segments = 4
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(radius, 0),
+        material
+      );
+
+      mesh.position.set(...position);
+      mesh.scale.set(1, 0.85, 1);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ------------------------------------------------------------
+    // Island / diorama base
+    // ------------------------------------------------------------
+    const island = new THREE.Group();
+    world.add(island);
+
+    // Base slab
+    addBox(
+      [11.5, 1.1, 9.5],
+      [0, -0.65, 0],
+      mat.soil,
+      island
+    );
+
+    // Layered grass top
+    addBox(
+      [11.2, 0.35, 9.2],
+      [0, -0.02, 0],
+      mat.grass,
+      island
+    );
+
+    addBox(
+      [10.9, 0.22, 8.9],
+      [0, 0.18, 0],
+      mat.grassLight,
+      island
+    );
+
+    // Side grass blocks
+    for (let x = -5; x <= 5; x++) {
+      addBox(
+        [0.65, 0.55, 0.45],
+        [x, 0.2, 4.55],
+        x % 2 === 0 ? mat.grass : mat.grassDark,
+        island
+      );
+    }
+
+    for (let x = -5; x <= 5; x++) {
+      addBox(
+        [0.65, 0.55, 0.45],
+        [x, 0.2, -4.55],
+        x % 2 === 0 ? mat.grass : mat.grassDark,
+        island
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Glowing voxel pond
+    // ------------------------------------------------------------
+    const pond = new THREE.Group();
+    pond.position.set(0.25, 0.35, 1.15);
+    world.add(pond);
+
+    // Dark pond basin
+    addBox(
+      [4.2, 0.2, 2.7],
+      [0, 0.02, 0],
+      mat.rockDark,
+      pond
+    );
+
+    // Animated-looking water made from many flat, overlapping blocks
+    const waterMaterials = [
+      new THREE.MeshStandardMaterial({
+        color: 0xff4fcf,
+        emissive: 0x7b1188,
+        emissiveIntensity: 1.5,
+        roughness: 0.35,
+        metalness: 0.05,
+        flatShading: true
+      }),
+      new THREE.MeshStandardMaterial({
+        color: 0xff8be8,
+        emissive: 0x9b24b7,
+        emissiveIntensity: 1.25,
+        roughness: 0.35,
+        metalness: 0.05,
+        flatShading: true
+      }),
+      new THREE.MeshStandardMaterial({
+        color: 0xf02fb8,
+        emissive: 0x73106e,
+        emissiveIntensity: 1.4,
+        roughness: 0.35,
+        metalness: 0.05,
+        flatShading: true
+      })
+    ];
+
+    const waterBlocks = [
+      [-1.5, 0.15, -0.7, 0.75, 0.12, 0.65],
+      [-0.65, 0.17, -0.45, 0.72, 0.14, 0.68],
+      [0.35, 0.16, -0.65, 0.76, 0.13, 0.65],
+      [1.35, 0.15, -0.35, 0.72, 0.13, 0.66],
+      [-0.75, 0.16, 0.45, 0.78, 0.13, 0.62],
+      [0.15, 0.17, 0.55, 0.76, 0.13, 0.64],
+      [1.0, 0.16, 0.2, 0.72, 0.13, 0.62],
+      [-1.45, 0.16, 0.25, 0.68, 0.13, 0.58],
+      [0.2, 0.18, -0.05, 0.5, 0.1, 0.45],
+      [-0.6, 0.18, 0.05, 0.55, 0.1, 0.46],
+      [0.8, 0.18, -0.15, 0.55, 0.1, 0.45]
+    ];
+
+    waterBlocks.forEach((block, index) => {
+      addBox(
+        block,
+        [block[0], block[1], block[2]],
+        waterMaterials[index % waterMaterials.length],
+        pond,
+        false,
+        false
+      );
+    });
+
+    // Pond edge stones
+    const edgePositions = [
+      [-2.2, 0.12, -0.8],
+      [-1.35, 0.12, 0.7],
+      [0.2, 0.12, 0.8],
+      [1.55, 0.12, 0.55],
+      [2.05, 0.12, -0.1],
+      [1.6, 0.12, -0.9],
+      [0.25, 0.12, -1.0],
+      [-1.25, 0.12, -1.0]
+    ];
+
+    edgePositions.forEach((position, index) => {
+      const stone = addBox(
+        [0.38, 0.28, 0.38],
+        position,
+        index % 2 ? mat.rock : mat.rockLight,
+        pond
+      );
+      stone.rotation.y = index * 0.7;
+    });
+
+    // ------------------------------------------------------------
+    // Rocks
+    // ------------------------------------------------------------
+    function createRock(position, scale, material = mat.rock) {
+      const rock = new THREE.Group();
+      rock.position.set(...position);
+      rock.scale.setScalar(scale);
+      world.add(rock);
+
+      // Main block
+      addBox(
+        [1.65, 1.35, 1.65],
+        [0, 0, 0],
+        material,
+        rock
+      );
+
+      // Irregular upper blocks
+      addBox(
+        [1.2, 0.85, 1.2],
+        [0.15, 0.73, 0.05],
+        mat.rockLight,
+        rock
+      );
+
+      addBox(
+        [0.95, 0.65, 0.95],
+        [-0.55, 0.55, 0.2],
+        mat.rockDark,
+        rock
+      );
+
+      addBox(
+        [0.75, 0.55, 0.75],
+        [0.6, 0.58, -0.25],
+        mat.rock,
+        rock
+      );
+
+      // Cracks as dark thin blocks
+      addBox(
+        [0.18, 0.62, 0.18],
+        [-0.36, 0.2, 0.35],
+        mat.rockDark,
+        rock
+      );
+
+      addBox(
+        [0.16, 0.42, 0.16],
+        [0.42, 0.12, 0.4],
+        mat.rockDark,
+        rock
+      );
+
+      return rock;
+    }
+
+    createRock([-3.2, 0.15, -1.25], 1.25);
+    createRock([3.25, 0.12, -1.45], 1.1);
+    createRock([4.4, 0.12, 1.55], 0.82);
+
+    // Main central rock formation
+    const mainRock = new THREE.Group();
+    mainRock.position.set(0.15, 0.1, -0.55);
+    world.add(mainRock);
+
+    addBox(
+      [3.25, 3.25, 3.05],
+      [0, 1.62, 0],
+      mat.rock,
+      mainRock
+    );
+
+    addBox(
+      [2.45, 1.85, 2.35],
+      [0.1, 3.05, 0.05],
+      mat.rockLight,
+      mainRock
+    );
+
+    addBox(
+      [2.1, 1.35, 2.05],
+      [-0.15, 4.0, 0.08],
+      mat.rock,
+      mainRock
+    );
+
+    addBox(
+      [1.75, 0.9, 1.8],
+      [0.3, 4.75, 0.15],
+      mat.rockLight,
+      mainRock
+    );
+
+    // Face-like cracks
+    addBox(
+      [0.22, 2.1, 0.22],
+      [-0.75, 2.25, 1.35],
+      mat.rockDark,
+      mainRock
+    );
+
+    addBox(
+      [0.24, 1.55, 0.24],
+      [0.55, 2.65, 1.4],
+      mat.rockDark,
+      mainRock
+    );
+
+    addBox(
+      [0.22, 0.85, 0.22],
+      [-0.55, 3.6, 1.35],
+      mat.rockDark,
+      mainRock
+    );
+
+    // ------------------------------------------------------------
+    // Crystal
+    // ------------------------------------------------------------
+    const crystal = new THREE.Group();
+    crystal.position.set(-1.25, 0.2, 0.65);
+    world.add(crystal);
+
+    addCylinder(
+      0.55,
+      1.15,
+      [0, 0.55, 0],
+      mat.crystal,
+      crystal,
+      4
+    );
+
+    addCylinder(
+      0.38,
+      0.65,
+      [0, 1.25, 0],
+      mat.crystal,
+      crystal,
+      4
+    );
+
+    addCylinder(
+      0.2,
+      0.35,
+      [0, 1.7, 0],
+      mat.crystalTop,
+      crystal,
+      4
+    );
+
+    // Small crystals around the main formation
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2 + 0.4;
+      const crystalGroup = new THREE.Group();
+      crystalGroup.position.set(
+        Math.cos(angle) * 2.45,
+        0.1,
+        -0.55 + Math.sin(angle) * 1.8
+      );
+      crystalGroup.rotation.y = angle;
+      world.add(crystalGroup);
+
+      addCylinder(
+        0.16,
+        0.65,
+        [0, 0.32, 0],
+        i % 2 ? mat.crystal : mat.purple,
+        crystalGroup,
+        4
+      );
+
+      addCylinder(
+        0.09,
+        0.28,
+        [0, 0.72, 0],
+        mat.crystalTop,
+        crystalGroup,
+        4
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Plants and flowers
+    // ------------------------------------------------------------
+    function createPlant(position, scale = 1, material = mat.grassLight) {
+      const plant = new THREE.Group();
+      plant.position.set(...position);
+      plant.scale.setScalar(scale);
+      world.add(plant);
+
+      addBox(
+        [0.22, 0.55, 0.22],
+        [0, 0.25, 0],
+        material,
+        plant
+      );
+
+      addBox(
+        [0.38, 0.28, 0.38],
+        [0, 0.5, 0],
+        mat.grass,
+        plant
+      );
+
+      addBox(
+        [0.25, 0.35, 0.25],
+        [0.12, 0.68, 0.05],
+        mat.grassDark,
+        plant
+      );
+
+      addBox(
+        [0.25, 0.35, 0.25],
+        [-0.12, 0.68, -0.05],
+        mat.grass,
+        plant
+      );
+
+      return plant;
+    }
+
+    const plantPositions = [
+      [-4.3, 0.2, 0.8, 0.9],
+      [-3.9, 0.2, 1.25, 0.7],
+      [-2.5, 0.2, 1.45, 0.8],
+      [-1.8, 0.2, 0.1, 0.75],
+      [-0.3, 0.2, -1.55, 0.85],
+      [1.2, 0.2, -1.7, 0.7],
+      [2.3, 0.2, -1.2, 0.9],
+      [3.4, 0.2, 0.2, 0.75],
+      [4.25, 0.2, 0.9, 0.9],
+      [-4.45, 0.2, -1.4, 0.8],
+      [3.8, 0.2, -1.7, 0.75],
+      [-0.8, 0.2, 1.75, 0.7],
+      [1.8, 0.2, 1.7, 0.65]
+    ];
+
+    plantPositions.forEach((entry, index) => {
+      createPlant(
+        [entry[0], entry[1], entry[2]],
+        entry[3],
+        index % 3 === 0 ? mat.grassDark : mat.grassLight
+      );
+    });
+
+    function createFlower(position, petalMaterial, centerMaterial, scale = 1) {
+      const flower = new THREE.Group();
+      flower.position.set(...position);
+      flower.scale.setScalar(scale);
+      world.add(flower);
+
+      addCylinder(
+        0.12,
+        0.22,
+        [0, 0.1, 0],
+        mat.grassDark,
+        flower,
+        4
+      );
+
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const petal = addBox(
+          [0.16, 0.12, 0.28],
+          [
+            Math.cos(angle) * 0.16,
+            0.19,
+            Math.sin(angle) * 0.16
+          ],
+          petalMaterial,
+          flower
+        );
+        petal.rotation.y = -angle;
+        petal.rotation.z = 0.18;
+      }
+
+      addCylinder(
+        0.1,
+        0.16,
+        [0, 0.29, 0],
+        centerMaterial,
+        flower,
+        4
+      );
+
+      return flower;
+    }
+
+    const flowerData = [
+      [-3.7, 0.25, 1.45, mat.pink, mat.yellow, 0.9],
+      [-2.8, 0.25, 1.75, mat.purple, mat.white, 0.75],
+      [-1.65, 0.25, 1.65, mat.red, mat.yellow, 0.8],
+      [0.25, 0.25, 1.85, mat.pink, mat.white, 0.85],
+      [1.45, 0.25, 1.55, mat.purple, mat.yellow, 0.75],
+      [2.8, 0.25, 1.25, mat.red, mat.white, 0.8],
+      [3.95, 0.25, 0.65, mat.pink, mat.yellow, 0.9],
+      [-4.25, 0.25, 0.15, mat.purple, mat.white, 0.75],
+      [-0.45, 0.25, -1.95, mat.red, mat.yellow, 0.75],
+      [1.1, 0.25, -2.0, mat.pink, mat.white, 0.8]
+    ];
+
+    flowerData.forEach((entry) => {
+      createFlower(
+        [entry[0], entry[1], entry[2]],
+        entry[3],
+        entry[4],
+        entry[5]
+      );
+    });
+
+    // ------------------------------------------------------------
+    // Tiny mushrooms
+    // ------------------------------------------------------------
+    function createMushroom(position, scale = 1) {
+      const mushroom = new THREE.Group();
+      mushroom.position.set(...position);
+      mushroom.scale.setScalar(scale);
+      world.add(mushroom);
+
+      addCylinder(
+        0.22,
+        0.18,
+        [0, 0.08, 0],
+        mat.yellow,
+        mushroom,
+        4
+      );
+
+      addCylinder(
+        0.09,
+        0.28,
+        [0, 0.23, 0],
+        mat.pink,
+        mushroom,
+        4
+      );
+
+      addCylinder(
+        0.1,
+        0.035,
+        [0, 0.37, 0],
+        mat.white,
+        mushroom,
+        4
+      );
+
+      return mushroom;
+    }
+
+    createMushroom([2.1, 0.2, 0.2], 0.8);
+    createMushroom([2.45, 0.2, -0.15], 0.55);
+    createMushroom([-2.4, 0.2, -0.2], 0.65);
+
+    // ------------------------------------------------------------
+    // Butterflies
+    // ------------------------------------------------------------
+    const butterflies = [];
+
+    function createButterfly(position, scale, colorMaterial) {
+      const butterfly = new THREE.Group();
+      butterfly.position.set(...position);
+      butterfly.scale.setScalar(scale);
+      world.add(butterfly);
+
+      const wingGeometry = new THREE.CircleGeometry(0.3, 4);
+
+      const leftWing = new THREE.Mesh(wingGeometry, colorMaterial);
+      leftWing.rotation.z = Math.PI / 2;
+      leftWing.position.x = -0.25;
+
+      const rightWing = new THREE.Mesh(wingGeometry, colorMaterial);
+      rightWing.rotation.z = -Math.PI / 2;
+      rightWing.position.x = 0.25;
+
+      butterfly.add(leftWing, rightWing);
+
+      addCylinder(
+        0.07,
+        0.18,
+        [0, 0.08, 0],
+        mat.yellow,
+        butterfly,
+        4
+      );
+
+      butterflies.push({
+        group: butterfly,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.7 + Math.random() * 0.6,
+        baseX: position[0],
+        baseY: position[1],
+        baseZ: position[2],
+        radius: 0.65 + Math.random() * 1.2
+      });
+    }
+
+    createButterfly([-3.1, 2.3, 0.8], 0.8, mat.purple);
+    createButterfly([3.2, 2.8, 0.5], 0.65, mat.yellow);
+    createButterfly([1.8, 3.4, -0.8], 0.55, mat.pink);
+    createButterfly([-1.6, 1.8, -1.4], 0.45, mat.blue);
+
+    // ------------------------------------------------------------
+    // UFO
+    // ------------------------------------------------------------
+    const ufo = new THREE.Group();
+    ufo.position.set(5.2, 4.1, -2.7);
+    ufo.rotation.y = -0.35;
+    world.add(ufo);
+
+    const saucer = addCylinder(
+      0.82,
+      0.3,
+      [0, 0, 0],
+      mat.white,
+      ufo,
+      8
+    );
+    saucer.castShadow = true;
+
+    const saucerBottom = addCylinder(
+      0.67,
+      0.18,
+      [0, -0.25, 0],
+      mat.blue,
+      ufo,
+      8
+    );
+    saucerBottom.castShadow = true;
+
+    addCylinder(
+      0.12,
+      0.65,
+      [0, -0.65, 0],
+      mat.blue,
+      ufo,
+      4
+    );
+
+    // Landing legs
+    for (const x of [-0.38, 0.38]) {
+      addCylinder(
+        0.045,
+        0.45,
+        [x, -1.0, 0],
+        mat.yellow,
+        ufo,
+        4
+      );
+
+      addBox(
+        [0.34, 0.12, 0.28],
+        [x, -1.25, 0],
+        mat.yellow,
+        ufo
+      );
+    }
+
+    // UFO eye lights
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x7dffbf,
+      emissive: 0x39ff88,
+      emissiveIntensity: 2.5,
+      roughness: 0.3
+    });
+
+    const eyeLeft = addCylinder(
+      0.09,
+      0.08,
+      [-0.47, 0.1, 0.58],
+      eyeMaterial,
+      ufo,
+      6
+    );
+    eyeLeft.rotation.z = Math.PI / 2;
+
+    const eyeRight = addCylinder(
+      0.09,
+      0.08,
+      [0.47, 0.1, 0.58],
+      eyeMaterial,
+      ufo,
+      6
+    );
+    eyeRight.rotation.z = -Math.PI / 2;
+
+    // Small hovering lights
+    for (const x of [-0.55, 0.55]) {
+      const light = addCylinder(
+        0.08,
+        0.08,
+        [x, -0.4, 0.1],
+        eyeMaterial,
+        ufo,
+        6
+      );
+      light.rotation.z = x < 0 ? -0.3 : 0.3;
+    }
+
+    // ------------------------------------------------------------
+    // Floating stars
+    // ------------------------------------------------------------
+    const starMaterial = new THREE.MeshBasicMaterial({
+      color: 0xfff4c2
+    });
+
+    const starColors = [
+      new THREE.MeshBasicMaterial({ color: 0xffd27c }),
+      new THREE.MeshBasicMaterial({ color: 0x9dcfff }),
+      new THREE.MeshBasicMaterial({ color: 0xffa8ff })
+    ];
+
+    const stars = [];
+
+    for (let i = 0; i < 55; i++) {
+      const star = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.035 + Math.random() * 0.07, 0),
+        starColors[i % starColors.length]
+      );
+
+      star.position.set(
+        (Math.random() - 0.5) * 24,
+        5 + Math.random() * 13,
+        (Math.random() - 0.5) * 18
+      );
+
+      star.userData = {
+        baseX: star.position.x,
+        baseY: star.position.y,
+        baseZ: star.position.z,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.25 + Math.random() * 0.4
+      };
+
+      scene.add(star);
+      stars.push(star);
+    }
+
+    // ------------------------------------------------------------
+    // Ground sparkles
+    // ------------------------------------------------------------
+    const groundSparkles = [];
+
+    for (let i = 0; i < 32; i++) {
+      const sparkle = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.045 + Math.random() * 0.035, 0),
+        starColors[i % starColors.length]
+      );
+
+      sparkle.position.set(
+        (Math.random() - 0.5) * 10,
+        0.45 + Math.random() * 0.2,
+        (Math.random() - 0.5) * 8
+      );
+
+      sparkle.userData.phase = Math.random() * Math.PI * 2;
+      scene.add(sparkle);
+      groundSparkles.push(sparkle);
+    }
+
+    // ------------------------------------------------------------
+    // Animation
+    // ------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle pond shimmer
+      pondGlow.intensity = 16 + Math.sin(elapsed * 1.8) * 2.5;
+
+      // Butterfly flapping and drifting
+      butterflies.forEach((butterfly, index) => {
+        const wing = butterfly.group.children[0];
+        const rightWing = butterfly.group.children[1];
+
+        const flap = Math.sin(elapsed * butterfly.speed + butterfly.phase) * 1.35;
+        wing.rotation.x = flap;
+        rightWing.rotation.x = -flap;
+
+        butterfly.group.position.x =
+          butterfly.baseX + Math.sin(elapsed * 0.35 + index) * butterfly.radius;
+
+        butterfly.group.position.y =
+          butterfly.baseY + Math.cos(elapsed * 0.4 + butterfly.phase) * 0.18;
+
+        butterfly.group.rotation.y =
+          Math.sin(elapsed * 0.25 + index) * 0.35;
+      });
+
+      // UFO gentle orbit
+      ufo.position.x = 5.2 + Math.sin(elapsed * 0.22) * 0.35;
+      ufo.position.y = 4.1 + Math.sin(elapsed * 0.36) * 0.25;
+      ufo.rotation.z = Math.sin(elapsed * 0.28) * 0.035;
+
+      // Stars drift
+      stars.forEach((star) => {
+        const data = star.userData;
+        star.position.x =
+          data.baseX + Math.sin(elapsed * data.speed + data.phase) * 0.45;
+        star.position.y =
+          data.baseY + Math.cos(elapsed * data.speed * 0.8 + data.phase) * 0.25;
+        star.rotation.y = elapsed * 0.12;
+      });
+
+      // Ground sparkles pulse
+      groundSparkles.forEach((sparkle) => {
+        const data = sparkle.userData;
+        const pulse = 0.75 + Math.sin(elapsed * 1.4 + data.phase) * 0.25;
+        sparkle.scale.setScalar(pulse);
+        sparkle.rotation.y = elapsed * 0.7 + data.phase;
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // ------------------------------------------------------------
+    // Resize
+    // ------------------------------------------------------------
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
