@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Roblox AI Putt-Putt Mini Golf (Three.js)</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      pointer-events: none;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0 0 4px 0;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    #scorecard {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 12px 18px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .score-row.total {
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 6px;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    #hole-nav {
+      position: absolute;
+      top: 80px;
+      left: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+    .nav-btn {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(56, 189, 248, 0.3);
+      border-color: #38bdf8;
+    }
+    .nav-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+    #instructions {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 10px 24px;
+      border-radius: 30px;
+      color: #38bdf8;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      pointer-events: none;
+      z-index: 10;
+      text-align: center;
+      transition: color 0.2s ease;
+    }
+    #power-bar-wrap {
+      position: absolute;
+      bottom: 68px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 220px;
+      height: 12px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+      display: none;
+      z-index: 10;
+    }
+    #power-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui">
+    <h1 id="course-title">Hole 1: Green Hill Zone</h1>
+    <p id="course-subtitle">Roblox Studio Beta AI Scene &bull; 4,205 Parts &bull; Physics Colliders</p>
+  </div>
+
+  <div id="hole-nav">
+    <button class="nav-btn active" onclick="loadHole(0)">Hole 1: Green Hill</button>
+    <button class="nav-btn" onclick="loadHole(1)">Hole 2: World 1-1</button>
+    <button class="nav-btn" onclick="loadHole(2)">Hole 3: China Market</button>
+  </div>
+
+  <div id="scorecard">
+    <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; margin-bottom:2px;">Scorecard</div>
+    <div class="score-row"><span>Hole 1 (Par 3):</span> <span id="h1-score">-</span></div>
+    <div class="score-row"><span>Hole 2 (Par 3):</span> <span id="h2-score">-</span></div>
+    <div class="score-row"><span>Hole 3 (Par 3):</span> <span id="h3-score">-</span></div>
+    <div class="score-row total"><span>Total:</span> <span id="total-score" style="color: #facc15">0</span></div>
+  </div>
+
+  <div id="power-bar-wrap">
+    <div id="power-bar"></div>
+  </div>
+
+  <div id="instructions">
+    Click & Drag ball backwards to Aim & Putt &bull; Rotate camera with right-click
+  </div>
+
+  <script>
+    // 1. SCENE & RENDERER SETUP
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x76c5f0);
+    scene.fog = new THREE.FogExp2(0x76c5f0, 0.008);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(-15, 18, 30);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+    // 2. LIGHTING
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x446688, 0.7);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfff8ee, 1.2);
+    dirLight.position.set(40, 60, 30);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 150;
+    dirLight.shadow.camera.left = -40;
+    dirLight.shadow.camera.right = 40;
+    dirLight.shadow.camera.top = 40;
+    dirLight.shadow.camera.bottom = -40;
+    scene.add(dirLight);
+
+    // Fairway green ground
+    const fairwayGeom = new THREE.BoxGeometry(60, 2, 60);
+    const fairwayMat = new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.8 });
+    const fairway = new THREE.Mesh(fairwayGeom, fairwayMat);
+    fairway.position.set(0, -1, 0);
+    fairway.receiveShadow = true;
+    scene.add(fairway);
+
+    // 3. COURSE DEFINITIONS & HOLE DATA
+    const courseGroup = new THREE.Group();
+    scene.add(courseGroup);
+    let colliders = [];
+
+    const HOLES = [
+      {
+        title: "Hole 1: Sonic Green Hill Zone",
+        subtitle: "Roblox Studio Beta AI Scene • 4,205 Parts • Looping Terrain & Checkers",
+        file: "green_hill_parts.json",
+        bgColor: 0x76c5f0,
+        fairwayColor: 0x4caf50,
+        centerOffset: [118.6, -3.1, 1.9],
+        ballStart: new THREE.Vector3(-14, 0.4, 14),
+        holePos: new THREE.Vector3(12, 0.05, -10),
+        par: 3
+      },
+      {
+        title: "Hole 2: Super Mario World 1-1",
+        subtitle: "Roblox Studio Beta AI Scene • 3,175 Parts • Raised Bricks & Pipes",
+        file: "mario_parts.json",
+        bgColor: 0x5c94fc,
+        fairwayColor: 0x00a800,
+        centerOffset: [0, 2.0, 0],
+        ballStart: new THREE.Vector3(-16, 0.4, 16),
+        holePos: new THREE.Vector3(14, 0.05, -12),
+        par: 3
+      },
+      {
+        title: "Hole 3: China Marketplace (Street Fighter II)",
+        subtitle: "Roblox Studio Beta AI Scene • 2,298 Parts • Cobblestones & Lantern Facades",
+        file: "chun_li_parts.json",
+        bgColor: 0x2b3345,
+        fairwayColor: 0x4b5563,
+        centerOffset: [0, 3.5, 0],
+        ballStart: new THREE.Vector3(-12, 0.4, 14),
+        holePos: new THREE.Vector3(10, 0.05, -10),
+        par: 3
+      }
+    ];
+
+    let currentHoleIdx = 0;
+    const holeScores = [0, 0, 0];
+    let strokesThisHole = 0;
+
+    // 4. PUTT-PUTT BALL & HOLE SETUP
+    const ballRadius = 0.4;
+    const ballGeom = new THREE.SphereGeometry(ballRadius, 32, 32);
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 });
+    const ball = new THREE.Mesh(ballGeom, ballMat);
+    ball.castShadow = true;
+    scene.add(ball);
+
+    // Golf Hole & Pin
+    const holeGeom = new THREE.CylinderGeometry(0.8, 0.8, 0.2, 32);
+    const holeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const hole = new THREE.Mesh(holeGeom, holeMat);
+    scene.add(hole);
+
+    // Pin & Flag
+    const pinGeom = new THREE.CylinderGeometry(0.06, 0.06, 5, 12);
+    const pinMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const pin = new THREE.Mesh(pinGeom, pinMat);
+    pin.castShadow = true;
+    scene.add(pin);
+
+    const flagGeom = new THREE.BufferGeometry();
+    const flagVertices = new Float32Array([
+      0, 5, 0,
+      1.5, 4.3, 0,
+      0, 3.6, 0
+    ]);
+    flagGeom.setAttribute('position', new THREE.BufferAttribute(flagVertices, 3));
+    const flagMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
+    const flag = new THREE.Mesh(flagGeom, flagMat);
+    scene.add(flag);
+
+    // Aim Line
+    const aimMat = new THREE.LineDashedMaterial({ color: 0xffeb3b, dashSize: 0.5, gapSize: 0.3 });
+    const aimGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const aimLine = new THREE.Line(aimGeom, aimMat);
+    aimLine.visible = false;
+    scene.add(aimLine);
+
+    const velocity = new THREE.Vector3();
+
+    function updateHolePin(pos) {
+      hole.position.copy(pos);
+      pin.position.set(pos.x, 2.5, pos.z);
+      flag.position.set(pos.x, 0, pos.z);
+    }
+
+    function resetBall() {
+      const cfg = HOLES[currentHoleIdx];
+      ball.position.copy(cfg.ballStart);
+      velocity.set(0, 0, 0);
+    }
+
+    function loadHole(idx) {
+      currentHoleIdx = idx;
+      const cfg = HOLES[idx];
+
+      // Update Nav Buttons
+      document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === idx);
+      });
+
+      // Update Header
+      document.getElementById('course-title').textContent = cfg.title;
+      document.getElementById('course-subtitle').innerHTML = cfg.subtitle;
+
+      // Update Scene atmosphere & ground
+      scene.background.setHex(cfg.bgColor);
+      scene.fog.color.setHex(cfg.bgColor);
+      fairwayMat.color.setHex(cfg.fairwayColor);
+
+      // Clear existing geometry
+      while (courseGroup.children.length > 0) {
+        const obj = courseGroup.children[0];
+        courseGroup.remove(obj);
+      }
+      colliders = [];
+
+      updateHolePin(cfg.holePos);
+      strokesThisHole = 0;
+      resetBall();
+
+      // Fetch geometry JSON
+      fetch(cfg.file)
+        .then(res => res.json())
+        .then(parts => {
+          parts.forEach(p => {
+            let geom;
+            const [sx, sy, sz] = p.size;
+            if (p.shape === 'Cylinder') {
+              geom = new THREE.CylinderGeometry(sx / 2, sx / 2, sy, 16);
+            } else if (p.shape === 'Ball') {
+              geom = new THREE.SphereGeometry(sx / 2, 16, 16);
+            } else {
+              geom = new THREE.BoxGeometry(sx, sy, sz);
+            }
+
+            const mat = new THREE.MeshStandardMaterial({
+              color: new THREE.Color(p.color),
+              roughness: 0.6,
+              metalness: 0.1
+            });
+
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(
+              p.pos[0] + cfg.centerOffset[0],
+              p.pos[1] + cfg.centerOffset[1],
+              p.pos[2] + cfg.centerOffset[2]
+            );
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            courseGroup.add(mesh);
+
+            // Build AABB collider for physical ricochet
+            mesh.geometry.computeBoundingBox();
+            colliders.push({
+              mesh: mesh,
+              box: new THREE.Box3().setFromObject(mesh)
+            });
+          });
+        })
+        .catch(err => console.log('Parts load note:', err));
+    }
+
+    // 5. DRAG-TO-PUTT CONTROLS
+    let isDragging = false;
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const dragStart = new THREE.Vector3();
+    const dragCurrent = new THREE.Vector3();
+    const powerBarWrap = document.getElementById('power-bar-wrap');
+    const powerBar = document.getElementById('power-bar');
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || velocity.length() > 0.05) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObject(ball);
+      if (intersects.length > 0) {
+        isDragging = true;
+        controls.enabled = false;
+        raycaster.ray.intersectPlane(groundPlane, dragStart);
+        powerBarWrap.style.display = 'block';
+        aimLine.visible = true;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      raycaster.ray.intersectPlane(groundPlane, dragCurrent);
+
+      // Aim vector is opposite drag direction (slingshot style)
+      const diff = new THREE.Vector3().subVectors(dragStart, dragCurrent);
+      diff.y = 0;
+      const power = Math.min(diff.length(), 8);
+      const pct = (power / 8) * 100;
+      powerBar.style.width = pct + '%';
+
+      // Update aim line
+      const lineEnd = ball.position.clone().add(diff.clone().normalize().multiplyScalar(power * 1.5));
+      lineEnd.y = 0.1;
+      aimLine.geometry.setFromPoints([ball.position.clone().setY(0.1), lineEnd]);
+      aimLine.computeLineDistances();
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      controls.enabled = true;
+      aimLine.visible = false;
+      powerBarWrap.style.display = 'none';
+
+      const diff = new THREE.Vector3().subVectors(dragStart, dragCurrent);
+      diff.y = 0;
+      const power = Math.min(diff.length(), 8);
+
+      if (power > 0.3) {
+        velocity.copy(diff.normalize().multiplyScalar(power * 0.38));
+        strokesThisHole++;
+        updateScorecardDisplay();
+      }
+    });
+
+    function updateScorecardDisplay() {
+      const h1El = document.getElementById('h1-score');
+      const h2El = document.getElementById('h2-score');
+      const h3El = document.getElementById('h3-score');
+      const totEl = document.getElementById('total-score');
+
+      if (currentHoleIdx === 0) h1El.textContent = strokesThisHole;
+      if (currentHoleIdx === 1) h2El.textContent = strokesThisHole;
+      if (currentHoleIdx === 2) h3El.textContent = strokesThisHole;
+
+      const sum = (holeScores[0] || (currentHoleIdx === 0 ? strokesThisHole : 0)) +
+                  (holeScores[1] || (currentHoleIdx === 1 ? strokesThisHole : 0)) +
+                  (holeScores[2] || (currentHoleIdx === 2 ? strokesThisHole : 0));
+      totEl.textContent = sum;
+    }
+
+    // 6. PHYSICS & RENDER LOOP
+    const friction = 0.985;
+    const restitution = 0.75;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Ball movement & physics
+      if (velocity.length() > 0.001) {
+        ball.position.add(velocity);
+        velocity.multiplyScalar(friction);
+
+        // Simple collision against course boundaries & props
+        for (let i = 0; i < colliders.length; i++) {
+          const col = colliders[i];
+          if (col.box.containsPoint(ball.position)) {
+            const center = new THREE.Vector3();
+            col.box.getCenter(center);
+            const normal = new THREE.Vector3().subVectors(ball.position, center).normalize();
+            velocity.reflect(normal).multiplyScalar(restitution);
+            ball.position.add(velocity);
+            break;
+          }
+        }
+
+        // Hole detection
+        const cfg = HOLES[currentHoleIdx];
+        const distToHole = ball.position.distanceTo(cfg.holePos);
+        if (distToHole < 0.9 && velocity.length() < 0.25) {
+          velocity.set(0, 0, 0);
+          ball.position.set(cfg.holePos.x, -0.3, cfg.holePos.z);
+          holeScores[currentHoleIdx] = strokesThisHole;
+          updateScorecardDisplay();
+
+          const instr = document.getElementById('instructions');
+          instr.textContent = '🎉 HOLE ' + (currentHoleIdx + 1) + ' COMPLETE IN ' + strokesThisHole + ' STROKES!';
+          instr.style.color = '#4ade80';
+
+          setTimeout(() => {
+            instr.textContent = 'Click & Drag ball backwards to Aim & Putt • Rotate camera with right-click';
+            instr.style.color = '#38bdf8';
+            if (currentHoleIdx < 2) {
+              loadHole(currentHoleIdx + 1);
+            } else {
+              instr.textContent = '🏆 COURSE FINISHED! Total Score: ' + (holeScores[0]+holeScores[1]+holeScores[2]);
+              instr.style.color = '#facc15';
+            }
+          }, 2500);
+        }
+
+        // Out of bounds reset
+        if (Math.abs(ball.position.x) > 28 || Math.abs(ball.position.z) > 28) {
+          resetBall();
+        }
+      }
+
+      controls.target.copy(ball.position);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Initialize Hole 1
+    loadHole(0);
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
