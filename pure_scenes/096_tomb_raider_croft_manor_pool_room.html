@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voxel Fresco Hall</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Temple Interior</title>
   <style>
     * {
       box-sizing: border-box;
@@ -16,39 +15,45 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #090909;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #080808;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     canvas {
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: none;
     }
 
-    #hud {
+    #info {
       position: fixed;
       top: 18px;
       left: 18px;
       z-index: 10;
-      padding: 12px 15px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 8px;
-      color: #eee6d4;
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 14px 16px;
+      color: #eee5cf;
       background: rgba(15, 12, 10, 0.72);
-      backdrop-filter: blur(8px);
-      font-size: 12px;
-      line-height: 1.55;
+      border: 1px solid rgba(231, 211, 164, 0.22);
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
       pointer-events: none;
     }
 
-    #hud strong {
-      display: block;
-      margin-bottom: 3px;
-      color: #d8b66f;
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    #info h1 {
+      margin: 0 0 5px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    #info p {
+      margin: 0;
+      color: #c7b998;
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     #help {
@@ -57,18 +62,18 @@
       bottom: 16px;
       z-index: 10;
       padding: 8px 11px;
-      border-radius: 6px;
-      color: rgba(255, 255, 255, 0.72);
-      background: rgba(10, 10, 10, 0.58);
+      color: #d5c7a9;
+      background: rgba(10, 9, 8, 0.6);
+      border: 1px solid rgba(231, 211, 164, 0.16);
+      border-radius: 7px;
       font-size: 11px;
       pointer-events: none;
     }
 
     @media (max-width: 600px) {
-      #hud {
+      #info {
         top: 10px;
         left: 10px;
-        right: 10px;
       }
 
       #help {
@@ -78,15 +83,12 @@
     }
   </style>
 </head>
-
 <body>
-  <div id="hud">
-    <strong>Submerged Hall</strong>
-    A voxel study of the ancient fresco room<br />
-    Drag to look · Scroll to move
+  <div id="info">
+    <h1>Temple of the Mosaic</h1>
+    <p>A voxel reconstruction of a sunlit ancient hall with tiled pools, sculpted columns, and painted processional walls.</p>
   </div>
-
-  <div id="help">WASD to walk · Click objects to inspect</div>
+  <div id="help">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
 
   <script type="module">
     import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -95,446 +97,309 @@
     // Renderer and scene
     // -------------------------------------------------------------------------
 
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x11110f);
+    scene.fog = new THREE.FogExp2(0x11110f, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(
+      47,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: "high-performance"
     });
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
     document.body.appendChild(renderer.domElement);
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x090909);
-    scene.fog = new THREE.FogExp2(0x090909, 0.022);
-
-    const camera = new THREE.PerspectiveCamera(
-      62,
-      window.innerWidth / window.innerHeight,
-      0.08,
-      120
-    );
-
-    // Direct, dependency-free camera controls.
-    const controls = {
-      yaw: -0.52,
-      pitch: 0.22,
-      distance: 13.5,
-      target: new THREE.Vector3(0, 2.2, 0),
-      dragging: false,
-      lastX: 0,
-      lastY: 0,
-      keys: new Set(),
-      speed: 4.5
-    };
-
-    function updateCamera() {
-      const horizontal = Math.cos(controls.pitch) * controls.distance;
-      camera.position.set(
-        controls.target.x + Math.sin(controls.yaw) * horizontal,
-        controls.target.y + Math.sin(controls.pitch) * controls.distance,
-        controls.target.z - Math.cos(controls.yaw) * horizontal
-      );
-      camera.lookAt(controls.target);
-    }
-
-    updateCamera();
-
-    // -------------------------------------------------------------------------
-    // Deterministic random helpers
-    // -------------------------------------------------------------------------
-
-    let randomSeed = 481516;
-
-    function random() {
-      randomSeed =
-        (randomSeed * 1664525 + 1013904223) >>> 0;
-      return randomSeed / 4294967296;
-    }
-
-    function randomRange(min, max) {
-      return min + (max - min) * random();
-    }
-
-    function hash(x, z) {
-      const value = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
-      return value - Math.floor(value);
-    }
-
-    // -------------------------------------------------------------------------
-    // Procedural textures
-    // -------------------------------------------------------------------------
-
-    function makeFrescoTexture() {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1024;
-      canvas.height = 384;
-
-      const ctx = canvas.getContext("2d");
-
-      // Warm plaster background.
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, "#a97845");
-      gradient.addColorStop(0.5, "#76502e");
-      gradient.addColorStop(1, "#3d2b20");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Layered decorative bands.
-      ctx.fillStyle = "#241c17";
-      ctx.fillRect(0, 0, canvas.width, 22);
-      ctx.fillRect(0, 362, canvas.width, 22);
-      ctx.fillRect(0, 332, canvas.width, 8);
-      ctx.fillRect(0, 93, canvas.width, 5);
-
-      // Painted figures.
-      const figureColors = ["#b77b45", "#8f5932", "#c18a50", "#6d4930"];
-
-      function drawFigure(x, y, scale, rotation = 0) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation);
-
-        ctx.fillStyle = figureColors[Math.floor(random() * figureColors.length)];
-        ctx.globalAlpha = 0.78;
-
-        // Draped body.
-        ctx.beginPath();
-        ctx.moveTo(0, 12);
-        ctx.bezierCurveTo(-4, 2, -3, -18, 0, -42);
-        ctx.bezierCurveTo(3, -18, 4, 2, 0, 12);
-        ctx.closePath();
-        ctx.fill();
-
-        // Head and shoulders.
-        ctx.beginPath();
-        ctx.arc(0, 15, 4.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "#332820";
-        ctx.fillRect(-4.2, 18.4, 8.4, 2.4);
-
-        // Arms.
-        ctx.strokeStyle = figureColors[Math.floor(random() * figureColors.length)];
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.moveTo(-3.4, 20);
-        ctx.lineTo(-7, -8);
-        ctx.lineTo(-8, 7);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(3.4, 20);
-        ctx.lineTo(7, -8);
-        ctx.lineTo(8, 7);
-        ctx.stroke();
-
-        ctx.restore();
-      }
-
-      for (let x = 70; x < canvas.width - 70; x += 48) {
-        drawFigure(x, 218, randomRange(0.85, 1.15), randomRange(-0.18, 0.18));
-      }
-
-      // Decorative motifs.
-      ctx.globalAlpha = 0.55;
-      ctx.strokeStyle = "#493729";
-      ctx.lineWidth = 3;
-
-      for (let x = 70; x < canvas.width; x += 48) {
-        for (let y = 98; y < 315; y += 38) {
-          ctx.beginPath();
-          ctx.arc(x, y, 8, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(x - 11, y - 8);
-          ctx.lineTo(x + 11, y + 8);
-          ctx.moveTo(x + 11, y - 8);
-          ctx.lineTo(x - 11, y + 8);
-          ctx.stroke();
-        }
-      }
-
-      ctx.globalAlpha = 1;
-
-      // Cracked, aged surface.
-      ctx.globalAlpha = 0.16;
-      ctx.strokeStyle = "#241b15";
-      ctx.lineWidth = 1;
-
-      for (let i = 0; i < 190; i++) {
-        const x = random() * canvas.width;
-        const y = random() * canvas.height;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(
-          x + randomRange(-18, 18),
-          y + randomRange(-18, 18)
-        );
-        ctx.stroke();
-      }
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(3, 1);
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      return texture;
-    }
-
-    function makeStoneTexture() {
-      const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = "#817766";
-      ctx.fillRect(0, 0, 512, 512);
-
-      for (let i = 0; i < 1800; i++) {
-        const shade = Math.floor(randomRange(85, 175));
-        ctx.fillStyle = `rgba(${shade},${shade - 4},${shade - 13},${randomRange(0.04, 0.22)})`;
-        const size = randomRange(1, 8);
-        ctx.fillRect(random() * 512, random() * 512, size, size);
-      }
-
-      for (let i = 0; i < 70; i++) {
-        ctx.strokeStyle = "rgba(35,30,25,0.15)";
-        ctx.lineWidth = randomRange(0.5, 2);
-        ctx.beginPath();
-        const x = random() * 512;
-        const y = random() * 512;
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + randomRange(-20, 20), y + randomRange(-20, 20));
-        ctx.stroke();
-      }
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(4, 4);
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      return texture;
-    }
-
-    function makeWaterTexture() {
-      const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext("2d");
-
-      const gradient = ctx.createRadialGradient(256, 256, 10, 256, 256, 360);
-      gradient.addColorStop(0, "#143c49");
-      gradient.addColorStop(0.55, "#082835");
-      gradient.addColorStop(1, "#04131d");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 512, 512);
-
-      for (let i = 0; i < 180; i++) {
-        const x = random() * 512;
-        const y = random() * 512;
-        const length = randomRange(4, 35);
-
-        ctx.strokeStyle = `rgba(76,183,205,${randomRange(0.08, 0.38)})`;
-        ctx.lineWidth = randomRange(0.6, 2.2);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.bezierCurveTo(
-          x + length * 0.3,
-          y - randomRange(5, 18),
-          x - length * 0.3,
-          y + randomRange(5, 18),
-          x + length,
-          y
-        );
-        ctx.stroke();
-      }
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(5, 5);
-      return texture;
-    }
-
-    const frescoTexture = makeFrescoTexture();
-    const stoneTexture = makeStoneTexture();
-    const waterTexture = makeWaterTexture();
 
     // -------------------------------------------------------------------------
     // Materials
     // -------------------------------------------------------------------------
 
-    const frescoMaterial = new THREE.MeshStandardMaterial({
-      map: frescoTexture,
-      color: 0xffffff,
-      roughness: 0.92,
-      metalness: 0
-    });
-
-    const darkPlasterMaterial = new THREE.MeshStandardMaterial({
-      color: 0x29211c,
-      roughness: 0.96
-    });
-
-    const stoneMaterial = new THREE.MeshStandardMaterial({
-      map: stoneTexture,
-      color: 0xb5aa91,
-      roughness: 0.88,
-      metalness: 0
-    });
-
-    const darkStoneMaterial = new THREE.MeshStandardMaterial({
-      map: stoneTexture,
-      color: 0x514a40,
-      roughness: 0.94
-    });
-
-    const bronzeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x80602e,
-      roughness: 0.48,
-      metalness: 0.68
-    });
-
-    const waterMaterial = new THREE.MeshPhysicalMaterial({
-      map: waterTexture,
-      color: 0x173b49,
-      roughness: 0.2,
-      metalness: 0.15,
-      transmission: 0.18,
-      transparent: true,
-      opacity: 0.88,
-      clearcoat: 0.7,
-      clearcoatRoughness: 0.2
-    });
+    const materials = {
+      floor: new THREE.MeshStandardMaterial({
+        color: 0xd7c69b,
+        roughness: 0.86,
+        metalness: 0.02
+      }),
+      floorDark: new THREE.MeshStandardMaterial({
+        color: 0x6c5940,
+        roughness: 0.95
+      }),
+      mosaic: new THREE.MeshStandardMaterial({
+        color: 0x71808a,
+        roughness: 0.2,
+        metalness: 0.28
+      }),
+      mosaicBlue: new THREE.MeshStandardMaterial({
+        color: 0x456b73,
+        roughness: 0.25,
+        metalness: 0.2
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xb98b3e,
+        roughness: 0.45,
+        metalness: 0.55
+      }),
+      dark: new THREE.MeshStandardMaterial({
+        color: 0x171713,
+        roughness: 0.92
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x765035,
+        roughness: 0.88
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x6f2f25,
+        roughness: 0.9
+      }),
+      plaster: new THREE.MeshStandardMaterial({
+        color: 0x8a7758,
+        roughness: 0.94
+      }),
+      statue: new THREE.MeshStandardMaterial({
+        color: 0x77715f,
+        roughness: 0.78,
+        metalness: 0.06
+      }),
+      statueDark: new THREE.MeshStandardMaterial({
+        color: 0x4b463d,
+        roughness: 0.86
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x244d55,
+        roughness: 0.18,
+        metalness: 0.58,
+        transparent: true,
+        opacity: 0.84
+      }),
+      waterGlint: new THREE.MeshStandardMaterial({
+        color: 0x8fc5c9,
+        emissive: 0x284b50,
+        emissiveIntensity: 0.45,
+        roughness: 0.25,
+        metalness: 0.35
+      })
+    };
 
     // -------------------------------------------------------------------------
-    // Voxel construction helpers
+    // Voxel helpers
     // -------------------------------------------------------------------------
 
-    const voxelSize = 0.5;
-    const voxelGeometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
-
-    const objects = [];
-    const clickableObjects = [];
-
-    function addVoxelBox({
-      x,
-      y,
-      z,
-      width,
-      height,
-      depth,
-      material,
-      name,
-      inspectable = false
-    }) {
-      const mesh = new THREE.Mesh(voxelGeometry, material);
+    const voxel = (x, y, z, size, material, castShadow = true, receiveShadow = true) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
       mesh.position.set(x, y, z);
-      mesh.scale.set(width, height, depth);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.userData.inspectable = inspectable;
-      mesh.userData.name = name;
-
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
       scene.add(mesh);
-      clickableObjects.push(mesh);
       return mesh;
+    };
+
+    const box = (x, y, z, sx, sy, sz, material, castShadow = true, receiveShadow = true) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    // A small palette of block materials used to keep the scene readable.
+    const palette = {
+      cream: new THREE.MeshStandardMaterial({ color: 0xd7c59a, roughness: 0.9 }),
+      pale: new THREE.MeshStandardMaterial({ color: 0xe1d2aa, roughness: 0.88 }),
+      ochre: new THREE.MeshStandardMaterial({ color: 0xb98a43, roughness: 0.8 }),
+      darkOchre: new THREE.MeshStandardMaterial({ color: 0x75552f, roughness: 0.9 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x73332c, roughness: 0.9 }),
+      dark: new THREE.MeshStandardMaterial({ color: 0x171916, roughness: 0.95 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x090a09, roughness: 1 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x465044, roughness: 0.92 }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x46616a, roughness: 0.8 }),
+      gold: new THREE.MeshStandardMaterial({ color: 0xc49a4a, roughness: 0.5, metalness: 0.45 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x765136, roughness: 0.9 }),
+      woodLight: new THREE.MeshStandardMaterial({ color: 0x9a7048, roughness: 0.88 }),
+      statue: new THREE.MeshStandardMaterial({ color: 0x81765f, roughness: 0.82 }),
+      statueLight: new THREE.MeshStandardMaterial({ color: 0x9a8b6e, roughness: 0.8 }),
+      statueDark: new THREE.MeshStandardMaterial({ color: 0x4e4940, roughness: 0.9 }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x28535c,
+        roughness: 0.2,
+        metalness: 0.48,
+        transparent: true,
+        opacity: 0.88
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Architecture
+    // -------------------------------------------------------------------------
+
+    const hallWidth = 17;
+    const hallDepth = 25;
+    const floorY = 0.18;
+
+    // Main floor: a broad tiled slab with inset mosaic borders.
+    box(
+      0,
+      floorY - 0.12,
+      0,
+      hallWidth + 0.4,
+      0.24,
+      hallDepth + 0.4,
+      materials.floor,
+      false,
+      true
+    );
+
+    // Floor border strips, assembled from square tiles.
+    const tile = 0.42;
+
+    function tiledBorder(x, z, width, depth, material, offset = 0) {
+      const nx = Math.max(1, Math.floor(width / tile));
+      const nz = Math.max(1, Math.floor(depth / tile));
+      for (let ix = 0; ix < nx; ix++) {
+        for (let iz = 0; iz < nz; iz++) {
+          const px = x + (ix - (nx - 1) / 2) * tile;
+          const pz = z + (iz - (nz - 1) / 2) * tile;
+          voxel(
+            px,
+            floorY + 0.025,
+            pz,
+            tile - 0.018,
+            material,
+            false,
+            true
+          );
+        }
+      }
     }
 
-    function addWallWithFrescoes(width, height, depth, x, z, rotation = 0) {
-      const group = new THREE.Group();
-      group.rotation.y = rotation;
-      group.position.set(x, 0, z);
+    tiledBorder(0, 0, hallWidth, hallDepth, materials.mosaic);
+    tiledBorder(0, 0, hallWidth - 1.3, hallDepth - 1.3, materials.mosaicBlue);
 
-      const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(width, height, depth),
-        frescoMaterial
+    // Central sunken pool.
+    const poolX = 0.4;
+    const poolZ = 0.1;
+    const poolWidth = 5.2;
+    const poolDepth = 5.0;
+
+    box(
+      poolX,
+      floorY - 0.16,
+      poolZ,
+      poolWidth + 0.35,
+      0.32,
+      poolDepth + 0.35,
+      materials.mosaic,
+      false,
+      true
+    );
+
+    box(
+      poolX,
+      floorY - 0.34,
+      poolZ,
+      poolWidth,
+      0.16,
+      poolDepth,
+      materials.dark,
+      false,
+      true
+    );
+
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(poolWidth - 0.12, poolDepth - 0.12),
+      materials.water
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(poolX, floorY - 0.255, poolZ);
+    water.receiveShadow = true;
+    scene.add(water);
+
+    // Animated water glints: small floating voxel shards.
+    const glintShards = [];
+    const glintPositions = [
+      [-1.4, 0.05, -1.4],
+      [0.3, 0.05, -0.7],
+      [1.4, 0.05, 0.8],
+      [-0.5, 0.05, 1.8],
+      [0.7, 0.05, 2.1],
+      [-1.7, 0.05, 1.3]
+    ];
+
+    for (const p of glintPositions) {
+      const shard = new THREE.Mesh(
+        new THREE.ConeGeometry(0.13, 0.32, 3),
+        materials.waterGlint
       );
-      wall.position.y = height / 2;
+      shard.rotation.z = Math.random() * Math.PI;
+      shard.position.set(p[0], floorY - 0.205, p[1]);
+      shard.userData.baseY = shard.position.y;
+      shard.userData.phase = Math.random() * Math.PI * 2;
+      scene.add(shard);
+      glintShards.push(shard);
+    }
+
+    // -------------------------------------------------------------------------
+    // Mosaic walls and processional niches
+    // -------------------------------------------------------------------------
+
+    function createWall(x, z, width, height, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      // Main wall mass.
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, 0.55),
+        materials.plaster
+      );
+      wall.position.y = height / 2 + floorY;
       wall.castShadow = true;
       wall.receiveShadow = true;
       group.add(wall);
 
       // Dark lower wainscot.
-      addVoxelBox({
-        x: 0,
-        y: 0.38,
-        z: 0,
-        width,
-        height: 0.76,
-        depth: depth + 0.08,
-        material: darkStoneMaterial,
-        name: "Fresco wall wainscot"
-      });
+      const wainscot = new THREE.Mesh(
+        new THREE.BoxGeometry(width, 1.35, 0.62),
+        materials.dark
+      );
+      wainscot.position.y = floorY + 0.67;
+      wainscot.castShadow = true;
+      wainscot.receiveShadow = true;
+      group.add(wainscot);
 
       // Upper cornice.
-      addVoxelBox({
-        x: 0,
-        y: height - 0.18,
-        z: 0,
-        width,
-        height: 0.36,
-        depth: depth + 0.12,
-        material: stoneMaterial,
-        name: "Fresco wall cornice"
-      });
+      const cornice = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.18, 0.32, 0.72),
+        materials.ochre
+      );
+      cornice.position.y = height - 0.18 + floorY;
+      cornice.castShadow = true;
+      cornice.receiveShadow = true;
+      group.add(cornice);
 
-      scene.add(group);
-      return group;
-    }
-
-    function addColumn(x, z, height = 6.4) {
-      const group = new THREE.Group();
-      group.position.set(x, 0, z);
-
-      // Block-built shaft with alternating stone bands.
-      for (let y = 0.35; y < height; y += 0.5) {
-        const shaft = new THREE.Mesh(voxelGeometry, stoneMaterial);
-        shaft.position.set(0, y, 0);
-        shaft.scale.set(1.25, 0.48, 1.25);
-        shaft.castShadow = true;
-        shaft.receiveShadow = true;
-        group.add(shaft);
-      }
-
-      // Dark base and capital.
-      addVoxelBox({
-        x: 0,
-        y: 0.25,
-        z: 0,
-        width: 2.2,
-        height: 0.5,
-        depth: 2.2,
-        material: darkStoneMaterial,
-        name: "Column base"
-      });
-
-      addVoxelBox({
-        x: 0,
-        y: height - 0.25,
-        z: 0,
-        width: 2.1,
-        height: 0.5,
-        depth: 2.1,
-        material: stoneMaterial,
-        name: "Column capital"
-      });
-
-      // Painted figure bands around the shaft.
-      for (const y of [2.25, 4.55]) {
+      // Decorative frieze bands.
+      for (const y of [floorY + 1.55, floorY + 1.98]) {
         const band = new THREE.Mesh(
-          new THREE.CylinderGeometry(1.34, 1.34, 0.55, 12),
-          frescoMaterial
+          new THREE.BoxGeometry(width + 0.08, 0.18, 0.7),
+          y === floorY + 1.55 ? materials.red : materials.darkOchre
         );
         band.position.y = y;
         band.castShadow = true;
@@ -542,355 +407,536 @@
         group.add(band);
       }
 
+      // Lower relief panels.
+      const panelCount = Math.max(3, Math.floor(width / 1.55));
+      for (let i = 0; i < panelCount; i++) {
+        const px = -width / 2 + (i / (panelCount - 1)) * width;
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(1.12, 0.9, 0.16),
+          materials.dark
+        );
+        panel.position.set(px, floorY + 0.68, 0.36);
+        panel.receiveShadow = true;
+        group.add(panel);
+
+        // Small inset figure or medallion.
+        const inset = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.28, 0.28, 0.1, 12),
+          i % 3 === 0 ? materials.gold : materials.red
+        );
+        inset.rotation.x = Math.PI / 2;
+        inset.position.set(px, floorY + 0.68, 0.45);
+        group.add(inset);
+      }
+
       scene.add(group);
       return group;
     }
 
-    function addStep(width, depth, height, x, z) {
-      addVoxelBox({
-        x,
-        y: height / 2,
-        z,
-        width,
-        height,
-        depth,
-        material: stoneMaterial,
-        name: "Stone step"
-      });
-    }
+    // Long wall on the left, facing into the hall.
+    createWall(-6.25, 1.2, 11.2, 5.2, Math.PI / 2);
+
+    // Back wall.
+    createWall(0, -11.5, 13.2, 5.4, 0);
+
+    // Right wall, with a doorway opening.
+    createWall(6.25, 1.2, 11.2, 5.2, -Math.PI / 2);
 
     // -------------------------------------------------------------------------
-    // Room layout
+    // Columns and sculpted figures
     // -------------------------------------------------------------------------
 
-    const room = new THREE.Group();
-    scene.add(room);
+    function createColumn(x, z, rotation = 0, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
 
-    // Main floor.
-    addVoxelBox({
-      x: 0,
-      y: 0.05,
-      z: 0,
-      width: 22,
-      height: 0.25,
-      depth: 18,
-      material: stoneMaterial,
-      name: "Hall floor"
-    });
+      // Square pedestal.
+      const pedestal = new THREE.Mesh(
+        new THREE.BoxGeometry(1.55, 0.38, 1.55),
+        materials.dark
+      );
+      pedestal.position.y = 0.19;
+      pedestal.castShadow = true;
+      pedestal.receiveShadow = true;
+      group.add(pedestal);
 
-    // Side walls with painted narrative scenes.
-    addWallWithFrescoes(18, 7.2, 0.75, 0, -8.8, Math.PI);
-    addWallWithFrescoes(18, 7.2, 0.75, 0, 8.8, Math.PI);
+      // Main shaft in stacked blocks.
+      const shaftParts = [
+        { y: 0.58, h: 0.65, mat: materials.stone || materials.stoneLight },
+        { y: 1.18, h: 0.65, mat: materials.stone || materials.stoneLight },
+        { y: 1.78, h: 0.65, mat: materials.stone || materials.stoneLight },
+        { y: 2.38, h: 0.65, mat: materials.stone || materials.stoneLight }
+      ];
 
-    // End wall.
-    addWallWithFrescoes(0.75, 7.2, 18, -9.25, 0, -Math.PI / 2);
-
-    // Far end opening and adjacent rooms.
-    addVoxelBox({
-      x: 0,
-      y: 3.6,
-      z: 9.45,
-      width: 4.5,
-      height: 7.2,
-      depth: 0.25,
-      material: darkPlasterMaterial,
-      name: "Far wall opening frame"
-    });
-
-    // Ceiling beams and roof structure.
-    for (let x = -8; x <= 8; x += 2) {
-      addVoxelBox({
-        x,
-        y: 7.55,
-        z: 0,
-        width: 1.1,
-        height: 0.55,
-        depth: 18.5,
-        material: darkStoneMaterial,
-        name: "Ceiling beam"
-      });
-    }
-
-    // Exposed roof ribs.
-    for (let z = -7.5; z <= 7.5; z += 2.5) {
-      for (let x = -8; x <= 8; x += 2) {
-        addVoxelBox({
-          x,
-          y: 8.15,
-          z,
-          width: 0.65,
-          height: 0.55,
-          depth: 0.65,
-          material: darkStoneMaterial,
-          name: "Roof rib"
-        });
-      }
-    }
-
-    // Skylight glass panels.
-    const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x9bc7c8,
-      roughness: 0.18,
-      metalness: 0,
-      transparent: true,
-      opacity: 0.34,
-      transmission: 0.25
-    });
-
-    for (let x = -6; x <= 6; x += 2) {
-      for (let z = -5; z <= 5; z += 2) {
-        const panel = new THREE.Mesh(
-          new THREE.PlaneGeometry(1.35, 1.35),
-          glassMaterial
+      for (const part of shaftParts) {
+        const shaft = new THREE.Mesh(
+          new THREE.BoxGeometry(0.82, part.h, 0.82),
+          materials.stone || materials.stoneLight
         );
-        panel.rotation.x = -Math.PI / 2;
-        panel.position.set(x, 8.48, z);
-        room.add(panel);
+        shaft.position.y = part.y;
+        shaft.castShadow = true;
+        shaft.receiveShadow = true;
+        group.add(shaft);
       }
+
+      // Capital.
+      const capital = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.42, 1.3),
+        materials.ochre
+      );
+      capital.position.y = 3.02;
+      capital.castShadow = true;
+      capital.receiveShadow = true;
+      group.add(capital);
+
+      // Decorative frieze around the capital.
+      const frieze = new THREE.Mesh(
+        new THREE.BoxGeometry(1.48, 0.18, 1.48),
+        materials.red
+      );
+      frieze.position.y = 2.78;
+      frieze.castShadow = true;
+      group.add(frieze);
+
+      scene.add(group);
+      return group;
     }
 
-    // Large columns framing the central view.
-    addColumn(-4.2, -4.3, 6.4);
-    addColumn(4.2, -4.3, 6.4);
-    addColumn(-4.2, 4.3, 6.4);
-    addColumn(4.2, 4.3, 6.4);
+    // Front pair.
+    createColumn(-3.35, 3.0, 0.08, 1.05);
+    createColumn(3.35, 3.0, -0.08, 1.05);
 
-    // Central aisle and broad steps leading to the far opening.
-    addStep(8.4, 2.2, 0.35, 0, 5.6);
-    addStep(7.2, 2.2, 0.35, 0, 7.8);
-    addStep(6.0, 2.2, 0.35, 0, 10.0);
+    // Rear pair.
+    createColumn(-3.35, -8.5, 0.08, 1.05);
+    createColumn(3.35, -8.5, -0.08, 1.05);
 
-    // Side benches.
-    for (const side of [-1, 1]) {
-      addVoxelBox({
-        x: side * 6.35,
-        y: 0.35,
-        z: 0.3,
-        width: 2.1,
-        height: 0.7,
-        depth: 7.4,
-        material: stoneMaterial,
-        name: "Side bench"
-      });
+    // Side columns.
+    createColumn(-5.85, -2.3, Math.PI / 2, 0.95);
+    createColumn(5.85, -2.3, -Math.PI / 2, 0.95);
 
-      addVoxelBox({
-        x: side * 6.35,
-        y: 0.86,
-        z: 0.3,
-        width: 2.35,
-        height: 0.28,
-        depth: 7.6,
-        material: darkStoneMaterial,
-        name: "Bench cushion"
-      });
-    }
+    // -------------------------------------------------------------------------
+    // Stylized voxel statues
+    // -------------------------------------------------------------------------
 
-    // Bronze artifacts on the side walls.
-    for (const side of [-1, 1]) {
-      for (let z = -4.8; z <= 4.8; z += 3.2) {
-        const artifact = new THREE.Mesh(
-          new THREE.TorusGeometry(0.32, 0.08, 8, 18),
-          bronzeMaterial
+    function createStatue(x, y, z, rotation = 0, scale = 1, pose = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
+
+      // Feet.
+      const leftFoot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.38, 0.22, 0.55),
+        materials.stateDark || materials.stateDark
+      );
+      leftFoot.position.set(-0.16, 0.11, 0);
+      leftFoot.castShadow = true;
+      group.add(leftFoot);
+
+      const rightFoot = leftFoot.clone();
+      rightFoot.position.x = 0.16;
+      group.add(rightFoot);
+
+      // Legs.
+      const leftLeg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.62, 0.36),
+        materials.stateDark || materials.stateDark
+      );
+      leftLeg.position.set(-0.13, 0.48, 0);
+      leftLeg.castShadow = true;
+      group.add(leftLeg);
+
+      const rightLeg = leftLeg.clone();
+      rightLeg.position.x = 0.13;
+      group.add(rightLeg);
+
+      // Torso.
+      const torso = new THREE.Mesh(
+        new THREE.BoxGeometry(0.62, 0.72, 0.42),
+        materials.stateDark || materials.stateDark
+      );
+      torso.position.set(0, 1.05, 0);
+      torso.rotation.z = pose;
+      torso.castShadow = true;
+      group.add(torso);
+
+      // Head and headdress.
+      const head = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.23, 0.25, 0.46, 8),
+        materials.stateDark || materials.stateDark
+      );
+      head.position.set(0, 1.57, 0);
+      head.castShadow = true;
+      group.add(head);
+
+      const headdress = new THREE.Mesh(
+        new THREE.ConeGeometry(0.39, 0.52, 8),
+        materials.gold
+      );
+      headdress.position.set(0, 1.93, 0);
+      headdress.castShadow = true;
+      group.add(headdress);
+
+      // Arms.
+      const leftArm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.78, 0.28),
+        materials.stateDark || materials.stateDark
+      );
+      leftArm.position.set(-0.48, 1.18, 0.04);
+      leftArm.rotation.z = -0.18;
+      leftArm.castShadow = true;
+      group.add(leftArm);
+
+      const rightArm = leftArm.clone();
+      rightArm.position.x = 0.48;
+      rightArm.rotation.z = 0.18;
+      group.add(rightArm);
+
+      // Small offerings or objects.
+      if (pose > 0.3) {
+        const offering = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.19, 0.23, 0.28, 10),
+          materials.gold
         );
-        artifact.rotation.x = Math.PI / 2;
-        artifact.position.set(side * 5.75, 1.25, z);
-        artifact.castShadow = true;
-        room.add(artifact);
-
-        const smallArtifact = new THREE.Mesh(
-          new THREE.TorusGeometry(0.22, 0.06, 8, 16),
-          bronzeMaterial
-        );
-        smallArtifact.rotation.x = Math.PI / 2;
-        smallArtifact.position.set(side * 5.75, 1.25, z + 0.55);
-        smallArtifact.castShadow = true;
-        room.add(smallArtifact);
+        offering.position.set(0.58, 0.91, 0.22);
+        offering.rotation.z = -0.2;
+        offering.castShadow = true;
+        group.add(offering);
       }
+
+      scene.add(group);
+      return group;
     }
 
-    // Central pool, cut into the floor.
-    const pool = new THREE.Group();
-    pool.position.set(0, 0, 1.1);
-    room.add(pool);
+    // Wall statues on the left.
+    createStatue(-5.55, 2.25, 1.48, 0, 0.88, 0.08);
+    createStatue(-4.2, 2.25, 1.48, 0, 0.88, -0.08);
+    createStatue(-2.85, 2.25, 1.48, 0, 0.88, 0.08);
 
-    // Pool coping.
-    addVoxelBox({
-      x: 0,
-      y: 0.22,
-      z: 0,
-      width: 7.4,
-      height: 0.44,
-      depth: 4.3,
-      material: stoneMaterial,
-      name: "Pool coping"
-    });
+    // Wall statues on the right.
+    createStatue(5.55, 2.25, 1.48, Math.PI, 0.88, 0.08);
+    createStatue(4.2, 2.25, 1.48, Math.PI, 0.88, -0.08);
+    createStatue(2.85, 2.25, 1.48, Math.PI, 0.88, 0.08);
 
-    // Darker inner basin.
-    addVoxelBox({
-      x: 0,
-      y: 0.05,
-      z: 0,
-      width: 6.65,
-      height: 0.16,
-      depth: 3.55,
-      material: darkStoneMaterial,
-      name: "Pool basin"
-    });
+    // Central processional statues.
+    createStatue(-1.2, floorY, 5.25, 0.35, 0.85, 0.15);
+    createStatue(1.2, floorY, 5.25, -0.35, 0.85, -0.15);
 
-    // Water surface.
-    const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(6.6, 3.5, 32, 18),
-      waterMaterial
+    createStatue(-1.2, floorY, -7.2, 0.35, 0.85, 0.15);
+    createStatue(1.2, floorY, -7.2, -0.35, 0.85, -0.15);
+
+    // -------------------------------------------------------------------------
+    // Ceiling, upper gallery, and skylight
+    // -------------------------------------------------------------------------
+
+    // Dark ceiling slab.
+    box(
+      0,
+      5.85,
+      0,
+      13.5,
+      0.4,
+      23.5,
+      materials.dark
     );
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(0, 0.145, 0);
-    water.receiveShadow = true;
-    pool.add(water);
 
-    // Subtle water-edge stones.
-    for (let i = 0; i < 24; i++) {
-      const side = i % 2 === 0 ? -1 : 1;
-      const stone = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(randomRange(0.18, 0.38), 0),
-        darkStoneMaterial
+    // Upper gallery along the back and sides.
+    box(
+      0,
+      5.35,
+      -9.6,
+      12.2,
+      0.45,
+      1.35,
+      materials.wood
+    );
+
+    box(
+      -5.9,
+      5.35,
+      -2.2,
+      1.35,
+      0.45,
+      10.6,
+      materials.wood
+    );
+
+    box(
+      5.9,
+      5.35,
+      -2.2,
+      1.35,
+      0.45,
+      10.6,
+      materials.wood
+    );
+
+    // Gallery railings.
+    for (const z of [-10.25, -3.25]) {
+      box(
+        0,
+        5.82,
+        z,
+        11.6,
+        0.12,
+        0.12,
+        materials.gold
       );
-      stone.position.set(
-        side * randomRange(3.65, 4.05),
+
+      for (let x = -5.4; x <= 5.4; x += 1.2) {
+        box(
+          x,
+          5.55,
+          z,
+          0.09,
+          0.55,
+          0.09,
+          materials.ochre
+        );
+      }
+    }
+
+    for (const x of [-6.45, 6.45]) {
+      box(
+        x,
+        5.82,
+        -2.2,
+        0.12,
+        0.12,
+        9.6,
+        materials.gold
+      );
+
+      for (let z = -6.8; z <= 2.8; z += 1.2) {
+        box(
+          x,
+          5.55,
+          z,
+          0.09,
+          0.55,
+          0.09,
+          materials.ochre
+        );
+      }
+    }
+
+    // Skylight frame and glass.
+    const skylight = new THREE.Mesh(
+      new THREE.BoxGeometry(6.8, 0.12, 10.8),
+      materials.mosaicBlue
+    );
+    skylight.position.set(0, 5.64, -3.0);
+    skylight.receiveShadow = true;
+    scene.add(skylight);
+
+    // Voxel rafters.
+    for (let z = -8.4; z <= 3.6; z += 2.1) {
+      box(
+        0,
+        5.82,
+        z,
+        6.9,
+        0.18,
         0.2,
-        randomRange(-1.75, 1.75)
+        materials.wood
       );
-      stone.scale.y = randomRange(0.35, 0.7);
-      stone.castShadow = true;
-      pool.add(stone);
     }
 
-    // A few submerged-looking artifacts below the water plane.
-    const submergedMaterial = new THREE.MeshStandardMaterial({
-      color: 0x26333a,
-      roughness: 0.75,
-      metalness: 0.15
-    });
+    // Outer frame around the skylight.
+    box(
+      0,
+      5.82,
+      -3.0,
+      7.2,
+      0.25,
+      0.25,
+      materials.gold
+    );
 
-    for (let i = 0; i < 8; i++) {
-      const artifact = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(randomRange(0.12, 0.3), 0),
-        submergedMaterial
+    box(
+      0,
+      5.82,
+      -3.0,
+      0.25,
+      0.25,
+      11.2,
+      materials.gold
+    );
+
+    // -------------------------------------------------------------------------
+    // Background doorway and distant architecture
+    // -------------------------------------------------------------------------
+
+    // Rear doorway frame.
+    box(
+      0,
+      2.3,
+      -11.05,
+      3.8,
+      4.6,
+      0.35,
+      materials.wood
+    );
+
+    box(
+      0,
+      4.55,
+      -10.82,
+      4.15,
+      0.3,
+      0.42,
+      materials.gold
+    );
+
+    box(
+      0,
+      0.2,
+      -10.8,
+      4.15,
+      0.4,
+      0.42,
+      materials.gold
+    );
+
+    // Distant interior visible through the doorway.
+    box(
+      0,
+      1.65,
+      -15.2,
+      6.4,
+      3.3,
+      0.5,
+      materials.dark
+    );
+
+    for (let x = -2.6; x <= 2.6; x += 1.3) {
+      box(
+        x,
+        2.1,
+        -14.9,
+        0.18,
+        2.2,
+        0.18,
+        materials.woodLight
       );
-      artifact.position.set(
-        randomRange(-2.8, 2.8),
-        randomRange(0.05, 0.16),
-        randomRange(-1.2, 1.2)
-      );
-      artifact.scale.y = randomRange(0.3, 0.8);
-      pool.add(artifact);
     }
+
+    // Distant mosaic wall.
+    box(
+      0,
+      2.1,
+      -14.9,
+      6.2,
+      4.2,
+      0.4,
+      materials.mosaic
+    );
+
+    // Warm light in the distant room.
+    const distantLight = new THREE.PointLight(0xffb35d, 1.6, 14, 2);
+    distantLight.position.set(0, 3.5, -13.4);
+    scene.add(distantLight);
 
     // -------------------------------------------------------------------------
     // Lighting
     // -------------------------------------------------------------------------
 
-    const hemisphere = new THREE.HemisphereLight(0x9ab7b8, 0x261a12, 1.15);
+    const hemisphere = new THREE.HemisphereLight(0xd9e5df, 0x33251b, 1.25);
     scene.add(hemisphere);
 
-    const ambient = new THREE.AmbientLight(0xffe0b0, 0.28);
-    scene.add(ambient);
-
-    // Warm directional light from the skylight.
-    const sun = new THREE.DirectionalLight(0xffd7a0, 3.2);
-    sun.position.set(-4, 11, 2);
+    const sun = new THREE.DirectionalLight(0xffe0a3, 3.2);
+    sun.position.set(-7, 10, 6);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -12;
-    sun.shadow.camera.right = 12;
-    sun.shadow.camera.top = 12;
-    sun.shadow.camera.bottom = -12;
+    sun.shadow.camera.left = -13;
+    sun.shadow.camera.right = 13;
+    sun.shadow.camera.top = 13;
+    sun.shadow.camera.bottom = -13;
     sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 35;
-    sun.shadow.bias = -0.0005;
+    sun.shadow.camera.far = 40;
+    sun.shadow.bias = -0.00035;
+    sun.shadow.normalBias = 0.025;
     scene.add(sun);
 
-    // Cool fill from the far opening.
-    const coolFill = new THREE.DirectionalLight(0x9bc9d1, 1.0);
-    coolFill.position.set(0, 6, 13);
+    const coolFill = new THREE.DirectionalLight(0x91b9c3, 1.15);
+    coolFill.position.set(8, 5, -8);
     scene.add(coolFill);
 
-    // Low warm point lights under the ceiling.
-    for (const x of [-4.2, 4.2]) {
-      const lamp = new THREE.PointLight(0xffb55f, 8, 10, 2);
-      lamp.position.set(x, 5.6, 0);
-      scene.add(lamp);
-    }
+    const poolLight = new THREE.PointLight(0x8bc8cf, 1.4, 11, 2);
+    poolLight.position.set(0.4, 1.2, 0.1);
+    scene.add(poolLight);
 
     // -------------------------------------------------------------------------
-    // Interaction: WASD movement and drag-to-look
+    // Custom camera controls
     // -------------------------------------------------------------------------
 
-    const forward = new THREE.Vector3();
-    const right = new THREE.Vector3();
+    const controls = {
+      target: new THREE.Vector3(0, 1.8, -0.7),
+      azimuth: 0.68,
+      polar: 1.08,
+      radius: 18.5,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
 
-    function updateKeyboardMovement(delta) {
-      forward.set(0, 0, -1).applyAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        controls.yaw
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
       );
-
-      right.set(1, 0, 0).applyAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        controls.yaw
-      );
-
-      const movement = new THREE.Vector3();
-
-      if (controls.keys.has("KeyW")) movement.add(forward);
-      if (controls.keys.has("KeyS")) movement.sub(forward);
-      if (controls.keys.has("KeyD")) movement.add(right);
-      if (controls.keys.has("KeyA")) movement.sub(right);
-
-      if (movement.lengthSq() > 0) {
-        movement.normalize().multiplyScalar(controls.speed * delta);
-        controls.target.add(movement);
-        controls.target.x = THREE.MathUtils.clamp(
-          controls.target.x,
-          -8,
-          8
-        );
-        controls.target.z = THREE.MathUtils.clamp(
-          controls.target.z,
-          -7,
-          7
-        );
-      }
-
-      // Gentle head movement while dragging.
-      if (controls.dragging) {
-        controls.yaw -= (controls.lastX - controls.lastY) * 0.006;
-        controls.pitch = THREE.MathUtils.clamp(
-          controls.pitch + (controls.lastY - controls.lastX) * 0.006,
-          -1.25,
-          1.25
-        );
-      }
+      camera.lookAt(controls.target);
     }
 
-    renderer.domElement.addEventListener("pointerdown", (event) => {
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", event => {
       controls.dragging = true;
+      controls.panning = event.button === 2 || event.shiftKey;
       controls.lastX = event.clientX;
       controls.lastY = event.clientY;
       renderer.domElement.setPointerCapture(event.pointerId);
     });
 
-    renderer.domElement.addEventListener("pointermove", (event) => {
+    renderer.domElement.addEventListener("pointermove", event => {
       if (!controls.dragging) return;
 
       const dx = event.clientX - controls.lastX;
       const dy = event.clientY - controls.lastY;
-
       controls.lastX = event.clientX;
       controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const scale = controls.radius * 0.0012;
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.getWorldDirection(right);
+        right.cross(camera.up).normalize();
+        up.cross(right).normalize();
+
+        controls.target.addScaledVector(right, -dx * scale);
+        controls.target.addScaledVector(up, dy * scale);
+      } else {
+        controls.azimuth -= dx * 0.006;
+        controls.polar = THREE.MathUtils.clamp(
+          controls.polar - dy * 0.005,
+          0.38,
+          1.42
+        );
+      }
+
+      updateCamera();
     });
 
     function endDrag(event) {
       controls.dragging = false;
+      controls.panning = false;
       if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
         renderer.domElement.releasePointerCapture(event.pointerId);
       }
@@ -898,188 +944,44 @@
 
     renderer.domElement.addEventListener("pointerup", endDrag);
     renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", event => event.preventDefault());
 
-    renderer.domElement.addEventListener("wheel", (event) => {
+    renderer.domElement.addEventListener("wheel", event => {
       event.preventDefault();
-      controls.distance = THREE.MathUtils.clamp(
-        controls.distance + event.deltaY * 0.012,
-        4.2,
-        24
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius + event.deltaY * 0.012,
+        7,
+        30
       );
+      updateCamera();
     }, { passive: false });
-
-    // -------------------------------------------------------------------------
-    // Clickable object inspection
-    // -------------------------------------------------------------------------
-
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-    const inspection = new THREE.Group();
-    scene.add(inspection);
-
-    function inspectObject(object) {
-      const name = object.userData.name;
-      const description = object.userData.description || "";
-
-      inspection.position.copy(object.position);
-      inspection.rotation.copy(object.rotation);
-      inspection.scale.copy(object.scale);
-
-      const title = document.createElement("div");
-      title.textContent = name;
-
-      const text = document.createElement("div");
-      text.textContent = description;
-
-      inspection.appendChild(title);
-      inspection.appendChild(text);
-      renderer.domElement.style.cursor = "pointer";
-      document.body.appendChild(inspection);
-    }
-
-    renderer.domElement.addEventListener("click", (event) => {
-      pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(clickableObjects, false);
-
-      if (hits.length) {
-        const object = hits[0].object;
-        const name = object.userData.name;
-        const description = object.userData.description || "";
-
-        inspection.position.copy(object.position);
-        inspection.rotation.copy(object.rotation);
-        inspection.scale.copy(object.scale);
-
-        const title = document.createElement("div");
-        title.textContent = name;
-
-        const text = document.createElement("div");
-        text.textContent = description;
-
-        inspection.appendChild(title);
-        inspection.appendChild(text);
-        renderer.domElement.style.cursor = "pointer";
-        document.body.appendChild(inspection);
-      }
-    });
 
     // -------------------------------------------------------------------------
     // Resize and animation
     // -------------------------------------------------------------------------
 
     window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     });
 
     const clock = new THREE.Clock();
 
     function animate() {
-      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
 
-      const delta = Math.min(clock.getDelta(), 0.05);
-      updateKeyboardMovement(delta);
-      updateCamera();
-
-      // Very subtle water movement.
-      waterMaterial.map.offset.x = clock.elapsedTime * 0.018;
-      waterMaterial.map.offset.y = Math.sin(clock.elapsedTime * 0.45) * 0.035;
+      for (const shard of glintShards) {
+        shard.position.y = shard.userData.baseY + Math.sin(elapsed * 1.15 + shard.userData.phase) * 0.035;
+        shard.rotation.y += 0.0007;
+      }
 
       renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     }
 
     animate();
-
-    // -------------------------------------------------------------------------
-    // Scene descriptions for interactive objects
-    // -------------------------------------------------------------------------
-
-    clickableObjects.forEach((object, index) => {
-      const names = {
-        "Fresco wall":
-          "A block-built wall covered in faded narrative frescoes. Drag across the painted figures to inspect the scene.",
-        "Column":
-          "A square column assembled from stone voxels, with painted narrative bands around its shaft.",
-        "Pool":
-          "A shallow reflecting pool cut into the central floor. The water hides bronze artifacts from the surface.",
-        "Step":
-          "Broad stone steps lead toward the illuminated opening in the far wall.",
-        "Benches":
-          "Low benches frame the central pool and provide a place to rest."
-      };
-
-      object.userData.description = names[object.userData.name] || "";
-    });
-
-    // -------------------------------------------------------------------------
-    // A small foreground voxel figure for scale
-    // -------------------------------------------------------------------------
-
-    const figure = new THREE.Group();
-    figure.position.set(-5.2, 0.15, 2.1);
-    figure.rotation.y = -0.65;
-
-    const figureMaterial = new THREE.MeshStandardMaterial({
-      color: 0x342a22,
-      roughness: 0.9
-    });
-
-    const robe = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.25, 0.42, 1.25, 8),
-      figureMaterial
-    );
-    robe.position.y = 0.65;
-    robe.castShadow = true;
-    figure.add(robe);
-
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x8a6848, roughness: 0.95 })
-    );
-    head.position.y = 1.42;
-    head.castShadow = true;
-    figure.add(head);
-
-    const staff = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.025, 0.025, 1.6, 6),
-      bronzeMaterial
-    );
-    staff.position.set(0.32, 0.8, 0);
-    staff.rotation.z = -0.12;
-    staff.castShadow = true;
-    figure.add(staff);
-
-    scene.add(figure);
-    clickableObjects.push(figure);
-
-    figure.userData.name = "Traveler";
-    figure.userData.description =
-      "A small voxel traveler provides a sense of scale inside the frescoed hall.";
-
-    // -------------------------------------------------------------------------
-    // Optional ambient motion: a floating dust mote above the pool
-    // -------------------------------------------------------------------------
-
-    const dust = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 6, 6),
-      new THREE.MeshBasicMaterial({
-        color: 0xffe3a6,
-        transparent: true,
-        opacity: 0.65
-      })
-    );
-    dust.position.set(0, 3.8, 0.5);
-    scene.add(dust);
-
-    animate(() => {
-      dust.position.y = 3.8 + Math.sin(clock.elapsedTime * 0.7) * 0.18;
-      dust.position.x = Math.sin(clock.elapsedTime * 0.35) * 0.25;
-    });
   </script>
 </body>
 </html>
