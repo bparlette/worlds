@@ -790,5 +790,13 @@
     "status": "pass",
     "filename": "1096-tomb_raider_croft_manor_pool_room.html",
     "updated_at": "2026-11-02 14:55 EST"
+  },
+  "97": {
+    "rank": 97,
+    "game": "Half-Life",
+    "name": "Black Mesa",
+    "status": "pass",
+    "filename": "1097-half_life_black_mesa.html",
+    "updated_at": "2026-11-02 15:05 EST"
   }
 }
