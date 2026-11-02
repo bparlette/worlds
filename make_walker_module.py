@@ -44,7 +44,32 @@ os.makedirs(THUMBS_DIR, exist_ok=True)
 BAKE_THUMBS_ENABLED = True
 
 
-def parse_scene_to_walker(html_content: str, spec: dict) -> str:
+def _load_relic_assignments():
+    """walk/relics.json: { "<zero-padded world id>": {"id": ..., "name": ...} }.
+
+    Relic identity lives in data, never in generation (R8): look beside
+    this script first (the repo root), then in WALK_DIR. Absence is
+    tolerated — unassigned worlds keep the legacy derivation and the
+    generic visual.
+    """
+    for candidate in (
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "walk", "relics.json"),
+        os.path.join(WALK_DIR, "relics.json"),
+    ):
+        try:
+            with open(candidate) as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            continue
+    return {}
+
+
+RELIC_ASSIGNMENTS = _load_relic_assignments()
+
+
+def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> str:
     script_match = re.search(r"<script\b[^>]*>([\s\S]*?)</script>", html_content, re.I)
     if not script_match:
         raise ValueError("No <script> tag found in HTML")
@@ -99,10 +124,21 @@ def parse_scene_to_walker(html_content: str, spec: dict) -> str:
     door_prev_x = tx - 12.0
     door_prev_z = tz + 10.0
 
-    # Derive iconic relic name and off-beeline coordinate
-    relic_name = f"{title} Relic" if title else "Ancient Relic"
-    relic_x = tx - 10.0
-    relic_z = tz - 12.0 if tz <= 0 else tz + 12.0
+    # Relic identity + anchor (R8). The id/name come from
+    # walk/relics.json when the world has an assignment — generation is
+    # never told about relics, and the Walker host builds the visual
+    # from walk/relics.js. Unassigned worlds keep the legacy derivation
+    # with the generic id. The anchor defaults to the off-beeline
+    # formula point; convert_scene_to_walker_module may pass a
+    # clearance-validated anchor instead (see relic_anchor_candidates).
+    assignment = RELIC_ASSIGNMENTS.get(formatted_id) or {}
+    relic_id = assignment.get("id", "generic")
+    relic_name = assignment.get("name") or (f"{title} Relic" if title else "Ancient Relic")
+    if relic_anchor is not None:
+        relic_x, relic_z = float(relic_anchor[0]), float(relic_anchor[1])
+    else:
+        relic_x = tx - 10.0
+        relic_z = tz - 12.0 if tz <= 0 else tz + 12.0
 
     lines = [
         f'// @world {header_json}',
@@ -201,7 +237,7 @@ def parse_scene_to_walker(html_content: str, spec: dict) -> str:
         '    group,',
         '    update,',
         f'    spawn: {{ x: {tx:.1f}, z: {spawn_z:.1f}, yaw: 0 }},',
-        f'    relic: {{ name: {json.dumps(relic_name)}, x: {relic_x:.1f}, z: {relic_z:.1f} }},',
+        f'    relic: {{ id: {json.dumps(relic_id)}, name: {json.dumps(relic_name)}, x: {relic_x:.1f}, z: {relic_z:.1f} }},',
         f'    env:   {{ background: {bg_val}, fogColor: {fog_val}, fogDensity: {density_val} }},',
         '    doors: {',
         f'      next: {{ x: {door_next_x:.1f}, z: {door_next_z:.1f} }},',
@@ -212,6 +248,120 @@ def parse_scene_to_walker(html_content: str, spec: dict) -> str:
         ''
     ]
     return '\n'.join(lines)
+
+
+def _scene_target(html_content: str):
+    """The scene's orbit target (tx, tz), parsed exactly as
+    parse_scene_to_walker step 2 parses it."""
+    m = re.search(r"target:\s*new\s+THREE\.Vector3\(([^)]+)\)", html_content)
+    tx, tz = 0.0, 0.0
+    if m:
+        try:
+            parts = [float(p.strip()) for p in m.group(1).split(",")]
+            tx = parts[0]
+            tz = parts[2] if len(parts) > 2 else parts[1]
+        except Exception:
+            pass
+    return tx, tz
+
+
+def relic_anchor_candidates(html_content: str) -> list:
+    """Ordered relic-anchor candidates (R8): the formula point first —
+    (tx - 10, tz -/+ 12) — then its mirrored offsets, the x/z sign
+    variants of the same offsets around the scene's orbit target."""
+    tx, tz = _scene_target(html_content)
+    fx, mx = tx - 10.0, tx + 10.0
+    fz = tz - 12.0 if tz <= 0 else tz + 12.0
+    mz = tz + 12.0 if tz <= 0 else tz - 12.0
+    candidates = []
+    for cand in [(fx, fz), (mx, fz), (fx, mz), (mx, mz)]:
+        if cand not in candidates:
+            candidates.append(cand)
+    return candidates
+
+
+def check_relic_anchor_clear(module_path: str, anchor_x: float, anchor_z: float) -> dict:
+    """
+    R8 anchor clearance, run headlessly against the converted module:
+    the relic floats at ground+1.05, so the 2-unit-radius column around
+    the anchor must be free of scene meshes at ground level. Ground
+    height is raycast at the anchor; the column is then sampled (centre
+    + rings at r=1 and r=2) — a sample whose surface sits more than 0.6
+    above or below the anchor's ground means a mesh occupies (or drops
+    away inside) the column.
+    Scene meshes are only ever observed here, never modified.
+    """
+    test_script = f"""
+globalThis.innerWidth = 1920;
+globalThis.innerHeight = 1080;
+globalThis.devicePixelRatio = 1;
+globalThis.addEventListener = () => {{}};
+globalThis.window = {{ innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {{}} }};
+globalThis.document = {{
+  createElementNS: () => ({{ getContext: () => null, style: {{}}, addEventListener: () => {{}}, removeEventListener: () => {{}} }}),
+  createElement: () => {{
+    const ctx = new Proxy({{}}, {{ get: () => () => ctx, set: () => true }});
+    return {{ getContext: () => ctx, width: 64, height: 64, style: {{}}, addEventListener: () => {{}}, removeEventListener: () => {{}} }};
+  }},
+  body: {{ appendChild: () => {{}}, prepend: () => {{}}, style: {{}} }},
+  querySelector: () => ({{ style: {{}}, addEventListener: () => {{}} }}),
+  getElementById: () => ({{ style: {{}}, classList: {{ add: () => {{}}, remove: () => {{}} }} }})
+}};
+
+const fs = require('fs');
+let THREE;
+try {{ THREE = require('/Users/braidpairlette/worlds/node_modules/three'); }}
+catch (e) {{ THREE = require('three'); }}
+
+let code = fs.readFileSync('{module_path}', 'utf8');
+code = code.replace(/import\\s+\\*\\s+as\\s+THREE\\s+from\\s+[^;]+;/, '');
+code = code.replace(/export\\s+function\\s+createWorld/, 'function createWorld');
+
+try {{
+  eval(code);
+  const world = createWorld(THREE);
+  world.group.updateMatrixWorld(true);
+  const ax = {anchor_x!r}, az = {anchor_z!r};
+  const ray = new THREE.Raycaster();
+  const down = new THREE.Vector3(0, -1, 0);
+  const topAt = (px, pz, fromY) => {{
+    ray.set(new THREE.Vector3(px, fromY, pz), down);
+    const hits = ray.intersectObject(world.group, true);
+    return hits.length ? hits[0].point.y : null;
+  }};
+  const samples = [[0, 0],
+    [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7],
+    [2, 0], [-2, 0], [0, 2], [0, -2], [1.4, 1.4], [-1.4, 1.4], [1.4, -1.4], [-1.4, -1.4]];
+  const tops = samples.map(([dx, dz]) => topAt(ax + dx, az + dz, 500));
+  const groundY = tops[0] === null ? 0 : tops[0];
+  let blocked = null;
+  for (let i = 0; i < samples.length; i++) {{
+    if (tops[i] !== null && Math.abs(tops[i] - groundY) > 0.6) {{
+      blocked = {{ at: [ax + samples[i][0], az + samples[i][1]], topY: tops[i] }};
+      break;
+    }}
+  }}
+  console.log(JSON.stringify({{ clear: !blocked, groundY: groundY, blocked: blocked }}));
+}} catch (err) {{
+  console.log(JSON.stringify({{ clear: false, error: err.message }}));
+}}
+"""
+    try:
+        proc = subprocess.run(
+            ["node", "-e", test_script],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=dict(os.environ, NODE_PATH=os.path.join(WORLDS_DIR, "node_modules"))
+        )
+        out = proc.stdout.strip()
+        if out:
+            for line in out.splitlines():
+                if line.startswith("{") and line.endswith("}"):
+                    return json.loads(line)
+        return {"clear": False, "error": proc.stderr.strip() or "No output from node anchor check"}
+    except Exception as e:
+        return {"clear": False, "error": str(e)}
 
 
 def validate_module_in_node(module_path: str) -> dict:
@@ -255,6 +405,9 @@ try {{
   if (!world.spawn || typeof world.spawn.x !== 'number' || typeof world.spawn.z !== 'number') throw new Error('Invalid world.spawn');
   if (!world.relic || typeof world.relic.name !== 'string' || typeof world.relic.x !== 'number' || typeof world.relic.z !== 'number') {{
     throw new Error('Rule R8 failed: Missing or invalid world.relic {{ name, x, z }}');
+  }}
+  if (world.relic.id !== undefined && typeof world.relic.id !== 'string') {{
+    throw new Error('Rule R8 failed: world.relic.id must be a string when present');
   }}
   if (!world.doors || !world.doors.next || !world.doors.prev) throw new Error('Invalid world.doors');
   if (!world.env) throw new Error('Missing world.env');
@@ -580,7 +733,39 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
         return {"status": "skipped_handcrafted", "id": formatted_id}
 
     try:
-        module_js = parse_scene_to_walker(html, spec)
+        # R8 anchor clearance: try the formula anchor, then its mirrored
+        # offsets; the first anchor whose 2-unit column is clear of scene
+        # meshes wins and is recorded in the module. Scene meshes are
+        # never deleted to clear a spot. If no candidate is clear, the
+        # formula anchor is kept and the result is flagged — positions
+        # are never guessed silently.
+        candidates = relic_anchor_candidates(html)
+        chosen_anchor = None
+        anchor_warning = None
+        module_js = None
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".js")
+        os.close(tmp_fd)
+        try:
+            for cand in candidates:
+                cand_js = parse_scene_to_walker(html, spec, relic_anchor=cand)
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    f.write(cand_js)
+                if check_relic_anchor_clear(tmp_path, cand[0], cand[1]).get("clear"):
+                    chosen_anchor, module_js = cand, cand_js
+                    break
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        if chosen_anchor is None:
+            chosen_anchor = candidates[0]
+            module_js = parse_scene_to_walker(html, spec, relic_anchor=chosen_anchor)
+            anchor_warning = (f"relic anchor blocked at all {len(candidates)} candidates; "
+                              "formula anchor kept — set a clear anchor by hand")
+            print(f"[Walker Bridge] ⚠ World #{formatted_id}: {anchor_warning}")
+        elif chosen_anchor != candidates[0]:
+            print(f"[Walker Bridge] World #{formatted_id}: formula relic anchor blocked; "
+                  f"mirrored anchor ({chosen_anchor[0]:.1f}, {chosen_anchor[1]:.1f}) is clear.")
+
         with open(module_path, "w", encoding="utf-8") as f:
             f.write(module_js)
 
@@ -599,7 +784,11 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
             # R9: bake the top-down map thumbnail. Decorative only — a bake
             # failure returns None here and never affects registration.
             thumb = bake_thumbnail(module_path, formatted_id) if BAKE_THUMBS_ENABLED else None
-            return {"status": "registered", "id": formatted_id, "thumb": thumb}
+            result = {"status": "registered", "id": formatted_id, "thumb": thumb,
+                      "relic_anchor": [chosen_anchor[0], chosen_anchor[1]]}
+            if anchor_warning:
+                result["anchor_warning"] = anchor_warning
+            return result
         else:
             # Remove invalid module so build-walk-manifest.mjs remains clean
             if os.path.exists(module_path):
