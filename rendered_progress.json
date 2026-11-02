@@ -710,5 +710,13 @@
     "status": "pass",
     "filename": "1089-halo_reach_condemned_gamma_station.html",
     "updated_at": "2026-11-02 07:48 EST"
+  },
+  "90": {
+    "rank": 90,
+    "game": "Resident Evil \u00d7 Silent Hill (tribute)",
+    "name": "\u201cResident Hill\u201d \u2014 The Mansion",
+    "status": "pass",
+    "filename": "1090-resident_evil_silent_hill_tribute_resident_hill_the_mansion.html",
+    "updated_at": "2026-11-02 07:54 EST"
   }
 }

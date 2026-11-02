@@ -266,6 +266,13 @@
     "module": "modules/088.js"
   },
   {
+    "id": "090",
+    "title": "Resident Evil × Silent Hill (tribute)",
+    "sub": "“Resident Hill” — The Mansion",
+    "system": "Console",
+    "module": "modules/090.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
