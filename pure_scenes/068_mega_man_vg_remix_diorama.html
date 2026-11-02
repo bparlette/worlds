@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Battle</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #080b11;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .title {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 2;
+      pointer-events: none;
+      color: #fff;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 48px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      color: #9eb0c8;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 2;
+      padding: 10px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: rgba(8, 12, 19, 0.65);
+      color: #aebbd0;
+      font-size: 12px;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    .help strong {
+      color: #fff;
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        top: 14px;
+        left: 14px;
+      }
+
+      .help {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <div class="title">
+    <h1>Voxel Battle</h1>
+    <p>Platform showdown</p>
+  </div>
+
+  <div class="help">
+    <strong>Drag</strong> to orbit · <strong>Scroll</strong> to zoom
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const app = document.getElementById("app");
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    app.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080b11);
+    scene.fog = new THREE.Fog(0x080b11, 22, 48);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffc82e,
+        roughness: 0.72,
+        metalness: 0.08
+      }),
+      yellowDark: new THREE.MeshStandardMaterial({
+        color: 0xd98916,
+        roughness: 0.8
+      }),
+      orange: new THREE.MeshStandardMaterial({
+        color: 0xff6a1c,
+        roughness: 0.68
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xe83b45,
+        roughness: 0.65
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x2477ff,
+        roughness: 0.55,
+        metalness: 0.18
+      }),
+      blueDark: new THREE.MeshStandardMaterial({
+        color: 0x143977,
+        roughness: 0.65
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf4f7ff,
+        roughness: 0.68
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x10141c,
+        roughness: 0.9
+      }),
+      glass: new THREE.MeshStandardMaterial({
+        color: 0x8de6ff,
+        roughness: 0.2,
+        metalness: 0.25,
+        emissive: 0x1b86a7,
+        emissiveIntensity: 0.4
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x42d96a,
+        roughness: 0.7
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x75422b,
+        roughness: 0.95
+      }),
+      gray: new THREE.MeshStandardMaterial({
+        color: 0x747b88,
+        roughness: 0.82
+      }),
+      grayDark: new THREE.MeshStandardMaterial({
+        color: 0x303843,
+        roughness: 0.85
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const voxel = (
+      parent,
+      size,
+      material,
+      x = 0,
+      y = 0,
+      z = 0
+    ) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    function voxelLine(parent, a, b, material, thickness = 0.18) {
+      const start = new THREE.Vector3(...a);
+      const end = new THREE.Vector3(...b);
+      const direction = end.clone().sub(start);
+      const length = direction.length();
+      const count = Math.max(1, Math.ceil(length / 0.22));
+
+      const line = new THREE.Group();
+      parent.add(line);
+
+      for (let i = 0; i <= count; i++) {
+        const t = i / count;
+        const p = start.clone().lerp(end, t);
+        voxel(line, thickness, material, p.x, p.y, p.z);
+      }
+
+      return line;
+    }
+
+    function addEye(parent, x, y, z, material = materials.white) {
+      return voxel(parent, 0.22, material, x, y, z);
+    }
+
+    // -------------------------------------------------------------------------
+    // Ground platform
+    // -------------------------------------------------------------------------
+
+    const platform = new THREE.Group();
+    scene.add(platform);
+
+    // Main platform base.
+    voxel(platform, 18, materials.grayDark, 0, -1.55, 0);
+    voxel(platform, 17.4, materials.wood, 0, -1.1, 0);
+
+    // Pixelated track surface.
+    const track = new THREE.Group();
+    platform.add(track);
+
+    for (let x = -8; x <= 8; x += 1) {
+      for (let z = -6; z <= 6; z += 1) {
+        const alternate = (x + z) % 2 === 0;
+        voxel(
+          track,
+          0.88,
+          alternate ? materials.white : materials.gray,
+          x,
+          0.12,
+          z
+        );
+      }
+    }
+
+    // Track border.
+    voxelLine(track, [-8.5, 0.3, -6.5], [8.5, 0.3, -6.5], materials.green, 0.28);
+    voxelLine(track, [-8.5, 0.3, 6.5], [8.5, 0.3, 6.5], materials.green, 0.28);
+    voxelLine(track, [-8.5, 0.3, -6.5], [-8.5, 0.3, 6.5], materials.green, 0.28);
+    voxelLine(track, [8.5, 0.3, -6.5], [8.5, 0.3, 6.5], materials.green, 0.28);
+
+    // Decorative platform edges.
+    for (let x = -8; x <= 8; x += 2) {
+      voxel(platform, 0.8, materials.orange, x, -0.8, 8.25);
+    }
+
+    // -------------------------------------------------------------------------
+    // Yellow hero
+    // -------------------------------------------------------------------------
+
+    const yellowHero = new THREE.Group();
+    yellowHero.position.set(0.2, 0.15, 0.2);
+    yellowHero.rotation.y = -0.18;
+    scene.add(yellowHero);
+
+    // Body and chest.
+    voxel(yellowHero, 1.65, materials.yellow, 0, 1.25, 0);
+    voxel(yellowHero, 1.25, materials.yellowDark, 0, 1.3, 0.05);
+    voxel(yellowHero, 0.85, materials.yellow, 0, 1.3, 0.7);
+
+    // Head.
+    voxel(yellowHero, 1.15, materials.yellow, 0, 2.65, 0);
+    voxel(yellowHero, 0.95, materials.yellowDark, 0, 2.7, 0.05);
+
+    // One glowing eye.
+    addEye(yellowHero, 0.34, 2.72, 0.35, materials.red);
+
+    // Hair / helmet.
+    voxel(yellowHero, 1.35, materials.yellowDark, 0, 3.38, -0.05);
+    voxel(yellowHero, 0.65, materials.white, 0, 3.55, 0.03);
+
+    // Arms.
+    voxel(yellowHero, 0.62, materials.yellow, -1.05, 1.45, 0);
+    voxel(yellowHero, 0.5, materials.yellow, -1.42, 0.78, 0.05);
+    voxel(yellowHero, 0.6, materials.yellow, 1.05, 1.45, 0);
+    voxel(yellowHero, 0.5, materials.yellow, 1.42, 0.78, 0.05);
+
+    // Legs.
+    voxel(yellowHero, 0.62, materials.yellow, -0.55, 0.35, 0.15);
+    voxel(yellowHero, 0.62, materials.yellow, 0.55, 0.35, 0.15);
+
+    // Belt.
+    voxel(yellowHero, 1.48, materials.orange, 0, 0.72, 0.05);
+
+    // Energy spear.
+    const spear = new THREE.Group();
+    spear.position.set(0.72, 1.95, 0.25);
+    spear.rotation.z = -0.28;
+    yellowHero.add(spear);
+
+    voxel(spear, 0.35, materials.white, 0, 0, 0);
+    voxel(spear, 0.48, materials.glass, 0, -0.42, 0);
+    voxel(spear, 0.12, materials.white, 0, -0.85, 0);
+
+    // Small floating emblem.
+    const emblem = new THREE.Group();
+    emblem.position.set(-1.55, 3.4, -0.4);
+    emblem.rotation.y = 0.4;
+    yellowHero.add(emblem);
+
+    voxel(emblem, 0.42, materials.orange, 0, 0, 0);
+    voxel(emblem, 0.2, materials.white, 0, 0.1, 0);
+
+    // -------------------------------------------------------------------------
+    // Blue hero
+    // -------------------------------------------------------------------------
+
+    const blueHero = new THREE.Group();
+    blueHero.position.set(5.8, 0.15, 2.2);
+    blueHero.rotation.y = -0.6;
+    scene.add(blueHero);
+
+    // Body.
+    voxel(blueHero, 1.45, materials.blue, 0, 1.25, 0);
+    voxel(blueHero, 1.05, materials.blueDark, 0, 1.3, 0.04);
+    voxel(blueHero, 0.85, materials.blue, 0, 1.3, 0.68);
+
+    // Head.
+    voxel(blueHero, 1.05, materials.blue, 0, 2.55, 0);
+    voxel(blueHero, 0.9, materials.blueDark, 0, 2.58, 0.05);
+
+    // Eye.
+    addEye(blueHero, -0.28, 2.6, 0.34, materials.white);
+    addEye(blueHero, 0.28, 2.6, 0.34, materials.orange);
+
+    // Helmet visor.
+    voxel(blueHero, 0.86, materials.glass, 0, 2.82, 0.05);
+
+    // Arms.
+    voxel(blueHero, 0.62, materials.blue, -1.02, 1.45, 0);
+    voxel(blueHero, 0.52, materials.blue, -1.4, 0.8, 0.05);
+    voxel(blueHero, 0.62, materials.blue, 1.02, 1.45, 0);
+    voxel(blueHero, 0.52, materials.blue, 1.4, 0.8, 0.05);
+
+    // Legs.
+    voxel(blueHero, 0.6, materials.blue, -0.5, 0.35, 0.12);
+    voxel(blueHero, 0.6, materials.blue, 0.5, 0.35, 0.12);
+
+    // Belt.
+    voxel(blueHero, 1.35, materials.orange, 0, 0.72, 0.05);
+
+    // Shield.
+    const shield = new THREE.Group();
+    shield.position.set(-1.4, 1.45, 0.2);
+    shield.rotation.z = 0.35;
+    blueHero.add(shield);
+
+    voxel(shield, 0.62, materials.white, 0, 0, 0);
+    voxel(shield, 0.42, materials.glass, 0, 0.02, 0.02);
+    voxel(shield, 0.16, materials.orange, 0, 0.02, 0.06);
+
+    // -------------------------------------------------------------------------
+    // Red masked hero
+    // -------------------------------------------------------------------------
+
+    const redHero = new THREE.Group();
+    redHero.position.set(-5.7, 0.15, -1.4);
+    redHero.rotation.y = 0.65;
+    scene.add(redHero);
+
+    // Body.
+    voxel(redHero, 1.25, materials.red, 0, 1.15, 0);
+    voxel(redHero, 0.85, materials.red, 0, 1.2, 0.52);
+
+    // Head.
+    voxel(redHero, 1.05, materials.white, 0, 2.35, 0);
+    voxel(redHero, 0.9, materials.red, 0, 2.4, 0.05);
+
+    // Mask.
+    voxel(redHero, 0.75, materials.red, 0, 2.4, 0.34);
+    voxel(redHero, 0.5, materials.black, -0.18, 2.4, 0.42);
+    voxel(redHero, 0.5, materials.black, 0.18, 2.4, 0.42);
+
+    // Arms.
+    voxel(redHero, 0.58, materials.red, -0.82, 1.4, 0);
+    voxel(redHero, 0.5, materials.red, -1.18, 0.78, 0.05);
+    voxel(redHero, 0.58, materials.red, 0.82, 1.4, 0);
+    voxel(redHero, 0.5, materials.red, 1.18, 0.78, 0.05);
+
+    // Legs.
+    voxel(redHero, 0.55, materials.red, -0.42, 0.35, 0.1);
+    voxel(redHero, 0.55, materials.red, 0.42, 0.35, 0.1);
+
+    // Cape.
+    voxel(redHero, 0.75, materials.orange, 0, 1.95, -0.28);
+    voxel(redHero, 0.9, materials.orange, 0, 1.75, -0.5);
+
+    // -------------------------------------------------------------------------
+    // Small orange robot
+    // -------------------------------------------------------------------------
+
+    const smallRobot = new THREE.Group();
+    smallRobot.position.set(-3.7, 0.15, 2.6);
+    smallRobot.rotation.y = -0.35;
+    scene.add(smallRobot);
+
+    // Body.
+    voxel(smallRobot, 0.85, materials.orange, 0, 0.75, 0);
+    voxel(smallRobot, 0.65, materials.yellow, 0, 0.8, 0.35);
+
+    // Head.
+    voxel(smallRobot, 0.72, materials.white, 0, 1.45, 0);
+    voxel(smallRobot, 0.58, materials.orange, 0, 1.5, 0.04);
+    addEye(smallRobot, -0.15, 1.5, 0.35, materials.black);
+    addEye(smallRobot, 0.15, 1.5, 0.35, materials.black);
+
+    // Arms.
+    voxel(smallRobot, 0.45, materials.orange, -0.55, 0.9, 0);
+    voxel(smallRobot, 0.38, materials.orange, -0.9, 0.48, 0.05);
+    voxel(smallRobot, 0.45, materials.orange, 0.55, 0.9, 0);
+    voxel(smallRobot, 0.38, materials.orange, 0.9, 0.48, 0.05);
+
+    // Legs.
+    voxel(smallRobot, 0.42, materials.orange, -0.25, 0.25, 0.08);
+    voxel(smallRobot, 0.42, materials.orange, 0.25, 0.25, 0.08);
+
+    // -------------------------------------------------------------------------
+    // Background city
+    // -------------------------------------------------------------------------
+
+    const city = new THREE.Group();
+    city.position.set(3.2, -0.1, -5.2);
+    scene.add(city);
+
+    // Main tower.
+    voxel(city, 3.2, materials.grayDark, 0, 2.4, 0);
+    voxel(city, 2.8, materials.blue, 0, 4.15, 0);
+    voxel(city, 2.1, materials.gray, 0, 5.65, 0);
+
+    // Roof.
+    voxel(city, 2.35, materials.red, 0, 6.45, 0);
+    voxel(city, 1.65, materials.white, 0, 6.95, 0);
+
+    // Windows.
+    for (let x = -1.15; x <= 1.15; x += 0.42) {
+      for (let y = 3.2; y <= 5.3; y += 0.65) {
+        voxel(city, 0.25, materials.glass, x, y, 1.47);
+      }
+    }
+
+    // Side towers.
+    voxel(city, 1.5, materials.grayDark, -3.2, 2.5, 0);
+    voxel(city, 1.2, materials.white, -3.2, 3.8, 0);
+    voxel(city, 0.9, materials.orange, -3.2, 4.45, 0);
+
+    voxel(city, 1.4, materials.grayDark, 3.1, 2.25, 0);
+    voxel(city, 1.15, materials.blue, 3.1, 3.45, 0);
+    voxel(city, 0.85, materials.green, 3.1, 4.05, 0);
+
+    // Satellite dish.
+    const dish = new THREE.Group();
+    dish.position.set(0.9, 5.05, 0.2);
+    dish.rotation.z = -0.25;
+    city.add(dish);
+
+    voxel(dish, 0.9, materials.white, 0, 0, 0);
+    const dishRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.62, 0.08, 8, 24, Math.PI * 1.55),
+      materials.gray
+    );
+    dishRim.position.set(0, 0.3, 0);
+    dishRim.rotation.z = Math.PI / 2;
+    dish.add(dishRim);
+
+    // Antenna.
+    voxel(city, 0.12, materials.orange, 1.15, 6.65, 0);
+    voxel(city, 0.12, materials.orange, 1.15, 7.1, 0);
+
+    // Floating hero character.
+    const floatingHero = new THREE.Group();
+    floatingHero.position.set(3.1, 6.8, 0.4);
+    floatingHero.rotation.y = 0.4;
+    city.add(floatingHero);
+
+    voxel(floatingHero, 0.75, materials.orange, 0, 0, 0);
+    voxel(floatingHero, 0.65, materials.yellow, 0, 0.8, 0);
+    voxel(floatingHero, 0.5, materials.white, 0, 1.35, 0);
+    addEye(floatingHero, -0.14, 1.35, 0.25, materials.black);
+    addEye(floatingHero, 0.14, 1.35, 0.25, materials.black);
+
+    // Halo.
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.52, 0.055, 8, 32),
+      materials.white
+    );
+    halo.position.set(0, 1.85, 0);
+    halo.rotation.x = Math.PI / 2;
+    floatingHero.add(halo);
+
+    // -------------------------------------------------------------------------
+    // Floating particles
+    // -------------------------------------------------------------------------
+
+    const particleMaterial = new THREE.MeshBasicMaterial({
+      color: 0x8ee9ff,
+      transparent: true,
+      opacity: 0.75
+    });
+
+    const particles = [];
+
+    for (let i = 0; i < 38; i++) {
+      const particle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08 + Math.random() * 0.18, 0.08 + Math.random() * 0.18, 0.08 + Math.random() * 0.18),
+        particleMaterial
+      );
+
+      const side = Math.random() > 0.5 ? 1 : -1;
+      particle.position.set(
+        -8 + Math.random() * 16,
+        0.5 + Math.random() * 7,
+        -7 + Math.random() * 14
+      );
+
+      particle.userData = {
+        speed: 0.25 + Math.random() * 0.55,
+        side,
+        phase: Math.random() * Math.PI * 2
+      };
+
+      scene.add(particle);
+      particles.push(particle);
+    }
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0xbad8ff, 0x18111a, 1.25));
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
+    keyLight.position.set(-7, 12, 8);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -15;
+    keyLight.shadow.camera.right = 15;
+    keyLight.shadow.camera.top = 15;
+    keyLight.shadow.camera.bottom = -15;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 35;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x55a7ff, 1.8);
+    rimLight.position.set(8, 6, -10);
+    scene.add(rimLight);
+
+    const warmLight = new THREE.PointLight(0xff7a32, 18, 15, 2);
+    warmLight.position.set(-4, 3, 3);
+    scene.add(warmLight);
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 2.1, 0),
+      radius: 18,
+      theta: Math.PI * 0.25,
+      phi: Math.PI * 0.32,
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.theta -= dx * 0.006;
+      controls.phi = THREE.MathUtils.clamp(
+        controls.phi - dy * 0.005,
+        0.18,
+        Math.PI * 0.49
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event.pointerId !== undefined) {
+        try {
+          renderer.domElement.releasePointerCapture(event.pointerId);
+        } catch (_) {
+          // The pointer may already have been released.
+        }
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius + event.deltaY * 0.012,
+          10,
+          28
+        );
+
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle idle motion for the central yellow hero.
+      yellowHero.position.y = 0.15 + Math.sin(elapsed * 1.15) * 0.035;
+      yellowHero.rotation.z = Math.sin(elapsed * 0.85) * 0.025;
+
+      // Energy spear glow pulse.
+      spear.children[1].material.emissiveIntensity =
+        0.45 + Math.sin(elapsed * 3.2) * 0.25;
+
+      // Floating hero bob.
+      floatingHero.position.y = 6.8 + Math.sin(elapsed * 1.7) * 0.18;
+      floatingHero.rotation.z = Math.sin(elapsed * 1.3) * 0.08;
+
+      // Animate particles.
+      for (const particle of particles) {
+        const data = particle.userData;
+        particle.position.x += data.speed * 0.016 * data.side;
+        particle.position.y += Math.sin(elapsed * 1.2 + data.phase) * 0.0025;
+        particle.rotation.y += 0.008;
+
+        if (particle.position.x > 10) {
+          particle.position.x = -10;
+          particle.position.y = 0.5 + Math.random() * 7;
+        }
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
