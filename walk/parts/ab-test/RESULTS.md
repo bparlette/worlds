@@ -9,3 +9,4 @@
 | `image-js` | image | js | 10170 | 29942 | 360.02s | `stop` | PASS: meshes=31, bbox min=[-14.62, -0.00, -14.62] max=[14.62, 12.65, 14.62], span=29.25x29.25x12.65 | `none` |
 | `text-json` | text | json | 3364 | 4882 | 73.53s | `stop` | PASS: meshes=18/18, bbox 30.00 x 30.00 x 8.58, scale=0.8333, relic 'Warp World Relic' @ (-8.3, -10.0) | `text-json.png` |
 | `text-js` | text | js | 6477 | 17697 | 223.47s | `stop` | FAIL: validation error: Cannot read properties of undefined (reading 'addScaledVector') | `none` |
+| `image-text-json` | vision text | json | 14000 | 21864 | 255.80s | `length` | FAIL: degenerate parts list (repair ratio 1.02: 14 duplicates + 207 parts clamped, exceeds 0.35 limit) | `none` |
