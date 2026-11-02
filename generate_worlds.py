@@ -191,9 +191,11 @@ def generate_single_world(spec: dict) -> str:
             parts = []
             for u, k in zip(img_urls[:3], img_kinds[:3]):
                 label = "area map (layout)" if k == "map" else "in-game screenshot (look and palette)"
-                parts.append({"type": "text", "text": f"Reference image - {label}:"})
+                if not spec.get("image_only"):
+                    parts.append({"type": "text", "text": f"Reference image - {label}:"})
                 parts.append({"type": "image_url", "image_url": {"url": _image_data_uri(u)}})
-            parts.append({"type": "text", "text": prompt})
+            if not spec.get("image_only"):
+                parts.append({"type": "text", "text": prompt})
             user_content = parts
             print(f"[AI Dispatch] Mode: image-led x{len(img_urls[:3])} ({', '.join(img_kinds[:3])})")
         except Exception as e:

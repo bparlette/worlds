@@ -123,6 +123,7 @@ def build_spec(e):
         ),
         "image_urls": [e["image_url"]],
         "image_kinds": ["screen"],
+        "image_only": os.environ.get("T100_IMAGE_ONLY") == "1",
     }
 
 
