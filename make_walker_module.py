@@ -155,6 +155,7 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
         '  let scene = {',
         '    add: (...objs) => objs.forEach(o => o && group.add(o)),',
         '    updateMatrixWorld: () => {},',
+        '    children: group.children,',
         '    background: null,',
         '    fog: null',
         '  };',
@@ -207,9 +208,7 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
         '    };',
         '    return node;',
         '  };',
-        '  const container = dummyEl();',
-        '  const stage = dummyEl();',
-        '  const app = dummyEl();',
+        '  // DOM / UI fallbacks',
         '  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {',
         '    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}',
         '  };',
@@ -801,9 +800,9 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
             manifest_entry = {
                 "id": formatted_id,
                 "module": f"modules/{module_filename}",
-                "title": spec["game"],
-                "sub": spec["target"],
-                "system": spec["platform"]
+                "title": spec.get("game", spec.get("title", f"World #{formatted_id}")),
+                "sub": spec.get("target", spec.get("name", "")),
+                "system": spec.get("platform", "Arcade")
             }
             update_walker_manifest(manifest_entry)
             print(f"[Walker Bridge] ✓ World #{formatted_id} ({spec['game']}) validated ({val.get('meshCount')} meshes) & registered in walk/worlds.json!")

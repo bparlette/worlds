@@ -1,16 +1,16 @@
 [
   {
     "id": "001",
-    "title": "Adventure",
-    "sub": "Castles & Mazes",
-    "system": "Atari 2600",
+    "title": "Sonic the Hedgehog",
+    "sub": "Green Hill Zone",
+    "system": "",
     "module": "modules/001.js"
   },
   {
     "id": "002",
-    "title": "Pitfall II: Lost Caverns",
-    "sub": "Vertical Subterranean Labyrinths & Rivers",
-    "system": "Atari 2600",
+    "title": "Super Mario Bros.",
+    "sub": "World 1-1",
+    "system": "",
     "module": "modules/002.js"
   },
   {

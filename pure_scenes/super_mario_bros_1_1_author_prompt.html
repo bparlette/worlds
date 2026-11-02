@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Mario World 1-1</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #86a8ff;
+      font-family: Arial, sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    #scene canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #hud {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 5;
+      color: #ffffff;
+      font-family: "Courier New", monospace;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 3px 3px 0 #1729ff, 6px 6px 0 #0a1456;
+      pointer-events: none;
+    }
+
+    #hud .label {
+      font-size: 15px;
+      letter-spacing: 2px;
+    }
+
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 5;
+      padding: 9px 12px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      color: #ffffff;
+      background: rgba(22, 40, 125, 0.55);
+      font-family: "Courier New", monospace;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      #hud {
+        top: 14px;
+        left: 14px;
+      }
+
+      #hud .score {
+        font-size: 19px;
+      }
+
+      #hud .world {
+        font-size: 17px;
+      }
+
+      #hud .time {
+        font-size: 17px;
+      }
+
+      #help {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="scene"></div>
+
+  <div id="hud">
+    <div class="label">MARIO <span class="score">000100</span></div>
+    <div class="label">?? x00</div>
+    <div class="label">WORLD <span>1-1</span></div>
+    <div class="label">TIME <span>375</span></div>
+  </div>
+
+  <div id="help">Drag to orbit · Scroll to zoom · R to reset</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+
+    const container = document.getElementById("scene");
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.SRGBColorSpace;
+    renderer.toneMappingExposure = 1.15;
+
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x8aaeff);
+    scene.fog = new THREE.Fog(0x8aaeff, 18, 38);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // ---------------------------------------------------------------------
+    // Direct camera controls: orbit and zoom, implemented without addons
+    // ---------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 3.2, 0),
+      azimuth: -0.45,
+      polar: 1.35,
+      radius: 18,
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.azimuth -= dx * 0.006;
+      controls.polar = THREE.MathUtils.clamp(
+        controls.polar - dy * 0.005,
+        0.55,
+        2.15
+      );
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      controls.dragging = false;
+
+      if (event.pointerId !== undefined &&
+          renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius + event.deltaY * 0.012,
+          8,
+          30
+        );
+
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key.toLowerCase() === "r") {
+        resetCamera();
+      }
+    });
+
+    function resetCamera() {
+      controls.target.set(0, 3.2, 0);
+      controls.azimuth = -0.45;
+      controls.polar = 1.35;
+      controls.radius = 18;
+      updateCamera();
+    }
+
+    updateCamera();
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+
+    const hemisphere = new THREE.HemisphereLight(0xcfe6ff, 0x68451f, 2.2);
+    scene.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight(0xfff5d5, 3.2);
+    sun.position.set(-8, 14, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -14;
+    sun.shadow.camera.right = 14;
+    sun.shadow.camera.top = 14;
+    sun.shadow.camera.bottom = -14;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8ebaff, 0.8);
+    fill.position.set(10, 5, -10);
+    scene.add(fill);
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+
+    const materials = {
+      brick: new THREE.MeshStandardMaterial({
+        color: 0xa9482f,
+        roughness: 0.88,
+        metalness: 0
+      }),
+      brickDark: new THREE.MeshStandardMaterial({
+        color: 0x7d3525,
+        roughness: 0.9
+      }),
+      brickLight: new THREE.MeshStandardMaterial({
+        color: 0xc05b3b,
+        roughness: 0.85
+      }),
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x77624b,
+        roughness: 0.95
+      }),
+      stoneLight: new THREE.MeshStandardMaterial({
+        color: 0x937b60,
+        roughness: 0.9
+      }),
+      mushroom: new THREE.MeshStandardMaterial({
+        color: 0xb9382c,
+        roughness: 0.75
+      }),
+      mushroomDark: new THREE.MeshStandardMaterial({
+        color: 0x782d28,
+        roughness: 0.8
+      }),
+      mushroomSkin: new THREE.MeshStandardMaterial({
+        color: 0xf0b347,
+        roughness: 0.72
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xe84a45,
+        roughness: 0.72
+      }),
+      overalls: new THREE.MeshStandardMaterial({
+        color: 0x173b8f,
+        roughness: 0.8
+      }),
+      skinLight: new THREE.MeshStandardMaterial({
+        color: 0xffd28d,
+        roughness: 0.75
+      }),
+      cap: new THREE.MeshStandardMaterial({
+        color: 0xffb32f,
+        roughness: 0.72
+      }),
+      hat: new THREE.MeshStandardMaterial({
+        color: 0xb7342e,
+        roughness: 0.8
+      }),
+      cloud: new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 1
+      }),
+      cloudShadow: new THREE.MeshStandardMaterial({
+        color: 0xddeeff,
+        roughness: 1
+      }),
+      pipe: new THREE.MeshStandardMaterial({
+        color: 0xd5a43b,
+        roughness: 0.75
+      }),
+      pipeDark: new THREE.MeshStandardMaterial({
+        color: 0x9c681e,
+        roughness: 0.8
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x3d8a3b,
+        roughness: 0.9
+      }),
+      ground: new THREE.MeshStandardMaterial({
+        color: 0x4e8c48,
+        roughness: 1
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Voxel helper functions
+    // ---------------------------------------------------------------------
+
+    function addBox(
+      parent,
+      size,
+      position,
+      material,
+      castShadow = true,
+      receiveShadow = true
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size.x, size.y, size.z),
+        material
+      );
+
+      mesh.position.copy(position);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      parent.add(mesh);
+
+      return mesh;
+    }
+
+    function addBlock(
+      x,
+      y,
+      z,
+      size = [1, 1, 1],
+      material = materials.brick,
+      parent = scene
+    ) {
+      return addBox(
+        parent,
+        new THREE.Vector3(size[0], size[1], size[2]),
+        new THREE.Vector3(x, y, z),
+        material
+      );
+    }
+
+    function addMushroom(parent, x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      // Stem
+      addBox(
+        group,
+        new THREE.Vector3(0.38, 0.62, 0.38),
+        new THREE.Vector3(0, 0.31, 0),
+        materials.mushroomSkin
+      );
+
+      // Cap, built from small blocks to retain the voxel look
+      const capBlocks = [
+        [0, 0.72, 0, 0.58, 0.22, 0.58],
+        [-0.28, 0.65, 0.04, 0.27, 0.16, 0.30],
+        [0.28, 0.65, 0.04, 0.27, 0.16, 0.30],
+        [-0.40, 0.58, -0.18, 0.20, 0.10, 0.22],
+        [0.40, 0.58, -0.18, 0.20, 0.10, 0.22],
+        [-0.40, 0.58, 0.18, 0.20, 0.10, 0.22],
+        [0.40, 0.58, 0.18, 0.20, 0.10, 0.22]
+      ];
+
+      for (const [bx, by, bz, sx, sy, sz] of capBlocks) {
+        addBox(
+          group,
+          new THREE.Vector3(sx, sy, sz),
+          new THREE.Vector3(bx, by, bz),
+          materials.mushroom
+        );
+      }
+
+      // Eyes
+      addBox(
+        group,
+        new THREE.Vector3(0.055, 0.055, 0.04),
+        new THREE.Vector3(-0.11, 0.78, 0.19),
+        materials.mushroomDark
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.055, 0.055, 0.04),
+        new THREE.Vector3(0.11, 0.78, 0.19),
+        materials.mushroomDark
+      );
+
+      return group;
+    }
+
+    function addGoomba(parent, x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      // Body
+      addBox(
+        group,
+        new THREE.Vector3(0.72, 0.34, 0.58),
+        new THREE.Vector3(0, 0.18, 0),
+        materials.mushroomDark
+      );
+
+      // Head
+      addBox(
+        group,
+        new THREE.Vector3(0.58, 0.38, 0.48),
+        new THREE.Vector3(0, 0.52, 0),
+        materials.mushroom
+      );
+
+      // Eyes
+      addBox(
+        group,
+        new THREE.Vector3(0.065, 0.065, 0.04),
+        new THREE.Vector3(-0.12, 0.73, 0.27),
+        materials.mushroomDark
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.065, 0.065, 0.04),
+        new THREE.Vector3(0.12, 0.73, 0.27),
+        materials.mushroomDark
+      );
+
+      // Nose
+      addBox(
+        group,
+        new THREE.Vector3(0.07, 0.06, 0.05),
+        new THREE.Vector3(0, 0.71, 0.30),
+        materials.mushroomDark
+      );
+
+      // Arms
+      addBox(
+        group,
+        new THREE.Vector3(0.15, 0.24, 0.18),
+        new THREE.Vector3(-0.42, 0.34, 0),
+        materials.mushroomDark
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.15, 0.24, 0.18),
+        new THREE.Vector3(0.42, 0.34, 0),
+        materials.mushroomDark
+      );
+
+      return group;
+    }
+
+    function addMario(parent, x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+      parent.add(group);
+
+      // Legs
+      addBox(
+        group,
+        new THREE.Vector3(0.22, 0.52, 0.28),
+        new THREE.Vector3(-0.13, 0.26, 0),
+        materials.overalls
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.22, 0.52, 0.28),
+        new THREE.Vector3(0.13, 0.26, 0),
+        materials.overalls
+      );
+
+      // Shoes
+      addBox(
+        group,
+        new THREE.Vector3(0.28, 0.13, 0.42),
+        new THREE.Vector3(-0.14, 0.02, 0.08),
+        materials.mushroomDark
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.28, 0.13, 0.42),
+        new THREE.Vector3(0.14, 0.02, 0.08),
+        materials.mushroomDark
+      );
+
+      // Torso
+      addBox(
+        group,
+        new THREE.Vector3(0.58, 0.62, 0.36),
+        new THREE.Vector3(0, 0.91, 0),
+        materials.overalls
+      );
+
+      // Arms
+      addBox(
+        group,
+        new THREE.Vector3(0.18, 0.54, 0.20),
+        new THREE.Vector3(-0.43, 0.92, 0),
+        materials.skin
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.18, 0.54, 0.20),
+        new THREE.Vector3(0.43, 0.92, 0),
+        materials.skin
+      );
+
+      // Head
+      addBox(
+        group,
+        new THREE.Vector3(0.48, 0.43, 0.38),
+        new THREE.Vector3(0, 1.40, 0),
+        materials.skinLight
+      );
+
+      // Hair
+      addBox(
+        group,
+        new THREE.Vector3(0.45, 0.13, 0.39),
+        new THREE.Vector3(0, 1.64, -0.015),
+        materials.skin
+      );
+
+      // Hat brim
+      addBox(
+        group,
+        new THREE.Vector3(0.66, 0.08, 0.44),
+        new THREE.Vector3(0, 1.68, 0),
+        materials.cap
+      );
+
+      // Hat top
+      addBox(
+        group,
+        new THREE.Vector3(0.34, 0.16, 0.31),
+        new THREE.Vector3(0, 1.84, 0),
+        materials.cap
+      );
+
+      // Eyes
+      addBox(
+        group,
+        new THREE.Vector3(0.045, 0.045, 0.04),
+        new THREE.Vector3(-0.09, 1.46, 0.205),
+        materials.mushroomDark
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.045, 0.045, 0.04),
+        new THREE.Vector3(0.09, 1.46, 0.205),
+        materials.mushroomDark
+      );
+
+      return group;
+    }
+
+    function addCloud(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      const puffData = [
+        [-1.05, 0.05, 0, 1.0, 0.55, 0.65],
+        [-0.45, 0.18, 0, 1.1, 0.72, 0.78],
+        [0.35, 0.12, 0, 1.0, 0.68, 0.72],
+        [1.0, -0.02, 0, 0.85, 0.50, 0.62],
+        [0.0, -0.18, 0.05, 1.05, 0.55, 0.68]
+      ];
+
+      for (const [px, py, pz, sx, sy, sz] of puffData) {
+        addBox(
+          group,
+          new THREE.Vector3(sx, sy, sz),
+          new THREE.Vector3(px, py, pz),
+          materials.cloud,
+          false,
+          false
+        );
+      }
+
+      return group;
+    }
+
+    function addPipe(x, y, z, width = 1, height = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      scene.add(group);
+
+      addBox(
+        group,
+        new THREE.Vector3(width, height, 0.48),
+        new THREE.Vector3(0, 0, 0),
+        materials.pipe
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(width + 0.05, 0.12, 0.54),
+        new THREE.Vector3(0, height * 0.5, 0),
+        materials.pipeDark
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(width, 0.13, 0.54),
+        new THREE.Vector3(0, -height * 0.5, 0),
+        materials.pipeDark
+      );
+
+      return group;
+    }
+
+    // ---------------------------------------------------------------------
+    // Level layout
+    // ---------------------------------------------------------------------
+
+    // Foreground ground platform
+    addBlock(
+      -7.5,
+      -0.45,
+      4.2,
+      new THREE.Vector3(14.5, 0.9, 3.2),
+      materials.stone
+    );
+
+    addBlock(
+      7.2,
+      -0.45,
+      4.4,
+      new THREE.Vector3(3.0, 0.9, 3.2),
+      materials.stone
+    );
+
+    // Ground top layer
+    addBlock(
+      -7.5,
+      0.02,
+      4.2,
+      new THREE.Vector3(14.5, 0.12, 2.7),
+      materials.ground
+    );
+
+    addBlock(
+      7.2,
+      0.02,
+      4.4,
+      new THREE.Vector3(3.0, 0.12, 2.7),
+      materials.ground
+    );
+
+    // Main elevated platform
+    addBlock(
+      2.0,
+      3.1,
+      -1.6,
+      new THREE.Vector3(12.5, 0.9, 2.2),
+      materials.brick
+    );
+
+    addBlock(
+      2.0,
+      3.58,
+      -1.6,
+      new THREE.Vector3(12.5, 0.12, 2.2),
+      materials.brickDark
+    );
+
+    // Question block
+    addBlock(
+      -5.0,
+      2.1,
+      -2.1,
+      new THREE.Vector3(1.25, 0.82, 1.15),
+      materials.brick
+    );
+
+    addBlock(
+      -5.0,
+      2.54,
+      -2.1,
+      new THREE.Vector3(1.32, 0.12, 1.22),
+      materials.brickDark
+    );
+
+    // Question mark texture created with small raised blocks
+    const questionMark = new THREE.Group();
+    questionMark.position.set(-5.0, 2.57, -2.1);
+    scene.add(questionMark);
+
+    addBox(
+      questionMark,
+      new THREE.Vector3(0.25, 0.60, 0.06),
+      new THREE.Vector3(0, 0.10, 0),
+      materials.pipeDark
+    );
+
+    addBox(
+      questionMark,
+      new THREE.Vector3(0.25, 0.25, 0.06),
+      new THREE.Vector3(0, -0.16, 0),
+      materials.pipeDark
+    );
+
+    addBox(
+      questionMark,
+      new THREE.Vector3(0.40, 0.18, 0.06),
+      new THREE.Vector3(0, -0.38, 0),
+      materials.pipeDark
+    );
+
+    addBox(
+      questionMark,
+      new THREE.Vector3(0.25, 0.25, 0.06),
+      new THREE.Vector3(0, -0.57, 0),
+      materials.pipeDark
+    );
+
+    // Small brick pillar
+    addBlock(
+      8.4,
+      1.45,
+      -1.2,
+      new THREE.Vector3(1.2, 2.9, 1.5),
+      materials.brick
+    );
+
+    addBlock(
+      8.4,
+      3.0,
+      -1.2,
+      new THREE.Vector3(1.3, 0.15, 1.6),
+      materials.brickDark
+    );
+
+    // Right-side cliff
+    addBlock(
+      11.2,
+      -0.45,
+      1.2,
+      new THREE.Vector3(3.2, 0.9, 5.0),
+      materials.stone
+    );
+
+    addBlock(
+      11.2,
+      0.02,
+      1.2,
+      new THREE.Vector3(3.2, 0.12, 4.5),
+      materials.ground
+    );
+
+    // Trees
+    function addTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+
+      addBox(
+        group,
+        new THREE.Vector3(1.3, 0.25, 1.3),
+        new THREE.Vector3(0, 0.12, 0),
+        materials.stone
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.18, 1.35, 0.18),
+        new THREE.Vector3(0, 0.83, 0),
+        materials.mushroomSkin
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(1.15, 0.85, 1.15),
+        new THREE.Vector3(0, 1.78, 0),
+        materials.leaf
+      );
+
+      addBox(
+        group,
+        new THREE.Vector3(0.85, 0.70, 0.85),
+        new THREE.Vector3(0, 2.48, 0),
+        materials.leaf
+      );
+
+      return group;
+    }
+
+    addTree(-12.0, 2.0, 1.1);
+    addTree(-11.0, -0.5, 0.85);
+    addTree(13.0, -0.5, 0.95);
+    addTree(14.0, 1.0, 0.75);
+
+    // Goombas
+    const goombaA = addGoomba(scene, -3.1, 3.58, -1.6, 0.9);
+    const goombaB = addGoomba(scene, 5.6, 3.58, -1.6, 0.78);
+    const goombaC = addGoomba(scene, 8.4, 3.58, -1.2, 0.82);
+
+    // Mario
+    const mario = addMario(scene, -2.0, 3.58, -1.6, -0.6);
+    mario.rotation.y = -0.6;
+
+    // Clouds
+    addCloud(-8.0, 7.3, 2.0, 1.25);
+    addCloud(7.7, 8.4, 2.5, 1.05);
+    addCloud(-10.5, 10.0, 4.0, 0.8);
+    addCloud(12.0, 10.7, -1.0, 0.75);
+
+    // Small background blocks
+    addBlock(
+      -12.0,
+      5.3,
+      -4.0,
+      new THREE.Vector3(2.2, 1.4, 1.2),
+      materials.brick
+    );
+
+    addBlock(
+      13.0,
+      5.7,
+      -3.5,
+      new THREE.Vector3(2.0, 1.4, 1.2),
+      materials.brick
+    );
+
+    // ---------------------------------------------------------------------
+    // Pixel font texture
+    // ---------------------------------------------------------------------
+
+    const hudCanvas = document.createElement("canvas");
+    hudCanvas.width = 1024;
+    hudCanvas.height = 256;
+
+    const hudContext = hudCanvas.getContext("2d");
+    hudContext.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+
+    const fontGlyphs = {
+      "0": ["11111", "10001", "10001", "11111"],
+      "1": ["00100", "10100", "01010", "00100"],
+      "2": ["11110", "00001", "11000", "00100", "10001", "11111"],
+      "3": ["11110", "00001", "11000", "00001", "11000", "11110"],
+      "4": ["00010", "00110", "01010", "10000", "11111", "00000"],
+      "5": ["11111", "00001", "11000", "00100", "10001", "11110"],
+      "6": ["11110", "00001", "11000", "00100", "10001", "11111"],
+      "7": ["11111", "00001", "00010", "00100", "01000", "00000"],
+      "8": ["11111", "00001", "11000", "00100", "11000", "00001"],
+      "9": ["11111", "00001", "11000", "00100", "10001", "11110"],
+      "A": ["01110", "10001", "10001", "11111", "10001", "10001"],
+      "B": ["11110", "10001", "10001", "11110", "10001", "10001"],
+      "C": ["01111", "10000", "10000", "10000", "10000", "01111"],
+      "D": ["11110", "10001", "10001", "11110", "10001", "10001"],
+      "E": ["11111", "10000", "11000", "00100", "10000", "11110"],
+      "F": ["11111", "10000", "11000", "00100", "10000", "11110"],
+      "G": ["01111", "10000", "11000", "00100", "10001", "01110"],
+      "H": ["11110", "10001", "10001", "11111", "10001", "10001"],
+      "I": ["00100", "01010", "01010", "00100", "00100", "00100"],
+      "J": ["00010", "00100", "01000", "10000", "00010", "11111"],
+      "K": ["10001", "11001", "10100", "10010", "10001", "10001"],
+      "L": ["11110", "10000", "10000", "10000", "10000", "11111"],
+      "M": ["10001", "11001", "10100", "10010", "11111", "10001"],
+      "N": ["10001", "11001", "10100", "10010", "10001", "00001"],
+      "O": ["01110", "10001", "10001", "01110", "00001", "00001"],
+      "P": ["11110", "10001", "10001", "11110", "10001", "10001"],
+      "Q": ["01110", "10001", "10001", "01110", "00001", "00001"],
+      "R": ["11110", "10001", "10001", "11110", "10100", "10001"],
+      "S": ["01111", "10000", "10000", "01110", "00001", "11110"],
+      "T": ["11111", "00100", "00100", "00100", "00100", "00100"],
+      "V": ["00100", "01010", "10001", "10001", "00100", "00000"],
+      "W": ["00100", "01010", "10001", "10001", "01010", "00100"],
+      "X": ["00100", "01010", "10001", "10001", "01010", "00100"],
+      "Y": ["00100", "01010", "10001", "00100", "00100", "00000"],
+      "Z": ["11111", "00001", "00001", "10000", "00001", "11110"],
+      "(": ["00000", "01000", "00100", "00010", "00001", "00000"],
+      ")": ["00000", "01000", "00100", "00010", "00001", "00000"],
+      "-": ["11111", "00000", "00000", "00000", "00000", "00000"],
+      " ": ["00000", "00000", "00000", "00000", "00000", "00000"]
+    };
+
+    function pixelText(text, centerX, centerY, fontSize = 64) {
+      const rows = text.split("").map((character) => fontGlyphs[character] || ["00000", "00000", "00000", "00000", "00000", "00000"]);
+
+      const textWidth = 20;
+      const lineHeight = fontSize * 0.64;
+      const totalHeight = lineHeight * rows.length;
+      const startX = centerX - textWidth * fontSize * 0.5;
+      const startY = centerY + totalHeight * 0.5;
+
+      for (let row = 0; row < rows.length; row++) {
+        for (let column = 0; column < rows[row].length; column++) {
+          if (rows[row][column] !== "1") continue;
+
+          hudContext.fillStyle = "#ffffff";
+          hudContext.fillRect(
+            startX + column * fontSize,
+            startY + row * lineHeight,
+            fontSize * 0.58,
+            lineHeight * 0.58
+          );
+        }
+      }
+    }
+
+    pixelText("MARIO", 34, 88);
+    pixelText("000100", 290, 88);
+    pixelText("?? x00", 500, 88);
+    pixelText("WORLD", 650, 88);
+    pixelText("1-1", 735, 88);
+    pixelText("TIME", 960, 88);
+    pixelText("375", 1030, 88);
+
+    const hudTexture = new THREE.CanvasTexture(hudCanvas);
+    hudTexture.colorSpace = THREE.SRGBColorSpace;
+    hudTexture.minFilter = THREE.FilterLinearFilter;
+    hudTexture.magFilter = THREE.FilterLinearFilter;
+
+    const hudMaterial = new THREE.MeshBasicMaterial({
+      map: hudTexture
+    });
+
+    const hud = new THREE.Mesh(
+      new THREE.PlaneGeometry(13.8, 3.45),
+      hudMaterial
+    );
+
+    hud.position.set(0, 13.8, 10);
+    hud.rotation.y = -0.25;
+    scene.add(hud);
+
+    // ---------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle breathing motion for the cloud puffs.
+      const cloudPuffs = [
+        {
+          object: scene.children.find((child) =>
+            child.isGroup &&
+            child.children.some((item) => item.material?.name?.includes("cloud"))
+          ),
+          phase: 0
+        }
+      ];
+
+      // Subtle Goomba bobbing
+      goombaA.position.y = 3.58 + Math.sin(elapsed * 2.2) * 0.025;
+      goombaB.position.y = 3.58 + Math.sin(elapsed * 2.2 + 1.4) * 0.025;
+      goombaC.position.y = 3.58 + Math.sin(elapsed * 2.2 + 2.8) * 0.025;
+
+      // Very subtle cloud drift
+      addCloud(-8.0, 7.3, 2.0, 1.25).position.x += Math.sin(elapsed * 0.08) * 0.0008;
+      addCloud(7.7, 8.4, 2.5, 1.05).position.x += Math.cos(elapsed * 0.07) * 0.0007;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // ---------------------------------------------------------------------
+    // Resize handling
+    // ---------------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

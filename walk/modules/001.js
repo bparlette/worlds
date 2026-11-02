@@ -1,4 +1,4 @@
-// @world {"id": "001", "title": "Adventure", "sub": "Castles & Mazes", "system": "Atari 2600"}
+// @world {"id": "001", "title": "Sonic the Hedgehog", "sub": "Green Hill Zone", "system": ""}
 // Converted from  into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -9,6 +9,7 @@ export function createWorld(THREE) {
   let scene = {
     add: (...objs) => objs.forEach(o => o && group.add(o)),
     updateMatrixWorld: () => {},
+    children: group.children,
     background: null,
     fog: null
   };
@@ -35,8 +36,9 @@ export function createWorld(THREE) {
   }
 
   function dummyCamera() {
+    const p = new Proxy({}, { get: () => () => p });
     return {
-      position: { set: () => {}, copy: () => {} },
+      position: p,
       lookAt: () => {},
       updateProjectionMatrix: () => {}
     };
@@ -60,9 +62,7 @@ export function createWorld(THREE) {
     };
     return node;
   };
-  const container = dummyEl();
-  const stage = dummyEl();
-  const app = dummyEl();
+  // DOM / UI fallbacks
   const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
     innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
   };
@@ -80,466 +80,528 @@ export function createWorld(THREE) {
 
   // --- Scoped Diorama Build Code ---
 
+    
 
+    const container = dummyEl();
 
-// scene redirect
-scene.background = new THREE.Color(0x080b14);
-scene.fog = new THREE.FogExp2(0x080b14, 0.024);
+    // scene redirect
+    scene.background = new THREE.Color(0x18366c);
+    scene.fog = new THREE.FogExp2(0x18366c, 0.018);
 
-camera = dummyCamera();
-renderer = dummyRenderer();
-const canvas = renderer.domElement;
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    camera = dummyCamera();
+    camera.position.set(8, 4.2, 12);
 
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
 
-const world = new THREE.Group();
-world.position.y = 0.15;
-scene.add(world);
+    const hemi = new THREE.HemisphereLight(0xbadfff, 0x384629, 2.2);
+    scene.add(hemi);
 
-const palette = {
-  stone: 0x59606a,
-  stoneDark: 0x303842,
-  stoneLight: 0x777b78,
-  gold: 0xd6a64b,
-  purple: 0x6b568c,
-  blue: 0x314c75,
-  green: 0x536b4d,
-  black: 0x101319,
-  red: 0x8e3237,
-  warm: 0xe3a55a
-};
+    const sun = new THREE.DirectionalLight(0xfff1bd, 3.4);
+    sun.position.set(-7, 12, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -15;
+    sun.shadow.camera.right = 15;
+    sun.shadow.camera.top = 13;
+    sun.shadow.camera.bottom = -8;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    scene.add(sun);
 
-function mat(color, roughness = .8, metalness = 0) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness });
-}
-const M = {
-  stone: mat(palette.stone),
-  stoneDark: mat(palette.stoneDark),
-  stoneLight: mat(palette.stoneLight),
-  gold: mat(palette.gold, .38, .65),
-  purple: mat(palette.purple),
-  blue: mat(palette.blue),
-  green: mat(palette.green),
-  black: mat(palette.black),
-  red: mat(palette.red),
-  warm: mat(palette.warm)
-};
+    const fill = new THREE.DirectionalLight(0x8ab8ff, 1.1);
+    fill.position.set(8, 5, -8);
+    scene.add(fill);
 
-function box(w, h, d, material, x = 0, y = 0, z = 0, parent = world) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
+    const voxelMaterial = (color, roughness = 0.86) => new THREE.MeshStandardMaterial({
+      color,
+      roughness,
+      metalness: 0.02
+    });
 
-function cyl(rTop, rBottom, h, material, x = 0, y = 0, z = 0, parent = world, segments = 12) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, h, segments), material);
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  parent.add(mesh);
-  return mesh;
-}
+    const mats = {
+      sky: new THREE.MeshStandardMaterial({ color: 0x173b78, roughness: 1 }),
+      cloud: new THREE.MeshStandardMaterial({ color: 0xe9f3ff, roughness: 1 }),
+      cloudDark: new THREE.MeshStandardMaterial({ color: 0xaac9ee, roughness: 1 }),
+      ground: new THREE.MeshStandardMaterial({ color: 0x496a35, roughness: 1 }),
+      groundTop: new THREE.MeshStandardMaterial({ color: 0x709245, roughness: 1 }),
+      grass: new THREE.MeshStandardMaterial({ color: 0x3f9d42, roughness: 1 }),
+      grassLight: new THREE.MeshStandardMaterial({ color: 0x75c85a, roughness: 1 }),
+      grassDark: new THREE.MeshStandardMaterial({ color: 0x246c35, roughness: 1 }),
+      soil: new THREE.MeshStandardMaterial({ color: 0x6a3d28, roughness: 1 }),
+      trunk: new THREE.MeshStandardMaterial({ color: 0x6d3e25, roughness: 1 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x35a84d, roughness: 1 }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x68d65c, roughness: 1 }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x17713c, roughness: 1 }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x168bd0,
+        roughness: 0.35,
+        metalness: 0.12,
+        transparent: true,
+        opacity: 0.92
+      }),
+      ring: new THREE.MeshStandardMaterial({
+        color: 0xffd62e,
+        roughness: 0.35,
+        emissive: 0x4b2c00,
+        emissiveIntensity: 0.28
+      }),
+      egg: new THREE.MeshStandardMaterial({ color: 0xf5e4a1, roughness: 0.8 }),
+      eggStripe: new THREE.MeshStandardMaterial({ color: 0x5b2d1f, roughness: 1 }),
+      flower: new THREE.MeshStandardMaterial({ color: 0xb983ff, roughness: 1 }),
+      flowerCenter: new THREE.MeshStandardMaterial({ color: 0xffd65c, roughness: 1 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xcf2f3f, roughness: 0.7 }),
+      blue: new THREE.MeshStandardMaterial({ color: 0x286dff, roughness: 0.65 }),
+      silver: new THREE.MeshStandardMaterial({ color: 0xb9c4c8, roughness: 0.45, metalness: 0.65 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x11171c, roughness: 0.75 })
+    };
 
-const orbit = {
-  theta: 0.82,
-  phi: 1.03,
-  radius: 25,
-  target: new THREE.Vector3(0, 2.4, 0),
-  dragging: false,
-  lastX: 0,
-  lastY: 0
-};
+    const world = new THREE.Group();
+    scene.add(world);
 
-function updateCamera() {
-  const sinPhi = Math.sin(orbit.phi);
-  camera.position.set(
-    orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
-    orbit.target.y + orbit.radius * Math.cos(orbit.phi),
-    orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
-  );
-  camera.lookAt(orbit.target);
-}
-updateCamera();
+    function addBox(parent, x, y, z, sx, sy, sz, material, cast = true) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
 
-// Floor grid and central courtyard.
-box(29.5, .35, 29.5, M.stoneDark, 0, .05, 0);
-for (let z = -13.5; z <= 13.5; z += 1.5) {
-  box(28.8, .035, .07, M.stoneLight, 0, .25, z);
-}
-for (let x = -13.5; x <= 13.5; x += 1.5) {
-  box(.07, .035, 28.8, M.stoneLight, x, .25, 0);
-}
+    function addCylinder(parent, x, y, z, radius, height, material, segments = 12) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
 
-// Main room: central dais, winding stair, side halls, and four boundary walls.
-const floorY = .32;
-box(11.4, .45, 8.2, M.stone, 0, .25, -2.2);
-box(6.2, .45, 4.2, M.stoneDark, 0, .25, 5.5);
-box(2.0, .45, 10.4, M.stone, 0, .25, 1.8);
+    // Sky and clouds
+    addBox(world, 0, 12, -18, 35, 18, 22, mats.sky, false);
 
-// Outer walls, kept continuous and unadorned.
-box(29, 12.5, .75, M.stoneDark, 0, 6.2, -14.25);
-box(.75, 12.5, 29, M.stoneDark, -14.25, 6.2, 0);
-box(29, 12.5, .75, M.stoneDark, 0, 6.2, 14.25);
-box(.75, 12.5, 29, M.stoneDark, 14.25, 6.2, 0);
+    function addCloud(x, y, z, scale = 1) {
+      const cloud = new THREE.Group();
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
 
-// Wall cap stones.
-box(29.2, .35, .95, M.stoneLight, 0, 12.55, -14.25);
-box(.95, .35, 29.2, M.stoneLight, -14.25, 12.55, 0);
-box(29.2, .35, .95, M.stoneLight, 0, 12.55, 14.25);
-box(.95, .35, 29.2, M.stoneLight, 14.25, 12.55, 0);
+      const puffs = [
+        [-2.2, 0, 0, 1.5],
+        [-0.8, 0.45, 0, 2.0],
+        [1.4, 0.2, 0, 1.7],
+        [2.7, -0.15, 0, 1.0],
+        [0.2, -0.25, 0.3, 2.2]
+      ];
 
-// Central dais and steps.
-box(4.8, .35, 3.6, M.stoneLight, 0, .52, -2.1);
-for (let i = 0; i < 3; i++) {
-  box(5.2 - i * .28, .22, 1.05, M.stone, 0, .42 + i * .22, -3.25 - i * .62);
-}
-cyl(1.35, 1.55, .42, M.stoneLight, 0, .93, -2.1);
+      for (const [px, py, pz, s] of puffs) {
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(s, 10, 7),
+          mats.cloud
+        );
+        puff.position.set(px, py, pz);
+        puff.scale.y = 0.58;
+        cloud.add(puff);
+      }
 
-// Wizard's throne at the back.
-box(3.2, .45, 2.0, M.stoneDark, 0, 1.3, -4.65);
-box(2.45, .75, 1.25, M.blue, 0, 1.95, -4.65);
-box(2.8, .35, 1.45, M.purple, 0, 2.42, -4.65);
-box(1.25, .35, .65, M.gold, 0, 2.75, -4.65);
-cyl(.08, .08, 1.6, M.gold, -.88, 1.75, -4.65);
-cyl(.08, .08, 1.6, M.gold, .88, 1.75, -4.65);
-box(.28, .28, .75, M.gold, 0, 2.15, -4.65);
-box(.16, .16, 1.2, M.gold, 0, 2.15, -4.65);
+      world.add(cloud);
+    }
 
-// Side alcoves.
-box(3.6, 3.0, 1.2, M.stoneDark, -6.3, 1.9, 2.7);
-box(3.6, 3.0, 1.2, M.stoneDark, 6.3, 1.9, 2.7);
-box(2.4, .45, 1.4, M.stone, -6.3, 3.55, 2.7);
-box(2.4, .45, 1.4, M.stone, 6.3, 3.55, 2.7);
-box(1.4, .7, 1.0, M.blue, -6.3, 3.9, 2.7);
-box(1.4, .7, 1.0, M.blue, 6.3, 3.9, 2.7);
-box(.22, .35, .65, M.gold, -6.3, 4.3, 2.7);
-box(.22, .35, .65, M.gold, 6.3, 4.3, 2.7);
+    addCloud(-10, 10, -13, 1.35);
+    addCloud(5, 12, -18, 1.0);
+    addCloud(14, 9, -10, 0.9);
+    addCloud(-18, 13, -20, 1.1);
 
-// Stair and central aisle.
-for (let i = 0; i < 5; i++) {
-  box(3.2, .18, .75, M.stoneLight, 0, .55 + i * .16, -7.4 - i * .72);
-}
-box(2.5, .18, 2.6, M.stone, 0, 1.15, -7.4);
-box(1.6, .18, 1.2, M.stoneLight, 0, 1.35, -7.4);
+    // Distant island
+    addBox(world, 0, 5.7, -12, 32, 5, 7, mats.soil);
+    addBox(world, 0, 6.45, -12, 32, 0.5, 7, mats.grassDark);
 
-// Wall sconces.
-for (const x of [-11.2, 11.2]) {
-  box(.65, .85, .28, M.stoneDark, x, 2.3, -13.75);
-  const lamp = new THREE.Mesh(
-    new THREE.SphereGeometry(.22, 12, 8),
-    new THREE.MeshStandardMaterial({ color: 0xffd58a, emissive: 0xffa63d, emissiveIntensity: 1.4 })
-  );
-  lamp.position.set(x, 2.3, -13.5);
-  world.add(lamp);
-}
-for (const x of [-11.2, 11.2]) {
-  box(.65, .85, .28, M.stoneDark, x, 2.3, 13.75);
-  const lamp = new THREE.Mesh(
-    new THREE.SphereGeometry(.22, 12, 8),
-    new THREE.MeshStandardMaterial({ color: 0xffd58a, emissive: 0xffa63d, emissiveIntensity: 1.4 })
-  );
-  lamp.position.set(x, 2.3, 13.5);
-  world.add(lamp);
-}
+    for (let i = 0; i < 28; i++) {
+      const x = -14 + i * 1.15;
+      const h = 1.2 + ((i * 7) % 5) * 0.55;
+      addBox(world, x, 7.2 + h * 0.5, -12, 0.65, h, 0.65, mats.leafDark);
+    }
 
-// Hanging chandelier.
-cyl(.18, .3, .25, M.gold, 0, 5.8, 1.4);
-cyl(.08, .1, .65, M.gold, 0, 6.1, 1.4);
-for (let i = 0; i < 6; i++) {
-  const a = i * Math.PI / 3;
-  const x = Math.cos(a) * 1.05;
-  const z = Math.sin(a) * 1.05;
-  const arm = cyl(.055, .055, .75, M.gold, x, 6.1, z);
-  arm.rotation.z = Math.cos(a) * .35;
-  arm.rotation.x = Math.sin(a) * .35;
-  const bulb = new THREE.Mesh(
-    new THREE.SphereGeometry(.18, 10, 8),
-    new THREE.MeshStandardMaterial({ color: 0xffd48a, emissive: 0xffa63d, emissiveIntensity: 1.8 })
-  );
-  bulb.position.set(x, 6.45, z);
-  world.add(bulb);
-}
+    // Water
+    const water = addBox(world, 0, 2.0, 3.0, 31, 0.65, 18, mats.water, false);
+    water.receiveShadow = true;
 
-// Crystal-like magical orb over the throne.
-const orb = new THREE.Mesh(
-  new THREE.IcosahedronGeometry(.55, 2),
-  new THREE.MeshStandardMaterial({
-    color: 0x836cff,
-    emissive: 0x4b2dff,
-    emissiveIntensity: 2.2,
-    roughness: .2,
-    metalness: .25
-  })
-);
-orb.position.set(0, 4.2, -4.1);
-orb.rotation.y = .4;
-world.add(orb);
+    // Main island
+    addBox(world, 0, 0.55, 2.0, 22, 1.1, 13, mats.soil);
+    addBox(world, 0, 1.18, 2.0, 22, 0.25, 13, mats.grassDark);
 
-const orbGlow = new THREE.PointLight(0x7a55ff, 1.7, 7, 2);
-orbGlow.position.copy(orb.position);
-world.add(orbGlow);
+    // Main grass surface
+    addBox(world, 0, 1.48, 2.0, 22, 0.18, 13, mats.grass);
 
-// Crystal cluster.
-for (let i = 0; i < 7; i++) {
-  const h = .8 + (i % 3) * .28;
-  const crystal = cyl(.09, .24, h, M.purple, -1.4 + (i % 2) * .38, 1.6 + h / 2, -5.1);
-  crystal.rotation.z = (i - 3) * .12;
-  const tip = new THREE.Mesh(
-    new THREE.ConeGeometry(.17, .42, 6),
-    M.purple
-  );
-  tip.position.set(-1.4 + (i % 2) * .38, 1.6 + h + .18, -5.1);
-  tip.rotation.z = (i - 3) * .12;
-  world.add(tip);
-}
+    // Water sparkle lines
+    for (let i = 0; i < 45; i++) {
+      const x = -13 + Math.random() * 26;
+      const z = -5 + Math.random() * 12;
+      const line = addBox(world, x, 2.43, z, 0.055, 0.025, 0.45 + Math.random() * 0.7, mats.water, false);
+      line.rotation.y = Math.random() * Math.PI;
+    }
 
-// Treasure pedestal.
-box(1.65, .22, 1.65, M.stoneLight, 3.45, .55, 3.85);
-box(1.25, .16, 1.25, M.stone, 3.45, .72, 3.85);
+    // Palm tree function
+    function addPalm(x, z, scale = 1, height = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 1.35, z);
+      tree.scale.setScalar(scale);
 
-// Low walls and pillars frame the room.
-for (const x of [-10.7, 10.7]) {
-  box(.75, 3.1, .75, M.stoneLight, x, 1.85, 7.3);
-  box(1.1, .28, 1.1, M.stone, x, 3.55, 7.3);
-}
-for (const z of [-8.8, 8.8]) {
-  box(.75, 3.1, .75, M.stoneLight, -10.7, 1.85, z);
-  box(.75, 3.1, .75, M.stoneLight, 10.7, 1.85, z);
-  box(1.1, .28, 1.1, M.stone, -10.7, 3.55, z);
-  box(1.1, .28, 1.1, M.stone, 10.7, 3.55, z);
-}
+      const trunkSegments = 7;
+      for (let i = 0; i < trunkSegments; i++) {
+        const y = 0.6 + i * 0.48;
+        const radius = 0.38 - i * 0.035;
+        const segment = addCylinder(tree, 0, y, 0, radius, 0.44, mats.trunk, 8);
+        segment.rotation.z = Math.sin(i * 1.7) * 0.05;
+      }
 
-// Decorative wall panels.
-for (const x of [-9.2, 9.2]) {
-  for (const z of [-13.7, 13.7]) {
-    box(.55, 1.55, .18, M.stoneDark, x, 3.0, z);
-    box(.32, .8, .2, M.blue, x, 3.1, z);
-    box(.2, .12, .23, M.gold, x, 3.1, z);
-  }
-}
+      const crown = new THREE.Group();
+      crown.position.y = 4.7;
+      crown.rotation.z = -0.12;
 
-// Trees around the perimeter, kept within the 30x30 footprint.
-function tree(x, z, scale = 1) {
-  const group = new THREE.Group();
-  group.position.set(x, .3, z);
-  group.scale.setScalar(scale);
-  world.add(group);
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        const leaf = new THREE.Mesh(
+          new THREE.ConeGeometry(0.72, 2.8, 5),
+          i % 2 ? mats.leaf : mats.leafLight
+        );
+        leaf.position.set(Math.cos(angle) * 0.55, 0.9, Math.sin(angle) * 0.55);
+        leaf.rotation.z = Math.cos(angle) * 0.42;
+        leaf.rotation.x = Math.sin(angle) * 0.42;
+        leaf.castShadow = true;
+        crown.add(leaf);
+      }
 
-  const trunk = cyl(.18, .27, 2.1, M.stoneDark, 0, 1.05, 0, group, 7);
-  trunk.rotation.z = (Math.random() - .5) * .15;
+      const center = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), mats.leafDark);
+      center.position.y = 0.2;
+      center.castShadow = true;
+      crown.add(center);
 
-  const foliage = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.35, 1),
-    M.green
-  );
-  foliage.position.y = 2.45;
-  foliage.scale.set(1, 1.12, .9);
-  foliage.castShadow = true;
-  foliage.receiveShadow = true;
-  group.add(foliage);
+      tree.add(crown);
+      world.add(tree);
+    }
 
-  const crown = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(.9, 1),
-    M.green
-  );
-  crown.position.set(.45, 3.0, .15);
-  crown.scale.set(.8, 1.05, .8);
-  crown.castShadow = true;
-  group.add(crown);
-}
-tree(-11.8, -8.8, .9);
-tree(-11.6, 8.7, .85);
-tree(11.8, -8.7, .9);
-tree(11.7, 8.8, .8);
-tree(-11.9, 0, .7);
-tree(11.9, 0, .7);
+    addPalm(-7.3, 4.0, 1.0, 1.0);
+    addPalm(-4.6, 4.0, 0.83, 0.88);
+    addPalm(2.0, 4.0, 1.0, 1.0);
+    addPalm(8.1, 4.0, 0.95, 0.93);
+    addPalm(-11.0, -0.5, 0.8, 0.82);
+    addPalm(11.0, -0.5, 0.8, 0.82);
 
-// Hanging banners.
-for (const x of [-8.3, 8.3]) {
-  const top = x, y = 4.3, z = -13.7;
-  const banner = box(1.15, 1.85, .12, M.blue, x, 3.4, -13.7);
-  banner.rotation.z = (x < 0 ? -.08 : .08);
-  box(.28, .28, .15, M.gold, x + .25, 2.43, -13.62);
-}
+    // Flowers
+    function addFlower(x, z, colorMaterial = mats.flower) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.55, z);
 
-// Small side tables and books.
-for (const x of [-8.2, 8.2]) {
-  box(1.3, .18, 1.3, M.stoneLight, x, 1.05, -6.1);
-  box(.18, 1.0, .18, M.stoneDark, x - .45, .55, -6.1);
-  box(.18, 1.0, .18, M.stoneDark, x + .45, .55, -6.1);
-  for (let i = 0; i < 4; i++) {
-    box(.34, .45, .22, i % 2 ? M.blue : M.purple, x, 1.45 + i * .1, -6.1);
-  }
-}
+      addCylinder(group, 0, 0.18, 0, 0.14, 0.36, mats.leafDark, 6);
 
-// Floating motes.
-const moteMaterial = new THREE.MeshBasicMaterial({ color: 0xc5a9ff, transparent: true, opacity: .55 });
-const motes = [];
-for (let i = 0; i < 34; i++) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(.035 + Math.random() * .07, 6, 4), moteMaterial);
-  m.position.set((Math.random() - .5) * 21, .8 + Math.random() * 7, (Math.random() - .5) * 21);
-  m.userData.speed = .18 + Math.random() * .35;
-  m.userData.phase = Math.random() * Math.PI * 2;
-  world.add(m);
-  motes.push(m);
-}
+      const petals = [];
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const petal = new THREE.Mesh(
+          new THREE.ConeGeometry(0.22, 0.32, 4),
+          colorMaterial
+        );
+        petal.position.set(Math.cos(angle) * 0.2, 0.42, Math.sin(angle) * 0.2);
+        petal.rotation.z = Math.cos(angle) * 0.35;
+        petal.rotation.x = Math.sin(angle) * 0.35;
+        petal.castShadow = true;
+        group.add(petal);
+        petals.push(petal);
+      }
 
-// Animated hanging crystals.
-const hangingCrystals = [];
-for (let i = 0; i < 5; i++) {
-  const crystal = cyl(.06, .16, .9 + (i % 2) * .25, M.purple, -7.2 + i * 1.5, 3.8, 9.1);
-  crystal.userData.phase = i * .7;
-  hangingCrystals.push(crystal);
-}
+      const center = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 8, 6),
+        mats.flowerCenter
+      );
+      center.position.y = 0.48;
+      group.add(center);
 
-// Animated orb pulse.
-const orbPulse = new THREE.Mesh(
-  new THREE.SphereGeometry(.58, 16, 12),
-  new THREE.MeshBasicMaterial({
-    color: 0x9b78ff,
-    transparent: true,
-    opacity: .18,
-    depthWrite: false
-  })
-);
-orbPulse.position.copy(orb.position);
-world.add(orbPulse);
+      world.add(group);
+      return group;
+    }
 
-// Subtle light pulse.
-const chandelierLight = new THREE.PointLight(0xffbb66, 2.2, 13, 2);
-chandelierLight.position.set(0, 6.3, 1.4);
-world.add(chandelierLight);
+    addFlower(-5.4, 3.1);
+    addFlower(-6.0, 3.0);
+    addFlower(4.8, 3.2);
+    addFlower(5.4, 3.1);
+    addFlower(-1.5, -3.7);
+    addFlower(1.4, -3.8);
 
-// Camera controls implemented directly, without addons.
-let pointerId = null;
-let moved = false;
-canvas.addEventListener("pointerdown", event => {
-  orbit.dragging = true;
-  pointerId = event.pointerId;
-  orbit.lastX = event.clientX;
-  orbit.lastY = event.clientY;
-  moved = true;
-  canvas.setPointerCapture(pointerId);
-  canvas.style.cursor = "grabbing";
-});
+    // Sun plant
+    const sunPlant = new THREE.Group();
+    sunPlant.position.set(5.0, 1.5, 1.7);
 
-canvas.addEventListener("pointermove", event => {
-  if (!orbit.dragging || event.pointerId !== pointerId) return;
-  const dx = event.clientX - orbit.lastX;
-  const dy = event.clientY - orbit.lastY;
-  orbit.lastX = event.clientX;
-  orbit.lastY = event.clientY;
-  orbit.theta -= dx * .006;
-  orbit.phi = THREE.MathUtils.clamp(orbit.phi - dy * .005, .38, 1.42);
-  updateCamera();
-});
+    addCylinder(sunPlant, 0, 0.28, 0, 0.28, 0.55, mats.leafDark, 8);
 
-function endDrag(event) {
-  if (event.pointerId !== pointerId) return;
-  orbit.dragging = false;
-  canvas.style.cursor = "grab";
-  if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
-    canvas.releasePointerCapture(pointerId);
-  }
-  pointerId = null;
-}
-canvas.addEventListener("pointerup", endDrag);
-canvas.addEventListener("pointercancel", endDrag);
-canvas.style.cursor = "grab";
+    const sunFace = new THREE.Mesh(new THREE.CircleGeometry(0.62, 16), mats.flowerCenter);
+    sunFace.position.set(0, 0.72, 0.04);
+    sunPlant.add(sunFace);
 
-canvas.addEventListener("wheel", event => {
-  event.preventDefault();
-  orbit.radius = THREE.MathUtils.clamp(orbit.radius + event.deltaY * .015, 12, 35);
-  updateCamera();
-}, { passive: false });
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const ray = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.48, 4),
+        mats.flowerCenter
+      );
+      ray.position.set(Math.cos(angle) * 0.2, 0.72, Math.sin(angle) * 0.2);
+      ray.rotation.z = Math.cos(angle) * 0.35;
+      ray.rotation.x = Math.sin(angle) * 0.35;
+      sunPlant.add(ray);
+    }
 
-// Touch pinch zoom.
-const touches = new Map();
-let pinchDistance = 0;
-canvas.addEventListener("touchstart", event => {
-  for (const touch of event.changedTouches) touches.set(touch.identifier, touch);
-  if (touches.size === 2) {
-    const [a, b] = [...touches.values()];
-    pinchDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-  }
-}, { passive: true });
-canvas.addEventListener("touchmove", event => {
-  if (event.touches.length === 2) {
-    event.preventDefault();
-    const [a, b] = [...event.touches.values()];
-    const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    if (pinchDistance > 0) {
-      orbit.radius = THREE.MathUtils.clamp(orbit.radius + (pinchDistance - distance) * .025, 12, 35);
+    world.add(sunPlant);
+
+    // Ring stacks
+    function addRingStack(x, y, z, count = 3) {
+      for (let i = 0; i < count; i++) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.085, 6, 18), mats.ring);
+        ring.position.set(x, y + i * 0.36, z);
+        ring.rotation.y = Math.PI / 2;
+        ring.castShadow = true;
+        world.add(ring);
+      }
+    }
+
+    addRingStack(-9.8, 3.0, 0.2, 4);
+    addRingStack(-8.9, 3.0, 0.2, 3);
+    addRingStack(-8.0, 3.0, 0.2, 4);
+    addRingStack(-7.1, 3.0, 0.2, 3);
+
+    // Egg
+    const egg = new THREE.Group();
+    egg.position.set(-1.5, 1.7, 0.4);
+    egg.rotation.y = 0.4;
+
+    const eggBody = new THREE.Mesh(new THREE.SphereGeometry(0.48, 12, 10), mats.egg);
+    eggBody.scale.set(0.85, 1.12, 0.85);
+    egg.add(eggBody);
+
+    for (let i = 0; i < 4; i++) {
+      const stripe = new THREE.Mesh(
+        new THREE.SphereGeometry(0.49, 10, 8, 0, Math.PI * 1.65, 0, Math.PI * 0.55),
+        mats.eggStripe
+      );
+      stripe.rotation.y = i * 0.7;
+      egg.add(stripe);
+    }
+
+    world.add(egg);
+
+    // Dr. Eggman robot
+    const robot = new THREE.Group();
+    robot.position.set(8.0, 1.55, 1.5);
+    robot.rotation.y = -0.4;
+
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.68, 0.75, 12), mats.red);
+    body.position.y = 0.25;
+    body.castShadow = true;
+    robot.add(body);
+
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), mats.silver);
+    chest.scale.set(0.8, 1.1, 0.8);
+    chest.position.y = 0.32;
+    robot.add(chest);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 8), mats.silver);
+    head.position.y = 1.02;
+    head.scale.set(1, 0.8, 0.9);
+    robot.add(head);
+
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.13, 0.04), mats.black);
+    visor.position.set(0, 1.02, 0.33);
+    robot.add(visor);
+
+    const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), mats.blue);
+    leftEye.position.set(-0.1, 1.03, 0.35);
+    robot.add(leftEye);
+
+    const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), mats.blue);
+    rightEye.position.set(0.1, 1.03, 0.35);
+    robot.add(rightEye);
+
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.75, 8), mats.red);
+    arm.position.set(-0.65, 0.28, 0);
+    arm.rotation.z = -0.45;
+    robot.add(arm);
+
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.25, 10), mats.black);
+    foot.position.set(0.2, -0.2, 0);
+    foot.rotation.z = -0.3;
+    robot.add(foot);
+
+    world.add(robot);
+
+    // Small bushes and rocks
+    function addBush(x, z, scale = 1) {
+      const bush = new THREE.Group();
+      bush.position.set(x, 1.6, z);
+      bush.scale.setScalar(scale);
+
+      const leaf1 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.65, 1), mats.leaf);
+      const leaf2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.48, 1), mats.leafLight);
+      const leaf3 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), mats.leafDark);
+
+      leaf1.position.set(0, 0.2, 0);
+      leaf2.position.set(0.35, 0.48, 0.05);
+      leaf3.position.set(-0.3, 0.4, -0.1);
+
+      bush.add(leaf1, leaf2, leaf3);
+      world.add(bush);
+    }
+
+    addBush(-3.4, 3.0, 0.8);
+    addBush(0.0, 3.1, 0.7);
+    addBush(3.0, 3.0, 0.9);
+    addBush(-11.0, 3.0, 0.7);
+    addBush(10.5, 3.0, 0.8);
+    addBush(-2.0, -3.8, 0.65);
+    addBush(2.0, -3.6, 0.75);
+
+    function addRock(x, z, scale = 1) {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.45, 0),
+        mats.eggStripe
+      );
+      rock.position.set(x, 1.7, z);
+      rock.scale.set(scale, scale * 0.7, scale);
+      rock.rotation.set(0.3, Math.random(), -0.2);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      world.add(rock);
+    }
+
+    addRock(-4.2, 3.8, 0.8);
+    addRock(3.6, 3.8, 0.65);
+    addRock(10.0, 0.5, 0.75);
+    addRock(-11.4, -0.3, 0.6);
+
+    // Background silhouettes
+    for (let i = 0; i < 18; i++) {
+      const x = -20 + i * 2.25;
+      const h = 1.4 + ((i * 5) % 4) * 0.55;
+      addBox(world, x, 6.9 + h * 0.5, -12, 0.55, h, 0.55, mats.leafDark);
+    }
+
+    // Camera controls implemented directly
+    const controls = {
+      yaw: 0.28,
+      pitch: 0.12,
+      distance: 17,
+      target: new THREE.Vector3(0, 2.2, 1.5),
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const horizontal = Math.cos(controls.pitch) * controls.distance;
+      camera.position.set(
+        controls.target.x + Math.sin(controls.yaw) * horizontal,
+        controls.target.y + Math.sin(controls.pitch) * horizontal,
+        controls.target.z + Math.cos(controls.yaw) * horizontal
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.yaw -= dx * 0.006;
+      controls.pitch = THREE.MathUtils.clamp(controls.pitch + dy * 0.004, -0.12, 0.45);
       updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
     }
-    pinchDistance = distance;
-  }
-}, { passive: false });
-canvas.addEventListener("touchend", event => {
-  for (const touch of event.changedTouches) touches.delete(touch.identifier);
-});
 
-// Responsive renderer.
-function resize() {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-}
-addEventListener("resize", resize);
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
 
-const clock = new THREE.Clock();
-let elapsed = 0;
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
 
-function animate() {
-    /* [SHIELD] */
-    requestAnimationFrame(animate);
-    try {
+    // Animation
+    const clock = new THREE.Clock();
+    let score = 0;
+    let time = 9;
+    let ringCount = 10;
 
+    const scoreElement = dummyEl();
+    const timeElement = dummyEl();
+    const ringsElement = dummyEl();
 
-  const dt = Math.min(clock.getDelta(), .05);
-  elapsed += dt;
+    function updateHUD() {
+      scoreElement.textContent = String(score).padStart(6, "0");
+      timeElement.textContent = `${Math.floor(time / 60).toString().padStart(2, "0")}:${Math.floor(time % 60).toString().padStart(2, "0")}`;
+      ringsElement.textContent = String(ringCount).padStart(2, "0");
+    }
 
-  orb.rotation.y += dt * .35;
-  orb.rotation.z = Math.sin(elapsed * .8) * .12;
-  orb.scale.setScalar(1 + Math.sin(elapsed * 1.7) * .08);
-  orbGlow.intensity = 1.55 + Math.sin(elapsed * 1.7) * .25;
+    function animate() {
+      requestAnimationFrame(animate);
 
-  orbPulse.scale.setScalar(1 + (Math.sin(elapsed * 1.7) * .5 + .5) * .55);
-  orbPulse.material.opacity = .12 + (Math.sin(elapsed * 1.7) * .5 + .5) * .14;
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const t = clock.elapsedTime;
 
-  chandelierLight.intensity = 2.0 + Math.sin(elapsed * 1.25) * .18;
+      // Gentle water shimmer
+      water.position.y = 2.0 + Math.sin(t * 1.2) * 0.025;
 
-  for (const crystal of hangingCrystals) {
-    crystal.rotation.z = Math.sin(elapsed * 1.05 + crystal.userData.phase) * .12;
-    crystal.rotation.x = Math.cos(elapsed * .9 + crystal.userData.phase) * .09;
-  }
+      // Egg bob
+      egg.position.y = 1.7 + Math.sin(t * 1.8) * 0.055;
+      egg.rotation.z = Math.sin(t * 1.2) * 0.08;
 
-  for (const mote of motes) {
-    mote.position.y += mote.userData.speed * dt;
-    mote.rotation.x += dt * .25;
-    mote.rotation.y += dt * .2;
-    if (mote.position.y > 7.8) mote.position.y = .6;
-  }
+      // Robot idle
+      robot.rotation.y = -0.4 + Math.sin(t * 1.1) * 0.1;
+      robot.position.y = 1.55 + Math.sin(t * 1.6) * 0.025;
 
+      // Rings hover
+      const rings = world.children.filter(child => child.geometry?.type === "TorusGeometry");
+      rings.forEach((ring, i) => {
+        ring.position.y += Math.sin(t * 1.3 + i) * 0.0008;
+      });
 
+      updateHUD();
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    updateHUD();
+    animate();
   
-    } catch (e) {
-      console.warn('Animation tick suppressed:', e.message);
-    }
-    renderer.render(scene, camera);
-}
-animate();
-
 
   // --- Walker Update Protocol ---
   function update(t, dt) {
@@ -553,12 +615,12 @@ animate();
   return {
     group,
     update,
-    spawn: { x: 0.0, z: 14.0, yaw: 0 },
-    relic: { id: "chalice", name: "Enchanted Chalice", x: -10.0, z: -12.0 },
-    env:   { background: 0x080b14, fogColor: 0x080b14, fogDensity: 0.024 },
+    spawn: { x: 0.0, z: -12.5, yaw: 0 },
+    relic: { id: "chalice", name: "Enchanted Chalice", x: -10.0, z: 13.5 },
+    env:   { background: 0x18366c, fogColor: 0x18366c, fogDensity: 0.018 },
     doors: {
-      next: { x: 12.0, z: -10.0 },
-      prev: { x: -12.0, z: 10.0 }
+      next: { x: 12.0, z: -8.5 },
+      prev: { x: -12.0, z: 11.5 }
     }
   };
 }

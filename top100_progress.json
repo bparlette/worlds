@@ -4,7 +4,7 @@
     "game": "Sonic the Hedgehog",
     "name": "Green Hill Zone",
     "status": "pass",
-    "filename": "1001_sonic_the_hedgehog_green_hill_zone.html",
+    "filename": "1001-sonic_the_hedgehog_green_hill_zone.html",
     "measured": {
       "x": 30.17,
       "z": 29.7,
@@ -17,14 +17,14 @@
     },
     "fails": [],
     "attempts": 2,
-    "updated_at": "2026-11-01 22:48 EST"
+    "updated_at": "2026-11-01 23:11 EST"
   },
   "2": {
     "rank": 2,
     "game": "Super Mario Bros.",
     "name": "World 1-1",
     "status": "pass",
-    "filename": "1002_super_mario_bros_world_1_1.html",
+    "filename": "1002-super_mario_bros_world_1_1.html",
     "measured": {
       "x": 29.45,
       "z": 29.45,
@@ -37,6 +37,6 @@
     },
     "fails": [],
     "attempts": 2,
-    "updated_at": "2026-11-01 22:48 EST"
+    "updated_at": "2026-11-01 23:11 EST"
   }
 }
