@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Sci-Fi Station</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090d12;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #info {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      max-width: 320px;
+      padding: 13px 15px;
+      color: #e8f0f4;
+      background: rgba(8, 13, 19, 0.72);
+      border: 1px solid rgba(150, 190, 210, 0.22);
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #info h1 {
+      margin: 0 0 5px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #info p {
+      margin: 0;
+      color: #9eb1bb;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 10;
+      padding: 8px 10px;
+      color: #a9bac7;
+      background: rgba(8, 13, 19, 0.68);
+      border: 1px solid rgba(150, 190, 210, 0.18);
+      border-radius: 6px;
+      font-size: 11px;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @media (max-width: 600px) {
+      #info {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <h1>Station Deck</h1>
+    <p>A voxel-built observation deck in a distant orbital facility.</p>
+  </div>
+  <div id="help">Drag to orbit · Wheel to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090d12);
+    scene.fog = new THREE.FogExp2(0x090d12, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(
+      48,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      120
+    );
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+
+    const materials = {
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x667078,
+        roughness: 0.92,
+        metalness: 0.12
+      }),
+      floorDark: new THREE.MeshStandardMaterial({
+        color: 0x272d33,
+        roughness: 0.88,
+        metalness: 0.2
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x747d83,
+        roughness: 0.84,
+        metalness: 0.18
+      }),
+      wallLight: new THREE.MeshStandardMaterial({
+        color: 0x9ca4a8,
+        roughness: 0.78,
+        metalness: 0.16
+      }),
+      wallDark: new THREE.MeshStandardMaterial({
+        color: 0x394149,
+        roughness: 0.8,
+        metalness: 0.26
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x11171c,
+        roughness: 0.72,
+        metalness: 0.35
+      }),
+      orange: new THREE.MeshStandardMaterial({
+        color: 0xd85a24,
+        roughness: 0.58,
+        metalness: 0.25
+      }),
+      orangeDark: new THREE.MeshStandardMaterial({
+        color: 0x743018,
+        roughness: 0.7,
+        metalness: 0.28
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xc79b22,
+        roughness: 0.65,
+        metalness: 0.2
+      }),
+      copper: new THREE.MeshStandardMaterial({
+        color: 0x9d5b37,
+        roughness: 0.55,
+        metalness: 0.62
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x315c70,
+        roughness: 0.48,
+        metalness: 0.58
+      }),
+      glass: new THREE.MeshStandardMaterial({
+        color: 0x183646,
+        roughness: 0.22,
+        metalness: 0.5,
+        emissive: 0x071823,
+        emissiveIntensity: 0.7
+      }),
+      light: new THREE.MeshStandardMaterial({
+        color: 0xbcecff,
+        emissive: 0x8edcff,
+        emissiveIntensity: 2.5,
+        roughness: 0.3
+      }),
+      warmLight: new THREE.MeshStandardMaterial({
+        color: 0xffd29a,
+        emissive: 0xff8a3d,
+        emissiveIntensity: 1.8,
+        roughness: 0.4
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x51595d,
+        roughness: 1,
+        metalness: 0.02
+      }),
+      rockLight: new THREE.MeshStandardMaterial({
+        color: 0x727a7c,
+        roughness: 1,
+        metalness: 0.02
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Voxel helper
+    // ---------------------------------------------------------------------
+
+    const voxel = new THREE.Group();
+
+    function addVoxel(parent, material, x, y, z, sx = 1, sy = 1, sz = 1) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addBox(parent, material, x, y, z, sx, sy, sz, rotationY = 0) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = rotationY;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addCylinder(parent, material, x, y, z, radius, height, rotation = 0) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, 10),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.rotation.z = rotation;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x8eb8d0, 0x17130f, 1.15));
+
+    const keyLight = new THREE.DirectionalLight(0xffe0b2, 3.0);
+    keyLight.position.set(8, 13, 9);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -16;
+    keyLight.shadow.camera.right = 16;
+    keyLight.shadow.camera.top = 16;
+    keyLight.shadow.camera.bottom = -16;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 45;
+    keyLight.shadow.bias = -0.00035;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x5ca8ff, 2.2);
+    rimLight.position.set(-10, 7, -8);
+    scene.add(rimLight);
+
+    const warmFill = new THREE.PointLight(0xff7b32, 18, 18, 2);
+    warmFill.position.set(3, 4, -4);
+    scene.add(warmFill);
+
+    // ---------------------------------------------------------------------
+    // Deck and structural frame
+    // ---------------------------------------------------------------------
+
+    const station = new THREE.Group();
+    scene.add(station);
+
+    // Main floor, built from large square tiles.
+    const floorY = 0;
+    const tile = 1.25;
+
+    for (let x = -9; x <= 9; x += tile) {
+      for (let z = -8; z <= 8; z += tile) {
+        addBox(
+          station,
+          materials.floorDark,
+          x,
+          floorY + 0.12,
+          z,
+          tile - 0.06,
+          0.22,
+          tile - 0.06
+        );
+      }
+    }
+
+    // Floor edge and hazard trim.
+    addBox(station, materials.orangeDark, 0, 0.02, 8.25, 20, 0.18, 0.55);
+    addBox(station, materials.black, 0, 0.02, -8.25, 20, 0.18, 0.55);
+
+    // Structural beams.
+    for (const z of [-7.5, 7.5]) {
+      addBox(station, materials.wallDark, 0, 1.15, z, 19, 0.35, 0.48);
+    }
+    for (const x of [-9, 9]) {
+      addBox(station, materials.wallDark, x, 1.15, 0, 0.48, 0.35, 16);
+    }
+
+    // Main doorway frame.
+    const doorway = new THREE.Group();
+    doorway.position.set(0, 0, -4.7);
+    station.add(doorway);
+
+    addBox(doorway, materials.wallLight, 0, 2.15, 0, 0.55, 4.3, 0.55);
+    addBox(doorway, materials.wallLight, -3.6, 2.15, 0, 0.55, 4.3, 0.55);
+    addBox(doorway, materials.wallLight, 3.6, 2.15, 0, 0.55, 4.3, 0.55);
+    addBox(doorway, materials.wallLight, 0, 2.15, 0, 7.8, 0.55, 0.55);
+
+    // Orange safety strips.
+    addBox(doorway, materials.orange, 0, 3.38, 0, 7.8, 0.12, 0.18);
+    addBox(doorway, materials.orange, -3.6, 2.15, 0, 0.18, 0.12, 4.3);
+    addBox(doorway, materials.orange, 3.6, 2.15, 0, 0.18, 0.12, 4.3);
+    addBox(doorway, materials.orange, 0, 2.15, 0, 7.8, 0.12, 0.18);
+
+    // Doorway inner surfaces and glowing strips.
+    for (const x of [-3.72, 3.72]) {
+      addBox(doorway, materials.wallDark, x, 2.1, 0.28, 0.18, 3.8, 0.22);
+    }
+    addBox(doorway, materials.black, 0, 2.1, 0.3, 7.2, 3.8, 0.22);
+
+    for (const x of [-2.8, 2.8]) {
+      addBox(doorway, materials.orangeDark, x, 2.1, 0.48, 0.1, 3.2, 0.08);
+    }
+
+    // Doorway floor threshold.
+    addBox(doorway, materials.wallDark, 0, 0.27, 0.35, 7.5, 0.18, 0.9);
+    addBox(doorway, materials.orange, 0, 0.39, 0.35, 7.5, 0.08, 0.12);
+
+    // Interior passage.
+    const passage = new THREE.Group();
+    passage.position.set(0, 0, -8.2);
+    station.add(passage);
+
+    addBox(passage, materials.wall, 0, 2.05, 0, 8, 4.1, 0.45);
+    addBox(passage, materials.wallLight, 0, 2.05, 0, 7.5, 0.25, 0.55);
+
+    for (const x of [-3.4, 3.4]) {
+      addBox(passage, materials.wallDark, x, 2.05, 0, 0.35, 4.1, 0.55);
+    }
+
+    // Curved pipe runs into the passage.
+    const pipeCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.8, 3.0, -1.5),
+      new THREE.Vector3(-1.8, 3.0, -3.8),
+      new THREE.Vector3(-1.8, 2.8, -6.5),
+      new THREE.Vector3(-1.8, 2.8, -9.4)
+    ]);
+
+    const pipe = new THREE.Mesh(
+      new THREE.TubeGeometry(pipeCurve, 24, 0.22, 10, false),
+      materials.copper
+    );
+    pipe.castShadow = true;
+    passage.add(pipe);
+
+    // ---------------------------------------------------------------------
+    // Railings
+    // ---------------------------------------------------------------------
+
+    const railing = new THREE.Group();
+    railing.position.set(0, 0, 6.25);
+    station.add(railing);
+
+    addBox(railing, materials.wallDark, 0, 0.9, 0, 18, 0.16, 0.16);
+
+    for (let x = -8.5; x <= 8.5; x += 1.7) {
+      addBox(railing, materials.wallDark, x, 0.55, 0, 0.12, 1.1, 0.12);
+      addBox(railing, materials.wallDark, x, 1.08, 0, 0.12, 0.12, 0.16);
+    }
+
+    // Lower railing on the left side.
+    const leftRailing = new THREE.Group();
+    leftRailing.position.set(-8.65, 0, 0);
+    station.add(leftRailing);
+
+    addBox(leftRailing, materials.wallDark, 0, 0.9, 0, 0.16, 0.16, 15);
+    for (let z = -7; z <= 7; z += 2.1) {
+      addBox(leftRailing, materials.wallDark, 0, 0.55, z, 0.12, 1.1, 0.12);
+    }
+
+    // ---------------------------------------------------------------------
+    // Pipes and conduits
+    // ---------------------------------------------------------------------
+
+    const pipes = new THREE.Group();
+    station.add(pipes);
+
+    for (const x of [-5.8, 5.8]) {
+      addCylinder(pipes, materials.copper, x, 3.7, -5.7, 0.2, 11.5, Math.PI / 2);
+      addCylinder(pipes, materials.wallDark, x, 3.7, 5.8, 0.2, 11.5, Math.PI / 2);
+    }
+
+    // Upper horizontal pipe.
+    addCylinder(pipes, materials.wallDark, 0, 5.2, -4.7, 0.28, 18, 0);
+
+    // Vertical supports and braces.
+    for (const x of [-7.2, 7.2]) {
+      addBox(station, materials.wallDark, x, 4.7, 5.9, 0.35, 8.5, 0.4);
+      addBox(station, materials.wall, x, 4.7, 5.9, 0.65, 0.45, 0.65);
+    }
+
+    addBox(station, materials.wallDark, 0, 4.7, 5.9, 14.8, 0.4, 0.4);
+
+    // Diagonal braces.
+    const brace = addBox(
+      station,
+      materials.wallDark,
+      0,
+      4.3,
+      5.9,
+      14.8,
+      0.22,
+      0.22,
+      Math.PI / 2
+    );
+    brace.rotation.z = -0.42;
+
+    // ---------------------------------------------------------------------
+    // Storage cabinets and equipment
+    // ---------------------------------------------------------------------
+
+    const equipment = new THREE.Group();
+    equipment.position.set(5.5, 0, -1.5);
+    station.add(equipment);
+
+    for (let i = 0; i < 3; i++) {
+      const x = -0.75 + i * 0.75;
+      addBox(equipment, materials.wallDark, x, 1.15, 0, 0.62, 2.3, 1.2);
+      addBox(equipment, materials.wall, x, 1.15, 0.62, 0.48, 1.85, 0.12);
+      addBox(equipment, materials.black, x, 1.15, 0.73, 0.3, 0.55, 0.08);
+      addBox(equipment, materials.orange, x, 1.15, 0.78, 0.08, 0.18, 0.08);
+      addBox(equipment, materials.blue, x, 1.15, 0.78, 0.18, 0.18, 0.08);
+    }
+
+    // Control console.
+    const consoleGroup = new THREE.Group();
+    consoleGroup.position.set(-5.6, 0, 1.4);
+    station.add(consoleGroup);
+
+    addBox(consoleGroup, materials.wallDark, 0, 1.0, 0, 2.2, 2.0, 1.1);
+    addBox(consoleGroup, materials.wall, 0, 1.0, 0.58, 1.8, 1.5, 0.16);
+    addBox(consoleGroup, materials.black, 0, 1.0, 0.72, 1.5, 0.75, 0.12);
+
+    for (let i = 0; i < 5; i++) {
+      addBox(
+        consoleGroup,
+        i === 2 ? materials.orange : materials.black,
+        -0.55 + i * 0.3,
+        1.0,
+        0.8,
+        0.18,
+        0.18,
+        0.12
+      );
+    }
+
+    addBox(consoleGroup, materials.orange, 0, 1.0, 0.8, 0.48, 0.16, 0.12);
+
+    // Wall-mounted light bars.
+    for (const x of [-6.2, 6.2]) {
+      addBox(station, materials.light, x, 4.1, -2.6, 0.45, 0.16, 2.3);
+    }
+
+    // ---------------------------------------------------------------------
+    // Exterior structure and windows
+    // ---------------------------------------------------------------------
+
+    const exterior = new THREE.Group();
+    station.add(exterior);
+
+    // Right-side wall panels.
+    for (let y = 0; y < 7; y++) {
+      addBox(
+        exterior,
+        y % 2 === 0 ? materials.wall : materials.wallLight,
+        9.4,
+        1.2 + y * 1.2,
+        0,
+        0.45,
+        1.05,
+        16
+      );
+    }
+
+    // Window bank.
+    for (let y = 0; y < 3; y++) {
+      for (let z = -5.5; z <= 5.5; z += 1.65) {
+        addBox(
+          exterior,
+          materials.glass,
+          8.75,
+          2.0 + y * 1.35,
+          z,
+          0.1,
+          0.82,
+          1.2
+        );
+      }
+    }
+
+    // Upper gantry.
+    addBox(exterior, materials.wallDark, 0, 6.8, 0, 18, 0.45, 1.2);
+    addBox(exterior, materials.wall, 0, 6.8, 0.72, 18, 0.35, 0.16);
+
+    for (let x = -8; x <= 8; x += 2) {
+      addBox(exterior, materials.wallDark, x, 6.8, 0.8, 0.14, 0.4, 0.14);
+    }
+
+    // Hanging service modules.
+    for (const x of [-5.5, 0, 5.5]) {
+      addBox(exterior, materials.wallDark, x, 5.85, 0, 1.25, 1.0, 1.1);
+      addBox(exterior, materials.wall, x, 5.85, 0.58, 1.05, 0.75, 0.12);
+      addBox(exterior, materials.orange, x, 5.85, 0.68, 0.42, 0.15, 0.12);
+    }
+
+    // ---------------------------------------------------------------------
+    // Rock formations / distant exterior
+    // ---------------------------------------------------------------------
+
+    const rocks = new THREE.Group();
+    rocks.position.set(0, -0.4, 11.5);
+    station.add(rocks);
+
+    const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+
+    const rockData = [
+      [-3.2, 0.2, 0, 1.1, 0.8, 0.8, 0.2],
+      [0.5, 0.35, 0.3, 1.3, 1.1, 0.9, -0.4],
+      [3.2, 0.1, -0.2, 1.0, 0.75, 0.8, 0.5],
+      [-4.2, -0.1, 1.2, 0.8, 0.6, 0.7, -0.2],
+      [4.3, -0.15, 1.5, 0.9, 0.7, 0.8, 0.1],
+      [-1.5, 0.2, 2.2, 0.7, 0.55, 0.65, 0.3],
+      [2.1, 0.2, 2.4, 0.65, 0.55, 0.65, -0.2]
+    ];
+
+    for (const data of rockData) {
+      const rock = new THREE.Mesh(rockGeometry, data[6] > 0 ? materials.rockLight : materials.rock);
+      rock.position.set(data[0], data[1], data[2]);
+      rock.scale.set(data[3], data[4], data[5]);
+      rock.rotation.set(data[6], data[7], data[8]);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      rocks.add(rock);
+    }
+
+    // Distant wall / space backdrop.
+    addBox(scene, materials.wallDark, 0, 5.5, -18, 35, 10, 0.8);
+    for (let x = -15; x <= 15; x += 2) {
+      addBox(scene, materials.wall, x, 5.5, -17.55, 1.6, 8.5, 0.15);
+    }
+
+    // ---------------------------------------------------------------------
+    // Decorative details
+    // ---------------------------------------------------------------------
+
+    // Small wall vents.
+    for (const x of [-7.2, 7.2]) {
+      for (let y = 1.1; y < 5.3; y += 0.62) {
+        addBox(station, materials.black, x, y, 5.55, 0.62, 0.12, 0.16);
+      }
+    }
+
+    // Cable conduits.
+    for (const x of [-6.6, 6.6]) {
+      addCylinder(station, materials.copper, x, 4.2, 5.5, 0.08, 5.8, Math.PI / 2);
+    }
+
+    // Small glowing indicator lights.
+    for (const x of [-4.1, 4.1]) {
+      addBox(station, materials.warmLight, x, 3.1, 5.55, 0.2, 0.12, 0.12);
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls implemented directly
+    // ---------------------------------------------------------------------
+
+    const cameraState = {
+      target: new THREE.Vector3(0, 2.3, -1.5),
+      radius: 16.5,
+      theta: 0.45,
+      phi: 1.16
+    };
+
+    const defaultCamera = {
+      target: cameraState.target.clone(),
+      radius: cameraState.radius,
+      theta: cameraState.theta,
+      phi: cameraState.phi
+    };
+
+    const canvas = renderer.domElement;
+    const pointer = new THREE.Vector2();
+    const previousPointer = new THREE.Vector2();
+    let dragging = false;
+    let panning = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    canvas.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousPointer.set(event.clientX, event.clientY);
+      lastX = event.clientX;
+      lastY = event.clientY;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = panning ? "move" : "grabbing";
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousPointer.x;
+      const dy = event.clientY - previousPointer.y;
+      previousPointer.set(event.clientX, event.clientY);
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.getWorldDirection(right);
+        right.cross(camera.up).normalize();
+        up.cross(right).normalize();
+
+        const panScale = cameraState.radius * 0.0015;
+        cameraState.target.addScaledVector(right, -dx * panScale);
+        cameraState.target.addScaledVector(up, dy * panScale);
+        cameraState.target.x = THREE.MathUtils.clamp(cameraState.target.x, -8, 8);
+        cameraState.target.y = THREE.MathUtils.clamp(cameraState.target.y, 0.2, 6);
+        cameraState.target.z = THREE.MathUtils.clamp(cameraState.target.z, -8, 8);
+      } else {
+        cameraState.theta -= dx * 0.005;
+        cameraState.phi = THREE.MathUtils.clamp(
+          cameraState.phi - dy * 0.005,
+          0.22,
+          Math.PI / 2 - 0.08
+        );
+      }
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      panning = false;
+      canvas.style.cursor = "grab";
+      if (event && canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", endDrag);
+    canvas.addEventListener("pointercancel", endDrag);
+    canvas.addEventListener("pointerleave", (event) => {
+      if (dragging && event.buttons === 0) endDrag(event);
+    });
+
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      cameraState.radius = THREE.MathUtils.clamp(
+        cameraState.radius * Math.exp(event.deltaY * 0.001),
+        6.5,
+        28
+      );
+    }, { passive: false });
+
+    // Gentle idle movement until the user interacts.
+    const clock = new THREE.Clock();
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+
+      camera.position.set(
+        cameraState.target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+
+      camera.lookAt(cameraState.target);
+    }
+
+    function resetCamera() {
+      cameraState.target.copy(defaultCamera.target);
+      cameraState.radius = defaultCamera.radius;
+      cameraState.theta = defaultCamera.theta;
+      cameraState.phi = defaultCamera.phi;
+      updateCamera();
+    }
+
+    canvas.addEventListener("dblclick", resetCamera);
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      // Subtle light pulse.
+      materials.light.emissiveIntensity = 2.25 + Math.sin(elapsed * 1.8) * 0.25;
+      warmFill.intensity = 16 + Math.sin(elapsed * 1.3) * 1.5;
+
+      // Slow, restrained camera drift only before user input.
+      if (!dragging && performance.now() - lastInteraction < 2500) {
+        cameraState.theta += Math.sin(elapsed * 0.18) * 0.00035;
+        cameraState.phi += Math.cos(elapsed * 0.16) * 0.0003;
+      }
+
+      updateCamera();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
