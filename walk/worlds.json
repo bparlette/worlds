@@ -84,6 +84,13 @@
     "module": "modules/022.js"
   },
   {
+    "id": "026",
+    "title": "Castlevania: Symphony of the Night",
+    "sub": "Dracula&#x27;s Throne Room",
+    "system": "Console",
+    "module": "modules/026.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
