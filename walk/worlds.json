@@ -203,6 +203,13 @@
     "module": "modules/071.js"
   },
   {
+    "id": "072",
+    "title": "Mortal Kombat X",
+    "sub": "Training Room Stage",
+    "system": "Console",
+    "module": "modules/072.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
