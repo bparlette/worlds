@@ -465,29 +465,6 @@
       scene.add(tuft);
     }
 
-    // Small foreground block details.
-    block(-1.8, 0.08, 1.25, materials.brickDark, 0.7, 0.22, 0.55);
-    block(0.4, 0.08, 1.35, materials.brickDark, 0.65, 0.22, 0.5);
-    block(1.2, 0.08, 1.4, materials.brickDark, 0.55, 0.22, 0.45);
-
-    // Pixel-style grass tufts along the front edge.
-    const grassColors = [0x39b967, 0x49c976, 0x31a95f];
-
-    for (let i = 0; i < 22; i++) {
-      const x = -11.5 + i * 1.08;
-      const material = new THREE.MeshStandardMaterial({
-        color: grassColors[i % grassColors.length],
-        roughness: 0.95
-      });
-
-      const tuft = new THREE.Mesh(voxelGeometry, material);
-      tuft.position.set(x, 0.48, 1.02 + (i % 3) * 0.08);
-      tuft.scale.set(0.2, 0.22 + (i % 2) * 0.08, 0.2);
-      tuft.rotation.y = (i * 0.7) % (Math.PI * 2);
-      tuft.castShadow = true;
-      scene.add(tuft);
-    }
-
     // Custom orbit controls implemented directly.
     const controls = {
       azimuth: 0.78,

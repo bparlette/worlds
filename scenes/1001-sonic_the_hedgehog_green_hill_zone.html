@@ -366,8 +366,8 @@
 
     function addRing(x, y, z, material = materials.gold) {
       const group = new THREE.Group();
-      const outer = new THREE.TorusGeometry(0.25, 0.065, 8, 24);
-      const inner = new THREE.TorusGeometry(0.16, 0.055, 8, 24);
+      const outer = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.065, 8, 24), material);
+      const inner = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.055, 8, 24), material);
       outer.rotation.y = Math.PI / 2;
       inner.rotation.y = Math.PI / 2;
       outer.castShadow = true;

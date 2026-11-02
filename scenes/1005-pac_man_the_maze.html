@@ -347,7 +347,7 @@
       }
 
       // Begin at a known location.
-      const current = cells[0];
+      let current = cells[0];
       maze.set(`${current.x},${current.z}`, {
         x: current.x,
         z: current.z,
@@ -461,6 +461,9 @@
       }
 
       start.set(0, 0, 0);
+    }
+
+    carveMaze();
 
       // ------------------------------------------------------------
       // Decorative particles

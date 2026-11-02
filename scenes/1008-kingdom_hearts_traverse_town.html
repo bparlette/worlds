@@ -491,10 +491,10 @@
     }
 
     // -------------------------------------------------------------------------
-    // Center jewelery building
+    // Center jewelry building
     // -------------------------------------------------------------------------
-    const jewelery = new THREE.Group();
-    jewelery.position.set(0, 0, 0);
+    const jewelry = new THREE.Group();
+    jewelry.position.set(0, 0, 0);
     scene.add(jewelry);
 
     b(jewelry, 10.8, 7.0, 7.0, mat.plasterWarm, 0, 3.5, 0);
@@ -511,7 +511,7 @@
     gable.scale.z = .76;
     gable.castShadow = true;
     gable.receiveShadow = true;
-    jewelery.add(gable);
+    jewelry.add(gable);
 
     // Timber facade
     for (const x of [-4.8, -2.4, 0, 2.4, 4.8]) {
@@ -534,7 +534,7 @@
       })
     );
     door.position.set(0, 1.8, 3.84);
-    jewelery.add(door);
+    jewelry.add(door);
 
     // Side windows
     for (const x of [-3.6, 3.6]) {
@@ -571,7 +571,7 @@
       new THREE.MeshBasicMaterial({ map: fleurTexture })
     );
     fleur.position.set(0, 6.75, 3.88);
-    jewelery.add(fleur);
+    jewelry.add(fleur);
 
     sign("JEWELRY", 4.2, 1.1, 0, 7.65, 3.95, "#ffd37a");
 

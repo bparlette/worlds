@@ -845,6 +845,8 @@
       [3.7, 4.65, -3.7]
     ];
 
+    const shimmerLights = [];
+
     for (const [x, y, z] of lightPositions) {
       voxelBatch(
         [
@@ -856,6 +858,7 @@
       const glow = new THREE.PointLight(0xffd58a, 1.3, 5.5, 2);
       glow.position.set(x, y - 0.15, z);
       scene.add(glow);
+      shimmerLights.push(glow);
     }
 
     // -------------------------------------------------------------------------
@@ -950,13 +953,8 @@
       const elapsed = clock.getElapsedTime();
 
       // Gentle light shimmer.
-      for (let i = 0; i < lightPositions.length; i++) {
-        const [x, y, z] = lightPositions[i];
-        const light = scene.getObjectByPosition(new THREE.Vector3(x, y - 0.15, z));
-
-        if (light && light.isPointLight) {
-          light.intensity = 1.15 + Math.sin(elapsed * 0.7 + i) * 0.12;
-        }
+      for (let i = 0; i < shimmerLights.length; i++) {
+        shimmerLights[i].intensity = 1.15 + Math.sin(elapsed * 0.7 + i) * 0.12;
       }
 
       renderer.render(scene, camera);
