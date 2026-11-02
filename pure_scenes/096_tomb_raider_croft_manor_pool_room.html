@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Sunken Temple</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #08090c;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    #hud {
+      position: fixed;
+      top: 18px;
+      left: 20px;
+      z-index: 2;
+      color: #f3dfad;
+      pointer-events: none;
+      text-shadow: 0 2px 12px #000;
+    }
+    #hud h1 { margin: 0 0 5px; font-size: 20px; letter-spacing: .12em; }
+    #hud p { margin: 0; color: #bca67f; font-size: 12px; }
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 2;
+      padding: 9px 12px;
+      border: 1px solid rgba(239, 218, 177, .22);
+      border-radius: 7px;
+      color: #d8c49d;
+      background: rgba(10, 10, 13, .65);
+      font-size: 11px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <h1>Sunken Temple</h1>
+    <p>Explore the flooded chamber in voxel style</p>
+  </div>
+  <div id="help">Drag to orbit · Scroll to zoom</div>
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x08090c);
+    scene.fog = new THREE.Fog(0x101116, 22, 58);
+
+    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 100);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    document.body.appendChild(renderer.domElement);
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // Deterministic procedural textures, assembled from small voxels.
+    function makeVoxelTexture(size, draw) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const cell = size / 24;
+      draw(ctx, cell);
+      const image = ctx.getImageData(0, 0, size, size);
+      for (let i = 0; i < image.data.length; i += 4) {
+        const n = Math.sin(i * 0.071) * 8 + Math.sin(i * 0.19) * 4;
+        image.data[i] = Math.max(0, Math.min(255, image.data[i] + n));
+        image.data[i + 1] = Math.max(0, Math.min(255, image.data[i + 1] + n));
+        image.data[i + 2] = Math.max(0, Math.min(255, image.data[i + 2] + n));
+      }
+      ctx.putImageData(image, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      return tex;
+    }
+
+    const floorTex = makeVoxelTexture(512, (ctx, cell) => {
+      ctx.fillStyle = "#81745b";
+      ctx.fillRect(0, 0, 512, 512);
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 24; x++) {
+          const v = 145 + ((x * 7 + y * 11) % 31);
+          ctx.fillStyle = `rgb(${v + 24},${v + 17},${v - 4})`;
+          ctx.fillRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
+          ctx.strokeStyle = "rgba(255,225,165,.12)";
+          ctx.strokeRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    });
+    floorTex.repeat.set(7, 7);
+
+    const wallTex = makeVoxelTexture(512, (ctx, cell) => {
+      ctx.fillStyle = "#4b3022";
+      ctx.fillRect(0, 0, 512, 512);
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 24; x++) {
+          const warm = 137 + ((x * 3 + y * 5) % 28);
+          ctx.fillStyle = `rgb(${warm + 28},${warm + 12},${warm - 10})`;
+          ctx.fillRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
+          ctx.fillStyle = "rgba(255,220,150,.055)";
+          ctx.fillRect(x * cell + 2, y * cell + 2, cell - 4, 2);
+        }
+      }
+    });
+    wallTex.repeat.set(4, 2);
+
+    const frescoTex = makeVoxelTexture(512, (ctx, cell) => {
+      ctx.fillStyle = "#765035";
+      ctx.fillRect(0, 0, 512, 512);
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 24; x++) {
+          const g = 125 + ((x * 4 + y * 7) % 35);
+          ctx.fillStyle = `rgb(${g + 25},${g + 10},${g - 8})`;
+          ctx.fillRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
+          ctx.fillStyle = "rgba(255,218,145,.08)";
+          ctx.fillRect(x * cell + 2, y * cell + 2, cell - 4, 2);
+        }
+      }
+    });
+    frescoTex.repeat.set(2, 1);
+
+    const darkTex = makeVoxelTexture(512, (ctx, cell) => {
+      ctx.fillStyle = "#17171b";
+      ctx.fillRect(0, 0, 512, 512);
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 24; x++) {
+          const g = 25 + ((x * 9 + y * 3) % 22);
+          ctx.fillStyle = `rgb(${g + 18},${g + 15},${g + 10})`;
+          ctx.fillRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    });
+    darkTex.repeat.set(2, 2);
+
+    function material(tex, color = 0xffffff, roughness = .92, metalness = 0) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        map: tex,
+        roughness,
+        metalness
+      });
+    }
+
+    const floorMat = material(floorTex, 0xb8aa88);
+    const wallMat = material(wallTex, 0xb99a72, .96);
+    const frescoMat = material(frescoTex, 0xd4b383, .95);
+    const darkMat = material(darkTex, 0x66626a, .88);
+    const woodMat = material(new THREE.CanvasTexture(
+      document.createElement("canvas").getContext("2d"),
+      0xffffff, .9
+    ));
+    woodMat.map = new THREE.CanvasTexture(
+      document.createElement("canvas");
+      const c = woodMat.map.canvas;
+      c.width = c.height = 256;
+      c.fillStyle = "#49301f";
+      c.fillRect(0, 0, 256, 256);
+      c.fillStyle = "rgba(190,125,70,.1)";
+      for (let i = 0; i < 45; i++) {
+        c.fillRect((i * 13) % 256, 0, 3, 256);
+      }
+      woodMat.map.wrapS = woodMat.map.wrapT = THREE.RepeatWrapping;
+      woodMat.map.repeat.set(2, 2);
+    );
+
+    // Shared voxel blocks.
+    const block = (w, h, d, mat, x, y, z, cast = true, receive = true) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      world.add(mesh);
+      return mesh;
+    };
+
+    function buildWall(x, z, width, height, direction = 1, fresco = true) {
+      const cell = 1.25;
+      const cols = Math.ceil(width / cell);
+      const rows = Math.ceil(height / cell);
+
+      for (let ix = 0; ix < cols; ix++) {
+        for (let iy = 0; iy < rows; iy++) {
+          const px = x - width / 2 + (ix + .5) * cell;
+          const py = -height / 2 + (iy + .5) * cell;
+          let mat = fresco ? (ix + iy) % 5 === 0 ? darkMat : frescoMat : wallMat;
+          block(Math.min(cell * .97, width / cols - .08), Math.min(cell * .97, height / rows - .08), .42, mat,
+            px, py, z, true, true);
+        }
+      }
+    }
+
+    function buildColumn(x, z, radius = 1.25) {
+      const cell = .62;
+      const levels = [
+        { y: -2.4, mat: darkMat, size: 1.45 },
+        { y: -1.75, mat: darkMat, size: 1.45 },
+        { y: -1.1, mat: frescoMat, size: 1.55 },
+        { y: -.45, mat: frescoMat, size: 1.55 },
+        { y: .2, mat: darkMat, size: 1.5 },
+        { y: .85, mat: darkMat, size: 1.5 }
+      ];
+      levels.forEach((l, i) => {
+        block(l.size, .68, l.size, l.mat, x, l.y, z, true, true);
+      });
+      block(1.7, .32, 1.7, darkMat, x, 2.12, z, true, true);
+    }
+
+    // Floor: broad raised rim and a sunken rectangular pool.
+    block(22, .45, 16, floorMat, 0, -.35, 0, false, true);
+    block(20.6, .38, 14.6, floorMat, 0, -.08, 0, false, true);
+
+    // Pool basin.
+    block(8.2, 1.15, 7.2, darkMat, 0, -.78, 0, false, true);
+    block(8.6, .28, 7.6, floorMat, 0, -.18, 0, false, true);
+
+    // Cracked water surface, made from many small raised voxel tiles.
+    const waterMat = material(new THREE.CanvasTexture(
+      document.createElement("canvas");
+      const c = waterMat.map.canvas;
+      c.width = c.height = 512;
+      c.fillStyle = "#162d35";
+      c.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 1800; i++) {
+        const x = (i * 83) % 512;
+        const y = (i * 47) % 512;
+        const r = 1 + ((i * 11) % 5);
+        c.strokeStyle = i % 3 === 0 ? "rgba(110,205,215,.42)" : "rgba(72,151,166,.25)";
+        c.lineWidth = .7;
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x + r, y + (i % 2 ? 1.5 : -.7));
+        c.stroke();
+      }
+      waterMat.map.wrapS = waterMat.map.wrapT = THREE.RepeatWrapping;
+      waterMat.map.repeat.set(3, 3);
+      waterMat.map.needsUpdate = true;
+    }, 0x73b3bd, .22, .18);
+
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(8.15, 7.15), waterMat);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -.005;
+    water.receiveShadow = true;
+    world.add(water);
+
+    // Main walls and columns.
+    buildWall(-10, -5.5, 15, 7.5, 1, true);
+    buildWall(10, -5.5, 15, 7.5, 1, true);
+    buildWall(-10, 6.5, 15, 7.5, -1, true);
+    buildWall(10, 6.5, 15, 7.5, -1, true);
+
+    // Rear wall with a central doorway.
+    block(3.8, 7.5, .45, darkMat, 0, 3.55, -8.8, true, true);
+    block(12.8, 7.5, .45, wallMat, 0, 3.55, -8.8, true, true);
+    buildColumn(-6.2, -8.55, 1.1);
+    buildColumn(6.2, -8.55, 1.1);
+
+    // Side alcove details.
+    for (const x of [-7.8, -4.8, 4.8, 7.8]) {
+      block(.75, 4.6, .32, darkMat, x, 2.15, -8.55, true, true);
+      block(.55, 3.5, .34, frescoMat, x, 2.0, -8.55, true, true);
+    }
+
+    // Pillars framing the opening.
+    buildColumn(-4.4, 6.1, 1.25);
+    buildColumn(4.4, 6.1, 1.25);
+
+    // Rear doorway and warm interior room.
+    block(4.1, 4.6, .18, woodMat, 0, 2.15, -10.15, true, true);
+    block(4.5, .25, .22, woodMat, 0, 4.5, -10.15, true, true);
+    for (const x of [-1.75, 1.75]) {
+      block(.22, 4.6, .2, woodMat, x, 2.15, -10.15, true, true);
+    }
+    block(3.2, 3.4, 1.2, wallMat, 0, 1.6, -11.35, true, true);
+    block(4.2, 3.4, 1.2, wallMat, 0, 1.6, -11.35, true, true);
+
+    // Ceiling beams and upper walkway.
+    for (let z = -7.5; z <= 7.5; z += 3) {
+      block(21.5, .38, .45, darkMat, 0, 7.35, z, true, true);
+    }
+    block(21.5, .3, 15, darkMat, 0, 7.62, 0, true, true);
+    for (const x of [-9, 9]) {
+      block(.5, 7.2, .5, darkMat, x, 3.6, -7.5, true, true);
+      block(.5, 7.2, .5, darkMat, x, 3.6, 7.5, true, true);
+    }
+
+    // Benches along the walls.
+    for (const z of [-3.8, 1.8, 4.4]) {
+      block(8.2, .38, .75, woodMat, -4.8, .25, z, true, true);
+      block(8.2, .75, .22, woodMat, -4.8, .88, z + .34, true, true);
+    }
+    for (const z of [-3.8, 1.8, 4.4]) {
+      block(8.2, .38, .75, woodMat, 4.8, .25, z, true, true);
+      block(8.2, .75, .22, woodMat, 4.8, .88, z + .34, true, true);
+    }
+
+    // Low central altar and broken artifacts.
+    block(3.2, .55, 1.8, darkMat, 0, .25, 1.6, true, true);
+    block(2.2, .35, 1.15, woodMat, 0, .6, 1.6, true, true);
+    block(.65, .5, .65, frescoMat, -2.2, .35, -.4, true, true);
+    block(.55, .42, .55, darkMat, 2.15, .3, -.45, true, true);
+
+    // Small floating dust motes, voxelized points.
+    const moteCount = 220;
+    const motePositions = new Float32Array(moteCount * 3);
+    for (let i = 0; i < moteCount; i++) {
+      motePositions[i * 3] = (Math.sin(i * 12.7) * .5 + .5) * 19;
+      motePositions[i * 3 + 1] = .5 + Math.sin(i * 21.1) * 5.5;
+      motePositions[i * 3 + 2] = (Math.cos(i * 9.3) * .5 + .5) * 13;
+    }
+    const moteGeometry = new THREE.BufferGeometry();
+    moteGeometry.setAttribute("position", new THREE.BufferAttribute(motePositions, 3));
+    const moteMaterial = new THREE.PointsMaterial({
+      color: 0xd9c996,
+      size: .055,
+      transparent: true,
+      opacity: .42,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const motes = new THREE.Points(moteGeometry, moteMaterial);
+    world.add(motes);
+
+    // Lighting: cool shafts, warm interior, and subtle ambient illumination.
+    scene.add(new THREE.AmbientLight(0x82929a, .38));
+
+    const sun = new THREE.DirectionalLight(0xffe2ad, 3.2);
+    sun.position.set(-8, 13, 7);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 45;
+    sun.shadow.bias = -.00035;
+    scene.add(sun);
+
+    const coolFill = new THREE.DirectionalLight(0x73b8d0, 1.25);
+    coolFill.position.set(9, 7, -10);
+    scene.add(coolFill);
+
+    const doorwayLight = new THREE.PointLight(0xffa65c, 24, 13, 2);
+    doorwayLight.position.set(0, 3.2, -9.3);
+    scene.add(doorwayLight);
+
+    const poolGlow = new THREE.PointLight(0x65b7c7, 10, 11, 2);
+    poolGlow.position.set(0, .2, .2);
+    scene.add(poolGlow);
+
+    // Custom orbit controls implemented directly, without addons.
+    let yaw = .58;
+    let pitch = .32;
+    let radius = 23;
+    const target = new THREE.Vector3(0, 1.4, 0);
+    const spherical = new THREE.Spherical();
+    const initial = { yaw, pitch, radius };
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      spherical.set(radius, yaw, pitch);
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      yaw -= dx * .005;
+      pitch = THREE.MathUtils.clamp(pitch + dy * .004, -.1, 1.15);
+      updateCamera();
+    });
+    function endDrag(event) {
+      dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      radius = THREE.MathUtils.clamp(radius + event.deltaY * .012, 10, 38);
+      updateCamera();
+    }, { passive: false });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // Gentle water shimmer and drifting dust.
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      water.position.y = Math.sin(t * 1.15) * .018;
+      water.rotation.z = Math.sin(t * .75) * .003;
+      motes.rotation.y = t * .018;
+      motes.position.y = Math.sin(t * .22) * .18;
+      doorwayLight.intensity = 23 + Math.sin(t * 1.4) * 1.4;
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
