@@ -26,6 +26,16 @@
   #hud { position:absolute; left:10px; bottom:8px; color:#fff; font-size:12px; text-shadow:0 1px 3px #000; opacity:.85; pointer-events:none; }
   footer { max-width:1100px; margin:0 auto; padding:0 20px 30px; color:#5c5f6b; font-size:12.5px; line-height:1.6; }
 </style>
+<script>
+  window.phase = 0;
+  const dummyElV = () => ({ style:{}, classList:{add:()=>{},remove:()=>{}}, appendChild:()=>{}, prepend:()=>{}, setAttribute:()=>{}, addEventListener:()=>{}, removeEventListener:()=>{} });
+  const realGEBIV = Document.prototype.getElementById;
+  Document.prototype.getElementById = function(id){ return realGEBIV.call(this, id) || dummyElV(); };
+  const realAppendV = Node.prototype.appendChild;
+  Node.prototype.appendChild = function(n){ if (!(n instanceof Node)) return n; return realAppendV.call(this, n); };
+</script>
+<script src="./stills-a.js"></script>
+<script src="./stills-b.js"></script>
 </head>
 <body>
 <header>
@@ -38,7 +48,8 @@
 </div>
 <nav id="tabs"></nav>
 <div id="note"></div>
-<div id="stage"><div id="wrap"><canvas id="cv"></canvas><div id="hud">drag to orbit · scroll / pinch to zoom</div></div></div>
+<div id="stage"><div id="wrap"><canvas id="cv"></canvas>
+    <img id="still" alt="Baked still of this attempt" style="display:none;width:100%;border-radius:8px"><div id="hud">drag to orbit · scroll / pinch to zoom</div></div></div>
 <footer>Attempts 1–4 are the 2×2 test (commit c38f8ab9), checked in as generated. Attempt 4's module was regenerated after a converter harness fix (see its note). Attempt 5 (vision description → parts) is commit 12d7b936.</footer>
 
 <script type="importmap">
@@ -55,7 +66,7 @@ const ATTEMPTS = [
   { key:'text-json', label:'3 · Text → JSON', kind:'module', file:'./text-json.module.js',
     note:'<b>Built cleanly, faithfully to its text.</b> The description it was given lists ingredients only (brick floor, green pipes, gold blocks, hills — no layout), so it arranged them as a plaza and named it "Warp World". Brick blocks became boundary walls; the clouds went missing.' },
   { key:'text-js', label:'4 · Text → JS', kind:'module', file:'./text-js.module.js',
-    note:'<b>Built — after a harness fix.</b> The 2×2 scored this as a crash, but the crash was in our converter\'s test dummy (a camera stub that could not chain vector calls), not in the scene. With the stub fixed, the scene converts and validates. Its content tracks the same description as attempt 3.' },
+    note:'<b>Built — after a harness fix.</b> The 2×2 scored this as a crash, but the crash was in our converter\'s test dummy (a camera stub that could not chain vector calls), not in the scene. With the stub fixed, the scene converts and validates. One bug is the scene\'s own: it uses an undeclared \'phase\' variable, so the viewer supplies a default value to let it build. Its content tracks the same description as attempt 3.' },
   { key:'fifth', label:'5 · Vision description → JSON', kind:'json', file:'./image-text-json.json',
     note:'<b>Failed too.</b> The model described the image in words, then built parts from its own description — and still ran to the token cap: 207 of its parts landed outside the world and had to be clamped, so the gate rejected it (repair ratio 1.02). Shown here from the salvaged parts, like attempt 1. The two-step idea did not rescue the small model.' },
 ];
@@ -114,6 +125,9 @@ async function loadAttempt(a) {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.key === a.key));
   document.getElementById('note').innerHTML = '<div class="card">' + a.note + '</div>';
   clearWorld();
+  const stillEl = document.getElementById('still');
+  if (stillEl) { stillEl.style.display = 'none'; }
+  document.getElementById('cv').style.display = 'block';
   try {
     if (a.kind === 'module') {
       const mod = await import(a.file);
@@ -133,7 +147,14 @@ async function loadAttempt(a) {
       show(built.group, (t) => built.tickers.forEach(f => f(t)));
     }
   } catch (e) {
-    document.getElementById('note').innerHTML = '<div class="card">' + a.note + '<br><br>Could not render this attempt: ' + e.message + '</div>';
+    const still = document.getElementById('still');
+    const uri = (window.STILLS || {})[ATTEMPTS.indexOf(a) + 1];
+    if (uri) {
+      still.src = uri; still.style.display = 'block'; document.getElementById('cv').style.display = 'none';
+      document.getElementById('note').innerHTML = '<div class="card">' + a.note + '<br><br>Live 3D did not start on this device (' + e.message + ') \u2014 showing a baked still of this attempt instead.</div>';
+    } else {
+      document.getElementById('note').innerHTML = '<div class="card">' + a.note + '<br><br>Could not render this attempt: ' + e.message + '</div>';
+    }
   }
 }
 
