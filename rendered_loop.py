@@ -64,14 +64,14 @@ def git_commit_and_push(msg):
         print("Git commit output:\n", res_commit.stdout.strip())
         
         # Try pushing, retry with rebase if remote changed
-        for attempt in range(3):
+        for attempt in range(5):
             push_res = subprocess.run(["git", "push", "origin", "main"], cwd=ROOT, capture_output=True, text=True)
             if push_res.returncode == 0:
                 print("Git push successful!")
                 return True
-            print(f"Push attempt {attempt+1} failed, rebasing...")
+            print(f"Push attempt {attempt+1} failed, rebasing on origin/main...")
             subprocess.run(["git", "pull", "--rebase", "origin", "main"], cwd=ROOT, capture_output=True, text=True)
-            time.sleep(2)
+            time.sleep(3)
     except Exception as e:
         print("Git push exception:", e)
     return False
@@ -101,7 +101,22 @@ def screenshot(scene_path, out_png):
         f"--screenshot={out_png}",
         f"file://{os.path.abspath(scene_path)}"
     ]
-    subprocess.run(cmd, capture_output=True, timeout=30)
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        print(f"Warning: Screenshot timed out for {scene_path}, retrying without webgl blocklist...")
+        try:
+            cmd_fallback = [
+                CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+                "--window-size=1000,700", "--virtual-time-budget=3000",
+                f"--screenshot={out_png}",
+                f"file://{os.path.abspath(scene_path)}"
+            ]
+            subprocess.run(cmd_fallback, capture_output=True, timeout=30)
+        except Exception as e:
+            print(f"Fallback screenshot failed: {e}")
+    except Exception as e:
+        print(f"Screenshot exception: {e}")
 
 def make_thumb(src_png, dst_jpg):
     im = Image.open(src_png).convert("RGB")
