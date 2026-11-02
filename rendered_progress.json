@@ -166,5 +166,13 @@
     "status": "pass",
     "filename": "1021-banjo_kazooie_spiral_mountain.html",
     "updated_at": "2026-11-02 02:00 EST"
+  },
+  "22": {
+    "rank": 22,
+    "game": "The Legend of Zelda: Twilight Princess",
+    "name": "Temple of Time",
+    "status": "pass",
+    "filename": "1022-the_legend_of_zelda_twilight_princess_temple_of_time.html",
+    "updated_at": "2026-11-02 02:05 EST"
   }
 }

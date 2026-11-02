@@ -1,5 +1,12 @@
 [
   {
+    "id": "002",
+    "title": "Super Mario Bros.",
+    "sub": "World 1-1",
+    "system": "",
+    "module": "modules/002.js"
+  },
+  {
     "id": "004",
     "title": "YARS' REVENGE",
     "sub": "Neutral Zone & Shield",
@@ -56,11 +63,25 @@
     "module": "modules/018.js"
   },
   {
+    "id": "019",
+    "title": "Blaster Master",
+    "sub": "Area 1 Underworld",
+    "system": "NES",
+    "module": "modules/019.js"
+  },
+  {
     "id": "020",
     "title": "Kirby&#x27;s Dream Land",
     "sub": "Dream Land — Star Door Hill",
     "system": "Console",
     "module": "modules/020.js"
+  },
+  {
+    "id": "022",
+    "title": "The Legend of Zelda: Twilight Princess",
+    "sub": "Temple of Time",
+    "system": "Console",
+    "module": "modules/022.js"
   },
   {
     "id": "1001",
