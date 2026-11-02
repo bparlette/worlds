@@ -140,6 +140,13 @@
     "module": "modules/045.js"
   },
   {
+    "id": "046",
+    "title": "Hollow Knight",
+    "sub": "The Knight&#x27;s Shell Cavern",
+    "system": "Console",
+    "module": "modules/046.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
