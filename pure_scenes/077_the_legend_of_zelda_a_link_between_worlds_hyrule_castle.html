@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Hyrule Castle</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #8fc9e8;
+      font-family: system-ui, sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    #title {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 2;
+      color: #173a5c;
+      pointer-events: none;
+      text-shadow: 0 2px 0 rgba(255,255,255,.5);
+    }
+    #title h1 {
+      margin: 0 0 4px;
+      font-size: clamp(20px, 3vw, 38px);
+      letter-spacing: .08em;
+      font-weight: 900;
+    }
+    #title p {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      opacity: .75;
+    }
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 2;
+      padding: 9px 12px;
+      border: 1px solid rgba(255,255,255,.45);
+      border-radius: 9px;
+      color: #173a5c;
+      background: rgba(255,255,255,.55);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="title">
+    <h1>VOXEL HYRULE</h1>
+    <p>Castle &amp; Sacred Realm</p>
+  </div>
+  <div id="help">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x8fc9e8);
+    scene.fog = new THREE.Fog(0x8fc9e8, 45, 110);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    // Voxel camera controls, implemented directly without addons.
+    const controls = {
+      target: new THREE.Vector3(0, 7, 0),
+      yaw: 0.08,
+      pitch: 0.15,
+      radius: 43,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const horizontal = Math.cos(controls.pitch) * controls.radius;
+      camera.position.set(
+        controls.target.x + Math.sin(controls.yaw) * horizontal,
+        controls.target.y + Math.sin(controls.pitch) * controls.radius,
+        controls.target.z + Math.cos(controls.yaw) * horizontal
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    document.body.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xeaf7ff, 0x52703a, 2.1);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff4d5, 3.2);
+    sun.position.set(-22, 35, 18);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -35;
+    sun.shadow.camera.right = 35;
+    sun.shadow.camera.top = 35;
+    sun.shadow.camera.bottom = -35;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 90;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x89bfff, 0.75);
+    fill.position.set(25, 15, -20);
+    scene.add(fill);
+
+    const voxelMaterial = (color, roughness = 0.82, metalness = 0) =>
+      new THREE.MeshStandardMaterial({ color, roughness, metalness });
+
+    const mats = {
+      grass: voxelMaterial(0x68b84f),
+      grassLight: voxelMaterial(0x79c95d),
+      grassDark: voxelMaterial(0x569b43),
+      dirt: voxelMaterial(0xa9683c),
+      path: voxelMaterial(0xd6c48f),
+      pathDark: voxelMaterial(0xbca973),
+      stone: voxelMaterial(0xdde8e7),
+      stoneLight: voxelMaterial(0xeef5f1),
+      stoneDark: voxelMaterial(0xb9c9c5),
+      trim: voxelMaterial(0x9fb7b5),
+      roof: voxelMaterial(0x346fa8),
+      roofLight: voxelMaterial(0x4a91c5),
+      roofDark: voxelMaterial(0x244f83),
+      gold: voxelMaterial(0xe7b84c, 0.45, 0.15),
+      blue: voxelMaterial(0x3779a9),
+      blueLight: voxelMaterial(0x5ca5d1),
+      green: voxelMaterial(0x3e8f43),
+      greenLight: voxelMaterial(0x55aa50),
+      greenDark: voxelMaterial(0x286d38),
+      leaf: voxelMaterial(0x4da252),
+      trunk: voxelMaterial(0x745038),
+      bone: voxelMaterial(0xc9b98f),
+      armor: voxelMaterial(0xaebfc0, 0.4, 0.25),
+      armorDark: voxelMaterial(0x667f85, 0.5, 0.2),
+      red: voxelMaterial(0xa83f3b),
+      purple: voxelMaterial(0x7652a3),
+      skin: voxelMaterial(0xd89a68),
+      hair: voxelMaterial(0x563b2d),
+      eye: voxelMaterial(0x14283a)
+    };
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const dummy = new THREE.Object3D();
+    const batches = new Map();
+
+    function voxel(x, y, z, sx = 1, sy = 1, sz = 1, material, rotationY = 0) {
+      dummy.position.set(x, y, z);
+      dummy.rotation.y = rotationY;
+      dummy.scale.set(sx, sy, sz);
+      dummy.updateMatrix();
+
+      if (!batches.has(material)) batches.set(material, []);
+      batches.get(material).push(dummy.matrix.clone());
+    }
+
+    function flushVoxels() {
+      for (const [material, matrices] of batches) {
+        const mesh = new THREE.Mesh(
+          new THREE.InstancedMesh(box, material, matrices.length),
+          material
+        );
+        matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+      }
+    }
+
+    // Ground island
+    for (let x = -24; x <= 24; x++) {
+      for (let z = -24; z <= 24; z++) {
+        const edge = Math.max(Math.abs(x) - 18, Math.abs(z) - 18);
+        const height = Math.max(0, 2 - edge * 0.17);
+        const y = -0.15 + height;
+
+        if (Math.abs(x) < 13 && Math.abs(z) < 13) {
+          voxel(x, y, z, 1, 1, 1, mats.grass);
+        } else if (height > 0) {
+          voxel(x, y, z, 1, 1, 1, mats.grassDark);
+        }
+      }
+    }
+
+    // Main castle footprint
+    const castle = {
+      xMin: -13, xMax: 13,
+      zMin: -12, zMax: 12,
+      levels: 4,
+      baseY: 0
+    };
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 0.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 1.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 2.5, z, 1, 1, 1, mats.stoneLight);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 3.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 4.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 5.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 6.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 7.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 8.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 9.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 10.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 11.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 12.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 13.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 14.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 15.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 16.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 17.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 18.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 19.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 20.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 21.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 22.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 23.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 24.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 25.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 26.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 27.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 28.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 29.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 30.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 31.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 32.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 33.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 34.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 35.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 36.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 37.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 38.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 39.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 40.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 41.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 42.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 43.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 44.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 45.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 46.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 47.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 48.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 49.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 50.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 51.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 52.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 53.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 54.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 55.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 56.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 57.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 58.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 59.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 60.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 61.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 62.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 63.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 64.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 65.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 66.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 67.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 68.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 69.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 70.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 71.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 72.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 73.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 74.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 75.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 76.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 77.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 78.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 79.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 80.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 81.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 82.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 83.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 84.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 85.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 86.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 87.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 88.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 89.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 90.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 91.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 92.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 93.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 94.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 95.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 96.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 97.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 98.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 99.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 100.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 101.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 102.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 103.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 104.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 105.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 106.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 107.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 108.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 109.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 110.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 111.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 112.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 113.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 114.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 115.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 116.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 117.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 118.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 119.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 120.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 121.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 122.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 123.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 124.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 125.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 126.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 127.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 128.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 129.5, z, 1, 1, 1, mats.stone);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs(z) <= 10) {
+          voxel(x, 130.5, z, 1, 1, 1, mats.stoneDark);
+        }
+      }
+    }
+
+    // Main building
+    for (let x = -12; x <= 12; x++) {
+      for (let z = -11; z <= 11; z++) {
+        if (Math.abs(x) <= 11 && Math.abs
