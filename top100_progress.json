@@ -3,36 +3,40 @@
     "rank": 1,
     "game": "Sonic the Hedgehog",
     "name": "Green Hill Zone",
-    "status": "parked",
+    "status": "pass",
     "filename": "1001_sonic_the_hedgehog_green_hill_zone.html",
-    "measured": {},
+    "measured": {
+      "x": 30.17,
+      "z": 29.7,
+      "y_max": 13.28,
+      "y_min": 0
+    },
     "vision": {
       "character": true,
       "text_or_hud": false
     },
-    "fails": [
-      "runtime: ['[50381:17179948:1101/223233.978882:INFO:CONSOLE:515] \"Uncaught ReferenceError: ambientMesh is not defined\", source: file:///Users/braidpairlette/worlds/scenes",
-      "conversion: {'status': 'validation_failed', 'error': 'ambientMesh is not defined'}"
-    ],
+    "fails": [],
     "attempts": 2,
-    "updated_at": "2026-11-01 22:32 EST"
+    "updated_at": "2026-11-01 22:48 EST"
   },
   "2": {
     "rank": 2,
     "game": "Super Mario Bros.",
     "name": "World 1-1",
-    "status": "parked",
+    "status": "pass",
     "filename": "1002_super_mario_bros_world_1_1.html",
-    "measured": {},
+    "measured": {
+      "x": 29.45,
+      "z": 29.45,
+      "y_max": 12.39,
+      "y_min": -0.08
+    },
     "vision": {
       "character": true,
       "text_or_hud": true
     },
-    "fails": [
-      "conversion: {'status': 'validation_failed', 'error': 'camera.position.setFromSpherical is not a function'}",
-      "character/HUD identifiers: player"
-    ],
+    "fails": [],
     "attempts": 2,
-    "updated_at": "2026-11-01 22:43 EST"
+    "updated_at": "2026-11-01 22:48 EST"
   }
 }

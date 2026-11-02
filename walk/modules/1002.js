@@ -1,0 +1,825 @@
+// @world {"id": "1002", "title": "Super Mario Bros.", "sub": "World 1-1", "system": ""}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    const p = new Proxy({}, { get: () => () => p });
+    return {
+      position: p,
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0x8fb6e5);
+    scene.fog = new THREE.Fog(0x8fb6e5, 24, 48);
+
+    camera = dummyCamera();
+
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    
+
+    const clock = new THREE.Clock();
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+
+    const mat = {
+      sky: new THREE.MeshBasicMaterial({ color: 0x8fb6e5 }),
+      cloud: new THREE.MeshStandardMaterial({
+        color: 0xf4f7ff, roughness: 1,
+        flatShading: true
+      }),
+      cloudDark: new THREE.MeshStandardMaterial({
+        color: 0xc7d9ef, roughness: 1, flatShading: true
+      }),
+      brick: new THREE.MeshStandardMaterial({
+        color: 0x9d3f24, roughness: .88,
+        flatShading: true
+      }),
+      brickDark: new THREE.MeshStandardMaterial({
+        color: 0x762d1e, roughness: .95, flatShading: true
+      }),
+      brickLight: new THREE.MeshStandardMaterial({
+        color: 0xb95a36, roughness: .86, flatShading: true
+      }),
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x756b58, roughness: 1, flatShading: true
+      }),
+      stoneLight: new THREE.MeshStandardMaterial({
+        color: 0x9a8c70, roughness: 1, flatShading: true
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x4d9b55, roughness: .92, flatShading: true
+      }),
+      greenDark: new THREE.MeshStandardMaterial({
+        color: 0x36783f, roughness: 1, flatShading: true
+      }),
+      bush: new THREE.MeshStandardMaterial({
+        color: 0x67a954, roughness: 1, flatShading: true
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x78ad57, roughness: .95, side: THREE.DoubleSide
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x9a3e2a, roughness: .92, side: THREE.BackSide
+      }),
+      wallDark: new THREE.MeshStandardMaterial({
+        color: 0x713025, roughness: 1, side: THREE.BackSide
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x9b492d, roughness: .95, side: THREE.DoubleSide
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x6f4127, roughness: .95, flatShading: true
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xe3ad35, metalness: .45, roughness: .38,
+        emissive: 0x4a2600, emissiveIntensity: .18
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x4c91df, roughness: .55, metalness: .05
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xd93b32, roughness: .65
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xf3a65c, roughness: .85
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x261b18, roughness: 1
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Lighting and atmosphere
+    // ---------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0xd9efff, 0x6a4c32, 2.1));
+
+    const sun = new THREE.DirectionalLight(0xfff2ce, 3.4);
+    sun.position.set(-10, 18, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -19;
+    sun.shadow.camera.right = 19;
+    sun.shadow.camera.top = 19;
+    sun.shadow.camera.bottom = -19;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 50;
+    sun.shadow.bias = -.00025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8ebcff, .9);
+    fill.position.set(12, 7, -10);
+    scene.add(fill);
+
+    // ---------------------------------------------------------------------
+    // Geometry helpers
+    // ---------------------------------------------------------------------
+
+    function box(w, h, d, material, x, y, z, cast = true) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function cylinder(r1, r2, h, material, x, y, z, segments = 10) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(r1, r2, h, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function sphere(radius, material, x, y, z, widthSegments = 10) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, widthSegments, 8),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function makeBrickBlock(w, h, d, x, y, z, light = false) {
+      const material = light ? mat.brickLight : mat.brick;
+      return box(w, h, d, material, x, y, z);
+    }
+
+    function makeQuestionBlock(x, y, z) {
+      const group = new THREE.Group();
+
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, .32, 1.5),
+        mat.brickDark
+      );
+      base.position.y = .16;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      group.add(base);
+
+      const top = new THREE.Mesh(
+        new THREE.BoxGeometry(1.36, .18, 1.36),
+        mat.brick
+      );
+      top.position.y = .45;
+      top.castShadow = true;
+      top.receiveShadow = true;
+      group.add(top);
+
+      const panel = new THREE.Mesh(
+        new THREE.BoxGeometry(.68, .72, .1),
+        mat.gold
+      );
+      panel.position.set(0, .48, .71);
+      panel.castShadow = true;
+      group.add(panel);
+
+      const mark = new THREE.Mesh(
+        new THREE.CylinderGeometry(.19, .19, .035, 16),
+        mat.gold
+      );
+      mark.rotation.x = Math.PI / 2;
+      mark.position.set(0, .48, .77);
+      group.add(mark);
+
+      group.position.set(x, y, z);
+      scene.add(group);
+      return group;
+    }
+
+    function makeCloud(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      const puffs = [
+        [-1.05, 0, 0, .72],
+        [-.35, .23, 0, .92],
+        [.48, .18, 0, .8],
+        [1.15, -.04, 0, .57]
+      ];
+
+      puffs.forEach(([px, py, pz, r]) => {
+        const puff = sphere(r, mat.cloud, px, py, pz, 12);
+        puff.scale.y = .58;
+        group.add(puff);
+      });
+
+      group.scale.setScalar(scale);
+      scene.add(group);
+      return group;
+    }
+
+    function makeTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+
+      const trunk = cylinder(.16, .23, 1.55, mat.wood, 0, .78, 0, 7);
+      trunk.rotation.z = -.08;
+
+      const leaves = [
+        [0, 2.05, 0, .88],
+        [-.48, 1.85, .12, .66],
+        [.5, 1.92, -.1, .64],
+        [.08, 2.45, -.08, .63]
+      ];
+
+      leaves.forEach(([px, py, pz, r]) => {
+        const leaf = sphere(r, mat.green, px, py, pz, 8);
+        leaf.scale.y = .78;
+        group.add(leaf);
+      });
+
+      scene.add(group);
+      return group;
+    }
+
+    function makeBush(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+
+      const pieces = [
+        [-.42, .35, 0, .48],
+        [.38, .42, .08, .5],
+        [.02, .58, -.12, .48]
+      ];
+
+      pieces.forEach(([px, py, pz, r]) => {
+        const b = sphere(r, mat.bush, px, py, pz, 8);
+        b.scale.y = .65;
+        group.add(b);
+      });
+
+      scene.add(group);
+      return group;
+    }
+
+    function makePipe(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      const body = cylinder(.48, .52, 1.25, mat.blue, 0, .63, 0, 14);
+      body.castShadow = true;
+      body.receiveShadow = true;
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(.49, .09, 8, 18),
+        mat.blue
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 1.25;
+      rim.castShadow = true;
+      group.add(rim);
+
+      const mouth = new THREE.Mesh(
+        new THREE.CircleGeometry(.2, 12),
+        mat.black
+      );
+      mouth.rotation.x = Math.PI / 2;
+      mouth.position.set(0, 1.28, .48);
+      group.add(mouth);
+
+      group.rotation.y = .12;
+      scene.add(group);
+      return group;
+    }
+
+    function makeGoomba(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      const head = sphere(.48, mat.brickDark, 0, .66, 0, 10);
+      head.scale.set(1, .9, .75);
+
+      const nose = sphere(.13, mat.skin, .12, .59, .29, 8);
+      nose.scale.z = .6;
+
+      const eyes = [
+        [-.14, .85, .33],
+        [.14, .85, .33]
+      ];
+
+      eyes.forEach(([x, y, z]) => {
+        const eye = sphere(.075, mat.black, x, y, z, 8);
+        eye.scale.z = .5;
+      });
+
+      const mouth = new THREE.Mesh(
+        new THREE.TorusGeometry(.095, .025, 6, 12),
+        mat.black
+      );
+      mouth.rotation.x = Math.PI / 2;
+      mouth.position.set(0, .43, .36);
+      group.add(mouth);
+
+      const legs = [
+        [-.17, .22, .18, -.18, .12],
+        [.17, .22, .18, .18, .12]
+      ];
+
+      legs.forEach(([x, y, z, ax, az]) => {
+        const leg = box(.22, .34, .18, mat.brickDark, x, y, z);
+        leg.rotation.z = ax;
+        leg.rotation.x = az;
+      });
+
+      scene.add(group);
+      return group;
+    }
+
+    function makePipeGoomba(x, z) {
+      const goomba = makeGoomba(x, z);
+      goomba.scale.setScalar(.72);
+      return goomba;
+    }
+
+    // ---------------------------------------------------------------------
+    // World layout: compact, fully enclosed within ±14.5, height ≤13
+    // ---------------------------------------------------------------------
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // Main foreground platform, centered around z=3.
+    box(24, .75, 10.5, mat.floor, 0, .38, 3.6);
+
+    // Rear elevated platform and bridge.
+    box(18.5, .72, 5.2, mat.floor, -1.2, .72, -8.6);
+
+    const bridge = makeBrickBlock(
+      12.5, .72, 3.4,
+      0, 2.05, -4.1
+    );
+    bridge.rotation.y = -.035;
+
+    // Side platforms.
+    box(5.8, .72, 6.6, mat.floor, -11.7, .38, -1.2);
+    box(5.0, .72, 5.2, mat.floor, 10.8, .38, -9.0);
+
+    // Wall capstones and block details.
+    box(29, .25, .65, mat.brickLight, 0, 1.15, -14.4);
+    box(29, .25, .65, mat.brickLight, 0, 1.15, 14.4);
+    box(.65, .25, 28.8, mat.brickLight, -14.4, 1.15, 0);
+    box(.65, .25, 28.8, mat.brickLight, 14.4, 1.15, 0);
+
+    // Rear wall block pattern.
+    for (let x = -13.5; x <= 13.5; x += 1.5) {
+      const b = makeBrickBlock(1.28, .8, .62, x, 1.0, -14.34, Math.random() > .5);
+      b.rotation.y = (Math.random() - .5) * .035;
+    }
+
+    // Side wall block pattern.
+    for (let z = -13.5; z <= 13.5; z += 1.5) {
+      const b = makeBrickBlock(.62, .8, 1.28, -14.34, 1.0, z, Math.random() > .5);
+      b.rotation.x = (Math.random() - .5) * .035;
+    }
+
+    // Foreground wall.
+    box(28.8, 1.1, .65, mat.wall, 0, .57, 14.36);
+    for (let x = -13.5; x <= 13.5; x += 1.5) {
+      const b = makeBrickBlock(1.28, .86, .62, x, .57, 14.37, x % 3 === 0);
+      b.rotation.y = (Math.random() - .5) * .025;
+    }
+
+    // Side walls.
+    box(.65, 1.1, 28.8, mat.wall, -14.36, .57, 0);
+    box(.65, 1.1, 28.8, mat.wall, 14.36, .57, 0);
+
+    // ---------------------------------------------------------------------
+    // Landmarks and environmental props
+    // ---------------------------------------------------------------------
+
+    makeQuestionBlock(-5.2, .74, -8.6);
+    makeQuestionBlock(4.2, .74, -8.6);
+    makeQuestionBlock(-11.7, .74, -1.2);
+
+    makePipe(-3.7, 9.0);
+    makePipe(5.8, 10.2);
+
+    makeTree(-8.7, 10.3, .95);
+    makeTree(7.9, 10.8, .86);
+    makeTree(-12.4, -11.6, .78);
+    makeTree(12.4, -12.0, .75);
+
+    makeBush(-6.5, 10.0, .85);
+    makeBush(3.7, 9.5, .78);
+    makeBush(-11.2, -2.0, .7);
+    makeBush(11.3, -3.5, .72);
+
+    // Small foreground bushes establish scale without clutter.
+    makeBush(-3.8, 9.2, .55);
+    makeBush(2.8, 9.0, .52);
+
+    // A few scattered bricks in the foreground.
+    [
+      [-7.8, .28, 7.0],
+      [-7.45, .28, 6.8],
+      [7.3, .28, 6.8],
+      [7.65, .28, 7.0],
+      [-9.0, .28, 4.5]
+    ].forEach(([x, y, z]) => {
+      const brick = makeBrickBlock(.9, .32, .65, x, y, z);
+      brick.rotation.y = (Math.random() - .5) * .12;
+    });
+
+    // ---------------------------------------------------------------------
+    // The required game-specific relic: the Golden Coin of Courage
+    // ---------------------------------------------------------------------
+
+    const relic = {
+      name: "The Golden Coin of Courage",
+      x: 3.1,
+      z: -2.35
+    };
+
+    const relicGroup = new THREE.Group();
+    relicGroup.position.set(relic.x, .78, relic.z);
+
+    const coin = cylinder(.58, .58, .16, mat.gold, 0, 0, 0, 24);
+    coin.castShadow = true;
+    coin.receiveShadow = true;
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(.43, .075, 8, 24),
+      mat.gold
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = .08;
+    ring.castShadow = true;
+    relicGroup.add(ring);
+
+    const heart = new THREE.Mesh(
+      new THREE.CircleGeometry(.19, 16),
+      mat.red
+    );
+    heart.rotation.x = Math.PI / 2;
+    heart.position.y = .205;
+    relicGroup.add(heart);
+
+    relicGroup.rotation.y = .25;
+    scene.add(relicGroup);
+
+    // ---------------------------------------------------------------------
+    // Enemies and player silhouette
+    // ---------------------------------------------------------------------
+
+    const goombas = [
+      makeGoomba(-8.8, 4.7),
+      makeGoomba(8.7, 5.2),
+      makePipeGoomba(-3.0, 7.6),
+      makePipeGoomba(4.5, 8.2)
+    ];
+
+    const player = new THREE.Group();
+    player.position.set(0, .76, 6.4);
+    scene.add(player);
+
+    const body = cylinder(.28, .32, .68, mat.red, 0, .35, 0, 10);
+    body.castShadow = true;
+
+    const head = sphere(.31, mat.skin, 0, .85, 0, 12);
+    head.scale.set(1, .92, 1);
+
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(.35, .37, .28, 12),
+      mat.red
+    );
+    cap.position.set(0, 1.05, 0);
+    cap.castShadow = true;
+    player.add(cap);
+
+    const hatBrim = new THREE.Mesh(
+      new THREE.CylinderGeometry(.43, .43, .08, 12),
+      mat.red
+    );
+    hatBrim.position.set(0, .98, 0);
+    hatBrim.castShadow = true;
+    player.add(hatBrim);
+
+    const nose = sphere(.08, mat.skin, 0, .85, .28, 8);
+    nose.scale.z = .55;
+    player.add(nose);
+
+    const hatTop = sphere(.16, mat.red, 0, 1.28, -.03, 10);
+    hatTop.scale.y = .7;
+    player.add(hatTop);
+
+    // ---------------------------------------------------------------------
+    // Clouds and drifting elements
+    // ---------------------------------------------------------------------
+
+    const clouds = [
+      makeCloud(-8.0, 10.4, -4.2, 1.1),
+      makeCloud(5.7, 11.7, -2.8, .9),
+      makeCloud(10.4, 9.5, 3.0, .82),
+      makeCloud(-12.0, 8.0, 7.0, .7)
+    ];
+
+    const leaves = [];
+    for (let i = 0; i < 36; i++) {
+      const leaf = sphere(
+        .12 + Math.random() * .16,
+        i % 3 === 0 ? mat.greenDark : mat.green,
+        (Math.random() - .5) * 26,
+        .8 + Math.random() * .5,
+        (Math.random() - .5) * 26,
+        7
+      );
+      leaves.push(leaf);
+    }
+
+    const fireflies = [];
+    for (let i = 0; i < 12; i++) {
+      const p = new THREE.PointLight(0xffd878, .25, 3.5, 2);
+      p.position.set(
+        (Math.random() - .5) * 24,
+        1.4 + Math.random() * 3.2,
+        (Math.random() - .5) * 24
+      );
+      scene.add(p);
+      fireflies.push(p);
+    }
+
+    // ---------------------------------------------------------------------
+    // Camera controls: direct pointer orbit, wheel zoom, touch pinch
+    // ---------------------------------------------------------------------
+
+    const target = new THREE.Vector3(0, 2.0, -1.5);
+    const spherical = new THREE.Spherical(24, 1.13, .72);
+    const initialCamera = {
+      target: target.clone(),
+      spherical: spherical.clone()
+    };
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    function updateCamera() {
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, .28, Math.PI * .91);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 10, 38);
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    function resetCamera() {
+      target.copy(initialCamera.target);
+      spherical.copy(initialCamera.spherical);
+      updateCamera();
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 1) {
+        dragging = true;
+        previousX = event.clientX;
+        previousY = event.clientY;
+        renderer.domElement.setPointerCapture(event.pointerId);
+      } else if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId)) return;
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (pinchDistance > 0) {
+          spherical.radius = THREE.MathUtils.clamp(
+            spherical.radius * (pinchDistance / Math.max(distance, 1)),
+            10,
+            38
+          );
+          updateCamera();
+        }
+
+        pinchDistance = distance;
+        return;
+      }
+
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      spherical.theta -= dx * .006;
+      spherical.phi -= dy * .005;
+      updateCamera();
+    });
+
+    function endPointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+      if (activePointers.size === 0) dragging = false;
+    }
+
+    renderer.domElement.addEventListener("pointerup", endPointer);
+    renderer.domElement.addEventListener("pointercancel", endPointer);
+    renderer.domElement.addEventListener("lostpointercapture", endPointer);
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      spherical.radius = THREE.MathUtils.clamp(
+        spherical.radius + event.deltaY * .012,
+        10,
+        38
+      );
+      updateCamera();
+    }, { passive: false });
+
+    window.addEventListener("keydown", event => {
+      if (event.key.toLowerCase() === "r") resetCamera();
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // ---------------------------------------------------------------------
+    // Animation loop
+    // ---------------------------------------------------------------------
+
+    function animate() {
+    /* [SHIELD] */
+    requestAnimationFrame(animate);
+    try {
+
+
+
+      const elapsed = clock.getElapsedTime();
+
+      clouds.forEach((cloud, i) => {
+        cloud.position.x += Math.sin(elapsed * .13 + i) * .0007;
+        cloud.position.y += Math.sin(elapsed * .1 + i) * .00025;
+      });
+
+      leaves.forEach((leaf, i) => {
+        leaf.rotation.y = elapsed * (.18 + i % 3 * .025) + i;
+        leaf.rotation.x = Math.sin(elapsed * .35 + i) * .05;
+      });
+
+      fireflies.forEach((light, i) => {
+        light.position.x += Math.sin(elapsed * .8 + i) * .0008;
+        light.position.y += Math.cos(elapsed * .7 + i) * .0006;
+        light.intensity = .22 + Math.sin(elapsed * 1.6 + i) * .08;
+      });
+
+      player.position.x = Math.sin(elapsed * .55) * .12;
+      player.position.z = 6.4 + Math.sin(elapsed * .4) * .05;
+      player.rotation.y = Math.cos(elapsed * .55) * .08;
+
+      
+    } catch (e) {
+      console.warn('Animation tick suppressed:', e.message);
+    }
+    renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+
+    const loading = dummyEl();
+    loading.style.opacity = "0";
+    setTimeout(() => loading.remove(), 600);
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Super Mario Bros. Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x8fb6e5, fogColor: 0x8fb6e5, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
+  };
+}

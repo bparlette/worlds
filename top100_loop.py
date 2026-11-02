@@ -94,7 +94,7 @@ def update_art_page(progress):
 
     def card(mo):
         block = re.sub(r'<div class="build">[\s\S]*?</div>\s*', "", mo.group(0))
-        rk = re.search(r'<span class="rank">#(\d+)</span>', block)
+        rk = re.search(r'<b>#(\d+)</b>', block) or re.search(r'<span class="rank">#(\d+)</span>', block)
         info = progress.get(rk.group(1)) if rk else None
         if not info or not info.get("filename"):
             return block
@@ -106,7 +106,7 @@ def update_art_page(progress):
             inner = f'<span class="parked">⚠ Parked — needs a rebuild</span><span class="updated-at">Updated {stamp}</span>'
         return block.replace("</figure>", f'<div class="build">{inner}</div>\n</figure>', 1)
 
-    html = re.sub(r'<figure class="card[^"]*">[\s\S]*?</figure>', card, html)
+    html = re.sub(r'<figure(?:\s+class="[^"]*")?>[\s\S]*?</figure>', card, html)
     with open(ART_PAGE, "w", encoding="utf-8") as f:
         f.write(html)
 

@@ -86,6 +86,16 @@ def automated_rule_based_patch(content: str) -> str:
         return f"new THREE.Vector3({m.group(1)}, 0, {m.group(2)})"
     content = re.sub(r"\{\s*x:\s*([0-9\.\-]+)\s*,\s*z:\s*([0-9\.\-]+)\s*\}", replace_vec2_literal, content)
 
+    # Fix 4b: Mismatched InstancedMesh / variable name references (e.g. ambientParticles vs ambientMesh)
+    inst_match = re.search(r"\bconst\s+(\w+)\s*=\s*new\s+THREE\.InstancedMesh\b", content)
+    if inst_match:
+        inst_var = inst_match.group(1)
+        # Check if an undeclared *Mesh is used with .setMatrixAt or .instanceMatrix
+        used_matches = re.findall(r"\b(\w+)\.(?:setMatrixAt|instanceMatrix)\b", content)
+        for u in set(used_matches):
+            if u != inst_var and not re.search(rf"\b(?:const|let|var)\s+{u}\b", content):
+                content = re.sub(rf"\b{u}\b", inst_var, content)
+
     # Fix 5: Graceful error shield inside animate() so one failing property does not kill rendering
     if "function animate()" in content and "/* [SHIELD] */" not in content:
         # Wrap the inside of animate() in a try-catch, ensuring renderer.render(scene, camera) still executes

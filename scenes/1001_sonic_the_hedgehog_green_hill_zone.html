@@ -511,11 +511,11 @@
     for (let i = 0; i < 36; i++) {
       ambientPosition.set((Math.random() - .5) * 27, .8 + Math.random() * 8, (Math.random() - .5) * 27);
       ambientMatrix.makeTranslation(ambientPosition.x, ambientPosition.y, ambientPosition.z);
-      ambientMesh:
-      ambientMesh.setMatrixAt(i, ambientMatrix);
+      motes:
+      motes.setMatrixAt(i, ambientMatrix);
     }
-    ambientMesh.instanceMatrix.needsUpdate = true;
-    world.add(ambientMesh);
+    motes.instanceMatrix.needsUpdate = true;
+    world.add(motes);
 
     // Custom pointer orbit controls.
     renderer.domElement.addEventListener("pointerdown", event => {

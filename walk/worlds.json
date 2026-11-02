@@ -68,5 +68,12 @@
     "sub": "Green Hill Zone",
     "system": "",
     "module": "modules/1001.js"
+  },
+  {
+    "id": "1002",
+    "title": "Super Mario Bros.",
+    "sub": "World 1-1",
+    "system": "",
+    "module": "modules/1002.js"
   }
 ]
