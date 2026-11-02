@@ -69,6 +69,56 @@ def _load_relic_assignments():
 RELIC_ASSIGNMENTS = _load_relic_assignments()
 
 
+_KNOWN_GLOBALS = {
+    "Math", "JSON", "console", "Object", "Array", "Number", "String", "Boolean",
+    "Promise", "Proxy", "Reflect", "Set", "Map", "WeakMap", "WeakSet", "Symbol",
+    "Error", "TypeError", "RangeError", "SyntaxError", "parseInt", "parseFloat",
+    "isNaN", "isFinite", "Infinity", "NaN", "undefined", "globalThis", "Date",
+    "RegExp", "Float32Array", "Float64Array", "Uint8Array", "Uint16Array",
+    "Uint32Array", "Int16Array", "Int32Array", "ArrayBuffer", "DataView",
+    "setTimeout", "setInterval", "clearTimeout", "clearInterval",
+    "requestAnimationFrame", "cancelAnimationFrame", "alert", "location",
+    "navigator", "history", "performance", "URL", "Blob", "Image", "Audio",
+    "encodeURIComponent", "decodeURIComponent", "btoa", "atob",
+}
+_PREAMBLE_NAMES = {
+    "THREE", "scene", "group", "renderer", "camera", "dummyEl", "dummyCamera",
+    "dummyRenderer", "container", "stage", "app", "window", "document",
+    "updateHook", "addEventListener", "devicePixelRatio", "innerWidth",
+    "innerHeight",
+}
+
+
+def _missing_identifier_repairs(clean_js: str) -> list:
+    """Identifiers the scene reads (object shorthand) or assigns bare without
+    ever declaring them. Conservative by construction: anything declared via
+    const/let/var/function, any parameter, any destructured name, known
+    globals, and the converter's own preamble names are all excluded. The
+    Node validation gate remains the safety net — a bad injection fails
+    loudly there instead of shipping."""
+    declared = set(re.findall(r"\b(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)", clean_js))
+    for params in re.findall(r"\bfunction\s*[A-Za-z_$]*\s*\(([^)]*)\)", clean_js):
+        for p in params.split(","):
+            name = p.strip().split("=")[0].strip().strip("{}")
+            if re.fullmatch(r"[A-Za-z_$][\w$]*", name or ""):
+                declared.add(name)
+    for params in re.findall(r"\(([^()]*)\)\s*=>", clean_js):
+        for p in params.split(","):
+            name = p.strip().split("=")[0].strip()
+            if re.fullmatch(r"[A-Za-z_$][\w$]*", name or ""):
+                declared.add(name)
+    declared |= set(re.findall(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*=>", clean_js))
+    for body in re.findall(r"\b(?:const|let|var)\s*\{([^}]*)\}", clean_js):
+        for part in body.split(","):
+            name = part.strip().split(":")[-1].split("=")[0].strip()
+            if re.fullmatch(r"[A-Za-z_$][\w$]*", name or ""):
+                declared.add(name)
+    declared |= _KNOWN_GLOBALS | _PREAMBLE_NAMES
+    used = set(re.findall(r"(?<=[{,])\s*([A-Za-z_$][\w$]*)\s*(?=[,}])", clean_js))
+    used |= set(re.findall(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*=(?![=>])", clean_js))
+    return sorted(u for u in used if u not in declared and u not in ("true", "false", "null", "this"))
+
+
 def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> str:
     script_match = re.search(r"<script\b[^>]*>([\s\S]*?)</script>", html_content, re.I)
     if not script_match:
@@ -121,6 +171,27 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
     clean_js = re.sub(r"\bdocument\.getElementById\([^)]*\)", "dummyEl()", clean_js)
     clean_js = re.sub(r"\bdocument\.querySelector\([^)]*\)", "dummyEl()", clean_js)
 
+    # Scripted guarantee (2026-11-01): a DOM lookup that survives neutralization
+    # crashes bare host pages in real browsers while Node's stub document hides
+    # it (the ab-test image-js module shipped exactly this). Fail loudly instead.
+    for _pat in (r"document\.getElementById\(", r"document\.querySelector\(", r"document\.querySelectorAll\("):
+        _m = re.search(_pat, clean_js)
+        if _m:
+            _line = clean_js[max(0, _m.start() - 40):_m.end() + 40].replace("\n", " ")
+            raise ValueError(f"DOM lookup survived neutralization ({_pat}): ...{_line.strip()[:110]}")
+
+    # Scripted repair (2026-11-01): declare identifiers the scene uses but never
+    # declared (shorthand reads like { group, phase } or bare assignments). A
+    # sloppy classic script tolerates these; a strict ES module throws
+    # "X is not defined" — the ab-test text-js scene parked on exactly this.
+    missing_ids = _missing_identifier_repairs(clean_js)
+    if missing_ids:
+        decls = "\n".join(f"  let {name} = 0;" for name in missing_ids)
+        clean_js = ("  // Converter repair: declared identifier(s) the scene used undeclared\n"
+                    "  // (strict modules throw where sloppy scripts did not): " + ", ".join(missing_ids) + "\n"
+                    + decls + "\n" + clean_js)
+        print(f"[Walker Bridge] Repaired undeclared identifier(s): {', '.join(missing_ids)}")
+
     spawn_z = tz + 14.0 if tz <= 0 else tz - 14.0
     door_next_x = tx + 12.0
     door_next_z = tz - 10.0
@@ -155,7 +226,6 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
         '  let scene = {',
         '    add: (...objs) => objs.forEach(o => o && group.add(o)),',
         '    updateMatrixWorld: () => {},',
-        '    children: group.children,',
         '    background: null,',
         '    fog: null',
         '  };',
@@ -182,9 +252,8 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
         '  }',
         '',
         '  function dummyCamera() {',
-        '    const p = new Proxy({}, { get: () => () => p });',
         '    return {',
-        '      position: p,',
+        '      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),',
         '      lookAt: () => {},',
         '      updateProjectionMatrix: () => {}',
         '    };',
@@ -208,7 +277,9 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
         '    };',
         '    return node;',
         '  };',
-        '  // DOM / UI fallbacks',
+        '  const container = dummyEl();',
+        '  const stage = dummyEl();',
+        '  const app = dummyEl();',
         '  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {',
         '    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}',
         '  };',
@@ -467,6 +538,72 @@ try {{
                 if line.startswith("{") and line.endswith("}"):
                     return json.loads(line)
         return {"valid": False, "error": proc.stderr.strip() or "No output from node validator"}
+    except Exception as e:
+        return {"valid": False, "error": str(e)}
+
+
+def validate_module_hostile_dom(module_path: str) -> dict:
+    """
+    Second validation gate (2026-11-01): run createWorld against a HOSTILE
+    bare-host DOM — getElementById/querySelector return null, and
+    body.appendChild rejects plain objects — the environment a converted
+    module actually meets in a real browser page that lacks the scene's
+    overlay elements. The friendly stub document in validate_module_in_node
+    hid this whole class: the ab-test viewer showed "could not render" for
+    modules that had passed Node validation.
+    """
+    test_script = f"""
+globalThis.innerWidth = 1920;
+globalThis.innerHeight = 1080;
+globalThis.devicePixelRatio = 1;
+globalThis.addEventListener = () => {{}};
+globalThis.window = {{ innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {{}} }};
+globalThis.document = {{
+  createElementNS: () => ({{ getContext: () => null, style: {{}}, addEventListener: () => {{}}, removeEventListener: () => {{}} }}),
+  createElement: () => {{
+    const ctx = new Proxy({{}}, {{ get: () => () => ctx, set: () => true }});
+    return {{ getContext: () => ctx, width: 64, height: 64, style: {{}}, addEventListener: () => {{}}, removeEventListener: () => {{}} }};
+  }},
+  body: {{ appendChild: (n) => {{ if (!n || typeof n !== 'object' || !('nodeType' in n)) throw new TypeError("Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'."); }}, prepend: () => {{}}, style: {{}} }},
+  querySelector: () => null,
+  querySelectorAll: () => [],
+  getElementById: () => null
+}};
+
+const fs = require('fs');
+const THREE = require('/Users/braidpairlette/worlds/node_modules/three');
+
+let code = fs.readFileSync('{module_path}', 'utf8');
+code = code.replace(/import\\s+\\*\\s+as\\s+THREE\\s+from\\s+[^;]+;/, '');
+code = code.replace(/export\\s+function\\s+createWorld/, 'function createWorld');
+
+try {{
+  eval(code);
+  const world = createWorld(THREE);
+  if (!world || !world.group) throw new Error('createWorld returned no group under hostile DOM');
+  world.update(0, 0.016);
+  world.update(1, 0.016);
+  let meshCount = 0;
+  world.group.traverse(o => {{ if (o.isMesh) meshCount++; }});
+  console.log(JSON.stringify({{ valid: true, meshCount: meshCount }}));
+}} catch (err) {{
+  console.log(JSON.stringify({{ valid: false, error: err.message }}));
+}}
+"""
+    try:
+        proc = subprocess.run(
+            ["node", "-e", test_script],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            env=dict(os.environ, NODE_PATH=os.path.join(WORLDS_DIR, "node_modules"))
+        )
+        out = proc.stdout.strip()
+        if out:
+            for line in out.splitlines():
+                if line.startswith("{") and line.endswith("}"):
+                    return json.loads(line)
+        return {"valid": False, "error": proc.stderr.strip() or "No output from hostile-DOM validator"}
     except Exception as e:
         return {"valid": False, "error": str(e)}
 
@@ -797,12 +934,19 @@ def convert_scene_to_walker_module(scene_path: str, spec: dict) -> dict:
         # Validate with headless node
         val = validate_module_in_node(module_path)
         if val.get("valid"):
+            # Second gate: the module must also survive a hostile bare-host
+            # DOM (real-browser conditions), not just Node's friendly stub.
+            hostile = validate_module_hostile_dom(module_path)
+            if not hostile.get("valid"):
+                val = {"valid": False,
+                       "error": f"hostile-DOM gate: {hostile.get('error')}"}
+        if val.get("valid"):
             manifest_entry = {
                 "id": formatted_id,
                 "module": f"modules/{module_filename}",
-                "title": spec.get("game", spec.get("title", f"World #{formatted_id}")),
-                "sub": spec.get("target", spec.get("name", "")),
-                "system": spec.get("platform", "Arcade")
+                "title": spec["game"],
+                "sub": spec["target"],
+                "system": spec["platform"]
             }
             update_walker_manifest(manifest_entry)
             print(f"[Walker Bridge] ✓ World #{formatted_id} ({spec['game']}) validated ({val.get('meshCount')} meshes) & registered in walk/worlds.json!")

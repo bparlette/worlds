@@ -144,6 +144,14 @@ def sanitize_scene_html(html: str) -> str:
     fixed, n = _LABEL_PREFIX.subn(r"\1", html)
     if n:
         print(f"[Sanitizer] Removed {n} bogus label prefix(es) from generated scene")
+    # Overlay guard (2026-11-01): scenes routinely end with
+    # document.getElementById("loading").style... — in any host where that
+    # element is absent (thumbnail bake, embedded hosts) the lookup returns
+    # null and the .style deref kills the script. Optional-chain the chain.
+    fixed, g = re.subn(r"document\.(getElementById|querySelector)\(([^)]*)\)\.(style|classList)\.",
+                       r"document.\1(\2)?.\3.", fixed)
+    if g:
+        print(f"[Sanitizer] Optional-chained {g} overlay lookup(s) against null hosts")
     # Gate 1 (2026-11-01): bare `canvas.` used but never declared -> ReferenceError.
     if (re.search(r"(?<![\w.$-])canvas\.(?:add|set|style|get|remove)", fixed)
             and not re.search(r"\b(?:const|let|var)\s+canvas\b", fixed)):
