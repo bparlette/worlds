@@ -463,6 +463,6 @@ export function createWorld(THREE) {
       next: { x: 0, z: -33 },
       prev: { x: 0, z: 37 }
     },
-    relic: { name: "Ace's Medal", x: -22, z: -26 }
+    relic: { id: "aces-medal", name: "Ace's Medal", x: -22, z: -26 }
   };
 }

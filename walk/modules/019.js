@@ -1126,7 +1126,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
-    relic: { name: "Blaster Master Relic", x: -10.0, z: -12.0 },
+    relic: { id: "hover-chip", name: "Hover Chip", x: -10.0, z: -12.0 },
     env:   { background: 0x050911, fogColor: 0x071019, fogDensity: 0.026 },
     doors: {
       next: { x: 12.0, z: -10.0 },
