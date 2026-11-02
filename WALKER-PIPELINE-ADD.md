@@ -45,7 +45,7 @@ export function createWorld(THREE) {
              prev: { x: 0, z: 14.8 },           // south wall passage
              east: { x: 14.8, z: 0 },           // east wall passage (routes/grid)
              west: { x: -14.8, z: 0 } },        // west wall passage (routes/grid)
-    relic: { name: "Enchanted Chalice", x: 20, z: -43 }  // hidden, off the beeline (R8)
+    relic: { id: "chalice", name: "Enchanted Chalice", x: 20, z: -43 }  // hidden, off the beeline (R8)
   };
 }
 ```
@@ -94,13 +94,42 @@ export function createWorld(THREE) {
   Back Roms floors the player by raycasting down. No invisible or
   merged-away ground planes.
 - **R8 — Relic.** Every world hides exactly one relic: `createWorld` also
-  returns `relic: { name, x, z }` — the world's one iconic object (the
-  chalice, the idol, the urn…). The point must be walkable ground (R7
-  applies) and clear of the spawn→door beeline — a detour, not a toll
-  booth: somewhere a walker only finds by exploring (behind the castle,
-  across the river, at the far end of the field). Back Roms renders the
-  relic itself — a golden core-and-rings prop, walker-owned — so the
-  module supplies only the name and the coordinates.
+  returns `relic: { id, name, x, z }` — the world's one iconic object (the
+  chalice, the idol, the urn…). **Qwen is never told about relics. Relic
+  identity comes from walk/relics.json, placement is validated by the
+  converter, the visual is built by the host from walk/relics.js. A
+  treasure-like object that is part of the source image's scenery is
+  scenery, not the relic.** Concretely:
+  - *Identity is data.* `walk/relics.json` maps world id →
+    `{ id, name }` (e.g. `"001": { "id": "chalice", "name": "Enchanted
+    Chalice" }`). The converter stamps the assignment into the module's
+    declaration. Unassigned worlds fall back to the legacy derived name
+    with `id: "generic"`. Curating a world's relic = editing that one
+    JSON line — no regeneration, no reconversion of the scene art.
+  - *The host builds the visual.* On world load the Walker calls
+    `buildRelic(THREE, id)` from `walk/relics.js` and places the result
+    at the anchor, floating at ground+1.05, with the journal/pickup
+    behaviour the Walker already owns. Builders are pure Three.js
+    primitives + MeshStandardMaterial only (no textures, no sprites, no
+    glow quads) — the same discipline as the legacy gold core-and-rings
+    prop, which survives as the `generic` builder and the fallback for
+    unknown ids.
+  - *Placement is validated, never improvised.* The converter checks
+    the formula anchor (off the spawn→door beeline — a detour, not a
+    toll booth: behind the castle, across the river, at the far end of
+    the field) for clearance: no scene mesh may occupy the 2-unit-radius
+    column around the anchor at ground level. If the formula point is
+    blocked it tries the mirrored offsets (the x/z sign variants of the
+    formula offsets) in order and records the first clear anchor in the
+    module. Scene meshes are never deleted to clear a spot; if no
+    candidate is clear, the formula anchor is kept and the conversion
+    result is flagged for a hand-set anchor. The point must be walkable
+    ground (R7 applies).
+  - *Generated scenes build NO relic.* A scene must not contain a
+    relic/treasure/idol/collectible object of its own — that is what
+    keeps the walk from ever showing two relics, or another world's
+    relic baked in by imitation. (Scenery that belongs to the pictured
+    place stays, per the quote above; it is simply not the relic.)
 - **R9 — Top-down thumbnail.** After a module passes the §4 gate and is
   registered, the converter bakes a map thumbnail for the Back Roms map
   overview: `walk/thumbs/<id>.png` (e.g. `walk/thumbs/042.png`), one per
@@ -164,9 +193,16 @@ here, never by editing Walker code.
 1. The module parses and imports cleanly.
 2. `createWorld(THREE)` runs headlessly and returns every required key,
    with finite numbers in `spawn`, `env`, `doors`, and a `relic` whose
-   `name` is a non-empty string and whose `x`/`z` are finite.
+   `name` is a non-empty string, whose `x`/`z` are finite, and whose
+   `id`, when present, is a string.
 3. `group` contains at least one mesh.
 4. `update(0, 0.016)` and `update(1, 0.016)` run without throwing.
+5. The converter's relic-anchor check passed for the recorded anchor:
+   no scene mesh occupies the 2-unit-radius column at ground level
+   (formula point first, then mirrored offsets — see R8). A conversion
+   where no candidate was clear is flagged in the conversion result
+   (`anchor_warning`) and the anchor is set by hand before the world
+   is announced.
 
 Failures go to a **conversion report** (world id + which rule failed),
 never into `worlds.json`. A world that isn't in the manifest simply isn't

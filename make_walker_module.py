@@ -286,9 +286,10 @@ def check_relic_anchor_clear(module_path: str, anchor_x: float, anchor_z: float)
     the relic floats at ground+1.05, so the 2-unit-radius column around
     the anchor must be free of scene meshes at ground level. Ground
     height is raycast at the anchor; the column is then sampled (centre
-    + rings at r=1 and r=2) — a sample whose surface sits more than 0.6
-    above or below the anchor's ground means a mesh occupies (or drops
-    away inside) the column.
+    + rings at r=1 and r=1.8, just inside the 2-unit disc) by casting
+    from just above the relic's float height — a sample whose surface
+    sits more than 0.6 above or below the anchor's ground means a mesh
+    occupies (or drops away inside) the column at ground level.
     Scene meshes are only ever observed here, never modified.
     """
     test_script = f"""
@@ -331,14 +332,35 @@ try {{
   }};
   const samples = [[0, 0],
     [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7],
-    [2, 0], [-2, 0], [0, 2], [0, -2], [1.4, 1.4], [-1.4, 1.4], [1.4, -1.4], [-1.4, -1.4]];
-  const tops = samples.map(([dx, dz]) => topAt(ax + dx, az + dz, 500));
-  const groundY = tops[0] === null ? 0 : tops[0];
+    [1.8, 0], [-1.8, 0], [0, 1.8], [0, -1.8], [1.27, 1.27], [-1.27, 1.27], [1.27, -1.27], [-1.27, -1.27]];
+  const gTop = topAt(ax, az, 500);
+  const groundY = gTop === null ? 0 : gTop;
+  // Occupancy is judged AT GROUND LEVEL (the brief's own words): cast
+  // from just above the floating relic (ground+2.2), so tall scenery
+  // that merely overhangs the disc — a wall cap, a roof edge — never
+  // blocks, while anything standing in the column does.
+  const tops = samples.map(([dx, dz]) => topAt(ax + dx, az + dz, groundY + 2.2));
   let blocked = null;
   for (let i = 0; i < samples.length; i++) {{
     if (tops[i] !== null && Math.abs(tops[i] - groundY) > 0.6) {{
       blocked = {{ at: [ax + samples[i][0], az + samples[i][1]], topY: tops[i] }};
       break;
+    }}
+  }}
+  // Perch check: a blocker at least as wide as the disc fools the test
+  // above (every sample lands on its top, uniformly "flat"). Compare
+  // the anchor's ground with the surrounding area's ground — the
+  // median surface on a r=4 ring. An anchor perched on an object (or
+  // sunk in a pit) relative to its surroundings is not clear.
+  if (!blocked) {{
+    const ring = [[4, 0], [-4, 0], [0, 4], [0, -4], [2.83, 2.83], [-2.83, 2.83], [2.83, -2.83], [-2.83, -2.83]];
+    const ringTops = ring.map(([dx, dz]) => topAt(ax + dx, az + dz, groundY + 2.2))
+      .filter(v => v !== null).sort((a, b) => a - b);
+    if (ringTops.length) {{
+      const areaGround = ringTops[Math.floor(ringTops.length / 2)];
+      if (Math.abs(groundY - areaGround) > 0.6) {{
+        blocked = {{ at: [ax, az], topY: groundY, areaGround: areaGround, reason: 'anchor ground differs from surrounding ground' }};
+      }}
     }}
   }}
   console.log(JSON.stringify({{ clear: !blocked, groundY: groundY, blocked: blocked }}));
