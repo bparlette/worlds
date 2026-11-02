@@ -217,6 +217,13 @@
     "module": "modules/074.js"
   },
   {
+    "id": "076",
+    "title": "Super Mario 64",
+    "sub": "Whomp&#x27;s Fortress",
+    "system": "Console",
+    "module": "modules/076.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
