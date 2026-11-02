@@ -686,5 +686,13 @@
     "status": "pass",
     "filename": "1086-dark_souls_bonfire_shrine.html",
     "updated_at": "2026-11-02 07:33 EST"
+  },
+  "87": {
+    "rank": 87,
+    "game": "GoldenEye 007",
+    "name": "Dam",
+    "status": "pass",
+    "filename": "1087-goldeneye_007_dam.html",
+    "updated_at": "2026-11-02 07:37 EST"
   }
 }

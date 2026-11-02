@@ -252,6 +252,13 @@
     "module": "modules/086.js"
   },
   {
+    "id": "087",
+    "title": "GoldenEye 007",
+    "sub": "Dam",
+    "system": "Console",
+    "module": "modules/087.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
