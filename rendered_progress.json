@@ -310,5 +310,13 @@
     "status": "pass",
     "filename": "1039-super_mario_64_bob_omb_battlefield.html",
     "updated_at": "2026-11-02 03:34 EST"
+  },
+  "40": {
+    "rank": 40,
+    "game": "Super Mario 64",
+    "name": "Peach&#x27;s Castle Exterior",
+    "status": "pass",
+    "filename": "1040-super_mario_64_peachx27s_castle_exterior.html",
+    "updated_at": "2026-11-02 03:39 EST"
   }
 }

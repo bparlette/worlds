@@ -126,6 +126,13 @@
     "module": "modules/039.js"
   },
   {
+    "id": "040",
+    "title": "Super Mario 64",
+    "sub": "Peach&#x27;s Castle Exterior",
+    "system": "Console",
+    "module": "modules/040.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
