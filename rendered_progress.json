@@ -174,5 +174,13 @@
     "status": "pass",
     "filename": "1022-the_legend_of_zelda_twilight_princess_temple_of_time.html",
     "updated_at": "2026-11-02 02:05 EST"
+  },
+  "23": {
+    "rank": 23,
+    "game": "The Legend of Zelda",
+    "name": "Hyrule Castle Interior",
+    "status": "pass",
+    "filename": "1023-the_legend_of_zelda_hyrule_castle_interior.html",
+    "updated_at": "2026-11-02 02:10 EST"
   }
 }
