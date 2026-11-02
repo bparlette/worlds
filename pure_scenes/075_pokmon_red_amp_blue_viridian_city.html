@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Village</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b8d6df;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      padding: 10px 13px;
+      border: 1px solid rgba(255,255,255,.55);
+      border-radius: 10px;
+      color: #163643;
+      background: rgba(245,250,250,.72);
+      box-shadow: 0 8px 28px rgba(25,65,75,.18);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      letter-spacing: .04em;
+      pointer-events: none;
+    }
+
+    #help {
+      position: fixed;
+      right: 16px;
+      bottom: 14px;
+      z-index: 10;
+      padding: 8px 11px;
+      border-radius: 8px;
+      color: #244c59;
+      background: rgba(245,250,250,.68);
+      box-shadow: 0 6px 20px rgba(25,65,75,.12);
+      font-size: 11px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">VOXEL VILLAGE</div>
+  <div id="help">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer, scene, and orthographic camera
+    // ------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb8d6df);
+    scene.fog = new THREE.Fog(0xb8d6df, 34, 72);
+
+    const camera = new THREE.OrthographicCamera(-28, 28, 20, -20, 0.1, 120);
+    camera.position.set(22, 19, 27);
+
+    const controls = {
+      target: new THREE.Vector3(0, 2, 0),
+      yaw: 0.68,
+      pitch: 0.48,
+      distance: 42,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const horizontal = Math.cos(controls.pitch) * controls.distance;
+      camera.position.set(
+        controls.target.x + Math.sin(controls.yaw) * horizontal,
+        controls.target.y + Math.sin(controls.pitch) * controls.distance,
+        controls.target.z + Math.cos(controls.yaw) * horizontal
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0xe8f7ff, 0x6f7b52, 2.1));
+
+    const sun = new THREE.DirectionalLight(0xfff1cf, 3.2);
+    sun.position.set(-14, 24, 12);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -34;
+    sun.shadow.camera.right = 34;
+    sun.shadow.camera.top = 30;
+    sun.shadow.camera.bottom = -30;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 75;
+    sun.shadow.bias = -0.00035;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9ac9e6, 0.75);
+    fill.position.set(18, 10, -18);
+    scene.add(fill);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const material = (color, roughness = 0.85) =>
+      new THREE.MeshStandardMaterial({ color, roughness });
+
+    const mats = {
+      grass: material(0x83b97b),
+      grassDark: material(0x63955f),
+      grassLight: material(0x9dcc82),
+      soil: material(0x594632),
+      white: material(0xf4f1df),
+      warmWhite: material(0xe8dfc2),
+      roof: material(0x547f9b),
+      roofLight: material(0x78a5b7),
+      blue: material(0x3b91bd),
+      blueDark: material(0x245c78),
+      red: material(0xd95a42),
+      redDark: material(0x9d352b),
+      yellow: material(0xe7ad35),
+      orange: material(0xd97832),
+      green: material(0x3d8b55),
+      greenLight: material(0x69aa62),
+      pine: material(0x397c55),
+      pineLight: material(0x4f925f),
+      pineDark: material(0x2f6848),
+      window: material(0x4f8ca2, 0.45),
+      metal: material(0x778b8d),
+      trunk: material(0x73523a)
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+    const unit = 1;
+
+    function box(x, y, z, sx, sy, sz, mat, cast = true, receive = true) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function voxelLine(x1, y, z1, x2, y, z2, mat, size = unit) {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const length = Math.hypot(dx, dz);
+      const count = Math.max(1, Math.ceil(length / size));
+
+      for (let i = 0; i <= count; i++) {
+        const t = i / count;
+        const x = THREE.MathUtils.lerp(x1, x2, t);
+        const z = THREE.MathUtils.lerp(z1, z2, t);
+        box(x, y, z, size, size, size, mat);
+      }
+    }
+
+    function makeTextSprite(text, color = "#36515d", width = 10) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+
+      ctx.clearRect(0, 0, 128, 64);
+      ctx.fillStyle = color;
+      ctx.font = "bold 34px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 64, 34);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          depthWrite: false
+        })
+      );
+      sprite.scale.set(width, width * 0.5, 1);
+      return sprite;
+    }
+
+    // ------------------------------------------------------------
+    // Terrain and roads
+    // ------------------------------------------------------------
+    box(0, -0.42, 0, 54, 0.65, 44, mats.grassDark);
+
+    // Main road, built from square tiles.
+    for (let z = -18; z <= 18; z += 2) {
+      box(0, 0.03, z, 1.9, 0.12, 1.9, mats.white);
+    }
+
+    // Side path leading toward the center building.
+    for (let x = -4; x <= 4; x += 2) {
+      box(x, 0.035, 0, 1.9, 0.12, 22, mats.white);
+    }
+
+    // Courtyard grass.
+    box(0, 0.06, 6, 15, 0.14, 18, mats.grass);
+
+    // ------------------------------------------------------------
+    // Main building: pixel-style post office / community hall
+    // ------------------------------------------------------------
+    const hall = new THREE.Group();
+    hall.position.set(0, 0, 0);
+
+    // Foundation and main body.
+    box(0, 0.34, 0, 10.8, 0.68, 7.2, mats.white);
+    box(0, 1.35, 0, 9.8, 2.25, 6.2, mats.warmWhite);
+
+    // Roof: stepped voxel pyramid.
+    box(0, 3.25, 0, 11.2, 0.45, 7.6, mats.roof);
+    box(0, 3.7, 0, 10.3, 0.35, 6.7, mats.roofLight);
+    box(0, 4.12, 0, 9.3, 0.28, 5.8, mats.roof);
+
+    // Front facade and entry.
+    box(0, 1.55, 3.15, 10.2, 1.55, 0.25, mats.blueDark);
+    box(0, 1.55, 3.3, 2.2, 2.1, 0.35, mats.blue);
+    box(0, 2.65, 3.5, 1.55, 0.18, 0.4, mats.roof);
+
+    // Door panels.
+    box(-0.48, 1.56, 3.52, 0.72, 1.72, 0.08, mats.window);
+    box(0.48, 1.56, 3.52, 0.72, 1.72, 0.08, mats.window);
+    box(0, 1.56, 3.6, 0.08, 1.72, 0.1, mats.metal);
+
+    // Side windows.
+    for (const x of [-4.25, 4.25]) {
+      box(x, 1.6, 2.95, 0.12, 1.25, 2.4, mats.window);
+      box(x, 1.6, 4.18, 0.12, 1.25, 0.25, mats.roof);
+    }
+
+    // Small side window.
+    box(-3.15, 1.55, -2.2, 1.8, 1.1, 0.12, mats.window);
+
+    // Sign.
+    const sign = makeTextSprite("POST", "#315a6c", 5.3);
+    sign.position.set(0, 2.35, 3.62);
+    hall.add(sign);
+
+    scene.add(hall);
+
+    // ------------------------------------------------------------
+    // Left building: mailbox / community center
+    // ------------------------------------------------------------
+    const leftBuilding = new THREE.Group();
+    leftBuilding.position.set(-10, 0, 2);
+
+    box(0, 0.3, 0, 6.2, 0.6, 5.2, mats.warmWhite);
+    box(0, 1.35, 0, 5.2, 2.1, 4.2, mats.white);
+
+    // Gabled roof made with stepped rows.
+    for (let i = 0; i < 3; i++) {
+      box(
+        0,
+        2.65 + i * 0.3,
+        0,
+        6.1 - i * 0.35,
+        0.28,
+        4.6 - i * 0.35,
+        mats.roof
+      );
+    }
+
+    // Front windows.
+    box(0, 1.55, 2.18, 2.8, 1.15, 0.16, mats.window);
+    box(-1.85, 1.55, 2.18, 1.15, 1.15, 0.16, mats.window);
+
+    // Door.
+    box(0.55, 1.4, 2.2, 1.1, 1.7, 0.2, mats.blue);
+    box(0.55, 2.3, 2.3, 0.7, 0.18, 0.3, mats.roof);
+
+    // Chimney.
+    box(1.25, 3.2, -0.9, 0.75, 2.2, 0.75, mats.trunk);
+    box(1.25, 4.25, -0.9, 0.95, 0.25, 0.95, mats.roof);
+
+    const leftSign = makeTextSprite("CVV", "#315a6c", 3.2);
+    leftSign.position.set(0, 2.7, 2.25);
+    leftBuilding.add(leftSign);
+
+    scene.add(leftBuilding);
+
+    // ------------------------------------------------------------
+    // Mailbox in foreground
+    // ------------------------------------------------------------
+    const mailbox = new THREE.Group();
+    mailbox.position.set(-5.7, 0, 9.5);
+
+    box(0, 0.25, 0, 1.35, 0.5, 0.75, mats.white);
+    box(0, 1.0, 0, 0.72, 1.15, 0.65, mats.blue);
+    box(0, 1.62, 0, 1.1, 0.2, 0.95, mats.roof);
+    box(0, 1.1, 0.38, 0.45, 0.7, 0.08, mats.window);
+
+    const mailboxSign = makeTextSprite("MAIL", "#315a6c", 2.3);
+    mailboxSign.position.set(0, 1.98, 0.5);
+    mailbox.add(mailboxSign);
+
+    scene.add(mailbox);
+
+    // ------------------------------------------------------------
+    // Flower beds
+    // ------------------------------------------------------------
+    function flowerBed(cx, cz, width, depth) {
+      box(cx, 0.15, cz, width, 0.2, depth, mats.soil);
+
+      const flowerCount = width * depth * 0.35;
+      const colors = [mats.red, mats.yellow, mats.orange, mats.greenLight];
+
+      for (let i = 0; i < flowerCount; i++) {
+        const x = cx + (Math.random() - 0.5) * (width - 0.6);
+        const z = cz + (Math.random() - 0.5) * (depth - 0.5);
+        const y = 0.3 + Math.random() * 0.22;
+        const r = 0.16 + Math.random() * 0.1;
+
+        const petal = new THREE.Mesh(
+          new THREE.SphereGeometry(r, 5, 4),
+          colors[i % colors.length]
+        );
+        petal.scale.set(1.4, 0.65, 1);
+        petal.position.set(x, y, z);
+        petal.castShadow = true;
+        scene.add(petal);
+
+        const leaf = new THREE.Mesh(
+          new THREE.SphereGeometry(r * 0.65, 5, 4),
+          mats.green
+        );
+        leaf.position.set(x + 0.08, y - 0.05, z);
+        leaf.scale.set(1.2, 0.5, 0.8);
+        scene.add(leaf);
+      }
+    }
+
+    flowerBed(-0.9, 7.1, 5.1, 1.35);
+    flowerBed(1.25, 7.1, 5.1, 1.35);
+
+    // ------------------------------------------------------------
+    // Fence
+    // ------------------------------------------------------------
+    const fenceStart = -9.2;
+    const fenceEnd = 9.2;
+    const fenceZ = 11.7;
+
+    box(
+      (fenceStart + fenceEnd) / 2,
+      0.15,
+      fenceZ,
+      fenceEnd - fenceStart,
+      0.3,
+      0.35,
+      mats.metal
+    );
+
+    for (let x = fenceStart; x <= fenceEnd; x += 1.1) {
+      box(x, 0.52, fenceZ, 0.46, 0.75, 0.38, mats.metal);
+      box(x, 0.75, fenceZ, 0.52, 0.12, 0.44, mats.metal);
+    }
+
+    // ------------------------------------------------------------
+    // Pine trees, all voxel-based
+    // ------------------------------------------------------------
+    function pineTree(x, z, scale = 1, baseY = 0.1) {
+      const group = new THREE.Group();
+      group.position.set(x, baseY, z);
+      group.scale.setScalar(scale);
+
+      // Trunk.
+      for (let i = 0; i < 4; i++) {
+        box(
+          0,
+          0.25 + i * 0.25,
+          0,
+          0.48,
+          0.25,
+          0.48,
+          mats.trunk
+        );
+      }
+
+      // Layered conical crowns, each made from a grid of cubes.
+      const layers = [
+        { y: 1.35, half: 1.65, depth: 1.65, count: 7 },
+        { y: 2.35, half: 1.3, depth: 1.3, count: 6 },
+        { y: 3.3, half: 0.95, depth: 0.95, count: 5 }
+      ];
+
+      for (const layer of layers) {
+        const size = 0.55;
+        for (let ix = 0; ix < layer.count; ix++) {
+          for (let iz = 0; iz < layer.count; iz++) {
+            const nx = ix - (layer.count - 1) / 2;
+            const nz = iz - (layer.count - 1) / 2;
+            const edge = Math.max(
+              0,
+              Math.abs(nx) + Math.abs(nz) - 1
+            );
+            if (edge > layer.count - 2) continue;
+
+            const shade = (ix + iz) % 3 === 0 ? mats.pineDark : mats.pine;
+            box(
+              nx * size,
+              layer.y,
+              nz * size,
+              size * (1 - edge * 0.18),
+              size,
+              size * (1 - edge * 0.18),
+              shade
+            );
+          }
+        }
+      }
+
+      scene.add(group);
+    }
+
+    const treePositions = [
+      [-15, -12, 1.15], [-13, -15, 0.9], [-10, -13, 1.05],
+      [-7, -15, 0.85], [-4, -13, 1.1], [-1, -15, 0.9],
+      [2, -13, 1.1], [5, -15, 0.85], [8, -13, 1.05],
+      [11, -15, 0.9], [14, -12, 1.15], [16, -16, 0.8],
+      [-17, 2, 1.05], [-15, 5, 0.85], [-12, 3, 1.15],
+      [-9, 6, 0.8], [-6, 4, 1.05], [-3, 7, 0.9],
+      [0, 4, 1.15], [3, 7, 0.85], [6, 4, 1.05],
+      [9, 7, 0.8], [12, 4, 1.15], [15, 7, 0.9],
+      [18, 0, 1.0], [17, -4, 0.8], [14, -2, 1.1],
+      [-18, -3, 0.9], [-19, 2, 1.05], [-16, 6, 0.8]
+    ];
+
+    treePositions.forEach(([x, z, scale]) => pineTree(x, z, scale));
+
+    // ------------------------------------------------------------
+    // Small foreground voxel structure / water feature
+    // ------------------------------------------------------------
+    const foreground = new THREE.Group();
+    foreground.position.set(0, 0, 15);
+
+    // Blue tiled basin.
+    box(0, 0.3, 0, 6.6, 0.55, 5.6, mats.blueDark);
+    for (let x = -3; x <= 3; x += 1) {
+      for (let z = -2; z <= 2; z += 1) {
+        box(x, 0.61, z, 0.9, 0.12, 0.9, mats.roofLight);
+      }
+    }
+
+    // Low walls around the basin.
+    box(-3.2, 0.65, 0, 0.45, 1.0, 5.7, mats.white);
+    box(3.2, 0.65, 0, 0.45, 1.0, 5.7, mats.white);
+    box(0, 0.65, -2.8, 6.4, 1.0, 0.45, mats.white);
+
+    const foregroundSign = makeTextSprite("HAR", "#315a6c", 2.8);
+    foregroundSign.position.set(-2.35, 1.4, 0.5);
+    foreground.add(foregroundSign);
+
+    scene.add(foreground);
+
+    // ------------------------------------------------------------
+    // Distant low-poly / voxel hills
+    // ------------------------------------------------------------
+    function hill(x, z, radius, height) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      for (let y = 0; y < height; y++) {
+        const half = radius * (1 - y / height * 0.42);
+        for (let ix = 0; ix < 6; ix++) {
+          for (let iz = 0; iz < 6; iz++) {
+            const nx = ix - 2.5;
+            const nz = iz - 2.5;
+            if (nx * nx + nz * nz > half * half + 0.5) continue;
+
+            const mat = y % 2 === 0 ? mats.grass : mats.grassDark;
+            box(
+              nx * 1.1,
+              y * 0.8,
+              nz * 1.1,
+              1.08,
+              0.76,
+              1.08,
+              mat
+            );
+          }
+        }
+      }
+
+      scene.add(group);
+    }
+
+    hill(-10, -22, 7, 4);
+    hill(0, -25, 8, 5);
+    hill(10, -23, 7, 4);
+    hill(-22, -16, 6, 3.5);
+    hill(23, -18, 6, 3.5);
+
+    // ------------------------------------------------------------
+    // Direct orbit / pan / zoom controls
+    // ------------------------------------------------------------
+    const canvas = renderer.domElement;
+
+    canvas.addEventListener("contextmenu", event => event.preventDefault());
+
+    canvas.addEventListener("pointerdown", event => {
+      controls.dragging = true;
+      controls.panning = event.button === 2 || event.shiftKey;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = controls.panning ? "move" : "grabbing";
+    });
+
+    canvas.addEventListener("pointermove", event => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.getWorldDirection(right);
+        right.cross(camera.up).normalize();
+        up.cross(camera.getWorldDirection(right)).normalize();
+
+        const panScale = controls.distance * 0.00125;
+        controls.target.addScaledVector(right, -dx * panScale);
+        controls.target.addScaledVector(up, dy * panScale);
+      } else {
+        controls.yaw -= dx * 0.006;
+        controls.pitch = THREE.MathUtils.clamp(
+          controls.pitch + dy * 0.005,
+          0.12,
+          1.18
+        );
+      }
+
+      updateCamera();
+    });
+
+    function stopDragging() {
+      controls.dragging = false;
+      controls.panning = false;
+      canvas.style.cursor = "grab";
+    }
+
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointercancel", stopDragging);
+    canvas.addEventListener("lostpointercapture", stopDragging);
+
+    canvas.addEventListener("wheel", event => {
+      event.preventDefault();
+      const factor = Math.exp(event.deltaY * 0.001);
+      controls.distance = THREE.MathUtils.clamp(
+        controls.distance * factor,
+        15,
+        65
+      );
+      updateCamera();
+    }, { passive: false });
+
+    // Double-click resets the camera.
+    canvas.addEventListener("dblclick", () => {
+      controls.target.set(0, 2, 0);
+      controls.yaw = 0.68;
+      controls.pitch = 0.48;
+      controls.distance = 42;
+      updateCamera();
+    });
+
+    // ------------------------------------------------------------
+    // Resize and animation
+    // ------------------------------------------------------------
+    window.addEventListener("resize", () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      camera.left = -width / 2;
+      camera.right = width / 2;
+      camera.top = height / 2;
+      camera.bottom = -height / 2;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(width, height);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
