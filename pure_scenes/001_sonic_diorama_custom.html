@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Platform</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b9c5cc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #hint {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      padding: 10px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      color: #17313b;
+      background: rgba(245, 250, 252, 0.78);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #title {
+      position: fixed;
+      right: 18px;
+      top: 18px;
+      color: #24434e;
+      font-size: clamp(18px, 2vw, 28px);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="title">VOXEL ISLAND</div>
+  <div id="hint">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from
+      "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb9c5cc);
+    scene.fog = new THREE.Fog(0xb9c5cc, 18, 38);
+
+    const camera = new THREE.PerspectiveCamera(
+      38,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    document.body.appendChild(renderer.domElement);
+
+    // -------------------------------------------------------------------------
+    // Lights
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0xe9f7ff, 0x52636a, 2.15));
+
+    const sun = new THREE.DirectionalLight(0xfff2cf, 4.2);
+    sun.position.set(7, 11, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -12;
+    sun.shadow.camera.right = 12;
+    sun.shadow.camera.top = 12;
+    sun.shadow.camera.bottom = -12;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.00035;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0x9ed8ff, 1.8);
+    rim.position.set(-8, 5, -9);
+    scene.add(rim);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      water: new THREE.MeshStandardMaterial({
+        color: 0x287fa8,
+        roughness: 0.28,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.93
+      }),
+      waterEdge: new THREE.MeshStandardMaterial({
+        color: 0x174e72,
+        roughness: 0.42,
+        metalness: 0.05
+      }),
+      block: new THREE.MeshStandardMaterial({
+        color: 0xe5aa45,
+        roughness: 0.76
+      }),
+      blockAlt: new THREE.MeshStandardMaterial({
+        color: 0xf0bd62,
+        roughness: 0.76
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x65c85a,
+        roughness: 0.82
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x7bd967,
+        roughness: 0.8
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x4d9d48,
+        roughness: 0.85
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x8a5a38,
+        roughness: 0.95
+      }),
+      flowerYellow: new THREE.MeshStandardMaterial({
+        color: 0xffd33f,
+        roughness: 0.55
+      }),
+      flowerGreen: new THREE.MeshStandardMaterial({
+        color: 0x47a847,
+        roughness: 0.8
+      }),
+      ring: new THREE.MeshStandardMaterial({
+        color: 0xffe25b,
+        roughness: 0.38,
+        metalness: 0.12
+      }),
+      house: new THREE.MeshStandardMaterial({
+        color: 0xf4c65b,
+        roughness: 0.72
+      }),
+      roof: new THREE.MeshStandardMaterial({
+        color: 0x9c4f3c,
+        roughness: 0.78
+      }),
+      window: new THREE.MeshStandardMaterial({
+        color: 0xffe6a1,
+        emissive: 0x8a4b12,
+        emissiveIntensity: 0.35,
+        roughness: 0.45
+      }),
+      door: new THREE.MeshStandardMaterial({
+        color: 0x6d3c31,
+        roughness: 0.8
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const sceneRoot = new THREE.Group();
+    scene.add(sceneRoot);
+
+    const voxel = (
+      size,
+      material,
+      x = 0,
+      y = 0,
+      z = 0,
+      parent = sceneRoot,
+      castShadow = true,
+      receiveShadow = true
+    ) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      parent.add(mesh);
+
+      return mesh;
+    };
+
+    // Creates a small stepped water slab.
+    function createWaterBase() {
+      const group = new THREE.Group();
+      sceneRoot.add(group);
+
+      const levels = [
+        { y: -0.7, half: 4.25, size: 0.48 },
+        { y: -0.24, half: 3.95, size: 0.42 },
+        { y: 0.2, half: 3.65, size: 0.36 }
+      ];
+
+      for (const level of levels) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(
+            level.half,
+            level.size * 0.48,
+            12,
+            64
+          ),
+          materials.waterEdge
+        );
+
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = level.y;
+        ring.scale.y = 0.72;
+        ring.castShadow = true;
+        ring.receiveShadow = true;
+        group.add(ring);
+      }
+
+      // Rounded-looking center slab assembled from many small water voxels.
+      const cell = 0.38;
+      const countX = 21;
+      const countZ = 17;
+
+      for (let x = 0; x < countX; x++) {
+        for (let z = 0; z < countZ; z++) {
+          const px = (x - (countX - 1) / 2) * cell;
+          const pz = (z - (countZ - 1) / 2) * cell;
+
+          if (Math.abs(px) < 3.25 && Math.abs(pz) < 2.75) {
+            voxel(
+              cell,
+              materials.water,
+              px,
+              0.18,
+              pz,
+              group,
+              false,
+              true
+            );
+          }
+        }
+      }
+
+      // Low island rim.
+      for (let x = -4; x <= 4; x++) {
+        for (let z = -3; z <= 3; z++) {
+          const edge = Math.abs(x) + Math.abs(z);
+          if (edge === 4 || edge === 5) {
+            voxel(
+              0.42,
+              materials.waterEdge,
+              x * 0.45,
+              0.43,
+              z * 0.45,
+              group,
+              false,
+              true
+            );
+          }
+        }
+      }
+    }
+
+    // Creates a checker-block arch with a circular opening.
+    // The ring is made from discrete blocks rather than a smooth torus.
+    function createCheckerArch() {
+      const group = new THREE.Group();
+      sceneRoot.add(group);
+
+      const cell = 0.34;
+      const outerRadius = 1.45;
+      const innerRadius = 0.88;
+      const verticalSegments = 7;
+      const horizontalSegments = 14;
+
+      for (let level = 0; level < verticalSegments; level++) {
+        const y = 0.48 + level * cell;
+
+        for (let i = 0; i < horizontalSegments; i++) {
+          const angle =
+            (i / horizontalSegments) * Math.PI * 2 + Math.PI / horizontalSegments;
+
+          const radius = outerRadius;
+          const x = Math.cos(angle) * radius;
+          const z = Math.sin(angle) * radius;
+
+          // Leave the front and back center open to suggest a tunnel.
+          const isFrontCenter =
+            level === 0 || level === verticalSegments - 1 &&
+            Math.abs(Math.sin(angle)) < 0.22;
+
+          const isBackCenter =
+            level === 0 || level === verticalSegments - 1 &&
+            Math.abs(Math.cos(angle)) < 0.22;
+
+          if (isFrontCenter || isBackCenter) {
+            continue;
+          }
+
+          const material =
+            (i + level) % 2 === 0
+              ? materials.block
+              : materials.blockAlt;
+
+          voxel(
+            cell * 0.92,
+            material,
+            x,
+            y,
+            z,
+            group
+          );
+        }
+      }
+
+      // Inner rim blocks.
+      for (let level = 0; level < verticalSegments; level++) {
+        const y = 0.48 + level * cell;
+
+        for (let i = 0; i < horizontalSegments; i++) {
+          const angle =
+            (i / horizontalSegments) * Math.PI * 2 + Math.PI / horizontalSegments;
+
+          const radius = innerRadius;
+          const x = Math.cos(angle) * radius;
+          const z = Math.sin(angle) * radius;
+
+          if (level === 0 || level === verticalSegments - 1) {
+            continue;
+          }
+
+          voxel(
+            cell * 0.78,
+            materials.block,
+            x,
+            y,
+            z,
+            group
+          );
+        }
+      }
+
+      // Vertical side pillars.
+      for (let y = 0.48; y < 4.4; y += cell) {
+        voxel(
+          cell * 1.05,
+          materials.block,
+          0,
+          y,
+          outerRadius,
+          group
+        );
+
+        voxel(
+          cell * 1.05,
+          materials.block,
+          0,
+          y,
+          -outerRadius,
+          group
+        );
+      }
+    }
+
+    // Creates the top grass cap.
+    function createTopGrassCap() {
+      const group = new THREE.Group();
+      sceneRoot.add(group);
+
+      const cell = 0.34;
+      const width = 3.45;
+      const depth = 3.0;
+      const rowsX = Math.floor(width / cell);
+      const rowsZ = Math.floor(depth / cell);
+
+      for (let x = 0; x < rowsX; x++) {
+        for (let z = 0; z < rowsZ; z++) {
+          const px = (x - (rowsX - 1) / 2) * cell;
+          const pz = (z - (rowsZ - 1) / 2) * cell;
+
+          const edge =
+            x === 0 || x === rowsX - 1 ||
+            z === 0 || z === rowsZ - 1;
+
+          const material = edge
+            ? materials.grassDark
+            : Math.random() > 0.48
+              ? materials.grass
+              : materials.grassLight;
+
+          voxel(
+            cell * 0.96,
+            material,
+            px,
+            3.05,
+            pz,
+            group
+          );
+        }
+      }
+
+      // Front grass lip.
+      for (let x = -1.55; x <= 1.55; x += 0.34) {
+        voxel(
+          0.34,
+          materials.grassDark,
+          x,
+          2.78,
+          1.55,
+          group
+        );
+      }
+    }
+
+    // Creates the lower grass cap.
+    function createBottomGrassCap() {
+      const group = new THREE.Group();
+      sceneRoot.add(group);
+
+      const cell = 0.34;
+      const width = 2.95;
+      const depth = 2.55;
+      const rowsX = Math.floor(width / cell);
+      const rowsZ = Math.floor(depth / cell);
+
+      for (let x = 0; x < rowsX; x++) {
+        for (let z = 0; z < rowsZ; z++) {
+          const px = (x - (rowsX - 1) / 2) * cell;
+          const pz = (z - (rowsZ - 1) / 2) * cell;
+
+          const edge =
+            x === 0 || x === rowsX - 1 ||
+            z === 0 || z === rowsZ - 1;
+
+          const material = edge
+            ? materials.grassDark
+            : Math.random() > 0.5
+              ? materials.grass
+              : materials.grassLight;
+
+          voxel(
+            cell * 0.96,
+            material,
+            px,
+            0.68,
+            pz,
+            group
+          );
+        }
+      }
+    }
+
+    // Creates a blocky flower.
+    function createFlower(x, y, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      sceneRoot.add(group);
+
+      voxel(
+        0.15,
+        materials.flowerGreen,
+        0,
+        0.08,
+        0,
+        group
+      );
+
+      voxel(
+        0.11,
+        materials.flowerGreen,
+        0,
+        0.22,
+        0,
+        group
+      );
+
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        voxel(
+          0.11,
+          materials.flowerYellow,
+          Math.cos(angle) * 0.1,
+          0.36,
+          Math.sin(angle) * 0.1,
+          group
+        );
+      }
+
+      voxel(
+        0.1,
+        materials.flowerYellow,
+        0,
+        0.46,
+        0,
+        group
+      );
+    }
+
+    // Creates a tiny voxel house.
+    function createHouse() {
+      const group = new THREE.Group();
+      sceneRoot.add(group);
+
+      const cell = 0.22;
+
+      // House body.
+      voxel(
+        cell * 4.4,
+        materials.house,
+        0,
+        3.42,
+        0,
+        group
+      );
+
+      // Roof, built as a stepped pyramid.
+      voxel(
+        cell * 5.2,
+        materials.roof,
+        0,
+        3.82,
+        0,
+        group
+      );
+
+      voxel(
+        cell * 4.4,
+        materials.roof,
+        0,
+        4.05,
+        0,
+        group
+      );
+
+      voxel(
+        cell * 3.6,
+        materials.roof,
+        0,
+        4.28,
+        0,
+        group
+      );
+
+      // Front facade.
+      voxel(
+        cell * 3.7,
+        materials.roof,
+        0,
+        3.42,
+        cell * 2.1,
+        group
+      );
+
+      // Door.
+      voxel(
+        cell * 1.15,
+        materials.door,
+        0,
+        3.42,
+        cell * 2.18,
+        group
+      );
+
+      // Windows.
+      voxel(
+        cell * 0.6,
+        materials.window,
+        -cell * 1.25,
+        3.42,
+        cell * 2.18,
+        group
+      );
+
+      voxel(
+        cell * 0.6,
+        materials.window,
+        cell * 1.25,
+        3.42,
+        cell * 2.18,
+        group
+      );
+
+      // Chimney.
+      voxel(
+        cell * 0.65,
+        materials.roof,
+        cell * 1.55,
+        4.55,
+        -cell * 0.25,
+        group
+      );
+    }
+
+    // Creates golden rings.
+    function createRings(x, y, z, count = 3) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      sceneRoot.add(group);
+
+      for (let i = 0; i < count; i++) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(0.13, 0.035, 6, 18),
+          materials.ring
+        );
+
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(
+          (i - (count - 1) / 2) * 0.2,
+          0.18 + i * 0.035,
+          0
+        );
+        ring.castShadow = true;
+        group.add(ring);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Assemble the island
+    // -------------------------------------------------------------------------
+
+    createWaterBase();
+    createCheckerArch();
+    createTopGrassCap();
+    createBottomGrassCap();
+
+    // Decorative flowers on the top cap.
+    createFlower(-1.35, 3.2, -0.85, 0.9);
+    createFlower(-0.9, 3.2, -1.08, 0.7);
+    createFlower(1.15, 3.2, -0.72, 0.85);
+    createFlower(1.5, 3.2, 0.55, 0.75);
+
+    // Small house on the top cap.
+    createHouse();
+
+    // Golden rings on the top and lower grass.
+    createRings(0.95, 3.2, 0.55, 4);
+    createRings(-0.9, 0.88, 0.5, 3);
+    createRings(0.55, 0.88, -0.45, 2);
+
+    // A few small stacked blocks for visual detail.
+    voxel(
+      0.28,
+      materials.blockAlt,
+      -1.45,
+      3.38,
+      0.65
+    );
+
+    voxel(
+      0.22,
+      materials.grassDark,
+      -1.45,
+      3.65,
+      0.65
+    );
+
+    // -------------------------------------------------------------------------
+    // Direct camera controls: orbit, zoom, and pan
+    // -------------------------------------------------------------------------
+
+    const cameraState = {
+      target: new THREE.Vector3(0, 1.7, 0),
+      azimuth: 0.72,
+      polar: 1.12,
+      distance: 11.5
+    };
+
+    const defaultCamera = {
+      target: cameraState.target.clone(),
+      azimuth: cameraState.azimuth,
+      polar: cameraState.polar,
+      distance: cameraState.distance
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(cameraState.polar);
+
+      camera.position.set(
+        cameraState.target.x +
+          cameraState.distance * sinPolar * Math.sin(cameraState.azimuth),
+        cameraState.target.y +
+          cameraState.distance * Math.cos(cameraState.polar),
+        cameraState.target.z +
+          cameraState.distance * sinPolar * Math.cos(cameraState.azimuth)
+      );
+
+      camera.lookAt(cameraState.target);
+    }
+
+    updateCamera();
+
+    let dragging = false;
+    let panning = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = panning ? "move" : "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const panScale = cameraState.distance * 0.0015;
+
+        cameraState.target.addScaledVector(right, -dx * panScale);
+        cameraState.target.addScaledVector(up, dy * panScale);
+
+        cameraState.target.x = THREE.MathUtils.clamp(
+          cameraState.target.x,
+          -4,
+          4
+        );
+
+        cameraState.target.y = THREE.MathUtils.clamp(
+          cameraState.target.y,
+          0.2,
+          4
+        );
+
+        cameraState.target.z = THREE.MathUtils.clamp(
+          cameraState.target.z,
+          -4,
+          4
+        );
+      } else {
+        cameraState.azimuth -= dx * 0.006;
+        cameraState.polar = THREE.MathUtils.clamp(
+          cameraState.polar - dy * 0.005,
+          0.35,
+          Math.PI - 0.35
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      panning = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (
+        event.pointerId !== undefined &&
+        renderer.domElement.hasPointerCapture(event.pointerId)
+      ) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+
+        cameraState.distance = THREE.MathUtils.clamp(
+          cameraState.distance * Math.exp(event.deltaY * 0.001),
+          6,
+          20
+        );
+
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    renderer.domElement.style.cursor = "grab";
+
+    // -------------------------------------------------------------------------
+    // Resize and render loop
+    // -------------------------------------------------------------------------
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Gentle water motion via shader-like material color variation.
+      materials.water.color.offsetHSL(
+        0,
+        0,
+        Math.sin(performance.now() * 0.0012) * 0.015
+      );
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

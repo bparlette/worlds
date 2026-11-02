@@ -3,7 +3,7 @@
     "id": "001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
-    "system": "",
+    "system": "Genesis",
     "module": "modules/001.js"
   },
   {

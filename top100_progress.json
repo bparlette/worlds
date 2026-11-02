@@ -5,19 +5,9 @@
     "name": "Green Hill Zone",
     "status": "pass",
     "filename": "1001-sonic_the_hedgehog_green_hill_zone.html",
-    "measured": {
-      "x": 30.17,
-      "z": 29.7,
-      "y_max": 13.28,
-      "y_min": 0
-    },
-    "vision": {
-      "character": true,
-      "text_or_hud": false
-    },
     "fails": [],
-    "attempts": 2,
-    "updated_at": "2026-11-01 23:11 EST"
+    "attempts": 1,
+    "updated_at": "2026-11-02 00:00 EST"
   },
   "2": {
     "rank": 2,
