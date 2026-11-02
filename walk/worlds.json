@@ -238,6 +238,13 @@
     "module": "modules/084.js"
   },
   {
+    "id": "085",
+    "title": "Counter-Strike",
+    "sub": "Dust II (de_dust2)",
+    "system": "Console",
+    "module": "modules/085.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
