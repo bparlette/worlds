@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Suburban House</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #bfe8f4;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .panel {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 15px 17px;
+      color: #17364a;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 14px;
+      box-shadow: 0 12px 35px rgba(20, 60, 80, 0.16);
+      backdrop-filter: blur(12px);
+      user-select: none;
+    }
+
+    .panel h1 {
+      margin: 0 0 5px;
+      font-size: 18px;
+      letter-spacing: 0.01em;
+    }
+
+    .panel p {
+      margin: 0;
+      color: #436378;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .hint {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 10;
+      padding: 9px 12px;
+      color: #23495e;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(20, 60, 80, 0.12);
+      font-size: 11px;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .panel {
+        top: 10px;
+        left: 10px;
+        padding: 12px 14px;
+      }
+
+      .panel h1 {
+        font-size: 15px;
+      }
+
+      .panel p {
+        font-size: 11px;
+      }
+
+      .hint {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="panel">
+    <h1>Voxel Suburban Home</h1>
+    <p>Drag to orbit · Right-drag to pan · Scroll to zoom</p>
+  </div>
+  <div class="hint">Double-click to reset the view</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xbfe8f4);
+    scene.fog = new THREE.Fog(0xbfe8f4, 28, 62);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    document.body.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xe8f8ff, 0x6f8b55, 2.15);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff4d8, 3.2);
+    sun.position.set(13, 22, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 55;
+    sun.shadow.bias = -0.00025;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0xb8e8ff, 0.65);
+    fill.position.set(-12, 8, -10);
+    scene.add(fill);
+
+    // -------------------------------------------------------------------------
+    // Palette
+    // -------------------------------------------------------------------------
+
+    const palette = {
+      house: new THREE.Color(0xf2c38e),
+      houseShadow: new THREE.Color(0xe3aa70),
+      roof: new THREE.Color(0xc86f3e),
+      trim: new THREE.Color(0xf8dfbd),
+      door: new THREE.Color(0xd96f45),
+      window: new THREE.Color(0x8bc9dc),
+      windowDark: new THREE.Color(0x547f96),
+      grass: new THREE.Color(0x78b96a),
+      grassLight: new THREE.Color(0x91c979),
+      grassDark: new THREE.Color(0x5b9c58),
+      path: new THREE.Color(0xd9d6c8),
+      sidewalk: new THREE.Color(0xe3e0d2),
+      fence: new THREE.Color(0x8b6244),
+      trunk: new THREE.Color(0x755038),
+      leaf: new THREE.Color(0x4f9657),
+      leafLight: new THREE.Color(0x69aa63),
+      leafDark: new THREE.Color(0x3f7848),
+      blue: new THREE.Color(0x3674a3),
+      mailbox: new THREE.Color(0x3674a3)
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    function voxelMaterial(color, roughness = 0.86) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        roughness,
+        metalness: 0.02
+      });
+    }
+
+    function addVoxel(x, y, z, color, sx = 1, sy = 1, sz = 1, parent = scene) {
+      const mesh = new THREE.Mesh(voxelGeometry, voxelMaterial(color));
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addVoxelBox({
+      x,
+      y,
+      z,
+      width,
+      height,
+      depth,
+      color,
+      parent = scene
+    }) {
+      return addVoxel(
+        x,
+        y,
+        z,
+        color,
+        width,
+        height,
+        depth,
+        parent
+      );
+    }
+
+    function addGridBox({
+      x,
+      y,
+      z,
+      width,
+      height,
+      depth,
+      color,
+      cell = 1,
+      parent = scene
+    }) {
+      const nx = Math.max(1, Math.ceil(width / cell));
+      const ny = Math.max(1, Math.ceil(height / cell));
+      const nz = Math.max(1, Math.ceil(depth / cell));
+
+      for (let ix = 0; ix < nx; ix++) {
+        for (let iy = 0; iy < ny; iy++) {
+          for (let iz = 0; iz < nz; iz++) {
+            addVoxel(
+              x - width / 2 + (ix + 0.5) * (width / nx),
+              y - height / 2 + (iy + 0.5) * (height / ny),
+              z - depth / 2 + (iz + 0.5) * (depth / nz),
+              color,
+              width / nx,
+              height / ny,
+              depth / nz,
+              parent
+            );
+          }
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Ground, lawn, driveway, and street
+    // -------------------------------------------------------------------------
+
+    addGridBox({
+      x: 0,
+      y: -0.38,
+      z: 0,
+      width: 54,
+      height: 0.7,
+      depth: 42,
+      color: 0x78b96a,
+      cell: 2
+    });
+
+    // Front lawn
+    addGridBox({
+      x: -2.2,
+      y: -0.16,
+      z: 3.5,
+      width: 14.5,
+      height: 0.28,
+      depth: 11.5,
+      color: 0x83bd72,
+      cell: 1.25
+    });
+
+    // Right lawn
+    addGridBox({
+      x: 10.7,
+      y: -0.16,
+      z: 1.8,
+      width: 10.5,
+      height: 0.28,
+      depth: 13.5,
+      color: 0x83bd72,
+      cell: 1.25
+    });
+
+    // Driveway
+    addGridBox({
+      x: 7.25,
+      y: 0.02,
+      z: 7.2,
+      width: 7.2,
+      height: 0.18,
+      depth: 13.5,
+      color: 0xd7d4c6,
+      cell: 1.25
+    });
+
+    // Street
+    addGridBox({
+      x: 0,
+      y: -0.1,
+      z: 21,
+      width: 48,
+      height: 0.2,
+      depth: 7,
+      color: 0xbcc0bd,
+      cell: 1.5
+    });
+
+    // Street seams
+    for (let x = -24; x <= 24; x += 6) {
+      addVoxel(x, 0.005, 21, 0xaeb9b4, 0.035, 0.025, 7);
+    }
+    for (let z = 17; z <= 24; z += 2) {
+      addVoxel(0, 0.005, z, 0xaeb9b4, 48, 0.025, 0.035);
+    }
+
+    // -------------------------------------------------------------------------
+    // House body
+    // -------------------------------------------------------------------------
+
+    const house = new THREE.Group();
+    house.position.y = 0.05;
+    scene.add(house);
+
+    // Main house walls
+    addGridBox({
+      x: -1.2,
+      y: 3.15,
+      z: 0,
+      width: 15,
+      height: 7.2,
+      depth: 10,
+      color: palette.house,
+      cell: 1.25,
+      parent: house
+    });
+
+    // Right side wall / garage volume
+    addGridBox({
+      x: 10.2,
+      y: 3.05,
+      z: 0,
+      width: 10,
+      height: 6.1,
+      depth: 10,
+      color: palette.house,
+      cell: 1.25,
+      parent: house
+    });
+
+    // Front facade trim
+    addGridBox({
+      x: -1.2,
+      y: 6.78,
+      z: 5.04,
+      width: 15.4,
+      height: 0.5,
+      depth: 0.4,
+      color: palette.trim,
+      cell: 1,
+      parent: house
+    });
+
+    // Garage facade trim
+    addGridBox({
+      x: 10.2,
+      y: 5.9,
+      z: 5.04,
+      width: 10.4,
+      height: 0.45,
+      depth: 0.4,
+      color: palette.trim,
+      cell: 1,
+      parent: house
+    });
+
+    // Front windows
+    function addFrontWindow(x, y, z, width = 3.1, height = 2.15) {
+      addGridBox({
+        x,
+        y,
+        z,
+        width,
+        height,
+        0.22,
+        palette.windowDark,
+        cell: 0.55,
+        parent: house
+      });
+
+      addGridBox({
+        x,
+        y,
+        z: 0.14,
+        width: width - 0.25,
+        height: height - 0.25,
+        0.12,
+        palette.window,
+        cell: 0.45,
+        parent: house
+      });
+
+      // Mullions
+      addVoxel(x, y, 0.2, palette.windowDark, 0.1, height, 0.12, house);
+      addVoxel(x, y, 0.2, palette.windowDark, width, 0.1, 0.12, house);
+    }
+
+    addFrontWindow(-5.25, 4.95, 5.05);
+    addFrontWindow(1.25, 4.95, 5.05);
+
+    // Side windows
+    addFrontWindow(14.95, 4.65, -2.5, 2.8, 1.9);
+    addFrontWindow(14.95, 4.65, 1.5, 2.8, 1.9);
+
+    // Arched bay windows
+    function addBayWindow(x, y, z) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      house.add(group);
+
+      // Brown arch frame
+      addGridBox({
+        x: 0,
+        y: 0,
+        z: 0,
+        width: 2.25,
+        height: 2.45,
+        depth: 0.35,
+        color: palette.roof,
+        cell: 0.45,
+        parent: group
+      });
+
+      // Window panes
+      addGridBox({
+        x: 0,
+        y: -0.05,
+        z: 0.2,
+        width: 1.75,
+        height: 1.95,
+        depth: 0.18,
+        color: palette.window,
+        cell: 0.42,
+        parent: group
+      });
+
+      // Cross mullions
+      addVoxel(0, -0.05, 0.3, palette.windowDark, 0.08, 1.95, 0.16, group);
+      addVoxel(0, -0.05, 0.3, palette.windowDark, 1.75, 0.08, 0.16, group);
+
+      // Small lower pane
+      addVoxel(0, -1.15, 0.2, palette.window, 1.85, 0.75, 0.18, group);
+    }
+
+    addBayWindow(-3.65, 2.15, 5.08);
+    addBayWindow(3.65, 2.15, 5.08);
+
+    // Front door
+    const door = new THREE.Group();
+    door.position.set(0, 0, 5.1);
+    house.add(door);
+
+    addGridBox({
+      x: 0,
+      y: 1.25,
+      z: 0,
+      width: 1.55,
+      height: 2.5,
+      depth: 0.28,
+      color: palette.door,
+      cell: 0.42,
+      parent: door
+    });
+
+    addVoxel(0, 1.85, 0.19, palette.window, 0.7, 0.75, 0.1, door);
+
+    // Door handle
+    addVoxel(0.48, 1.3, 0.25, palette.trim, 0.12, 0.35, 0.1, door);
+
+    // Yellow doormat
+    addVoxel(0.48, 0.12, 5.2, palette.trim, 0.75, 0.18, 0.55);
+
+    // Chimney
+    addGridBox({
+      x: -5.8,
+      y: 8.05,
+      z: -2.2,
+      width: 1.65,
+      height: 3.6,
+      depth: 1.65,
+      color: palette.trim,
+      cell: 0.55,
+      parent: house
+    });
+
+    addVoxel(-5.8, 9.95, -2.2, palette.roof, 1.9, 0.25, 1.9, house);
+
+    // Roof
+    const roof = new THREE.Group();
+    house.add(roof);
+
+    // Main gable roof
+    addGridBox({
+      x: -1.2,
+      y: 7.35,
+      z: 0,
+      width: 16.2,
+      height: 0.65,
+      depth: 10.8,
+      color: palette.roof,
+      cell: 1.05,
+      parent: roof
+    });
+
+    // Roof trim
+    addVoxel(-1.2, 7.72, 5.43, palette.trim, 16.4, 0.2, 0.28, roof);
+    addVoxel(-1.2, 7.72, -5.43, palette.trim, 16.4, 0.2, 0.28, roof);
+
+    // Gable triangles made from stacked smaller boxes
+    function addGableTriangle(x, z, width, height, color) {
+      for (let y = 0; y < height; y++) {
+        const rowWidth = width * ((height - y) / height);
+        addGridBox({
+          x,
+          y: height / 2 - 0.33 + y,
+          z,
+          width: rowWidth,
+          height: 0.35,
+          depth: 0.35,
+          color,
+          cell: 0.5,
+          parent: roof
+        });
+      }
+    }
+
+    addGableTriangle(-1.2, -5.45, 7.6, 3.8, palette.roof);
+
+    // Garage roof
+    const garageRoof = new THREE.Group();
+    garageRoof.position.set(10.2, 6.1, 0);
+    house.add(garageRoof);
+
+    addGridBox({
+      x: 0,
+      y: 0,
+      z: 0,
+      width: 10.8,
+      height: 0.55,
+      depth: 8.2,
+      color: palette.roof,
+      cell: 1,
+      parent: garageRoof
+    });
+
+    addVoxel(0, 0.35, 4.13, palette.trim, 11, 0.2, 0.25, garageRoof);
+    addVoxel(0, 0.35, -4.13, palette.trim, 11, 0.2, 0.25, garageRoof);
+
+    // Garage door
+    addGridBox({
+      x: 0,
+      y: 0,
+      z: 4.12,
+      width: 8.6,
+      height: 5.55,
+      depth: 0.22,
+      color: palette.trim,
+      cell: 0.9,
+      parent: garageRoof
+    });
+
+    // Garage door horizontal lines
+    for (let y = -2.1; y <= 2.2; y += 0.7) {
+      addVoxel(0, y, 4.27, palette.houseShadow, 8.45, 0.08, 0.08, garageRoof);
+    }
+
+    // Garage window
+    addGridBox({
+      x: 0,
+      y: 4.45,
+      z: 4.29,
+      width: 2.25,
+      height: 1.35,
+      depth: 0.12,
+      color: palette.window,
+      cell: 0.4,
+      parent: garageRoof
+    });
+
+    // Small side window above garage
+    addFrontWindow(14.95, 6.75, 3.2, 1.8, 1.15);
+
+    // -------------------------------------------------------------------------
+    // Fence
+    // -------------------------------------------------------------------------
+
+    const fence = new THREE.Group();
+    scene.add(fence);
+
+    // Left fence
+    for (let x = -18; x <= -12; x += 1.2) {
+      addVoxel(x, 1.15, 8.8, palette.fence, 0.22, 2.3, 0.22, fence);
+      addVoxel(x + 0.45, 1.55, 8.8, palette.fence, 0.16, 0.8, 0.16, fence);
+    }
+
+    // Right fence
+    for (let x = 15.5; x <= 22; x += 1.2) {
+      addVoxel(x, 1.15, 10.2, palette.fence, 0.22, 2.3, 0.22, fence);
+      addVoxel(x + 0.45, 1.55, 10.2, palette.fence, 0.16, 0.8, 0.16, fence);
+    }
+
+    // Back fence segments
+    for (let x = -18; x <= -12; x += 1.2) {
+      addVoxel(x, 1.15, -13.5, palette.fence, 0.22, 2.3, 0.22, fence);
+    }
+    for (let x = 15.5; x <= 22; x += 1.2) {
+      addVoxel(x, 1.15, -13.5, palette.fence, 0.22, 2.3, 0.22, fence);
+    }
+
+    // -------------------------------------------------------------------------
+    // Trees
+    // -------------------------------------------------------------------------
+
+    function addTree(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.scale.setScalar(scale);
+      scene.add(tree);
+
+      addVoxel(0, 1.25, 0, palette.trunk, 0.55, 2.5, 0.55, tree);
+
+      const crown = new THREE.Group();
+      crown.position.y = 3.55;
+      tree.add(crown);
+
+      // Layered cubic crown
+      addGridBox({
+        x: 0,
+        y: 0,
+        z: 0,
+        width: 4.4,
+        height: 2.2,
+        depth: 4.4,
+        color: palette.leaf,
+        cell: 0.75,
+        parent: crown
+      });
+
+      addGridBox({
+        x: 0,
+        y: 1.25,
+        z: 0,
+        width: 3.5,
+        height: 1.65,
+        depth: 3.5,
+        color: palette.leafLight,
+        cell: 0.65,
+        parent: crown
+      });
+
+      addGridBox({
+        x: 0,
+        y: 2.45,
+        z: 0,
+        width: 2.7,
+        height: 1.25,
+        depth: 2.7,
+        color: palette.leafDark,
+        cell: 0.55,
+        parent: crown
+      });
+
+      return tree;
+    }
+
+    addTree(-10.7, 5.7, 1.1);
+    addTree(13.7, -7.5, 0.95);
+
+    // -------------------------------------------------------------------------
+    // Bushes
+    // -------------------------------------------------------------------------
+
+    function addBush(x, z, scale = 1, light = false) {
+      const bush = new THREE.Group();
+      bush.position.set(x, 0, z);
+      bush.scale.setScalar(scale);
+      scene.add(bush);
+
+      addVoxel(0, 0.3, 0, light ? palette.leafLight : palette.leafDark, 1.15, 0.6, 1.15, bush);
+      addVoxel(-0.38, 0.65, 0.08, light ? palette.leaf : palette.leaf, 0.75, 0.7, 0.75, bush);
+      addVoxel(0.38, 0.65, 0.08, light ? palette.leaf : palette.leaf, 0.75, 0.7, 0.75, bush);
+      addVoxel(0, 0.95, 0, light ? palette.leafLight : palette.leaf, 0.9, 0.65, 0.9, bush);
+    }
+
+    addBush(-6.8, 6.2, 0.85);
+    addBush(-2.8, 6.4, 0.72);
+    addBush(2.8, 6.4, 0.72);
+    addBush(6.8, 6.2, 0.85);
+    addBush(-7.2, 2.4, 0.65);
+    addBush(7.2, 2.4, 0.65);
+    addBush(-11.5, 1.2, 0.75);
+    addBush(11.2, 7.8, 0.75);
+
+    // -------------------------------------------------------------------------
+    // Mailbox
+    // -------------------------------------------------------------------------
+
+    const mailbox = new THREE.Group();
+    mailbox.position.set(7.6, 0, 11.6);
+    scene.add(mailbox);
+
+    addVoxel(0, 0.45, 0, palette.blue, 0.9, 0.9, 0.5, mailbox);
+    addVoxel(0, 0.92, 0, palette.blue, 0.65, 0.18, 0.4, mailbox);
+    addVoxel(0, 0.08, 0, palette.trim, 0.2, 0.45, 0.3, mailbox);
+
+    // -------------------------------------------------------------------------
+    // Antenna
+    // -------------------------------------------------------------------------
+
+    const antenna = new THREE.Group();
+    antenna.position.set(-5.8, 10.05, -2.2);
+    house.add(antenna);
+
+    addVoxel(0, 1.3, 0, palette.trim, 0.12, 2.6, 0.12, antenna);
+    addVoxel(-0.6, 2.25, 0, palette.trim, 1.2, 0.1, 0.1, antenna);
+    addVoxel(0.6, 2.25, 0, palette.trim, 1.2, 0.1, 0.1, antenna);
+    addVoxel(0, 2.35, 0, palette.trim, 1.4, 0.1, 0.1, antenna);
+
+    // -------------------------------------------------------------------------
+    // Custom camera controls
+    // -------------------------------------------------------------------------
+
+    const target = new THREE.Vector3(1.5, 3.5, 1.6);
+    const spherical = new THREE.Spherical(25, Math.PI * 0.38, Math.PI * 0.25);
+    const initialTarget = target.clone();
+    const initialSpherical = spherical.clone();
+
+    let dragging = false;
+    let panning = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    const canvas = renderer.domElement;
+
+    canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    canvas.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = panning ? "move" : "grabbing";
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.getWorldDirection(right);
+        right.cross(camera.up).normalize();
+        up.crossVectors(right, camera.getWorldDirection(new THREE.Vector3()))
+          .normalize();
+
+        const panScale = 0.018 / camera.zoom;
+        target.addScaledVector(right, -dx * panScale);
+        target.addScaledVector(up, dy * panScale);
+        target.x = THREE.MathUtils.clamp(target.x, -12, 15);
+        target.y = THREE.MathUtils.clamp(target.y, 1, 10);
+        target.z = THREE.MathUtils.clamp(target.z, -8, 12);
+      } else {
+        spherical.theta -= dx * 0.006;
+        spherical.phi = THREE.MathUtils.clamp(
+          spherical.phi - dy * 0.005,
+          0.18,
+          Math.PI * 0.49
+        );
+      }
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      panning = false;
+      canvas.style.cursor = "grab";
+      if (event && canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointercancel", stopDragging);
+    canvas.style.cursor = "grab";
+
+    canvas.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        spherical.radius = THREE.MathUtils.clamp(
+          spherical.radius * Math.exp(event.deltaY * 0.001),
+          12,
+          48
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    function updateCamera() {
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    function resetCamera() {
+      target.copy(initialTarget);
+      spherical.copy(initialSpherical);
+      updateCamera();
+    }
+
+    canvas.addEventListener("dblclick", resetCamera);
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+      const leafMaterial = scene.children.find((child) => child.isGroup && child.children.some((item) => item.material?.color?.getHex() === palette.leaf.getHex()))?.materials?.[0];
+
+      // Subtle tree breathing
+      if (leafMaterial) {
+        leafMaterial.color.offsetHSL(0, 0, Math.sin(elapsed * 1.2) * 0.015);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
