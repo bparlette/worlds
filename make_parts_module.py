@@ -8,8 +8,11 @@ make_walker_module.py's output (R1-R8):
     python3 make_parts_module.py <parts.json> [--out <path>]
     python3 make_parts_module.py --selftest
 
-Steps: validate + repair the parts (per-part graceful degradation) ->
-analytic bounds -> mechanical normalization scale -> spawn/doors/relic
+Steps: input repair (strip markdown fences, drop trailing commas,
+salvage complete parts out of a truncated document) -> validate +
+repair the parts (per-part graceful degradation) -> analytic bounds
+-> mechanical normalization scale -> degeneracy gates (repair ratio,
+sliver footprint) -> spawn/doors/relic
 anchors (relic identity from walk/relics.json, anchor chosen with the
 same ground-column clearance algorithm as make_walker_module.py) ->
 emit the module (buildParts from walk/parts.js does the geometry) ->
@@ -66,6 +69,157 @@ RELIC_ASSIGNMENTS = _load_relic_assignments()
 
 
 # ---------------------------------------------------------------------------
+# Input repair. Qwen's raw output needs mechanical cleanup before it
+# can be parsed at all: it arrives wrapped in markdown fences, with
+# trailing commas, or cut off mid-object at the token cap. Each stage
+# is attempted in order and every action is returned as a repair line,
+# counted in the run's repair accounting. A document that yields zero
+# parts raises, exactly like an unparseable file always did.
+# ---------------------------------------------------------------------------
+
+_TRAILING_COMMA_RE = re.compile(r",(\s*[}\]])")
+
+
+def _strip_code_fence(text):
+    """Remove a leading ``` / ```json fence line and a trailing fence.
+    The closing fence may be absent (truncated output)."""
+    t = text.strip()
+    if not t.startswith("```"):
+        return text, False
+    nl = t.find("\n")
+    if nl < 0:
+        return text, False
+    body = t[nl + 1:]
+    tail = body.rstrip()
+    if tail.endswith("```"):
+        body = tail[:-3]
+    return body, True
+
+
+def _fix_trailing_commas(text):
+    return _TRAILING_COMMA_RE.subn(r"\1", text)
+
+
+def _salvage_parts_array(text):
+    """Scan the "parts" array for complete balanced {...} objects
+    (string- and escape-aware) and parse each one. Returns the list of
+    recovered part objects — possibly empty."""
+    m = re.search(r'"parts"\s*:\s*\[', text)
+    if not m:
+        return []
+    i = m.end()
+    n = len(text)
+    parts = []
+    while i < n:
+        while i < n and text[i] in " \t\r\n,":
+            i += 1
+        if i >= n or text[i] == "]":
+            break
+        if text[i] != "{":
+            nxt = text.find("{", i)
+            if nxt < 0:
+                break
+            i = nxt
+        depth = 0
+        in_str = False
+        esc = False
+        j = i
+        complete = False
+        while j < n:
+            ch = text[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            elif ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    complete = True
+                    j += 1
+                    break
+            j += 1
+        if not complete:
+            break
+        try:
+            obj = json.loads(_fix_trailing_commas(text[i:j])[0])
+            if isinstance(obj, dict):
+                parts.append(obj)
+        except Exception:
+            pass
+        i = j
+    return parts
+
+
+def _salvage_header(text):
+    """Best-effort extraction of the world-level fields from raw text
+    (used only when the document as a whole does not parse). Part
+    objects never carry these keys, so a plain scan is safe."""
+    header = {}
+    m = re.search(r'"id"\s*:\s*("[^"]*"|\d+)', text)
+    if m:
+        try:
+            header["id"] = json.loads(m.group(1))
+        except Exception:
+            pass
+    for key in ("title", "game"):
+        m = re.search(r'"%s"\s*:\s*"((?:[^"\\]|\\.)*)"' % key, text)
+        if m:
+            try:
+                header[key] = json.loads('"%s"' % m.group(1))
+            except Exception:
+                header[key] = m.group(1)
+    for key in ("sky", "fog", "ground"):
+        m = re.search(r'"%s"\s*:\s*"(#[0-9a-fA-F]{6})"' % key, text)
+        if m:
+            header[key] = m.group(1)
+    return header
+
+
+def load_parts_data(path):
+    """Returns (data, input_repairs). Raises if no parseable document
+    and no salvageable parts can be recovered."""
+    with open(path, "r", encoding="utf-8") as f:
+        raw = f.read()
+    repairs = []
+    try:
+        return json.loads(raw), repairs
+    except Exception:
+        pass
+    text, fenced = _strip_code_fence(raw)
+    if fenced:
+        repairs.append("input: stripped markdown code fence")
+        try:
+            return json.loads(text), repairs
+        except Exception:
+            pass
+    fixed, n_commas = _fix_trailing_commas(text)
+    if n_commas:
+        repairs.append(f"input: removed {n_commas} trailing comma(s)")
+        try:
+            return json.loads(fixed), repairs
+        except Exception:
+            pass
+    salvaged = _salvage_parts_array(text)
+    if salvaged:
+        data = _salvage_header(text)
+        data["parts"] = salvaged
+        repairs.append(
+            f"input truncated/unparseable: salvaged {len(salvaged)} complete parts")
+        return data, repairs
+    # Nothing recovered — re-raise the original parse error verbatim so
+    # the failure reads exactly as it did before input repair existed.
+    json.loads(raw)
+    raise ValueError("unparseable parts file")
+
+
+# ---------------------------------------------------------------------------
 # Validation + repair. Every repair is logged; a part that cannot be
 # repaired is dropped and logged. Nothing raises on bad part data.
 # ---------------------------------------------------------------------------
@@ -85,15 +239,20 @@ def _clamp(v, lo, hi):
 
 
 def validate_parts(data):
-    """Returns (clean_data, expanded_parts, repairs, dropped_count).
+    """Returns (clean_data, expanded_parts, repairs, dropped_count,
+    vstats).
 
     clean_data carries the world-level fields; expanded_parts is the
     flat, validated, repeat-expanded, deduped part list that gets
     inlined into the module (so walk/parts.js and this script agree
-    mesh-for-mesh).
+    mesh-for-mesh). vstats carries the degeneracy-gate counters:
+    entries whose position or size was clamped, and exact duplicates
+    removed by dedupe.
     """
     repairs = []
     dropped = 0
+    clamped_parts = 0
+    duplicates_removed = 0
 
     def rep(msg):
         repairs.append(msg)
@@ -125,16 +284,21 @@ def validate_parts(data):
             dropped += 1
             continue
         part = {"s": shape}
+        clamped_here = False
         # position: clamp |p| <= 80
         cp = [_clamp(v, -POS_CLAMP, POS_CLAMP) for v in p]
         if cp != p:
             rep(f"{label} ({shape}): position {p} clamped to {cp}")
+            clamped_here = True
         part["p"] = cp
         # size: clamp to [0.05, 60]
         cz = [_clamp(v, SIZE_MIN, SIZE_MAX) for v in z]
         if cz != z:
             rep(f"{label} ({shape}): size {z} clamped to {cz}")
+            clamped_here = True
         part["z"] = cz
+        if clamped_here:
+            clamped_parts += 1
         # color
         c = raw.get("c")
         if not (isinstance(c, str) and COLOR_RE.match(c)):
@@ -218,7 +382,8 @@ def validate_parts(data):
         seen.add(key)
         deduped.append(part)
     if len(deduped) != len(expanded):
-        rep(f"{len(expanded) - len(deduped)} exact-duplicate part(s) removed")
+        duplicates_removed = len(expanded) - len(deduped)
+        rep(f"{duplicates_removed} exact-duplicate part(s) removed")
         expanded = deduped
 
     clean = {
@@ -231,7 +396,9 @@ def validate_parts(data):
     }
     if clean["fog"] is None:
         clean["fog"] = clean["sky"]
-    return clean, expanded, repairs, dropped
+    vstats = {"clamped_parts": clamped_parts,
+              "duplicates_removed": duplicates_removed}
+    return clean, expanded, repairs, dropped, vstats
 
 
 # ---------------------------------------------------------------------------
@@ -607,8 +774,7 @@ def run_gate(module_js, candidates, expected_meshes):
 # ---------------------------------------------------------------------------
 
 def convert(parts_path, out_path=None):
-    with open(parts_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data, input_repairs = load_parts_data(parts_path)
 
     raw_id = data.get("id")
     if isinstance(raw_id, (int, float)) and not isinstance(raw_id, bool):
@@ -618,9 +784,10 @@ def convert(parts_path, out_path=None):
     else:
         raise ValueError("parts file has no usable 'id'")
 
-    clean, parts, repairs, dropped = validate_parts(data)
+    clean, parts, repairs, dropped, vstats = validate_parts(data)
     clean["formatted_id"] = fid
     entries = len(data.get("parts") or [])
+    repairs = input_repairs + repairs
     for msg in repairs:
         print(f"[Parts] repair: {msg}")
     print(f"[Parts] world {fid} \"{clean['title'] or clean['game']}\": "
@@ -635,6 +802,37 @@ def convert(parts_path, out_path=None):
     w, d, h = dims
     print(f"[Parts] analytic bounds {w:.2f} x {d:.2f} x {h:.2f} (w x d x h) "
           f"-> scale {scale:.4f} (post {w * scale:.2f} x {d * scale:.2f} x {h * scale:.2f})")
+
+    # Degeneracy gates — hard fails. A list the validator had to
+    # rescue wholesale (duplicates, clamps) or that normalizes to a
+    # spike is not a world; nothing is emitted or written.
+    repaired = vstats["duplicates_removed"] + vstats["clamped_parts"]
+    ratio = repaired / entries if entries else 0.0
+    if ratio > 0.35:
+        msg = (f"degenerate parts list: repair ratio {ratio:.2f} "
+               f"({vstats['duplicates_removed']} exact duplicates removed + "
+               f"{vstats['clamped_parts']} parts clamped, of {entries} raw "
+               f"entries) exceeds 0.35")
+        print(f"[Parts Gate] FAIL: {msg}")
+        return {"status": "degenerate", "id": fid, "errors": [msg]}
+    pw, pd = w * scale, d * scale
+    if min(pw, pd) < 8 and max(pw, pd) > 20:
+        msg = (f"sliver world: post-scale footprint {pw:.2f} x {pd:.2f} "
+               f"(min {min(pw, pd):.2f} < 8 while max {max(pw, pd):.2f} > 20)")
+        print(f"[Parts Gate] FAIL: {msg}")
+        return {"status": "degenerate", "id": fid, "errors": [msg]}
+
+    # Shape dominance — a warning only, printed on the gate line.
+    dominance_note = ""
+    if len(parts) > 40:
+        shape_counts = {}
+        for p in parts:
+            shape_counts[p["s"]] = shape_counts.get(p["s"], 0) + 1
+        top_shape, top_count = max(shape_counts.items(), key=lambda kv: kv[1])
+        if top_count / len(parts) > 0.85:
+            dominance_note = (f" | WARNING: shape '{top_shape}' dominates "
+                              f"({top_count}/{len(parts)} = "
+                              f"{top_count / len(parts):.0%} of kept parts)")
 
     # Anchors (scaled space). Spawn mirrors module 001 exactly: south
     # edge, inset 2.5 from the rim, field name `yaw`, facing the centre.
@@ -692,7 +890,8 @@ def convert(parts_path, out_path=None):
     print(f"[Parts Gate] parse OK | meshes {gate['meshCount']}/{len(parts)} | "
           f"bbox {bw:.2f} x {bd:.2f} x {bh:.2f} | NaN values {gate.get('nanValues', 0)} | "
           f"relic '{relic_name}' ({relic_id}) @ ({chosen[0]:.1f}, {chosen[1]:.1f})"
-          f"{' clear' if not stats['anchor_warning'] else ' WARNING'}")
+          f"{' clear' if not stats['anchor_warning'] else ' WARNING'}"
+          f"{dominance_note}")
 
     if errors:
         for e in errors:

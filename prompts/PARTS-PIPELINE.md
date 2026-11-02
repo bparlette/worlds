@@ -52,12 +52,13 @@ mechanical, §5), no wall instructions beyond the `role` tag.
 
 ```
 You are given one screenshot of a video game place. Describe ONLY the place as a JSON parts list. Output ONLY the JSON object — no prose, no code, no markdown fences.
+If the image is a whole MAP showing many rooms or areas, build only ONE connected area — the most important one — that fits the world; do not try to build the whole map.
 Coordinates: origin at the centre of the place, ground level y=0, +y up, +x right, +z toward the viewer. Each part's "p" is its CENTRE [x,y,z]; each part's "z" is its FULL size [sx,sy,sz]. Units are world units: make the place about 30 units wide and at most 13 high.
 Each part: {"s":shape,"p":[x,y,z],"z":[sx,sy,sz],"c":"#rrggbb"} — use flat colours sampled from the screenshot.
 Shapes: "box" block; "cyl" cylinder (z[0]=diameter, z[1]=height); "sph" ball (stretched by z); "cone" (z[0]=base diameter, z[1]=height); "tor" ring standing upright (z[0]=ring diameter, z[1]=tube radius); "wed" ramp, low edge toward +z, high edge toward -z; "gnd" ground slab (p[1] is its TOP height).
 Optional per part: "ry" rotation in degrees; "e":"#rrggbb" glow colour; "a":"bob"|"spin"|"sway"|"pulse" for simple motion (pulse needs "e"); "r":[dx,dy,dz] and "n":count repeat a part in a row (fences, posts, trees); "role":"wall" ONLY on the outer boundary walls.
 Build only the background world: the terrain, buildings, platforms and fixed props that would remain if every character vanished. No characters, no enemies, no HUD, no text or lettering as shapes. Characters set the scale and nothing else.
-Order: biggest shapes first (ground, walls, buildings), then props. Use as many parts as the place needs.
+Order: biggest shapes first (ground, walls, buildings), then props. A place usually needs 40-120 parts. Prefer fewer, larger parts over many small ones; never repeat the same part in a stack or grid by hand — use "r"/"n" for rows.
 {"id":"<world id>","title":"<place name>","game":"<game>","sky":"#rrggbb","fog":"#rrggbb","ground":"#rrggbb","parts":[ ... ]}
 ```
 
@@ -125,6 +126,20 @@ place anchors, or stamp relics — that is the converter's job.
 
 **`make_parts_module.py <parts.json> [--out <path>] [--selftest]`:**
 
+0. **Input repair.** Qwen's raw text is cleaned mechanically before
+   parsing, in stages: a markdown code fence (```json / ```) around
+   the document is stripped; if the document still fails to parse,
+   trailing commas are removed and parsing is retried; if it still
+   fails — the truncation case, output cut mid-object at the token
+   cap — the parts array is **salvaged**: complete balanced part
+   objects are recovered one by one (string-aware brace matching),
+   the header fields (id/title/game/sky/fog/ground) are extracted
+   best-effort from the raw text, and the run proceeds with the
+   salvaged list, logging `input truncated/unparseable: salvaged N
+   complete parts`. Every input-repair action is printed in the
+   `[Parts]` repair lines and counts toward the run's repair total.
+   Salvaging zero parts is a hard error, exactly like an unparseable
+   file.
 1. **Validate + repair** per §3; log every repair; drop unrepairable
    parts. Repeat expansion, the 800 cap and dedupe happen here, so the
    part list inlined into the module is exactly the built list.
@@ -188,6 +203,21 @@ rewritten to the local build, the same trick as the R9 bake):
 5. `update(0)`, `update(1)`, `update(1.7)` run without throwing.
 6. Relic anchor clearance, per §4.5 — pass, or `anchor_warning`
    recorded (a warning, not a failure, exactly as in the JS pipeline).
+7. **Degeneracy — repair ratio (hard fail).** Checked in the converter
+   before the headless gate: (exact duplicates removed + parts with
+   any clamped field) ÷ raw part entries > 0.35 → the list is
+   degenerate (the #001 pilot's repetition loop alone produced 110
+   exact duplicates among 189 entries — a 0.58 ratio before clamped
+   parts are even counted). The converter exits non-zero, writes no
+   module, and prints the measured counts.
+8. **Degeneracy — sliver world (hard fail).** Also checked before the
+   headless gate: a post-normalization footprint with min(w, d) < 8
+   while max(w, d) > 20 is a spike, not a place — same hard fail,
+   nothing written.
+
+One warning is not a failure: if a single shape makes up > 85% of
+kept parts while kept parts > 40, a shape-dominance warning is
+printed on the gate line.
 
 The converter prints the numbers for every run: entries → kept /
 dropped / repairs, analytic bounds, scale, gate mesh count, measured
@@ -208,6 +238,10 @@ other world, do not register anything, do not overwrite anything.
 2. **Qwen pass.** Run Qwen with the §2 prompt, verbatim, on the SAME
    source image previously used for `scenes/001` (Adventure — Castles
    & Mazes). Save its raw output, unedited, to `walk/parts/001.json`.
+   The run must use the LOCKED generation configuration from the
+   kickoff v5 audit — the same model and sampling that generated
+   scenes 001–003 (temperature 0.6, max_tokens 14000) — not an ad-hoc
+   model or cap; record the model name and settings in the report.
 3. **Convert.** `python3 make_parts_module.py walk/parts/001.json`
    → `walk/parts/001.module.js`. **Do NOT overwrite
    `walk/modules/001.js`. Do NOT register in the walker manifest.**
