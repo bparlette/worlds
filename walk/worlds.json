@@ -224,6 +224,13 @@
     "module": "modules/076.js"
   },
   {
+    "id": "083",
+    "title": "Metal Gear Solid",
+    "sub": "Shadow Moses Island — Heliport",
+    "system": "Console",
+    "module": "modules/083.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
