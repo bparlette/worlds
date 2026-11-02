@@ -574,5 +574,13 @@
     "status": "pass",
     "filename": "1072-mortal_kombat_x_training_room_stage.html",
     "updated_at": "2026-11-02 06:23 EST"
+  },
+  "73": {
+    "rank": 73,
+    "game": "Kirby",
+    "name": "Battleship Halberd",
+    "status": "pass",
+    "filename": "1073-kirby_battleship_halberd.html",
+    "updated_at": "2026-11-02 06:28 EST"
   }
 }
