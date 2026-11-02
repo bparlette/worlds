@@ -6,21 +6,18 @@ INPUT: `art/top100.json` in this repo — 100 ranked screens {rank, game, name, 
 
 TASK: Run these 100 through the SAME scripts and loop as the 1,000-world catalog (Qwen generation + sanitizer + make_walker_module.py conversion + gate), in rank order, one at a time. Same pipeline — the only changes are the image type and the Qwen prompt rules below.
 
-## QWEN PROMPT CHANGES (screens run — this replaces the map framing)
+## GENERATION — PARTS PIPELINE (this replaces the Qwen prompt rules)
 
-The 1,000's template carries the Section Rule because catalog images are whole maps. These images are NOT maps. For this run, replace that part of the prompt with:
+These 100 are built with the JSON parts pipeline — `prompts/PARTS-PIPELINE.md` in this repo is the full spec; read it first. In short:
 
-> IMAGE TYPE: this image is a single gameplay SCREEN — one place at player-view scale, not a map. Build the entire pictured place. There is no larger map and no section to choose; do not crop, zoom, or select a sub-area.
->
-> WHO IS IN THE PICTURE: the screen may show characters, enemies, a player sprite, HUD, score counters, and text. Build NONE of those. Build only the background world — the terrain, buildings, platforms, scenery, and fixed props that would remain if every character and every HUD element vanished. Characters set the scale and nothing else. No text, no letters, no HUD shapes as geometry.
->
-> Everything else in the standard template stands.
+- Qwen emits a **JSON parts list** per screen, using the exact prompt in PARTS-PIPELINE.md §2 — image in, JSON out. Qwen writes NO JavaScript, so there is no scene code and no sanitizer pass.
+- The builder script (`walk/parts.js` + `make_parts_module.py`) constructs the walker module deterministically; the gates in PARTS-PIPELINE.md §5 are the per-world gates for this run.
+- The screen framing survives inside that prompt: this image is a single gameplay SCREEN — one place at player-view scale; build the entire pictured place; background world only — no characters, enemies, HUD, score counters, or text as geometry. Characters set the scale and nothing else. There is no larger map and no section to choose.
+- **PILOT FIRST:** run the PARTS-PIPELINE.md §6 test protocol on world #001 only and report the results before starting the Top 100 loop.
 
 ## LOCKED STANDARDS (unchanged from the 1,000 run)
-- Footprint ≤ 30×30; height cap ~13.
-- Walls: inside-only — wall material renders interior faces only (BackSide): solid from inside, not drawn from outside.
-- Sanitizer: canvas-declaration fix, defaultCamera.distance() replacement, touch CSS backstop AND the JS gesture guard (non-passive touchstart/touchmove preventDefault on the canvas; gesturestart/gesturechange preventDefault on document) — iOS orbit is owner-tested on her phone.
-- Relics are NOT generation-side: the Qwen prompt must contain NO relic mention of any kind (the input stays image + minimal text). Relic identity comes from `walk/relics.json`, placement is stamped and clearance-validated by the converter, and the Walker builds the visual from `walk/relics.js` (pure 3D shapes by construction). If a treasure-like object is part of the source screen's scenery, it is scenery — build it as such; it is not the relic.
+- Size, walls, and relics are MECHANICAL — none of them is prompt text: the builder script normalizes scale to the 30×30 footprint / ~13 height caps, boundary walls are flipped inside-only (BackSide) from the parts list's `role:"wall"` tag, and relic identity/placement come from `walk/relics.json` + converter-validated anchors with the visual built by the host from `walk/relics.js`. Qwen is told nothing about relics; a treasure-like object in a source screen's scenery is scenery, not the relic.
+- Sanitizer: canvas-declaration fix, defaultCamera.distance() replacement, touch CSS backstop AND the JS gesture guard (non-passive touchstart/touchmove preventDefault on the canvas; gesturestart/gesturechange preventDefault on document) — iOS orbit is owner-tested on her phone. (Applies to the 1,000 run's JS scenes; the parts pipeline emits no Qwen code to sanitize.)
 - The Glitch rules unchanged (Back Roms-wide).
 - Walker conversion per the R1–R9 contract in WALKER-PIPELINE-ADD.md; every scene registers in the walker manifest; bake thumbnails as in the 1,000 run.
 
