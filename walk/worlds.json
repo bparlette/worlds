@@ -112,6 +112,13 @@
     "module": "modules/032.js"
   },
   {
+    "id": "034",
+    "title": "Mario Kart 8",
+    "sub": "Bowser&#x27;s Castle",
+    "system": "Console",
+    "module": "modules/034.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
