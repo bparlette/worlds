@@ -1,0 +1,779 @@
+// @world {"id": "093", "title": "Portal", "sub": "Aperture Science Test Chamber", "system": "Console"}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    return {
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): ceiling, items, walls
+  let ceiling = 0;
+  let items = 0;
+  let walls = 0;
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0x090d12);
+    scene.fog = new THREE.FogExp2(0x090d12, 0.018);
+
+    camera = dummyCamera();
+
+    // -------------------------------------------------------------------------
+    // Shared voxel materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      floor: new THREE.MeshStandardMaterial({
+        color: 0x9ca6ad,
+        roughness: 0.82,
+        metalness: 0.08
+      }),
+      floorEdge: new THREE.MeshStandardMaterial({
+        color: 0x30383e,
+        roughness: 0.9,
+        metalness: 0.12
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0xaeb7bd,
+        roughness: 0.88,
+        metalness: 0.04
+      }),
+      wallInset: new THREE.MeshStandardMaterial({
+        color: 0x7c878e,
+        roughness: 0.9,
+        metalness: 0.05
+      }),
+      dark: new THREE.MeshStandardMaterial({
+        color: 0x171d22,
+        roughness: 0.78,
+        metalness: 0.16
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x080b0f,
+        roughness: 0.96,
+        metalness: 0.02
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xe8eef1,
+        roughness: 0.55,
+        metalness: 0.08
+      }),
+      laser: new THREE.MeshBasicMaterial({
+        color: 0xff4f83,
+        transparent: true,
+        opacity: 0.95,
+        toneMapped: false
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Instanced voxel construction helpers
+    // -------------------------------------------------------------------------
+
+    const dummy = new THREE.Object3D();
+
+    function addVoxelBox({
+      x,
+      y,
+      z,
+      sx,
+      sy,
+      sz,
+      material = materials.wall,
+      castShadow = true,
+      receiveShadow = true
+    }) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function addInstancedVoxels({
+      items,
+      material = materials.wall,
+      castShadow = true,
+      receiveShadow = true
+    }) {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const mesh = new THREE.InstancedMesh(
+        geometry,
+        material,
+        items.length
+      );
+
+      items.forEach((item, index) => {
+        dummy.position.set(item.x, item.y, item.z);
+        dummy.rotation.set(
+          item.rx || 0,
+          item.ry || 0,
+          item.rz || 0
+        );
+        dummy.scale.set(item.sx || 1, item.sy || 1, item.sz || 1);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(index, dummy.matrix);
+      });
+
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function addLineBetween(start, end, radius = 0.025, material = materials.laser) {
+      const direction = new THREE.Vector3().subVectors(end, start);
+      const length = direction.length();
+      const midpoint = new THREE.Vector3()
+        .addVectors(start, end)
+        .multiplyScalar(0.5);
+
+      const geometry = new THREE.CylinderGeometry(
+        radius,
+        radius,
+        length,
+        8
+      );
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.copy(midpoint);
+      mesh.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+      );
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function addFloorTile(x, z, material = materials.floor) {
+      addVoxelBox({
+        x,
+        y: 0.025,
+        z,
+        sx: 1.32,
+        sy: 0.08,
+        sz: 1.32,
+        material
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // Architecture: floor, walls, ceiling, columns, and doorway frame
+    // -------------------------------------------------------------------------
+
+    const floorTiles = [];
+
+    // Floor extends from x = -12 to 12 and z = -12 to 12.
+    for (let x = -12; x <= 12; x += 1.32) {
+      for (let z = -12; z <= 12; z += 1.32) {
+        floorTiles.push({ x, z });
+      }
+    }
+
+    addInstancedVoxels({
+      items: floorTiles,
+      material: materials.floor,
+      castShadow: false,
+      receiveShadow: true
+    });
+
+    // Dark structural perimeter beneath the floor.
+    for (let x = -12; x <= 12; x += 1.32) {
+      addFloorTile(x, -12);
+      addFloorTile(x, 12);
+    }
+
+    for (let z = -12; z <= 12; z += 1.32) {
+      addFloorTile(-12, z);
+      addFloorTile(12, z);
+    }
+
+    // Rear wall and side wall.
+    addVoxelBox({
+      x: 0,
+      y: 3.65,
+      z: -12,
+      sx: 25,
+      sy: 7.3,
+      sz: 0.55,
+      material: materials.wall
+    });
+
+    // Near side wall, interrupted for the camera opening.
+    addVoxelBox({
+      x: -11.5,
+      y: 3.65,
+      z: 0,
+      sx: 0.55,
+      sy: 7.3,
+      sz: 24,
+      material: materials.wall
+    });
+
+    addVoxelBox({
+      x: 11.5,
+      y: 3.65,
+      z: 0,
+      sx: 0.55,
+      sy: 7.3,
+      sz: 24,
+      material: materials.wall
+    });
+
+    // Ceiling.
+    addVoxelBox({
+      x: 0,
+      y: 7.25,
+      z: 0,
+      sx: 25,
+      sy: 0.45,
+      sz: 25,
+      material: materials.wall
+    });
+
+    // Ceiling panel seams.
+    const ceilingSeams = [];
+    for (let z = -12; z <= 12; z += 1.32) {
+      ceilingSeams.push({ x: 0, y: 7.515, z });
+    }
+    for (let x = -12; x <= 12; x += 1.32) {
+      ceilingSeams.push({ x, y: 7.515, z: 0 });
+    }
+    addInstancedVoxels({
+      items: ceilingSeams,
+      material: materials.floorEdge,
+      castShadow: false,
+      receiveShadow: false
+    });
+
+    // Dark wall panels.
+    const darkWallPanels = [];
+
+    for (let x = -10.5; x <= 10.5; x += 3.15) {
+      darkWallPanels.push({
+        x,
+        y: 4.55,
+        z: -11.65,
+        sx: 2.65,
+        sy: 2.2,
+        sz: 0.12
+      });
+    }
+
+    for (let z = -8.5; z <= 8.5; z += 3.15) {
+      darkWallPanels.push({
+        x: -11.65,
+        y: 4.55,
+        z,
+        sx: 0.12,
+        sy: 2.2,
+        sz: 2.65
+      });
+      darkWallPanels.push({
+        x: 11.65,
+        y: 4.55,
+        z,
+        sx: 0.12,
+        sy: 2.2,
+        sz: 2.65
+      });
+    }
+
+    addInstancedVoxels({
+      items: darkWallPanels,
+      material: materials.dark
+    });
+
+    // Large window on the left wall with vertical mullions and blinds.
+    const windowGroup = new THREE.Group();
+    windowGroup.position.set(-11.2, 4.45, 0);
+
+    const windowPane = new THREE.Mesh(
+      new THREE.PlaneGeometry(7.4, 5.4),
+      new THREE.MeshBasicMaterial({
+        color: 0x91b7cf,
+        side: THREE.DoubleSide
+      })
+    );
+    windowPane.rotation.y = Math.PI / 2;
+    windowGroup.add(windowPane);
+
+    const windowFrameMaterial = new THREE.MeshStandardMaterial({
+      color: 0x273038,
+      roughness: 0.6,
+      metalness: 0.25
+    });
+
+    for (let x = -3.45; x <= 3.45; x += 1.15) {
+      const mullion = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 5.75, 0.18),
+        windowFrameMaterial
+      );
+      mullion.position.set(x, 0, 0);
+      windowGroup.add(mullion);
+    }
+
+    const sill = new THREE.Mesh(
+      new THREE.BoxGeometry(8.2, 0.18, 0.6),
+      windowFrameMaterial
+    );
+    sill.position.set(0, -2.95, 0);
+    windowGroup.add(sill);
+
+    scene.add(windowGroup);
+
+    // Vertical blinds as narrow alternating panels.
+    const blindMaterials = [
+      new THREE.MeshStandardMaterial({
+        color: 0x6d777d,
+        roughness: 0.95
+      }),
+      new THREE.MeshStandardMaterial({
+        color: 0x343d43,
+        roughness: 0.9
+      })
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      const blind = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 5.45, 0.14),
+        blindMaterials[i % 2]
+      );
+      blind.position.set(-3.25 + i * 0.61, 0, 0.13);
+      windowGroup.add(blind);
+    }
+
+    // Structural columns.
+    const columns = [
+      { x: -10.6, z: -8.7 },
+      { x: 10.6, z: -8.7 },
+      { x: -10.6, z: 8.7 },
+      { x: 10.6, z: 8.7 }
+    ];
+
+    columns.forEach((column) => {
+      addVoxelBox({
+        x: column.x,
+        y: 3.6,
+        z: column.z,
+        sx: 0.65,
+        sy: 7.2,
+        sz: 0.65,
+        material: materials.dark
+      });
+
+      addVoxelBox({
+        x: column.x,
+        y: 0.25,
+        z: column.z,
+        sx: 0.9,
+        sy: 0.5,
+        sz: 0.9,
+        material: materials.floorEdge
+      });
+    });
+
+    // Rear utility cabinet.
+    const cabinet = new THREE.Group();
+    cabinet.position.set(0, 0, -11.1);
+
+    const cabinetBody = new THREE.Mesh(
+      new THREE.BoxGeometry(7.8, 2.8, 0.55),
+      materials.dark
+    );
+    cabinetBody.position.y = 1.4;
+    cabinet.add(cabinetBody);
+
+    for (let i = 0; i < 6; i++) {
+      const door = new THREE.Mesh(
+        new THREE.BoxGeometry(1.05, 2.25, 0.08),
+        materials.wallInset
+      );
+      door.position.set(-3.4 + i * 1.28, 1.45, 0.34);
+      cabinet.add(door);
+    }
+
+    scene.add(cabinet);
+
+    // Ceiling light fixtures.
+    const fixtureMaterial = new THREE.MeshStandardMaterial({
+      color: 0xdde6eb,
+      emissive: 0x9fc8dc,
+      emissiveIntensity: 0.45,
+      roughness: 0.55
+    });
+
+    for (const x of [-6.5, 6.5]) {
+      const fixture = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2, 0.12, 1.25),
+        fixtureMaterial
+      );
+      fixture.position.set(x, 6.98, 0);
+      scene.add(fixture);
+    }
+
+    // -------------------------------------------------------------------------
+    // Laser apparatus and beam
+    // -------------------------------------------------------------------------
+
+    const laserBase = new THREE.Group();
+    laserBase.position.set(2.5, 0, 4.2);
+
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(1.25, 0.16, 0.9),
+      materials.dark
+    );
+    base.position.y = 0.08;
+    laserBase.add(base);
+
+    const tower = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 2.7, 0.18),
+      materials.wallInset
+    );
+    tower.position.y = 1.45;
+    laserBase.add(tower);
+
+    const lens = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.13, 0.2, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0xff396f,
+        emissive: 0xff184f,
+        emissiveIntensity: 2.2,
+        roughness: 0.25,
+        metalness: 0.2
+      })
+    );
+    lens.rotation.z = Math.PI / 2;
+    lens.position.y = 2.8;
+    laserBase.add(lens);
+
+    scene.add(laserBase);
+
+    const beamStart = new THREE.Vector3(2.5, 2.8, 4.2);
+    const beamEnd = new THREE.Vector3(2.5, 2.8, -10.8);
+    addLineBetween(beamStart, beamEnd, 0.025);
+
+    // A second lower beam extends toward the cabinet.
+    const lowerBeamStart = new THREE.Vector3(2.5, 0.25, 4.2);
+    const lowerBeamEnd = new THREE.Vector3(2.5, 0.25, -11.3);
+    addLineBetween(lowerBeamStart, lowerBeamEnd, 0.018);
+
+    // Laser halo at the target.
+    const halo = new THREE.Mesh(
+      new THREE.RingGeometry(0.3, 0.58, 40),
+      new THREE.MeshBasicMaterial({
+        color: 0xff315f,
+        transparent: true,
+        opacity: 0.55,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        toneMapped: false
+      })
+    );
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.set(2.5, 0.25, -11.3);
+    scene.add(halo);
+
+    // Small indicator lights.
+    const indicator = new THREE.Mesh(
+      new THREE.SphereGeometry(0.065, 12, 8),
+      new THREE.MeshBasicMaterial({
+        color: 0xff7a9f,
+        toneMapped: false
+      })
+    );
+    indicator.position.set(2.5, 0.25, 4.7);
+    scene.add(indicator);
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    const hemisphere = new THREE.HemisphereLight(
+      0xb9d9ec,
+      0x161b1f,
+      1.15
+    );
+    scene.add(hemisphere);
+
+    const ambient = new THREE.AmbientLight(0x8da4b3, 0.24);
+    scene.add(ambient);
+
+    // Key light from the window.
+    const keyLight = new THREE.DirectionalLight(0xd9f1ff, 3.2);
+    keyLight.position.set(-8, 7, 2);
+    keyLight.target.position.set(0, 0, -5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -15;
+    keyLight.shadow.camera.right = 15;
+    keyLight.shadow.camera.top = 15;
+    keyLight.shadow.camera.bottom = -15;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 45;
+    keyLight.shadow.bias = -0.0004;
+    scene.add(keyLight, keyLight.target);
+
+    // Soft ceiling illumination.
+    const ceilingLight = new THREE.PointLight(0xc8e5f3, 24, 22, 2);
+    ceilingLight.position.set(0, 6.4, 0);
+    scene.add(ceilingLight);
+
+    // Pink laser illumination.
+    const laserLight = new THREE.PointLight(0xff2761, 18, 12, 2);
+    laserLight.position.set(2.5, 1.5, 3.2);
+    scene.add(laserLight);
+
+    // -------------------------------------------------------------------------
+    // Custom camera controls: orbit and zoom
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 3.4, -1.5),
+      azimuth: 0.28,
+      polar: 1.34,
+      radius: 19,
+      dragging: false,
+      previousX: 0,
+      previousY: 0
+    };
+
+    const initialView = {
+      target: controls.target.clone(),
+      azimuth: controls.azimuth,
+      polar: controls.polar,
+      radius: controls.radius
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.previousX = event.clientX;
+      controls.previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.previousX;
+      const dy = event.clientY - controls.previousY;
+
+      controls.previousX = event.clientX;
+      controls.previousY = event.clientY;
+
+      controls.azimuth -= dx * 0.005;
+      controls.polar = THREE.MathUtils.clamp(
+        controls.polar - dy * 0.004,
+        0.55,
+        Math.PI * 0.72
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius + event.deltaY * 0.012,
+          8,
+          32
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    dummyEl().addEventListener("click", () => {
+      controls.target.copy(initialView.target);
+      controls.azimuth = initialView.azimuth;
+      controls.polar = initialView.polar;
+      controls.radius = initialView.radius;
+      updateCamera();
+    });
+
+    const toggleButton = dummyEl();
+    let lightsOn = true;
+
+    toggleButton.addEventListener("click", () => {
+      lightsOn = !lightsOn;
+
+      keyLight.intensity = lightsOn ? 3.2 : 0.18;
+      ceilingLight.intensity = lightsOn ? 24 : 0.08;
+      laserLight.intensity = lightsOn ? 18 : 0.05;
+
+      indicator.material.color.setHex(lightsOn ? 0xff7a9f : 0x302d38);
+      toggleButton.textContent = lightsOn ? "Dim lights" : "Restore lights";
+    });
+
+    // -------------------------------------------------------------------------
+    // Resize and render loop
+    // -------------------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Very subtle laser shimmer.
+      laserLight.intensity = lightsOn ? 18 + Math.sin(elapsed * 2.2) * 0.8 : 0.05;
+
+      // Gentle indicator pulse.
+      indicator.material.opacity = lightsOn ? 0.85 : 0.2;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 12.5, yaw: 0 },
+    relic: { id: "generic", name: "Portal Relic", x: -10.0, z: -13.5 },
+    env:   { background: 0x090d12, fogColor: 0x090d12, fogDensity: 0.018 },
+    doors: {
+      next: { x: 12.0, z: -11.5 },
+      prev: { x: -12.0, z: 8.5 }
+    }
+  };
+}
