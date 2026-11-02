@@ -590,8 +590,8 @@
       [new THREE.CylinderGeometry(0.025, 0.025, 0.72, 6), 0, 0.75, 0, frameMat]
     ];
     for (const piece of framePieces) {
-      const mesh = new THREE.Mesh(piece[0], piece[1]);
-      mesh.position.copy(piece[1][2]);
+      const mesh = new THREE.Mesh(piece[0], piece[4]);
+      mesh.position.set(piece[1], piece[2], piece[3]);
       bike.add(mesh);
     }
 
