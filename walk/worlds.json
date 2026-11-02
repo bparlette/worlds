@@ -196,6 +196,13 @@
     "module": "modules/070.js"
   },
   {
+    "id": "071",
+    "title": "Ghosts &#x27;n Goblins",
+    "sub": "Stage 1 — Forest",
+    "system": "Console",
+    "module": "modules/071.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
