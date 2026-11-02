@@ -16,5 +16,23 @@
     ],
     "attempts": 2,
     "updated_at": "2026-11-01 22:32 EST"
+  },
+  "2": {
+    "rank": 2,
+    "game": "Super Mario Bros.",
+    "name": "World 1-1",
+    "status": "parked",
+    "filename": "1002_super_mario_bros_world_1_1.html",
+    "measured": {},
+    "vision": {
+      "character": true,
+      "text_or_hud": true
+    },
+    "fails": [
+      "conversion: {'status': 'validation_failed', 'error': 'camera.position.setFromSpherical is not a function'}",
+      "character/HUD identifiers: player"
+    ],
+    "attempts": 2,
+    "updated_at": "2026-11-01 22:43 EST"
   }
 }
