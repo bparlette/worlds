@@ -760,7 +760,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
-    relic: { name: "Super Mario Bros. 3 Relic", x: -10.0, z: -12.0 },
+    relic: { id: "wand", name: "Magic Wand", x: -10.0, z: -12.0 },
     env:   { background: 0x081121, fogColor: 0x173145, fogDensity: 0.018 },
     doors: {
       next: { x: 12.0, z: -10.0 },

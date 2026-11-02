@@ -896,7 +896,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: -2.0, z: 11.0, yaw: 0 },
-    relic: { name: "Bionic Commando Relic", x: -12.0, z: -15.0 },
+    relic: { id: "grapple-arm", name: "The Bionic Arm", x: -12.0, z: -15.0 },
     env:   { background: 0x07141c, fogColor: 0x0b202a, fogDensity: 0.018 },
     doors: {
       next: { x: 10.0, z: -13.0 },
