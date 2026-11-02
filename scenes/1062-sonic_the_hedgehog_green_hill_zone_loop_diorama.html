@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Island</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #aebbc2;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hud {
+      position: fixed;
+      top: 20px;
+      left: 22px;
+      z-index: 10;
+      padding: 12px 16px;
+      color: #17313a;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(22, 43, 52, 0.16);
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .hud h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+
+    .hud p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.72;
+    }
+
+    .controls {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 10;
+      color: #17313a;
+      font-size: 12px;
+      text-align: right;
+      pointer-events: none;
+      text-shadow: 0 0 0 rgba(255, 255, 255, 0.45);
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 12px;
+        left: 12px;
+      }
+
+      .controls {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <h1>Voxel Island</h1>
+    <p>Drag to orbit · Scroll to zoom</p>
+  </div>
+  <div class="controls">
+    Arrow keys move the character<br />
+    Space jumps
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xaebbc2);
+    scene.fog = new THREE.Fog(0xaebbc2, 18, 38);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.appendChild(renderer.domElement);
+
+    // Camera controls implemented directly.
+    const target = new THREE.Vector3(0, 2.4, 0);
+    let azimuth = 0.62;
+    let polar = 1.12;
+    let radius = 12.8;
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      const sinPolar = Math.sin(polar);
+      camera.position.set(
+        target.x + radius * sinPolar * Math.sin(azimuth),
+        target.y + radius * Math.cos(polar),
+        target.z + radius * sinPolar * Math.cos(azimuth)
+      );
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      azimuth -= dx * 0.006;
+      polar = THREE.MathUtils.clamp(polar - dy * 0.005, 0.55, 1.42);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        radius = THREE.MathUtils.clamp(radius + event.deltaY * 0.008, 7.5, 20);
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // Lighting.
+    scene.add(new THREE.HemisphereLight(0xe8f5ff, 0x66705b, 2.2));
+
+    const sun = new THREE.DirectionalLight(0xfff4d2, 3.4);
+    sun.position.set(7, 12, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -10;
+    sun.shadow.camera.right = 10;
+    sun.shadow.camera.top = 10;
+    sun.shadow.camera.bottom = -10;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 30;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    // Materials.
+    const materials = {
+      water: new THREE.MeshStandardMaterial({
+        color: 0x248ec3,
+        roughness: 0.28,
+        metalness: 0.05
+      }),
+      waterDark: new THREE.MeshStandardMaterial({
+        color: 0x146a9f,
+        roughness: 0.35
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0xb87945,
+        roughness: 0.95
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x65c75b,
+        roughness: 0.85
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x83d86a,
+        roughness: 0.85
+      }),
+      check: new THREE.MeshStandardMaterial({
+        color: 0xe3a64b,
+        roughness: 0.8
+      }),
+      checkDark: new THREE.MeshStandardMaterial({
+        color: 0xa95f2d,
+        roughness: 0.85
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x358c43,
+        roughness: 0.85
+      }),
+      flower: new THREE.MeshStandardMaterial({
+        color: 0xf1bd45,
+        roughness: 0.7
+      }),
+      flowerCenter: new THREE.MeshStandardMaterial({
+        color: 0xe7a52d,
+        roughness: 0.7
+      }),
+      ring: new THREE.MeshStandardMaterial({
+        color: 0xffd54a,
+        roughness: 0.38,
+        metalness: 0.08
+      }),
+      character: new THREE.MeshStandardMaterial({
+        color: 0xe94f39,
+        roughness: 0.72
+      }),
+      characterDark: new THREE.MeshStandardMaterial({
+        color: 0x7e261d,
+        roughness: 0.78
+      }),
+      eye: new THREE.MeshStandardMaterial({
+        color: 0x172326,
+        roughness: 0.45
+      })
+    };
+
+    const voxel = (x, y, z, sx, sy, sz, material, castShadow = true) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    // Water base: a broad blocky island with stepped, irregular edges.
+    const waterY = 0;
+    const waterWidth = 11.4;
+    const waterDepth = 7.8;
+
+    voxel(0, waterY - 0.45, 0, 12.2, 0.9, 8.6, materials.waterDark);
+    voxel(0, waterY - 0.08, 0, 11.6, 0.24, 8.0, materials.water);
+
+    // Slight water top variation and side voxels.
+    for (let x = -5; x <= 5; x++) {
+      for (let z = -3; z <= 3; z++) {
+        const edge = Math.max(Math.abs(x) - 4.6, Math.abs(z) - 3.4);
+        if (edge > 0) {
+          voxel(
+            x * 0.82,
+            waterY - 0.26,
+            z * 0.82,
+            0.62,
+            0.18,
+            0.62,
+            materials.water
+          );
+        }
+      }
+    }
+
+    // Main island foundation.
+    for (let x = -4; x <= 4; x++) {
+      for (let z = -2; z <= 2; z++) {
+        voxel(
+          x * 0.82,
+          0.4,
+          z * 0.82,
+          0.62,
+          0.8,
+          0.62,
+          materials.soil
+        );
+      }
+    }
+
+    // Lower grass cap.
+    for (let x = -4; x <= 4; x++) {
+      for (let z = -2; z <= 2; z++) {
+        const noise =
+          (Math.abs(x + 2) % 2 === 0 ? 1 : 0) *
+          (Math.abs(z + 1) % 2 === 0 ? 1 : 0);
+        voxel(
+          x * 0.82 + noise * 0.035,
+          0.9,
+          z * 0.82,
+          0.62,
+          0.55,
+          0.62,
+          (x + z) % 3 === 0 ? materials.grass : materials.grassLight
+        );
+      }
+    }
+
+    // Upper terrain: a floating grassy slab.
+    for (let x = -3; x <= 3; x++) {
+      for (let z = -2; z <= 2; z++) {
+        const edge = Math.abs(x) + Math.abs(z);
+        const topMaterial =
+          edge > 2 ? materials.soil : materials.grass;
+        const variation =
+          (x * z) % 4 === 0 ? 1 : 0;
+
+        voxel(
+          x * 0.82,
+          1.35,
+          z * 0.82,
+          0.62,
+          0.5,
+          0.62,
+          topMaterial
+        );
+      }
+    }
+
+    // Main checkered support arch.
+    const archGroup = new THREE.Group();
+    scene.add(archGroup);
+
+    function archVoxel(x, y, z, material) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.62, 0.62, 0.62),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      archGroup.add(mesh);
+      return mesh;
+    }
+
+    // Two vertical pillars.
+    for (let y = 0; y < 4; y++) {
+      for (let z = -1; z <= 1; z++) {
+        if (Math.abs(z) === 1) {
+          archVoxel(-2.0, 1.8 + y, z * 0.62, materials.check);
+          archVoxel(2.0, 1.8 + y, z * 0.62, materials.check);
+        }
+      }
+    }
+
+    // Curved voxel arch.
+    for (let y = 0; y < 5; y++) {
+      for (let z = -1; z <= 1; z++) {
+        const angle = Math.PI * 0.75 + (y / 4) * Math.PI * 0.5;
+        const x = Math.cos(angle) * 1.8;
+        const zPosition = Math.sin(angle) * 1.1;
+
+        if (y === 0) {
+          archVoxel(x, 1.8, zPosition, materials.checkDark);
+        } else {
+          archVoxel(x, 2.35 + y, zPosition, materials.check);
+        }
+      }
+    }
+
+    // Rounded top cap.
+    for (let x = -2; x <= 2; x++) {
+      for (let z = -1; z <= 1; z++) {
+        if (Math.abs(x) + Math.abs(z) <= 2) {
+          archVoxel(
+            x * 0.62,
+            4.35,
+            z * 0.62,
+            materials.check
+          );
+        }
+      }
+    }
+
+    // Top grass surface.
+    for (let x = -3; x <= 3; x++) {
+      for (let z = -2; z <= 2; z++) {
+        const edge = Math.abs(x) + Math.abs(z);
+        const material =
+          edge > 1.5 ? materials.soil : materials.grass;
+
+        voxel(
+          x * 0.62,
+          4.75,
+          z * 0.62,
+          0.5,
+          0.45,
+          0.5,
+          material
+        );
+      }
+    }
+
+    // Small front ledge.
+    for (let x = -2; x <= 2; x++) {
+      voxel(
+        x * 0.62,
+        3.85,
+        1.45,
+        0.5,
+        0.4,
+        0.5,
+        materials.grass
+      );
+    }
+
+    // Sunflowers on the upper island.
+    function makeSunflower(x, z, height) {
+      const group = new THREE.Group();
+      group.position.set(x, 4.75, z);
+      scene.add(group);
+
+      for (let y = 0; y < 3; y++) {
+        voxel(
+          0,
+          y * 0.34,
+          0,
+          0.22,
+          0.32,
+          0.22,
+          materials.leaf
+        );
+      }
+
+      const stemTop = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.07, 0.09, 0.9, 6),
+        materials.leaf
+      );
+      stemTop.position.y = 1.2;
+      stemTop.castShadow = true;
+      group.add(stemTop);
+
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const leaf = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 6, 4),
+          materials.leaf
+        );
+        leaf.scale.set(0.35, 1.25, 0.2);
+        leaf.position.set(
+          Math.cos(angle) * 0.25,
+          1.45,
+          Math.sin(angle) * 0.25
+        );
+        leaf.rotation.z = Math.cos(angle) * 0.55;
+        leaf.rotation.x = Math.sin(angle) * 0.55;
+        leaf.castShadow = true;
+        group.add(leaf);
+      }
+
+      const flower = new THREE.Mesh(
+        new THREE.SphereGeometry(0.34, 8, 6),
+        materials.flower
+      );
+      flower.scale.set(1, 0.55, 1);
+      flower.position.y = 1.72;
+      flower.castShadow = true;
+      group.add(flower);
+
+      const center = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 8, 6),
+        materials.flowerCenter
+      );
+      center.position.y = 1.79;
+      center.castShadow = true;
+      group.add(center);
+    }
+
+    makeSunflower(-2.1, -0.45, 0.2);
+    makeSunflower(-1.25, -0.55, 0.3);
+    makeSunflower(1.8, 0.35, 0.15);
+
+    // Pixel character on the upper grass.
+    const character = new THREE.Group();
+    character.position.set(0.35, 4.98, 0.2);
+    scene.add(character);
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.62, 0.62, 0.42),
+      materials.character
+    );
+    body.position.y = 0.3;
+    body.castShadow = true;
+    character.add(body);
+
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.5, 0.42),
+      materials.grassLight
+    );
+    head.position.y = 0.88;
+    head.castShadow = true;
+    character.add(head);
+
+    for (const x of [-0.13, 0.13]) {
+      const eye = new THREE.Mesh(
+        new THREE.BoxGeometry(0.09, 0.09, 0.04),
+        materials.eye
+      );
+      eye.position.set(x, 0.93, 0.225);
+      character.add(eye);
+    }
+
+    const hat = new THREE.Mesh(
+      new THREE.BoxGeometry(0.64, 0.12, 0.46),
+      materials.flower
+    );
+    hat.position.y = 1.18;
+    hat.castShadow = true;
+    character.add(hat);
+
+    const hatTop = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.16, 0.16, 4),
+      materials.flower
+    );
+    hatTop.rotation.y = Math.PI / 4;
+    hatTop.position.y = 1.3;
+    hatTop.castShadow = true;
+    character.add(hatTop);
+
+    // Golden rings, some floating and one near the character.
+    const ringGeometry = new THREE.TorusGeometry(0.15, 0.055, 6, 18);
+    const floatingRings = [
+      { x: 1.45, y: 5.05, z: 0.3, rotation: 0.2 },
+      { x: 2.05, y: 5.45, z: -0.1, rotation: -0.4 },
+      { x: 0.85, y: 5.35, z: 0.5, rotation: 0.7 },
+      { x: 0.65, y: 4.95, z: 0.65, rotation: 1.1 }
+    ];
+
+    for (const ring of floatingRings) {
+      const mesh = new THREE.Mesh(ringGeometry, materials.ring);
+      mesh.position.set(ring.x, ring.y, ring.z);
+      mesh.rotation.set(ring.rotation, 0, 0);
+      mesh.castShadow = true;
+      scene.add(mesh);
+    }
+
+    const characterRing = new THREE.Mesh(ringGeometry, materials.ring);
+    characterRing.position.set(0.48, 5.05, 0.55);
+    characterRing.rotation.set(0.4, 0, 0.3);
+    characterRing.castShadow = true;
+    scene.add(characterRing);
+
+    // Lower grass details and small plants.
+    for (let x = -3; x <= 3; x++) {
+      for (let z = -1; z <= 1; z++) {
+        if ((x + z) % 2 === 0) {
+          voxel(
+            x * 0.82,
+            1.2,
+            z * 0.82,
+            0.48,
+            0.25,
+            0.48,
+            materials.grassLight
+          );
+        }
+      }
+    }
+
+    // Small foreground island patch.
+    for (let x = -2; x <= 2; x++) {
+      for (let z = -1; z <= 1; z++) {
+        voxel(
+          x * 0.7,
+          0.85,
+          z * 0.7,
+          0.48,
+          0.55,
+          0.48,
+          materials.soil
+        );
+      }
+    }
+
+    for (let x = -2; x <= 2; x++) {
+      for (let z = -1; z <= 1; z++) {
+        voxel(
+          x * 0.7,
+          1.18,
+          z * 0.7,
+          0.48,
+          0.38,
+          0.48,
+          materials.grass
+        );
+      }
+    }
+
+    // Tiny voxel flowers on the lower patch.
+    for (const [x, z] of [[-1, 0], [1, 0]]) {
+      voxel(x * 0.7, 1.35, z * 0.7, 0.18, 0.35, 0.18, materials.leaf);
+      const flower = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 6, 4),
+        materials.flower
+      );
+      flower.position.set(x * 0.7, 1.56, z * 0.7);
+      flower.castShadow = true;
+      scene.add(flower);
+    }
+
+    // Pixel clouds in the background.
+    const cloudMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf4f7f4,
+      roughness: 1
+    });
+
+    function makeCloud(x, y, z, scale) {
+      const cloud = new THREE.Group();
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
+      scene.add(cloud);
+
+      const pieces = [
+        [-0.8, 0, 0, 0.75, 0.38, 0.55],
+        [0, 0.15, 0, 0.9, 0.65, 0.7],
+        [0.8, 0, 0, 0.75, 0.4, 0.55],
+        [0.1, -0.18, 0.05, 0.65, 0.35, 0.55]
+      ];
+
+      for (const [px, py, pz, sx, sy, sz] of pieces) {
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 8, 5),
+          cloudMaterial
+        );
+        puff.position.set(px, py, pz);
+        puff.scale.set(sx, sy, sz);
+        cloud.add(puff);
+      }
+    }
+
+    makeCloud(-7, 8, -7, 1.4);
+    makeCloud(7, 10, -9, 1.8);
+    makeCloud(0, 13, -12, 1.2);
+
+    // Ground shadow catcher and subtle grid.
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 80),
+      new THREE.MeshStandardMaterial({
+        color: 0xaebbc2,
+        roughness: 1
+      })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.96;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const grid = new THREE.GridHelper(50, 50, 0x8fa5aa, 0xa9b9bf);
+    grid.position.y = -0.955;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.18;
+    scene.add(grid);
+
+    // Animation: floating rings and subtle water motion.
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      floatingRings.forEach((ring, index) => {
+        const mesh = scene.children.find(
+          (object) =>
+            object.geometry?.type === "TorusGeometry" &&
+            object.userData.basePosition?.x === ring.x
+        );
+        if (!mesh) return;
+
+        mesh.position.y = ring.y + Math.sin(elapsed * 1.4 + index) * 0.12;
+        mesh.rotation.z += 0.0009;
+      });
+
+      // Gentle water color pulse.
+      materials.water.color.offsetHSL(
+        0,
+        0,
+        Math.sin(elapsed * 0.7) * 0.015
+      );
+
+      renderer.render(scene, camera);
+    }
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // Keyboard character controls.
+    let characterX = 0.35;
+    let characterZ = 0.2;
+    let facing = 0;
+    let jumping = false;
+    let jumpVelocity = 0;
+    let onGround = true;
+
+    addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") {
+        facing = Math.PI;
+        event.preventDefault();
+      } else if (event.key === "ArrowRight") {
+        facing = 0;
+        event.preventDefault();
+      } else if (event.key === "ArrowUp") {
+        facing = -Math.PI / 2;
+        event.preventDefault();
+      } else if (event.key === "ArrowDown") {
+        facing = Math.PI / 2;
+        event.preventDefault();
+      } else if (event.code === "Space") {
+        event.preventDefault();
+        if (onGround) {
+          jumping = true;
+          jumpVelocity = 4.8;
+          onGround = false;
+        }
+      }
+    });
+
+    addEventListener("keyup", (event) => {
+      if (event.code === "Space") {
+        jumping = false;
+      }
+    });
+
+    function updateCharacter() {
+      if (jumping) {
+        jumpVelocity -= 0.72;
+        character.position.y += jumpVelocity;
+
+        if (character.position.y <= 4.78) {
+          character.position.y = 4.78;
+          jumping = false;
+          onGround = true;
+        }
+      }
+
+      character.position.x = characterX;
+      character.position.z = characterZ;
+      character.rotation.y = facing;
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>
