@@ -11,29 +11,10 @@
       "text_or_hud": false
     },
     "fails": [
-      "runtime: ['[29281:16909475:1101/193446.304794:INFO:CONSOLE:113] \"Uncaught TypeError: parent.add is not a function\", source: file:///Users/braidpairlette/worlds/scenes/10",
-      "conversion: {'status': 'validation_failed', 'error': 'parent.add is not a function'}",
-      "no relic in scene"
+      "runtime: ['[50381:17179948:1101/223233.978882:INFO:CONSOLE:515] \"Uncaught ReferenceError: ambientMesh is not defined\", source: file:///Users/braidpairlette/worlds/scenes",
+      "conversion: {'status': 'validation_failed', 'error': 'ambientMesh is not defined'}"
     ],
     "attempts": 2,
-    "updated_at": "2026-11-01 19:35 EST"
-  },
-  "2": {
-    "rank": 2,
-    "game": "Super Mario Bros.",
-    "name": "World 1-1",
-    "status": "parked",
-    "filename": "1002_super_mario_bros_world_1_1.html",
-    "measured": {},
-    "vision": {
-      "character": false,
-      "text_or_hud": true
-    },
-    "fails": [
-      "conversion: {'status': 'validation_failed', 'error': \"Identifier 'window' has already been declared\"}",
-      "no relic in scene"
-    ],
-    "attempts": 2,
-    "updated_at": "2026-11-01 20:01 EST"
+    "updated_at": "2026-11-01 22:32 EST"
   }
 }

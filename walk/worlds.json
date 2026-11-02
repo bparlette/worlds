@@ -63,10 +63,10 @@
     "module": "modules/020.js"
   },
   {
-    "id": "1002",
-    "title": "Super Mario Bros.",
-    "sub": "World 1-1",
+    "id": "1001",
+    "title": "Sonic the Hedgehog",
+    "sub": "Green Hill Zone",
     "system": "",
-    "module": "modules/1002.js"
+    "module": "modules/1001.js"
   }
 ]
