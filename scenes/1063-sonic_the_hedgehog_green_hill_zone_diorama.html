@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Sonic Diorama</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #dce8f3;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      z-index: 2;
+      pointer-events: none;
+      color: #172b43;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 42px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.68;
+    }
+
+    .help {
+      position: absolute;
+      right: 24px;
+      bottom: 22px;
+      z-index: 2;
+      padding: 10px 13px;
+      border: 1px solid rgba(31, 51, 78, 0.14);
+      border-radius: 12px;
+      color: #233a52;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(10px);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        top: 18px;
+        left: 18px;
+      }
+
+      .help {
+        right: 14px;
+        bottom: 14px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="title">
+      <h1>Voxel Velocity</h1>
+      <p>A mini world in blocks</p>
+    </div>
+    <div class="help">Drag to orbit · Scroll to zoom</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+
+    const app = document.querySelector("#app");
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    app.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xdce8f3);
+    scene.fog = new THREE.Fog(0xdce8f3, 20, 42);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0xeaf7ff, 0x6b774b, 2.25));
+
+    const sun = new THREE.DirectionalLight(0xfff4d4, 4.2);
+    sun.position.set(9, 15, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -13;
+    sun.shadow.camera.right = 13;
+    sun.shadow.camera.top = 13;
+    sun.shadow.camera.bottom = -13;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 40;
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0xb8dcff, 1.15);
+    fill.position.set(-9, 7, -8);
+    scene.add(fill);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x39d65b,
+        roughness: 0.86
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x25b94c,
+        roughness: 0.9
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x55e66d,
+        roughness: 0.82
+      }),
+      dirt: new THREE.MeshStandardMaterial({
+        color: 0xb9562d,
+        roughness: 0.95
+      }),
+      dirtLight: new THREE.MeshStandardMaterial({
+        color: 0xd97742,
+        roughness: 0.93
+      }),
+      dirtDark: new THREE.MeshStandardMaterial({
+        color: 0x8f3f24,
+        roughness: 0.98
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x29a9d3,
+        roughness: 0.25,
+        metalness: 0.08
+      }),
+      waterLight: new THREE.MeshStandardMaterial({
+        color: 0x64c8e8,
+        roughness: 0.2,
+        metalness: 0.05
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xffd52f,
+        roughness: 0.35,
+        metalness: 0.35
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf8fbf5,
+        roughness: 0.72
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xe73b52,
+        roughness: 0.55
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x3988ff,
+        roughness: 0.5
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x55c84f,
+        roughness: 0.78
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x65d85c,
+        roughness: 0.8
+      }),
+      leafDark: new THREE.MeshStandardMaterial({
+        color: 0x36a846,
+        roughness: 0.85
+      }),
+      trunk: new THREE.MeshStandardMaterial({
+        color: 0x86502c,
+        roughness: 0.95
+      }),
+      spike: new THREE.MeshStandardMaterial({
+        color: 0xdde7e7,
+        roughness: 0.58,
+        metalness: 0.08
+      }),
+      flower: new THREE.MeshStandardMaterial({
+        color: 0xf3a443,
+        roughness: 0.65
+      }),
+      mushroom: new THREE.MeshStandardMaterial({
+        color: 0xe44b57,
+        roughness: 0.6
+      }),
+      mushroomCap: new THREE.MeshStandardMaterial({
+        color: 0xf6d59a,
+        roughness: 0.6
+      }),
+      cloud: new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 1
+      })
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helper
+    // ------------------------------------------------------------
+
+    function box(
+      width,
+      height,
+      depth,
+      material,
+      x = 0,
+      y = 0,
+      z = 0,
+      castShadow = true,
+      receiveShadow = true
+    ) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      return mesh;
+    }
+
+    function addVoxelColumn(
+      width,
+      depth,
+      levels,
+      x,
+      z,
+      levelMaterials,
+      baseY = 0
+    ) {
+      for (let level = 0; level < levels; level++) {
+        const material =
+          levelMaterials[level % levelMaterials.length] || materials.dirt;
+
+        const slab = box(
+          width,
+          0.55,
+          depth,
+          material,
+          x,
+          baseY + level * 0.55 + 0.275,
+          z
+        );
+
+        scene.add(slab);
+      }
+    }
+
+    function addRings(x, y, z, count = 4, radius = 0.13, rotation = 0) {
+      for (let i = 0; i < count; i++) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(radius, 0.045, 6, 18),
+          materials.gold
+        );
+        ring.position.set(
+          x + Math.cos(rotation + i * Math.PI * 2 / count) * radius * 0.38,
+          y + Math.sin(rotation + i * Math.PI * 2 / count) * radius * 0.38,
+          z
+        );
+        ring.rotation.y = rotation + i * Math.PI * 2 / count;
+        ring.castShadow = true;
+        scene.add(ring);
+      }
+    }
+
+    function addPalm(x, z, height = 3.4) {
+      const trunk = box(
+        0.34,
+        height,
+        0.34,
+        materials.trunk,
+        x,
+        height * 0.5,
+        z
+      );
+      scene.add(trunk);
+
+      const leafCount = 7;
+      for (let i = 0; i < leafCount; i++) {
+        const angle = (i / leafCount) * Math.PI * 2;
+        const leaf = box(
+          0.22,
+          1.25,
+          0.18,
+          i % 2 ? materials.leaf : materials.leafDark,
+          x + Math.cos(angle) * 0.42,
+          height + 0.55 + (i % 3) * 0.12,
+          z + Math.sin(angle) * 0.42,
+          false,
+          true
+        );
+        leaf.rotation.z = Math.cos(angle) * 0.42;
+        leaf.rotation.x = Math.sin(angle) * 0.42;
+        scene.add(leaf);
+      }
+    }
+
+    function addCactus(x, z, height = 1.6) {
+      const body = box(
+        0.36,
+        height,
+        0.36,
+        materials.green,
+        x,
+        height * 0.5,
+        z
+      );
+      scene.add(body);
+
+      for (let i = 0; i < 4; i++) {
+        const arm = box(
+          0.2,
+          0.22,
+          0.2,
+          materials.green,
+          x + (i % 2 ? 0.22 : -0.22),
+          0.25 + i * 0.22,
+          z,
+          false,
+          true
+        );
+        arm.rotation.z = i % 2 ? -0.75 : 0.75;
+        scene.add(arm);
+      }
+    }
+
+    function addFlower(x, y, z, scale = 1) {
+      const stem = box(
+        0.09 * scale,
+        0.55 * scale,
+        0.09 * scale,
+        materials.leafDark,
+        x,
+        y + 0.25 * scale,
+        z,
+        false,
+        false
+      );
+      scene.add(stem);
+
+      const flower = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16 * scale, 8, 6),
+        materials.flower
+      );
+      flower.scale.y = 0.65;
+      flower.position.set(x, y + 0.57 * scale, z);
+      flower.castShadow = true;
+      scene.add(flower);
+    }
+
+    function addMushroom(x, y, z, scale = 1) {
+      const stem = box(
+        0.24 * scale,
+        0.55 * scale,
+        0.24 * scale,
+        materials.white,
+        x,
+        y + 0.275 * scale,
+        z
+      );
+      scene.add(stem);
+
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.28 * scale, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+        materials.mushroomCap
+      );
+      cap.scale.y = 0.55;
+      cap.position.set(x, y + 0.56 * scale, z);
+      cap.castShadow = true;
+      scene.add(cap);
+
+      const underside = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.19 * scale, 0.2 * scale, 0.055 * scale, 10),
+        materials.mushroom
+      );
+      underside.position.set(x, y + 0.52 * scale, z);
+      scene.add(underside);
+    }
+
+    function addCloud(x, y, z, scale = 1) {
+      const cloud = new THREE.Group();
+
+      const puffs = [
+        [-0.55, 0, 0, 0.52],
+        [0, 0.12, 0, 0.7],
+        [0.55, 0, 0, 0.55],
+        [0.1, -0.1, 0.05, 0.62]
+      ];
+
+      for (const [px, py, pz, radius] of puffs) {
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(radius, 12, 8),
+          materials.cloud
+        );
+        puff.position.set(px, py, pz);
+        puff.scale.y = 0.65;
+        cloud.add(puff);
+      }
+
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
+      scene.add(cloud);
+    }
+
+    // ------------------------------------------------------------
+    // Main island
+    // ------------------------------------------------------------
+
+    const island = new THREE.Group();
+    scene.add(island);
+
+    // Base plinth
+    addVoxelColumn(
+      10.2,
+      7.2,
+      2,
+      0,
+      0,
+      [materials.dirtDark, materials.dirt],
+      0
+    );
+
+    // Main grass platform
+    const mainGrass = box(
+      10.2,
+      0.55,
+      7.2,
+      materials.grass,
+      0,
+      0.72,
+      0
+    );
+    island.add(mainGrass);
+
+    // Grass stripe blocks
+    for (let x = -4.5; x <= 4.5; x += 1.5) {
+      const stripe = box(
+        1.34,
+        0.08,
+        7.15,
+        (x + 4.5) % 3 === 0 ? materials.grassLight : materials.grassDark,
+        x,
+        1.025,
+        0,
+        false,
+        true
+      );
+      island.add(stripe);
+    }
+
+    // Upper left platform
+    addVoxelColumn(
+      4.2,
+      3.7,
+      3,
+      -2.65,
+      0,
+      [materials.dirt, materials.dirtLight, materials.dirt],
+      1.0
+    );
+
+    const upperLeftGrass = box(
+      4.2,
+      0.55,
+      3.7,
+      materials.grass,
+      -2.65,
+      2.7,
+      0
+    );
+    island.add(upperLeftGrass);
+
+    // Upper right platform
+    addVoxelColumn(
+      3.5,
+      3.3,
+      3,
+      2.65,
+      0,
+      [materials.dirt, materials.dirtLight, materials.dirt],
+      1.0
+    );
+
+    const upperRightGrass = box(
+      3.5,
+      0.55,
+      3.3,
+      materials.grass,
+      2.65,
+      2.7,
+      0
+    );
+    island.add(upperRightGrass);
+
+    // Top rear platform
+    addVoxelColumn(
+      4.5,
+      3.4,
+      3,
+      0,
+      0,
+      [materials.dirt, materials.dirtLight, materials.dirt],
+      1.0
+    );
+
+    const upperRearGrass = box(
+      4.5,
+      0.55,
+      3.4,
+      materials.grass,
+      0,
+      2.7,
+      0
+    );
+    island.add(upperRearGrass);
+
+    // Water channel between upper platforms
+    const water = box(
+      1.45,
+      0.34,
+      4.6,
+      materials.water,
+      0,
+      1.25,
+      0.1
+    );
+    island.add(water);
+
+    const waterTop = box(
+      1.35,
+      0.08,
+      4.5,
+      materials.waterLight,
+      0,
+      1.44,
+      0.1,
+      false,
+      true
+    );
+    island.add(waterTop);
+
+    // Water edge blocks
+    for (let i = 0; i < 5; i++) {
+      const x = -0.72 + i * 0.36;
+      island.add(
+        box(
+          0.3,
+          0.3,
+          0.32,
+          materials.water,
+          x,
+          1.2,
+          2.45,
+          false,
+          true
+        )
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Decorative objects
+    // ------------------------------------------------------------
+
+    // Palm trees
+    addPalm(-4.45, -1.05, 3.8);
+    addPalm(-3.45, -1.05, 3.2);
+    addPalm(-2.45, -1.05, 3.5);
+    addPalm(4.35, -1.05, 3.6);
+    addPalm(3.3, -1.05, 3.15);
+
+    // Rear platform vegetation
+    addPalm(-1.25, 1.15, 3.5);
+    addPalm(0.35, 1.15, 3.2);
+    addPalm(1.85, 1.15, 3.8);
+
+    // Cacti
+    addCactus(-3.85, 0.75, 1.8);
+    addCactus(3.85, 0.75, 1.65);
+    addCactus(1.15, 0.75, 1.4);
+
+    // Flowers
+    addFlower(-4.0, 1.1, 0.55, 1.15);
+    addFlower(-3.55, 1.1, 0.55, 0.85);
+    addFlower(4.0, 1.1, 0.55, 1.05);
+    addFlower(-0.9, 2.88, 1.05, 0.85);
+    addFlower(0.2, 2.88, 1.05, 0.75);
+    addFlower(1.55, 2.88, 1.05, 0.85);
+    addFlower(-2.1, 2.88, 1.0, 0.7);
+    addFlower(2.25, 2.88, 1.0, 0.75);
+
+    // Mushrooms
+    addMushroom(-4.15, 1.05, 0.15, 0.85);
+    addMushroom(-3.55, 1.05, 0.15, 0.65);
+    addMushroom(4.15, 1.05, 0.15, 0.8);
+    addMushroom(3.55, 1.05, 0.15, 0.65);
+    addMushroom(-1.85, 2.85, 1.15, 0.7);
+    addMushroom(1.75, 2.85, 1.15, 0.7);
+
+    // Ring collections
+    addRings(-3.8, 1.12, 0.45, 5, 0.14);
+    addRings(3.8, 1.12, 0.45, 5, 0.14);
+    addRings(-3.8, 2.82, 0.45, 4, 0.13);
+    addRings(3.8, 2.82, 0.45, 4, 0.13);
+    addRings(-1.85, 2.85, 1.15, 3, 0.12);
+    addRings(1.75, 2.85, 1.15, 3, 0.12);
+
+    // Spike beds
+    function addSpikes(x, z, count = 10, radius = 0.35) {
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const spike = box(
+          0.12,
+          0.65,
+          0.12,
+          materials.spike,
+          x + Math.cos(angle) * radius,
+          1.48,
+          z + Math.sin(angle) * radius,
+          false,
+          true
+        );
+        spike.rotation.z = Math.cos(angle) * 0.2;
+        spike.rotation.x = Math.sin(angle) * 0.2;
+        scene.add(spike);
+      }
+    }
+
+    addSpikes(-2.75, 0.85, 12, 0.48);
+    addSpikes(2.75, 0.85, 12, 0.48);
+
+    // Character: blue hedgehog
+    function addHedgehog(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.58, 12, 8),
+        materials.blue
+      );
+      body.scale.set(1.15, 0.85, 0.95);
+      body.castShadow = true;
+      group.add(body);
+
+      const nose = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 8, 6),
+        materials.white
+      );
+      nose.position.set(0.42, 0.18, 0.32);
+      group.add(nose);
+
+      const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x172536,
+        roughness: 0.4
+      });
+
+      for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(
+          new THREE.SphereGeometry(0.055, 7, 5),
+          eyeMaterial
+        );
+        eye.position.set(side * 0.28, 0.43, 0.38);
+        group.add(eye);
+
+        const cheek = new THREE.Mesh(
+          new THREE.SphereGeometry(0.1, 7, 5),
+          materials.white
+        );
+        cheek.scale.set(0.55, 0.5, 0.25);
+        cheek.position.set(side * 0.4, 0.06, 0.3);
+        group.add(cheek);
+      }
+
+      const arm = box(
+        0.2,
+        0.22,
+        0.2,
+        materials.blue,
+        0,
+        0.18,
+        0.55,
+        false,
+        true
+      );
+      arm.rotation.y = Math.PI / 2;
+      group.add(arm);
+
+      scene.add(group);
+    }
+
+    addHedgehog(-1.25, 1.08, 0.65, -0.8);
+    addHedgehog(1.15, 1.08, 0.65, 0.8);
+    addHedgehog(-0.25, 2.88, 0.8, 0.4);
+
+    // Character on upper platform
+    addHedgehog(-0.55, 2.9, 0.45, -1.1);
+
+    // Flag
+    function addFlag(x, y, z, color = 0x3988ff) {
+      const pole = box(
+        0.12,
+        2.3,
+        0.12,
+        materials.white,
+        x,
+        y + 1.15,
+        z
+      );
+      scene.add(pole);
+
+      const flag = box(
+        0.95,
+        0.48,
+        0.09,
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.7
+        }),
+        x + 0.43,
+        y + 2.15,
+        z,
+        false,
+        true
+      );
+      flag.rotation.y = -0.12;
+      scene.add(flag);
+    }
+
+    addFlag(-1.55, 2.85, 1.2);
+    addFlag(1.65, 2.85, 1.2, 0xe73b52);
+
+    // Small top decorations
+    addFlower(-1.8, 3.02, 0.9, 0.8);
+    addFlower(-1.2, 3.02, 0.9, 0.7);
+    addFlower(1.2, 3.02, 0.9, 0.7);
+    addFlower(1.8, 3.02, 0.9, 0.8);
+    addMushroom(-0.55, 3.0, 0.9, 0.55);
+    addMushroom(0.55, 3.0, 0.9, 0.55);
+
+    // Clouds
+    addCloud(-6.5, 7.0, -3.5, 1.25);
+    addCloud(5.0, 8.0, -4.5, 1.1);
+    addCloud(8.5, 5.8, 1.5, 0.95);
+    addCloud(-8.5, 6.2, 2.0, 0.85);
+
+    // Background sun
+    const sunDisc = new THREE.Mesh(
+      new THREE.SphereGeometry(0.7, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfff1b4 })
+    );
+    sunDisc.position.set(-7, 8.5, -7);
+    scene.add(sunDisc);
+
+    // ------------------------------------------------------------
+    // Camera controls implemented directly
+    // ------------------------------------------------------------
+
+    const target = new THREE.Vector3(0, 1.8, 0);
+    const spherical = new THREE.Spherical(13.8, 1.02, 0.72);
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let previousDistance = spherical.radius;
+    let targetDistance = spherical.radius;
+
+    function updateCamera() {
+      spherical.radius = THREE.MathUtils.lerp(
+        spherical.radius,
+        targetDistance,
+        0.12
+      );
+
+      spherical.theta -= (previousX - spherical.theta) * 0.12;
+      spherical.phi -= (previousY - spherical.phi) * 0.12;
+
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.28, Math.PI * 0.48);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 7.5, 24);
+
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      targetDistance = THREE.MathUtils.clamp(
+        targetDistance + dx * 0.012,
+        7.5,
+        24
+      );
+
+      spherical.theta -= dx * 0.006;
+      spherical.phi -= dy * 0.006;
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.28, Math.PI * 0.48);
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event.pointerId !== undefined &&
+          renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        targetDistance = THREE.MathUtils.clamp(
+          targetDistance + event.deltaY * 0.01,
+          7.5,
+          24
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // ------------------------------------------------------------
+    // Resize and animation
+    // ------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle cloud drift.
+      const clouds = scene.children.filter(
+        (object) => object.type === "Group" &&
+          object.userData.isCloud
+      );
+
+      for (const cloud of clouds) {
+        cloud.position.x += Math.sin(elapsed * 0.18 + cloud.userData.phase) * 0.0015;
+      }
+
+      // Subtle water shimmer.
+      waterTop.material.color.offsetHSL(
+        0,
+        0,
+        Math.sin(elapsed * 1.4) * 0.015
+      );
+
+      // Very subtle flag flutter.
+      const flags = scene.children.filter(
+        (object) => object.userData.isFlag
+      );
+
+      for (const flag of flags) {
+        flag.rotation.z = Math.sin(elapsed * 2.2 + flag.userData.phase) * 0.045;
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

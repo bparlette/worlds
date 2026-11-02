@@ -494,5 +494,13 @@
     "status": "pass",
     "filename": "1062-sonic_the_hedgehog_green_hill_zone_loop_diorama.html",
     "updated_at": "2026-11-02 05:37 EST"
+  },
+  "63": {
+    "rank": 63,
+    "game": "Sonic the Hedgehog",
+    "name": "Green Hill Zone Diorama",
+    "status": "pass",
+    "filename": "1063-sonic_the_hedgehog_green_hill_zone_diorama.html",
+    "updated_at": "2026-11-02 05:42 EST"
   }
 }
