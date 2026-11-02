@@ -24,20 +24,16 @@
     "name": "World 1-1",
     "status": "parked",
     "filename": "1002_super_mario_bros_world_1_1.html",
-    "measured": {
-      "x": 29.85,
-      "z": 29.87,
-      "y_max": 13.9,
-      "y_min": 0
-    },
+    "measured": {},
     "vision": {
-      "character": true,
+      "character": false,
       "text_or_hud": true
     },
     "fails": [
-      "height 13.9 > 13"
+      "conversion: {'status': 'validation_failed', 'error': \"Identifier 'window' has already been declared\"}",
+      "no relic in scene"
     ],
     "attempts": 2,
-    "updated_at": "2026-11-01 19:47 EST"
+    "updated_at": "2026-11-01 20:01 EST"
   }
 }
