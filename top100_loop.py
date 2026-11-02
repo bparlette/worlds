@@ -48,7 +48,9 @@ STANDARD_TAIL = (
     "Keep it within 30x30 units across and 13 units high. Walls must be inside-only: give "
     "wall materials side: THREE.BackSide so they are solid from inside and not drawn from "
     "outside. Include lighting, fog, textures/materials, animated environmental elements, "
-    "and mouse/touch orbit camera controls."
+    "and mouse/touch orbit camera controls. "
+    "RELIC: You MUST explicitly declare a relic object in your scene: "
+    "const relic = { name: '<iconic treasure for this game>', x: <x on walkable ground>, z: <z on walkable ground> };"
 )
 
 # The catalog system prompt tells Qwen to pick one section of a multi-room sheet;

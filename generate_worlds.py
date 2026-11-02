@@ -207,8 +207,9 @@ def generate_single_world(spec: dict) -> str:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_content}
         ],
-        "max_tokens": 14000,
+        "max_tokens": 12000,
         "temperature": 0.6,
+        "frequency_penalty": 0.2,
         "stream": True
     }
 

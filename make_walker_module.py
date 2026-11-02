@@ -117,6 +117,9 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
     # The module's renderer is a dummy; a real browser throws on appending its fake
     # domElement (walker stalls, bake fails). Only Node's faked document tolerated it.
     clean_js = re.sub(r"document\.body\.appendChild\(\s*renderer\.domElement\s*\);?", "", clean_js)
+    # Neutralize DOM lookups like document.getElementById(...) which return null in headless/sandbox contexts
+    clean_js = re.sub(r"\bdocument\.getElementById\([^)]*\)", "dummyEl()", clean_js)
+    clean_js = re.sub(r"\bdocument\.querySelector\([^)]*\)", "dummyEl()", clean_js)
 
     spawn_z = tz + 14.0 if tz <= 0 else tz - 14.0
     door_next_x = tx + 12.0
