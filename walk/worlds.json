@@ -154,6 +154,13 @@
     "module": "modules/047.js"
   },
   {
+    "id": "051",
+    "title": "The Legend of Zelda: Link&#x27;s Awakening",
+    "sub": "Animal Village Kitchen",
+    "system": "Console",
+    "module": "modules/051.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
