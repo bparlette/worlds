@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Monster Den</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #120d08;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #hud {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      color: #ffd8a1;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+    }
+
+    #hud h1 {
+      margin: 0 0 5px;
+      font-size: clamp(20px, 3vw, 38px);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #hud p {
+      margin: 0;
+      color: #f3c983;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 10;
+      padding: 10px 13px;
+      border: 1px solid rgba(255, 216, 151, 0.25);
+      border-radius: 8px;
+      color: #f6d6a1;
+      background: rgba(20, 12, 8, 0.65);
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      #hud {
+        top: 12px;
+        left: 12px;
+      }
+
+      #help {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="hud">
+    <h1>Voxel Monster Den</h1>
+    <p>Procedural voxel scene</p>
+  </div>
+
+  <div id="help">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer, scene, camera
+    // ------------------------------------------------------------
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x17100b);
+    scene.fog = new THREE.FogExp2(0x241812, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // ------------------------------------------------------------
+    // Shared voxel materials
+    // ------------------------------------------------------------
+
+    const materials = {
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x5b3428,
+        roughness: 0.92,
+        metalness: 0.02
+      }),
+      darkRock: new THREE.MeshStandardMaterial({
+        color: 0x2d201b,
+        roughness: 0.96
+      }),
+      redRock: new THREE.MeshStandardMaterial({
+        color: 0x8c3027,
+        roughness: 0.88
+      }),
+      moss: new THREE.MeshStandardMaterial({
+        color: 0x294b38,
+        roughness: 1
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xb88a31,
+        roughness: 0.55,
+        metalness: 0.65
+      }),
+      darkGold: new THREE.MeshStandardMaterial({
+        color: 0x6f4c1e,
+        roughness: 0.62,
+        metalness: 0.55
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x315a43,
+        roughness: 0.72
+      }),
+      teal: new THREE.MeshStandardMaterial({
+        color: 0x287f83,
+        roughness: 0.5,
+        metalness: 0.25
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0x7853a8,
+        roughness: 0.65,
+        metalness: 0.2
+      }),
+      blueGlass: new THREE.MeshStandardMaterial({
+        color: 0x38b9d5,
+        roughness: 0.18,
+        metalness: 0.1,
+        emissive: 0x073c52,
+        emissiveIntensity: 0.8
+      }),
+      orange: new THREE.MeshStandardMaterial({
+        color: 0xf28a2d,
+        roughness: 0.6
+      }),
+      bone: new THREE.MeshStandardMaterial({
+        color: 0xc6a16a,
+        roughness: 0.8
+      }),
+      eye: new THREE.MeshStandardMaterial({
+        color: 0xff3d25,
+        emissive: 0xff1608,
+        emissiveIntensity: 2.4,
+        roughness: 0.25
+      })
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+
+    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    function voxel(x, y, z, sx = 1, sy = 1, sz = 1, material, parent = scene) {
+      const mesh = new THREE.Mesh(voxelGeometry, material);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function voxelBox(x, y, z, sx, sy, sz, material, parent = scene) {
+      const mesh = new THREE.Mesh(voxelGeometry, material);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addCylinder(radius, height, material, x, y, z, parent = scene, segments = 12) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addSphere(radius, material, x, y, z, parent = scene, widthSegments = 12, heightSegments = 10) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, widthSegments, heightSegments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ------------------------------------------------------------
+    // Environment / floating island
+    // ------------------------------------------------------------
+
+    const island = new THREE.Group();
+    scene.add(island);
+
+    // Main platform, assembled from irregular rock blocks.
+    const platformY = 1.15;
+    const platformSize = 11.5;
+
+    for (let x = -5; x <= 5; x++) {
+      for (let z = -4; z <= 4; z++) {
+        const edge = Math.max(Math.abs(x) - 4.6, Math.abs(z) - 3.6);
+        const noise = (Math.sin(x * 1.73 + z * 0.91) + Math.cos(z * 1.31 - x * 0.47)) * 0.18;
+        const height = Math.max(0, 1.55 - edge * 0.28 + noise);
+
+        if (height > 0) {
+          voxelBox(
+            x,
+            platformY + height * 0.5,
+            z,
+            1.18,
+            height,
+            1.18,
+            (x + z) % 3 === 0 ? materials.redRock : materials.rock,
+            island
+          );
+        }
+      }
+    }
+
+    // Upper rear shelf.
+    voxelBox(-0.4, 3.65, -2.2, 8.4, 0.75, 4.2, materials.darkRock, island);
+    voxelBox(-0.4, 4.1, -2.2, 7.8, 0.28, 3.8, materials.rock, island);
+
+    // Hanging stalactite-like blocks.
+    for (let i = 0; i < 7; i++) {
+      const x = -4.8 + i * 1.45;
+      const z = -3.1 + (i % 3) * 0.35;
+      const length = 1.1 + (i % 2) * 0.55;
+
+      voxelBox(x, 5.05 - length * 0.5, z, 0.75, length, 0.75, materials.darkRock, island);
+      voxelBox(x, 4.2 - length, z, 0.55, 0.35, 0.55, materials.rock, island);
+    }
+
+    // Moss patches.
+    for (let i = 0; i < 28; i++) {
+      const x = -5.2 + Math.random() * 10.4;
+      const z = -4.1 + Math.random() * 8.2;
+      voxelBox(
+        x,
+        platformY + 0.12,
+        z,
+        0.25 + Math.random() * 0.45,
+        0.12,
+        0.25 + Math.random() * 0.45,
+        materials.moss,
+        island
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Giant left monster
+    // ------------------------------------------------------------
+
+    const giant = new THREE.Group();
+    giant.position.set(-3.2, 0.45, 0.3);
+    giant.rotation.y = -0.12;
+    scene.add(giant);
+
+    // Torso and head.
+    voxelBox(0, 1.65, 0, 2.15, 2.55, 2.2, materials.gold, giant);
+    voxelBox(0.35, 3.15, 0, 2.35, 1.75, 2.15, materials.gold, giant);
+    voxelBox(0.55, 4.02, 0, 1.8, 0.85, 1.75, materials.darkGold, giant);
+
+    // Jaw and teeth.
+    voxelBox(0.62, 2.72, 0.15, 1.75, 0.6, 1.65, materials.gold, giant);
+
+    for (let i = 0; i < 5; i++) {
+      voxel(
+        0.05 + i * 0.32,
+        2.34,
+        0.95,
+        0.18,
+        0.48,
+        0.24,
+        materials.bone,
+        giant
+      );
+    }
+
+    // Red glowing eyes.
+    voxel(0.02, 4.04, 0.88, 0.17, 0.28, 0.16, materials.eye, giant);
+    voxel(0.02, 4.04, -0.88, 0.17, 0.28, 0.16, materials.eye, giant);
+
+    // Horns / spikes.
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + 0.15;
+      const x = Math.cos(angle) * 0.9;
+      const z = Math.sin(angle) * 0.9;
+
+      voxel(x, 4.75, z, 0.18, 1.1, 0.18, materials.darkGold, giant);
+      voxel(x, 5.25, z, 0.28, 0.35, 0.28, materials.gold, giant);
+    }
+
+    // Long limbs.
+    voxelBox(-1.25, 1.2, 0.25, 0.75, 2.45, 0.75, materials.gold, giant);
+    voxelBox(1.2, 1.05, 0.15, 0.7, 2.15, 0.7, materials.gold, giant);
+
+    // Claws.
+    for (let i = 0; i < 4; i++) {
+      const x = -1.25 + i * 0.42;
+      voxel(x, 0.05, 0.72, 0.18, 0.35, 0.55, materials.darkGold, giant);
+      voxel(x + 0.08, -0.12, 0.9, 0.11, 0.2, 0.34, materials.gold, giant);
+    }
+
+    // Tail curving down.
+    voxelBox(-0.8, 0.45, 0.4, 0.75, 0.65, 0.75, materials.gold, giant);
+    voxelBox(-1.55, -0.1, 0.65, 0.7, 0.55, 0.7, materials.darkGold, giant);
+    voxelBox(-2.25, -0.65, 0.9, 0.65, 0.5, 0.65, materials.gold, giant);
+
+    for (let i = 0; i < 5; i++) {
+      voxel(
+        -2.2 - i * 0.22,
+        -0.85 - i * 0.1,
+        1.15 + i * 0.08,
+        0.15,
+        0.3,
+        0.18,
+        materials.darkGold,
+        giant
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Center hero
+    // ------------------------------------------------------------
+
+    const hero = new THREE.Group();
+    hero.position.set(0.35, platformY, 0.25);
+    hero.rotation.y = -0.2;
+    scene.add(hero);
+
+    // Boots.
+    voxelBox(-0.38, 0.18, 0.18, 0.45, 0.36, 0.52, materials.darkGold, hero);
+    voxelBox(0.38, 0.18, -0.12, 0.45, 0.36, 0.52, materials.darkGold, hero);
+
+    // Legs.
+    voxelBox(-0.2, 0.62, 0.05, 0.35, 0.72, 0.42, materials.gold, hero);
+    voxelBox(0.22, 0.62, -0.08, 0.35, 0.72, 0.42, materials.gold, hero);
+
+    // Torso.
+    voxelBox(0, 1.25, 0, 0.82, 0.85, 0.68, materials.gold, hero);
+    voxelBox(0, 1.68, 0, 0.65, 0.24, 0.58, materials.darkGold, hero);
+
+    // Arms.
+    voxelBox(-0.62, 1.2, 0.02, 0.3, 0.65, 0.34, materials.gold, hero);
+    voxelBox(0.62, 1.18, -0.05, 0.3, 0.65, 0.34, materials.gold, hero);
+
+    // Helmet / visor.
+    voxelBox(0, 1.83, 0, 0.72, 0.25, 0.58, materials.darkGold, hero);
+    voxelBox(0, 1.84, 0.31, 0.58, 0.2, 0.12, materials.blueGlass, hero);
+
+    // Energy core.
+    voxelBox(0, 1.27, 0.37, 0.3, 0.28, 0.12, materials.orange, hero);
+
+    // Weapon.
+    voxelBox(-0.95, 1.15, -0.08, 0.8, 0.22, 0.24, materials.darkGold, hero);
+    voxelBox(-1.42, 1.15, -0.08, 0.18, 0.18, 0.18, materials.gold, hero);
+
+    // Armored gauntlet.
+    voxelBox(-0.7, 0.78, 0.2, 0.42, 0.48, 0.46, materials.orange, hero);
+
+    // ------------------------------------------------------------
+    // Female companion
+    // ------------------------------------------------------------
+
+    const companion = new THREE.Group();
+    companion.position.set(2.1, platformY, 0.75);
+    companion.rotation.y = 0.15;
+    scene.add(companion);
+
+    // Dress torso.
+    voxelBox(0, 1.15, 0, 0.55, 1.1, 0.58, materials.teal, companion);
+    voxelBox(0, 1.75, 0, 0.67, 0.28, 0.62, materials.purple, companion);
+
+    // Head and hair.
+    voxelBox(0, 2.25, 0, 0.55, 0.55, 0.5, materials.moss, companion);
+    voxelBox(0, 2.58, 0, 0.66, 0.18, 0.58, materials.darkGold, companion);
+
+    // Hair locks.
+    voxelBox(-0.24, 2.43, 0.05, 0.2, 0.42, 0.2, materials.moss, companion);
+    voxelBox(0.24, 2.4, 0.08, 0.18, 0.4, 0.18, materials.moss, companion);
+
+    // Eyes.
+    voxel(-0.12, 2.28, 0.28, 0.09, 0.13, 0.08, materials.eye, companion);
+    voxel(0.12, 2.28, 0.28, 0.09, 0.13, 0.08, materials.eye, companion);
+
+    // Arms.
+    voxelBox(-0.38, 0.9, 0.02, 0.24, 0.75, 0.28, materials.teal, companion);
+    voxelBox(0.38, 0.9, 0.02, 0.24, 0.75, 0.28, materials.teal, companion);
+
+    // Legs.
+    voxelBox(-0.15, 0.48, 0, 0.28, 0.65, 0.34, materials.teal, companion);
+    voxelBox(0.15, 0.48, 0.02, 0.28, 0.65, 0.34, materials.teal, companion);
+
+    // Boots.
+    voxelBox(-0.15, 0.13, 0.1, 0.38, 0.24, 0.46, materials.purple, companion);
+    voxelBox(0.15, 0.13, 0.12, 0.38, 0.24, 0.46, materials.purple, companion);
+
+    // Staff.
+    voxelBox(0.48, 1.55, -0.15, 0.09, 2.4, 0.09, materials.gold, companion);
+    voxelBox(0.48, 2.85, -0.15, 0.3, 0.25, 0.3, materials.purple, companion);
+
+    // Crystal pendant.
+    voxelBox(0, 1.25, 0.39, 0.18, 0.25, 0.12, materials.orange, companion);
+
+    // ------------------------------------------------------------
+    // Central crystal shrine
+    // ------------------------------------------------------------
+
+    const shrine = new THREE.Group();
+    shrine.position.set(0.15, platformY, -1.15);
+    scene.add(shrine);
+
+    // Base.
+    voxelBox(0, 0.25, 0, 2.4, 0.5, 2.2, materials.darkGold, shrine);
+    voxelBox(0, 0.56, 0, 2.7, 0.2, 2.5, materials.gold, shrine);
+
+    // Crystal cage.
+    voxelBox(0, 1.45, 0, 0.75, 2.1, 0.75, materials.darkGold, shrine);
+    voxelBox(0, 2.55, 0, 0.9, 0.3, 0.9, materials.gold, shrine);
+
+    for (const x of [-0.48, 0.48]) {
+      for (const z of [-0.48, 0.48]) {
+        voxel(x, 0.78, z, 0.14, 1.8, 0.14, materials.gold, shrine);
+      }
+    }
+
+    // Glowing crystal.
+    voxelBox(0, 1.55, 0, 0.62, 1.85, 0.62, materials.blueGlass, shrine);
+    voxelBox(0, 2.53, 0, 0.72, 0.22, 0.72, materials.orange, shrine);
+
+    // Inner orb.
+    addSphere(0.28, materials.orange, 0, 1.58, 0, shrine, 10, 8);
+
+    // Small guardian creatures around the shrine.
+    function createGuardian(x, z, rotation = 0) {
+      const g = new THREE.Group();
+      g.position.set(x, platformY, z);
+      g.rotation.y = rotation;
+      scene.add(g);
+
+      voxelBox(0, 0.16, 0, 0.42, 0.3, 0.42, materials.darkGold, g);
+      voxelBox(-0.12, 0.5, 0, 0.22, 0.45, 0.28, materials.gold, g);
+      voxelBox(0.12, 0.5, 0, 0.22, 0.45, 0.28, materials.gold, g);
+      voxelBox(0, 0.92, 0, 0.5, 0.5, 0.42, materials.green, g);
+      voxelBox(0, 1.25, 0, 0.42, 0.25, 0.38, materials.gold, g);
+      voxelBox(0, 1.42, 0.1, 0.24, 0.2, 0.1, materials.orange, g);
+      voxel(-0.1, 1.0, 0.25, 0.08, 0.1, 0.08, materials.eye, g);
+      voxel(0.1, 1.0, 0.25, 0.08, 0.1, 0.08, materials.eye, g);
+    }
+
+    createGuardian(-1.75, 0.15, 0.8);
+    createGuardian(1.65, 0.2, -0.8);
+
+    // ------------------------------------------------------------
+    // Right-side throne / altar
+    // ------------------------------------------------------------
+
+    const throne = new THREE.Group();
+    throne.position.set(3.15, platformY, -1.65);
+    throne.rotation.y = -0.1;
+    scene.add(throne);
+
+    // Throne base.
+    voxelBox(0, 0.25, 0, 2.2, 0.5, 2.0, materials.darkRock, throne);
+    voxelBox(0, 0.58, 0, 2.5, 0.25, 2.3, materials.rock, throne);
+
+    // Backrest.
+    voxelBox(0, 1.05, -0.78, 1.9, 1.65, 0.65, materials.gold, throne);
+    voxelBox(0, 1.9, -0.78, 2.15, 0.35, 0.85, materials.darkGold, throne);
+
+    // Crown-like spikes.
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2;
+      voxel(
+        Math.cos(angle) * 0.58,
+        2.15,
+        -0.78 + Math.sin(angle) * 0.58,
+        0.13,
+        0.75,
+        0.13,
+        materials.gold,
+        throne
+      );
+    }
+
+    // Armrests.
+    voxelBox(-0.95, 0.85, 0.15, 0.3, 0.8, 0.45, materials.gold, throne);
+    voxelBox(0.95, 0.85, 0.15, 0.3, 0.8, 0.45, materials.gold, throne);
+
+    // Orbital crystal.
+    voxelBox(0, 2.35, 0.1, 0.35, 0.7, 0.35, materials.purple, throne);
+    voxelBox(0, 2.8, 0.1, 0.18, 0.2, 0.18, materials.orange, throne);
+
+    // Throne steps.
+    voxelBox(-0.45, 0.05, 0.8, 1.5, 0.2, 1.2, materials.redRock, throne);
+    voxelBox(0.55, 0.05, 0.9, 1.4, 0.2, 1.2, materials.redRock, throne);
+
+    // ------------------------------------------------------------
+    // Hanging crystals and vines
+    // ------------------------------------------------------------
+
+    function hangingCrystal(x, y, z, colorMaterial, scale = 1) {
+      const crystal = new THREE.Group();
+      crystal.position.set(x, y, z);
+      crystal.scale.setScalar(scale);
+      scene.add(crystal);
+
+      voxelBox(0, 0, 0, 0.35, 0.7, 0.35, colorMaterial, crystal);
+      voxelBox(0, 0.39, 0, 0.5, 0.2, 0.5, colorMaterial, crystal);
+      voxelBox(0, 0.56, 0, 0.62, 0.1, 0.62, colorMaterial, crystal);
+
+      for (let i = 0; i < 3; i++) {
+        voxel(
+          (i - 1) * 0.12,
+          0.49,
+          0,
+          0.08,
+          0.18,
+          0.08,
+          colorMaterial,
+          crystal
+        );
+      }
+    }
+
+    hangingCrystal(-2.1, 4.65, -2.9, materials.orange, 0.85);
+    hangingCrystal(1.65, 4.8, -3.1, materials.purple, 0.72);
+    hangingCrystal(3.7, 4.25, -2.8, materials.blueGlass, 0.6);
+
+    // Vines curling down the right wall.
+    for (let i = 0; i < 5; i++) {
+      const x = 4.35 + (i % 2) * 0.28;
+      const z = -3.1 + Math.floor(i / 2) * 0.55;
+
+      voxel(x, 4.7 - i * 0.72, z, 0.13, 1.15, 0.13, materials.moss, scene);
+      voxel(x + 0.16, 4.35 - i * 0.72, z, 0.1, 0.35, 0.1, materials.orange, scene);
+      voxel(x - 0.1, 4.05 - i * 0.72, z, 0.1, 0.3, 0.1, materials.moss, scene);
+    }
+
+    // ------------------------------------------------------------
+    // Foreground dragon wing / skull
+    // ------------------------------------------------------------
+
+    const foreground = new THREE.Group();
+    foreground.position.set(0.1, platformY, 1.1);
+    foreground.rotation.y = 0.1;
+    scene.add(foreground);
+
+    // Wing skeleton.
+    voxelBox(0, 0.25, 0, 0.18, 1.4, 0.18, materials.gold, foreground);
+    voxelBox(-0.75, -0.1, 0, 0.16, 0.9, 0.16, materials.darkGold, foreground);
+    voxelBox(-1.35, -0.35, 0, 0.15, 0.65, 0.15, materials.gold, foreground);
+
+    // Membrane.
+    const membrane = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.8, 1.45, 10, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x8f241d,
+        roughness: 0.85,
+        side: THREE.DoubleSide,
+        emissive: 0x260504,
+        emissiveIntensity: 0.35
+      })
+    );
+    membrane.position.set(-1.05, -0.55, 0);
+    membrane.rotation.y = Math.PI;
+    membrane.rotation.z = -0.12;
+    membrane.castShadow = true;
+    foreground.add(membrane);
+
+    // Wing bones.
+    for (let i = 0; i < 5; i++) {
+      voxel(
+        -1.45 - i * 0.25,
+        -0.42 - i * 0.1,
+        0.15,
+        0.1,
+        0.45,
+        0.1,
+        materials.bone,
+        foreground
+      );
+    }
+
+    // Foreground skull.
+    voxelBox(0.85, 0.1, 0.2, 0.75, 0.45, 0.65, materials.bone, foreground);
+    voxelBox(0.85, 0.4, 0.2, 0.55, 0.18, 0.48, materials.darkGold, foreground);
+
+    for (const x of [0.65, 1.05]) {
+      voxel(x, 0.14, 0.55, 0.12, 0.17, 0.12, materials.eye, foreground);
+    }
+
+    // Teeth.
+    for (let i = 0; i < 4; i++) {
+      voxel(
+        0.85 + (i - 1.5) * 0.16,
+        -0.12,
+        0.58,
+        0.1,
+        0.3,
+        0.12,
+        materials.bone,
+        foreground
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Background structures
+    // ------------------------------------------------------------
+
+    // Rear cliff.
+    voxelBox(-0.2, 4.8, -4.1, 10.5, 2.3, 3.2, materials.darkRock);
+    voxelBox(-0.2, 6.2, -4.15, 9.5, 0.55, 2.8, materials.rock);
+
+    // Rear arch / doorway.
+    voxelBox(-3.7, 3.0, -4.4, 2.2, 2.3, 0.7, materials.darkRock);
+    voxelBox(-1.8, 3.0, -4.4, 2.2, 2.3, 0.7, materials.darkRock);
+    voxelBox(-0.75, 3.0, -4.4, 1.3, 1.2, 0.7, materials.darkRock);
+
+    // Distant glowing crystals.
+    for (let i = 0; i < 5; i++) {
+      const x = -6 + i * 2.5;
+      voxelBox(x, 6.2, -5.7, 0.12, 1.2, 0.12, materials.orange);
+      voxelBox(x, 7.05, -5.7, 0.24, 0.2, 0.24, materials.purple);
+    }
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+
+    const hemisphere = new THREE.HemisphereLight(0x8cb9c8, 0x32170f, 1.25);
+    scene.add(hemisphere);
+
+    const warmLight = new THREE.PointLight(0xff7a2e, 2.5, 13, 2);
+    warmLight.position.set(-1.5, 3.2, 1.5);
+    scene.add(warmLight);
+
+    const coolLight = new THREE.PointLight(0x38d7ff, 2.1, 11, 2);
+    coolLight.position.set(0.1, 2.6, -1.3);
+    scene.add(coolLight);
+
+    const rimLight = new THREE.DirectionalLight(0x8bc7d8, 1.35);
+    rimLight.position.set(-4, 6, 3);
+    scene.add(rimLight);
+
+    const orangeFill = new THREE.PointLight(0xff4b1f, 1.1, 8, 2);
+    orangeFill.position.set(3.8, 2.4, -1.7);
+    scene.add(orangeFill);
+
+    // ------------------------------------------------------------
+    // Camera controls implemented directly
+    // ------------------------------------------------------------
+
+    const target = new THREE.Vector3(-0.2, 2.2, -0.3);
+    const spherical = new THREE.Spherical(12.8, Math.PI * 0.42, Math.PI * 0.25);
+    const initialTarget = target.clone();
+    const initialSpherical = spherical.clone();
+
+    let dragging = false;
+    let panning = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.22, Math.PI * 0.48);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 6.2, 22);
+
+      target.y = THREE.MathUtils.clamp(target.y, 0.4, 5.5);
+
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = panning ? "move" : "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.getWorldDirection(right);
+        right.cross(camera.up).normalize();
+        up.cross(right).normalize();
+
+        target.addScaledVector(right, -dx * 0.015);
+        target.addScaledVector(up, dy * 0.015);
+      } else {
+        spherical.theta -= dx * 0.006;
+        spherical.phi -= dy * 0.005;
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      panning = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        spherical.radius *= Math.exp(event.deltaY * 0.001);
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    renderer.domElement.style.cursor = "grab";
+    updateCamera();
+
+    // Gentle idle motion for the floating crystals.
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Pulse the central crystal.
+      const pulse = 1 + Math.sin(elapsed * 2.2) * 0.08;
+      shrine.children.forEach((child) => {
+        if (child.isMesh && ["blueGlass", "orange"].some((material) => child.material?.name?.includes))) {
+          child.scale.setScalar(pulse);
+        }
+      });
+
+      // Subtle guardian movement.
+      createGuardian(-1.75, 0.15, 0.8).position.y = platformY + Math.sin(elapsed * 1.7) * 0.025;
+      createGuardian(1.65, 0.2, -0.8).position.y = platformY + Math.sin(elapsed * 1.7 + 1.4) * 0.025;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // ------------------------------------------------------------
+    // Resize handling
+    // ------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+  </script>
+</body>
+</html>

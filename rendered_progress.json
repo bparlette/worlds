@@ -182,5 +182,13 @@
     "status": "pass",
     "filename": "1023-the_legend_of_zelda_hyrule_castle_interior.html",
     "updated_at": "2026-11-02 02:10 EST"
+  },
+  "24": {
+    "rank": 24,
+    "game": "Metroid",
+    "name": "Metroid Diorama",
+    "status": "pass",
+    "filename": "1024-metroid_metroid_diorama.html",
+    "updated_at": "2026-11-02 02:16 EST"
   }
 }
