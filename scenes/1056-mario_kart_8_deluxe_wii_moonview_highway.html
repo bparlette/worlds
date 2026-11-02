@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Mushroom City</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050914;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #fff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+    }
+
+    #hud h1 {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      margin: 0;
+      font-size: clamp(22px, 3vw, 42px);
+      line-height: 1;
+      letter-spacing: 0.04em;
+    }
+
+    #hud p {
+      position: absolute;
+      top: 28px;
+      right: 28px;
+      margin: 0;
+      max-width: 310px;
+      font-size: 12px;
+      line-height: 1.65;
+      text-align: right;
+    }
+
+    #legend {
+      position: absolute;
+      left: 28px;
+      bottom: 24px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 8px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      background: rgba(10, 16, 31, 0.55);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    #crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 640px) {
+      #hud p {
+        display: none;
+      }
+
+      #hud h1 {
+        top: 18px;
+        left: 18px;
+      }
+
+      #legend {
+        left: 18px;
+        bottom: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <h1>MUSHROOM METRO</h1>
+    <p>
+      A voxel night drive through the Mushroom City skyline.<br>
+      Drag to orbit · Right-drag to pan · Scroll to zoom
+    </p>
+    <div id="crosshair"></div>
+    <div id="legend">
+      <span class="chip">NOODLE DUNE</span>
+      <span class="chip">COASTAL LOOP</span>
+      <span class="chip">CITY LOOP</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from
+      "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x071122);
+    scene.fog = new THREE.FogExp2(0x071122, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      180
+    );
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const V = (x, y, z, sx, sy, sz, material) =>
+      new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+
+    const materials = {
+      road: new THREE.MeshStandardMaterial({
+        color: 0x101823,
+        roughness: 0.92
+      }),
+      lane: new THREE.MeshBasicMaterial({
+        color: 0x83e9ff
+      }),
+      curb: new THREE.MeshStandardMaterial({
+        color: 0x273441,
+        roughness: 0.8
+      }),
+      building: new THREE.MeshStandardMaterial({
+        color: 0x303944,
+        roughness: 0.85
+      }),
+      buildingWarm: new THREE.MeshStandardMaterial({
+        color: 0x6a4533,
+        roughness: 0.85
+      }),
+      buildingBlue: new THREE.MeshStandardMaterial({
+        color: 0x315a67,
+        roughness: 0.8
+      }),
+      buildingPink: new THREE.MeshStandardMaterial({
+        color: 0x744557,
+        roughness: 0.8
+      }),
+      window: new THREE.MeshStandardMaterial({
+        color: 0xffd88a,
+        emissive: 0xffa83c,
+        emissiveIntensity: 1.8,
+        roughness: 0.45
+      }),
+      windowCool: new THREE.MeshStandardMaterial({
+        color: 0x9cecff,
+        emissive: 0x35c9ff,
+        emissiveIntensity: 1.5,
+        roughness: 0.4
+      }),
+      windowDim: new THREE.MeshStandardMaterial({
+        color: 0x263442,
+        emissive: 0x102333,
+        emissiveIntensity: 0.45
+      }),
+      yellow: new THREE.MeshBasicMaterial({
+        color: 0xffc84d
+      }),
+      orange: new THREE.MeshBasicMaterial({
+        color: 0xff7835
+      }),
+      pink: new THREE.MeshBasicMaterial({
+        color: 0xff65c4
+      }),
+      cyan: new THREE.MeshBasicMaterial({
+        color: 0x42d9ff
+      }),
+      green: new THREE.MeshBasicMaterial({
+        color: 0x68ffb4
+      }),
+      red: new THREE.MeshBasicMaterial({
+        color: 0xff3d55
+      }),
+      white: new THREE.MeshBasicMaterial({
+        color: 0xfff7dc
+      }),
+      black: new THREE.MeshBasicMaterial({
+        color: 0x101319
+      }),
+      blue: new THREE.MeshBasicMaterial({
+        color: 0x4c8cff
+      }),
+      purple: new THREE.MeshBasicMaterial({
+        color: 0xc878ff
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xffd7a3,
+        roughness: 0.7
+      }),
+      hair: new THREE.MeshStandardMaterial({
+        color: 0x24130f,
+        roughness: 0.8
+      }),
+      dress: new THREE.MeshStandardMaterial({
+        color: 0xf5a6d4,
+        roughness: 0.75
+      }),
+      hat: new THREE.MeshStandardMaterial({
+        color: 0xffd66b,
+        roughness: 0.7
+      })
+    };
+
+    function addBox(parent, x, y, z, sx, sy, sz, material, cast = false) {
+      const mesh = V(x, y, z, sx, sy, sz, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addVoxelSign(parent, text, options = {}) {
+      const {
+        width = 6,
+        height = 2.4,
+        depth = 0.45,
+        bg = 0x07111f,
+        fg = 0xffffff,
+        accent = 0x42d9ff,
+        align = "center",
+        pixelScale = 0.22
+      } = options;
+
+      const group = new THREE.Group();
+      parent.add(group);
+
+      const bgMat = new THREE.MeshStandardMaterial({
+        color: bg,
+        emissive: bg,
+        emissiveIntensity: 0.25,
+        roughness: 0.75
+      });
+
+      addBox(group, 0, 0, 0, width, height, depth, bgMat);
+
+      const chars = [...text];
+      const glyph = {
+        "0": ["11110", "10001", "10001", "11110", "10101", "10101", "11111"],
+        "1": ["00100", "10100", "10100", "10100", "10100", "10100", "10100"],
+        "2": ["11111", "00001", "11110", "00001", "11110", "00001", "11111"],
+        "3": ["11110", "00001", "11110", "00001", "11110", "00001", "11110"],
+        "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
+        "5": ["11111", "00001", "11110", "00001", "11110", "00001", "11111"],
+        "6": ["11110", "00001", "11110", "00001", "11110", "00001", "10001"],
+        "7": ["11111", "00001", "00001", "00001", "11110", "00001", "00001"],
+        "8": ["11110", "00001", "11110", "00001", "11110", "00001", "11110"],
+        "9": ["11110", "00001", "11110", "00001", "11110", "00001", "10001"],
+        "M": ["10101", "11011", "10111", "10111", "10001", "11101", "10101"],
+        "P": ["11110", "10001", "11110", "00001", "00001", "00001", "11110"],
+        "B": ["11111", "10000", "11110", "10000", "11110", "10000", "11111"],
+        "L": ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
+        "S": ["01111", "10000", "10000", "10000", "10000", "10000", "11110"],
+        "D": ["11111", "10000", "11110", "10000", "11110", "10000", "11111"],
+        "K": ["10101", "10000", "11110", "10000", "10101", "10000", "10101"],
+        "A": ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+        "T": ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+        "Y": ["01010", "01010", "11111", "00100", "00100", "00100", "00100"],
+        "G": ["10111", "10000", "10000", "11110", "00001", "00001", "10111"],
+        "O": ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+        "Q": ["01110", "10001", "10001", "10001", "10001", "10001", "00111"],
+        "R": ["10101", "11011", "10111", "10111", "10001", "11001", "10101"],
+        "E": ["11111", "10000", "11110", "10000", "11110", "10000", "11111"],
+        "C": ["01111", "10000", "10000", "10000", "10000", "10000", "01111"],
+        "H": ["10101", "10101", "10101", "11111", "10101", "10101", "10101"],
+        "I": ["01111", "00100", "00100", "00100", "00100", "00100", "01111"],
+        "J": ["00110", "01010", "10010", "00100", "00010", "00001", "11111"],
+        "F": ["11111", "10000", "11110", "10000", "11110", "10000", "10000"],
+        "U": ["01110", "10000", "10000", "01110", "00001", "00001", "00001"],
+        "V": ["01110", "10000", "10000", "01110", "00001", "00001", "00001"],
+        "W": ["01110", "10000", "10000", "01110", "00001", "00001", "00001"],
+        "X": ["01110", "10000", "10000", "01110", "00001", "00001", "00001"],
+        "Z": ["11111", "00001", "11110", "00001", "11110", "00001", "11111"],
+        "??": ["01110", "10001", "10001", "10001", "01110", "10001", "10001"]
+      };
+
+      const font = options.font || glyph;
+      const glyphFor = (ch) => (font[ch] || font["?"]);
+      const cols = glyphFor(text.at(-1)).length;
+      const rows = glyphFor(text.at(-1)).length;
+      const cell = pixelScale;
+      const totalWidth = (cols * cell) - cell;
+      const totalHeight = rows * cell;
+
+      const fgMat = new THREE.MeshBasicMaterial({
+        color: fg,
+        toneMapped: false
+      });
+
+      const accentMat = new THREE.MeshBasicMaterial({
+        color: accent,
+        toneMapped: false
+      });
+
+      const edgeMat = new THREE.MeshBasicMaterial({
+        color: accent,
+        toneMapped: false
+      });
+
+      addBox(group, 0, totalHeight / 2 + 0.02, 0.28, totalWidth, totalHeight, 0.16, edgeMat);
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const bit = glyphFor(text.at(-1))[row][col];
+          if (bit !== "1") continue;
+
+          const x =
+            ((col - (cols - 1) / 2) * cell) + totalWidth / 2;
+          const y =
+            ((row - (rows - 1) / 2) * cell) + totalHeight / 2;
+
+          let material = fgMat;
+
+          if (
+            options.accent &&
+            (row === 0 || row === rows - 1 || col === 0 || col === cols - 1)
+          ) {
+            material = accentMat;
+          }
+
+          addBox(
+            group,
+            x,
+            y,
+            0.39,
+            cell * 0.68,
+            cell * 0.68,
+            0.12,
+            material
+          );
+        }
+      }
+
+      if (align === "left") {
+        group.position.x -= totalWidth / 2;
+      }
+
+      return group;
+    }
+
+    function addBillboard(parent, text, subtitle, options = {}) {
+      const {
+        width = 7,
+        height = 3.4,
+        bg = 0x07111f,
+        fg = 0xffffff,
+        accent = 0x42d9ff
+      } = options;
+
+      const group = new THREE.Group();
+      parent.add(group);
+
+      addBox(group, 0, 0, 0, width, height, 0.35, materials.building);
+
+      const fg = new THREE.MeshBasicMaterial({
+        color: fg,
+        toneMapped: false
+      });
+
+      const accent = new THREE.MeshBasicMaterial({
+        color: accent,
+        toneMapped: false
+      });
+
+      addBox(
+        group,
+        width / 2 - 0.1,
+        height / 2 - 0.12,
+        0.2,
+        width - 0.2,
+        0.22,
+        0.12,
+        accent
+      );
+
+      addBox(
+        group,
+        width / 2 - 0.1,
+        -height / 2 + 0.12,
+        0.2,
+        width - 0.2,
+        0.22,
+        0.12,
+        accent
+      );
+
+      addBox(
+        group,
+        0,
+        height / 2 - 0.12,
+        0.2,
+        0.22,
+        0.22,
+        0.12,
+        accent
+      );
+
+      addBox(
+        group,
+        0,
+        -height / 2 + 0.12,
+        0.2,
+        0.22,
+        0.22,
+        0.12,
+        accent
+      );
+
+      addBox(
+        group,
+        0,
+        0,
+        0.22,
+        width - 0.45,
+        height - 0.45,
+        0.1,
+        materials.black
+      );
+
+      addBox(
+        group,
+        0,
+        0.1,
+        0.42,
+        width - 0.7,
+        0.22,
+        0.12,
+        fg
+      );
+
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x7896c7, 0x181015, 1.25));
+
+    const moonLight = new THREE.DirectionalLight(0x9fc8ff, 1.4);
+    moonLight.position.set(-35, 45, 25);
+    scene.add(moonLight);
+
+    const warmLight = new THREE.PointLight(0xff7b32, 45, 70, 2);
+    warmLight.position.set(0, 8, 12);
+    scene.add(warmLight);
+
+    const cyanLight = new THREE.PointLight(0x39d8ff, 55, 80, 2);
+    cyanLight.position.set(18, 12, -8);
+    scene.add(cyanLight);
+
+    // -------------------------------------------------------------------------
+    // Ground and road
+    // -------------------------------------------------------------------------
+
+    addBox(
+      scene,
+      0,
+      -0.72,
+      0,
+      140,
+      0.8,
+      140,
+      materials.building
+    );
+
+    const roadCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-45, -0.2, 18),
+      new THREE.Vector3(-25, -0.2, 18),
+      new THREE.Vector3(0, -0.2, 18),
+      new THREE.Vector3(25, -0.2, 18),
+      new THREE.Vector3(45, -0.2, 18)
+    ]);
+
+    const roadGroup = new THREE.Group();
+    scene.add(roadGroup);
+
+    const road = addBox(
+      roadGroup,
+      0,
+      -0.08,
+      18,
+      95,
+      0.18,
+      10,
+      materials.road
+    );
+    road.rotation.y = -0.22;
+
+    const laneGroup = new THREE.Group();
+    roadGroup.add(laneGroup);
+
+    for (let x = -42; x <= 42; x += 5) {
+      const dash = addBox(
+        laneGroup,
+        x,
+        0.025,
+        18,
+        2.4,
+        0.04,
+        0.12,
+        materials.lane,
+        false
+      );
+      dash.rotation.y = -0.22;
+    }
+
+    for (let z = 13; z < 23; z += 2.5) {
+      const dash = addBox(
+        laneGroup,
+        0,
+        0.025,
+        z,
+        0.12,
+        0.04,
+        1.8,
+        materials.lane,
+        false
+      );
+      dash.rotation.y = -0.22;
+    }
+
+    const curbGroup = new THREE.Group();
+    roadGroup.add(curbGroup);
+
+    for (let x = -48; x <= 48; x += 4) {
+      const curb = addBox(
+        curbGroup,
+        x,
+        0.12,
+        18,
+        3.8,
+        0.22,
+        0.65,
+        materials.curb,
+        false
+      );
+      curb.rotation.y = -0.22;
+    }
+
+    // Roadside barriers
+    for (let x = -45; x <= 45; x += 3) {
+      const barrier = addBox(
+        scene,
+        x,
+        0.45,
+        23.8,
+        2.4,
+        0.5,
+        0.5,
+        materials.buildingBlue
+      );
+      barrier.rotation.y = -0.22;
+    }
+
+    // -------------------------------------------------------------------------
+    // Buildings
+    // -------------------------------------------------------------------------
+
+    const buildings = [];
+
+    function addBuilding({
+      x,
+      z,
+      w,
+      d,
+      h,
+      material = materials.building,
+      seed = 0,
+      sign = null
+    }) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      scene.add(group);
+
+      addBox(
+        group,
+        0,
+        h / 2,
+        0,
+        w,
+        h,
+        d,
+        material
+      );
+
+      // Blocky window grids.
+      const cols = Math.max(2, Math.floor(w / 2.2));
+      const rows = Math.max(2, Math.floor(h / 2.2));
+
+      for (let y = 1.2; y < h - 0.8; y += 2) {
+        for (let ix = 0; ix < cols; ix++) {
+          for (let iz = 0; iz < 2; iz++) {
+            const wx = -w / 2 + ((ix + 0.5) * w) / cols;
+            const wz = -d / 2 + iz * d / 2;
+
+            let windowMat = materials.windowDim;
+
+            const rand = Math.sin(seed + ix * 12.9898 + y * 78.233);
+            if (rand > 0.55) {
+              windowMat = Math.random() > 0.55
+                ? materials.window
+                : materials.windowCool;
+            }
+
+            addBox(
+              group,
+              wx,
+              y,
+              wz,
+              0.68,
+              0.72,
+              0.12,
+              windowMat,
+              false
+            );
+          }
+        }
+      }
+
+      // Roof cap and antenna.
+      addBox(
+        group,
+        0,
+        h + 0.18,
+        0,
+        w + 0.3,
+        0.36,
+        d + 0.3,
+        materials.buildingBlue
+      );
+
+      addBox(
+        group,
+        0,
+        h + 1.1,
+        0,
+        0.12,
+        2,
+        0.12,
+        materials.building
+      );
+
+      addBox(
+        group,
+        0,
+        h + 2.15,
+        0,
+        1.2,
+        0.18,
+        0.18,
+        materials.red,
+        false
+      );
+
+      buildings.push(group);
+      return group;
+    }
+
+    // Main landmarks
+    addBuilding({
+      x: -22,
+      z: 8,
+      w: 15,
+      d: 14,
+      h: 21,
+      material: materials.buildingWarm,
+      seed: 1.2,
+      sign: "MUSHROOM PISTON"
+    });
+
+    addBuilding({
+      x: 18,
+      z: 9,
+      w: 13,
+      d: 15,
+      h: 24,
+      material: materials.buildingBlue,
+      seed: 3.1,
+      sign: "GXA\nGalaxyAir"
+    });
+
+    addBuilding({
+      x: 29,
+      z: -12,
+      w: 11,
+      d: 12,
+      h: 18,
+      material: materials.buildingPink,
+      seed: 5.7
+    });
+
+    addBuilding({
+      x: -31,
+      z: -10,
+      w: 12,
+      d: 13,
+      h: 22,
+      material: materials.building,
+      seed: 7.4
+    });
+
+    addBuilding({
+      x: 39,
+      z: 14,
+      w: 10,
+      d: 10,
+      h: 16,
+      material: materials.buildingBlue,
+      seed: 9.1
+    });
+
+    addBuilding({
+      x: -42,
+      z: 22,
+      w: 9,
+      d: 9,
+      h: 14,
+      material: materials.buildingWarm,
+      seed: 11.3
+    });
+
+    addBuilding({
+      x: 44,
+      z: -23,
+      w: 10,
+      d: 10,
+      h: 18,
+      material: materials.building,
+      seed: 13.7
+    });
+
+    addBuilding({
+      x: 8,
+      z: -31,
+      w: 12,
+      d: 12,
+      h: 20,
+      material: materials.buildingBlue,
+      seed: 15.9
+    });
+
+    // Signage
+    const signs = [
+      {
+        text: "MUSHROOM PISTON",
+        subtitle: "TIRE SERVICE",
+        x: -22,
+        y: 14,
+        z: 15.4,
+        width: 7,
+        height: 2.7,
+        accent: 0xff7835,
+        bg: 0x17100b
+      },
+      {
+        text: "GXA",
+        subtitle: "GalaxyAir",
+        x: 18,
+        y: 16,
+        z: 16.2,
+        width: 7,
+        height: 2.7,
+        accent: 0x42d9ff,
+        bg: 0x071328
+      },
+      {
+        text: "MUSHROOM MOON",
+        subtitle: "The Musical",
+        x: 4,
+        y: 10.5,
+        z: 15.8,
+        width: 10,
+        height: 3.7,
+        accent: 0xffd66b,
+        bg: 0x101827
+      },
+      {
+        text: "LEMMY'S",
+        subtitle: "TIRE SERVICE",
+        x: 30,
+        y: 12,
+        z: -5.5,
+        width: 6,
+        height: 2.5,
+        accent: 0xff65c4,
+        bg: 0x241324
+      },
+      {
+        text: "PTT",
+        subtitle: "PASSION TIME",
+        x: -28,
+        y: 15,
+        z: 5.4,
+        width: 4.5,
+        height: 2.2,
+        accent: 0x42d9ff,
+        bg: 0x071328
+      },
+      {
+        text: "PAL",
+        subtitle: "POLICE",
+        x: 17,
+        y: 6,
+        z: 16,
+        width: 3.6,
+        height: 2.2,
+        accent: 0xff3d55,
+        bg: 0x161018
+      },
+      {
+        text: "BURNING",
+        subtitle: "DK",
+        x: -45,
+        y: 3,
+        z: 24,
+        width: 4.5,
+        height: 2.5,
+        accent: 0xff7835,
+        bg: 0x17100b
+      }
+    ];
+
+    for (const s of signs) {
+      const sign = addVoxelSign(
+        scene,
+        s.text,
+        {
+          width: s.width,
+          height: s.height,
+          fg: s.text === "GXA" ? 0x9af5ff : 0xffffff,
+          accent: s.accent,
+          bg: s.bg
+        }
+      );
+      sign.position.set(s.x, s.y, s.z);
+    }
+
+    // -------------------------------------------------------------------------
+    // Character billboards
+    // -------------------------------------------------------------------------
+
+    function addPrincessBillboard() {
+      const group = new THREE.Group();
+      group.position.set(2, 10.2, 15.9);
+      scene.add(group);
+
+      const dress = addBox(
+        group,
+        0,
+        0,
+        0,
+        3.1,
+        3.1,
+        0.35,
+        materials.dress
+      );
+
+      addBox(
+        group,
+        0,
+        1.55,
+        0.12,
+        0.7,
+        1.1,
+        0.35,
+        materials.skin
+      );
+
+      addBox(
+        group,
+        0,
+        2.25,
+        0.12,
+        0.85,
+        0.18,
+        0.35,
+        materials.hair
+      );
+
+      addBox(
+        group,
+        0,
+        2.55,
+        0.12,
+        1.15,
+        0.16,
+        0.35,
+        materials.hat
+      );
+
+      addBox(
+        group,
+        0,
+        2.7,
+        0.15,
+        0.1,
+        0.1,
+        0.1,
+        materials.skin
+      );
+
+      addBox(
+        group,
+        0,
+        2.7,
+        0.15,
+        0.1,
+        0.1,
+        0.1,
+        materials.skin
+      );
+
+      addBox(
+        group,
+        0,
+        -1.6,
+        0.12,
+        3.6,
+        0.16,
+        0.35,
+        materials.hair
+      );
+
+      const halo = addBox(
+        group,
+        0,
+        3.1,
+        0.12,
+        3.2,
+        0.8,
+        0.35,
+        materials.yellow
+      );
+      halo.rotation.z = 0.05;
+    }
+
+    addPrincessBillboard();
+
+    function addMarioBillboard() {
+      const group = new THREE.Group();
+      group.position.set(4, 11.4, 16);
+      scene.add(group);
+
+      addBox(
+        group,
+        0,
+        0,
+        0,
+        2.6,
+        2.6,
+        0.35,
+        materials.skin
+      );
+
+      addBox(
+        group,
+        0,
+        1.35,
+        0.12,
+        0.8,
+        0.7,
+        0.35,
+        materials.hair
+      );
+
+      addBox(
+        group,
+        0,
+        1.85,
+        0.12,
+        1.1,
+        0.16,
+        0.35,
+        materials.hat
+      );
+
+      addBox(
+        group,
+        0,
+        1.75,
+        0.12,
+        0.1,
+        0.1,
+        0.1,
+        materials.skin
+      );
+
+      addBox(
+        group,
+        0,
+        1.75,
+        0.12,
+        0.1,
+        0.1,
+        0.1,
+        materials.skin
+      );
+
+      addBox(
+        group,
+        0,
+        -1.3,
+        0.12,
+        2.8,
+        0.16,
+        0.35,
+        materials.hair
+      );
+
+      addBox(
+        group,
+        0,
+        0.35,
+        0.18,
+        0.7,
+        0.55,
+        0.3,
+        materials.blue
+      );
+
+      const halo = addBox(
+        group,
+        0,
+        2.05,
+        0.12,
+        2.2,
+        0.55,
+        0.35,
+        materials.yellow
+      );
+      halo.rotation.z = 0.05;
+    }
+
+    addMarioBillboard();
+
+    // -------------------------------------------------------------------------
+    // Neon poles and street details
+    // -------------------------------------------------------------------------
+
+    function addNeonPole(x, z, color = 0x42d9ff, height = 7) {
+      const group = new THREE.Group();
+      scene.add(group);
+
+      addBox(
+        group,
+        x,
+        height / 2,
+        z,
+        0.18,
+        height,
+        0.18,
+        materials.building
+      );
+
+      const neonMat = new THREE.MeshBasicMaterial({
+        color,
+        toneMapped: false
+      });
+
+      addBox(
+        group,
+        x,
+        height + 0.1,
+        z,
+        1.4,
+        0.12,
+        0.12,
+        neonMat
+      );
+
+      addBox(
+        group,
+        x,
+        height + 0.1,
+        z,
+        0.12,
+        0.12,
+        1.4,
+        neonMat
+      );
+    }
+
+    addNeonPole(-12, 24, 0x42d9ff, 7);
+    addNeonPole(13, 24, 0xff7835, 7);
+    addNeonPole(33, 23, 0x68ffb4, 6.5);
+    addNeonPole(-36, 22, 0xff65c4, 6);
+
+    // Street lamps
+    function addStreetLamp(x, z, color = 0xffd88a) {
+      const group = new THREE.Group();
+      scene.add(group);
+
+      addBox(
+        group,
+        x,
+        4.3,
+        z,
+        0.14,
+        8.6,
+        0.14,
+        materials.building
+      );
+
+      addBox(
+        group,
+        x,
+        8.7,
+        z,
+        0.8,
+        0.18,
+        0.55,
+        materials.building
+      );
+
+      const light = new THREE.PointLight(color, 18, 18, 2);
+      light.position.set(x, 8.45, z);
+      scene.add(light);
+    }
+
+    addStreetLamp(-9, 24, 0xffd88a);
+    addStreetLamp(10, 24, 0xffd88a);
+    addStreetLamp(26, 24, 0x68ffb4);
+
+    // -------------------------------------------------------------------------
+    // Vehicles
+    // -------------------------------------------------------------------------
+
+    function addCar(x, z, color, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, -0.05, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color,
+        roughness: 0.35,
+        metalness: 0.25
+      });
+
+      addBox(
+        group,
+        0,
+        0.45,
+        0,
+        2.2,
+        0.75,
+        0.9,
+        bodyMat
+      );
+
+      addBox(
+        group,
+        0,
+        0.95,
+        0.15,
+        1.25,
+        0.55,
+        0.65,
+        materials.black
+      );
+
+      const wheelMat = materials.black;
+
+      for (const wx of [-0.72, 0.72]) {
+        for (const wz of [-0.43, 0.43]) {
+          const wheel = addBox(
+            group,
+            wx,
+            0.18,
+            wz,
+            0.34,
+            0.34,
+            0.22,
+            wheelMat
+          );
+          wheel.rotation.x = Math.PI / 2;
+        }
+      }
+
+      for (const wx of [-0.35, 0.35]) {
+        addBox(
+          group,
+          wx,
+          1.23,
+          0.5,
+          0.28,
+          0.12,
+          0.32,
+          materials.red
+        );
+      }
+    }
+
+    addCar(-12, 19, 0xff7835, -0.22);
+    addCar(4, 20, 0x54d7ff, 0.22);
+    addCar(18, 19, 0x68ffb4, -0.22);
+    addCar(29, 20, 0xff65c4, 0.22);
+    addCar(-31, 20, 0x42d9ff, -0.22);
+
+    // -------------------------------------------------------------------------
+    // Stars
+    // -------------------------------------------------------------------------
+
+    const starMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      toneMapped: false
+    });
+
+    const starPositions = [
+      [-45, 28, -55], [-38, 34, -62], [-28, 40, -50],
+      [-15, 31, -65], [0, 37, -58], [14, 29, -64],
+      [27, 36, -52], [40, 26, -58], [-52, 22, -35],
+      [52, 24, -36], [-10, 42, -70], [30, 44, -70],
+      [58, 30, -20], [-58, 28, 5], [20, 39, -30]
+    ];
+
+    for (const p of starPositions) {
+      const star = addBox(
+        scene,
+        p[0],
+        p[1],
+        p[2],
+        0.35,
+        0.35,
+        0.35,
+        starMat,
+        false
+      );
+      star.rotation.set(0.3, 0.7, 0.4);
+    }
+
+    // -------------------------------------------------------------------------
+    // Camera controls implemented directly
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 8, 18),
+      radius: 58,
+      theta: 0.25,
+      phi: 1.22,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    const initialCamera = {
+      target: controls.target.clone(),
+      radius: controls.radius,
+      theta: controls.theta,
+      phi: controls.phi
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.panning = event.button === 2 || event.shiftKey;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const panScale = controls.radius * 0.0015;
+        controls.target.addScaledVector(right, -dx * panScale);
+        controls.target.addScaledVector(up, dy * panScale);
+      } else {
+        controls.theta -= dx * 0.005;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - dy * 0.004,
+          0.22,
+          Math.PI * 0.49
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      controls.panning = false;
+
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+
+        const factor = Math.exp(event.deltaY * 0.001);
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius * factor,
+          18,
+          115
+        );
+
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    renderer.domElement.addEventListener("dblclick", () => {
+      controls.target.copy(initialCamera.target);
+      controls.radius = initialCamera.radius;
+      controls.theta = initialCamera.theta;
+      controls.phi = initialCamera.phi;
+      updateCamera();
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      warmLight.intensity = 42 + Math.sin(elapsed * 1.8) * 5;
+      cyanLight.intensity = 50 + Math.sin(elapsed * 1.4 + 1) * 7;
+
+      for (const building of buildings) {
+        building.position.y = Math.sin(elapsed * 0.75 + building.position.x) * 0.08;
+      }
+
+      // Gentle moving vehicle.
+      const movingCar = scene.children.find(
+        (obj) => obj.isGroup && obj.children.some((child) => child.material?.color?.hex === 0x54d7ff)
+      );
+
+      if (movingCar) {
+        movingCar.position.z = 20 + Math.sin(elapsed * 0.22) * 1.4;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
