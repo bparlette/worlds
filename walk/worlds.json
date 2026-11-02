@@ -168,6 +168,13 @@
     "module": "modules/052.js"
   },
   {
+    "id": "055",
+    "title": "Super Mario 64 (Minecraft build)",
+    "sub": "Peach&#x27;s Castle Grounds",
+    "system": "Console",
+    "module": "modules/055.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",

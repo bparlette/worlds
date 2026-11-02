@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Castle</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b8d9ed;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    #hud {
+      position: fixed;
+      top: 18px;
+      left: 20px;
+      z-index: 10;
+      padding: 12px 15px;
+      color: #fff;
+      background: rgba(22, 48, 72, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      pointer-events: none;
+    }
+
+    #hud h1 {
+      margin: 0 0 5px;
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #hud p {
+      margin: 0;
+      color: #cce8f5;
+      font-size: 12px;
+    }
+
+    #help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 10;
+      padding: 9px 12px;
+      color: #263a4a;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(40, 65, 85, 0.2);
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      #hud {
+        top: 10px;
+        left: 10px;
+      }
+
+      #help {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="hud">
+    <h1>Pixel Castle</h1>
+    <p>A voxel fantasy realm</p>
+  </div>
+
+  <div id="help">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from
+      "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xaed9f0);
+    scene.fog = new THREE.Fog(0xaed9f0, 42, 105);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      innerWidth / innerHeight,
+      0.1,
+      180
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.prepend(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xe9f7ff, 0x52693d, 2.1);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff1cf, 3.4);
+    sun.position.set(-28, 42, 24);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -45;
+    sun.shadow.camera.right = 45;
+    sun.shadow.camera.top = 45;
+    sun.shadow.camera.bottom = -45;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 110;
+    sun.shadow.normalBias = 0.035;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8ecfff, 0.65);
+    fill.position.set(25, 18, -30);
+    scene.add(fill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const material = (color, roughness = 0.88, metalness = 0) =>
+      new THREE.MeshStandardMaterial({ color, roughness, metalness });
+
+    const mats = {
+      grass: material(0x72a94b),
+      grassLight: material(0x83b955),
+      grassDark: material(0x4f8b43),
+      path: material(0xc9a96d),
+      stone: material(0xb8b8aa),
+      stoneLight: material(0xd0cbc0),
+      stoneDark: material(0x818b83),
+      roof: material(0xa84f2c),
+      roofLight: material(0xc16436),
+      wood: material(0x765039),
+      woodLight: material(0x9a704b),
+      soil: material(0x6c583b),
+      water: material(0x287eb5, 0.3, 0.08),
+      waterLight: material(0x45a8dc, 0.3, 0.08),
+      gold: material(0xf2b948, 0.42, 0.25),
+      red: material(0xb83c2f),
+      leaf: material(0x3e783d),
+      leafLight: material(0x559243),
+      leafDark: material(0x285d38),
+      trunk: material(0x65452f),
+      cream: material(0xf1e6c8),
+      blue: material(0x5b8fc0)
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const voxel = (x, y, z, sx, sy, sz, mat, cast = true, receive = true) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = receive;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    const box = (x, y, z, sx, sy, sz, mat) =>
+      voxel(x, y, z, sx, sy, sz, mat);
+
+    // Instanced trees for efficient rendering.
+    const treeData = [];
+    const treeTrunks = [];
+    const treeCanopies = [];
+
+    function addTree(x, z, scale = 1, dark = false) {
+      treeData.push({ x, z, scale });
+      treeTrunks.push({ x, z, scale, mat: mats.trunk });
+      treeCanopies.push({
+        x,
+        z,
+        scale,
+        mat: dark ? mats.leafDark : mats.leaf,
+        offset: [0.08, 0.08, 0]
+      });
+    }
+
+    const trunkGeometry = new THREE.BoxGeometry(0.34, 1.4, 0.34);
+    const crownGeometry = new THREE.BoxGeometry(1.0, 0.85, 1.0);
+
+    const trunks = new THREE.InstancedMesh(
+      trunkGeometry,
+      mats.trunk,
+      treeTrunks.length
+    );
+    const crowns = new THREE.InstancedMesh(
+      crownGeometry,
+      mats.leaf,
+      treeCanopies.length
+    );
+
+    trunks.castShadow = true;
+    trunks.receiveShadow = true;
+    crowns.castShadow = true;
+    crowns.receiveShadow = true;
+
+    const dummy = new THREE.Object3D();
+
+    treeTrunks.forEach((t, i) => {
+      dummy.position.set(t.x, 0.7 * t.scale, t.z);
+      dummy.scale.setScalar(t.scale);
+      dummy.updateMatrix();
+      trunks.setMatrixAt(i, dummy.matrix);
+    });
+
+    treeCanopies.forEach((c, i) => {
+      dummy.position.set(c.x + c.offset[0], 1.65 * c.scale, c.z + c.offset[1]);
+      dummy.scale.set(c.scale, c.scale * 0.85, c.scale);
+      dummy.updateMatrix();
+      crowns.setMatrixAt(i, dummy.matrix);
+    });
+
+    scene.add(trunks, crowns);
+
+    // -------------------------------------------------------------------------
+    // Terrain: stepped voxel hills
+    // -------------------------------------------------------------------------
+
+    const terrain = new THREE.Group();
+    scene.add(terrain);
+
+    function terrainBox(x, y, z, sx, sy, sz, mat) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      terrain.add(mesh);
+      return mesh;
+    }
+
+    // Main island / castle plateau.
+    terrainBox(-1.5, 0.45, 0, 12, 0.9, 13, mats.grass);
+    terrainBox(-2.5, 0.1, 1.5, 9, 0.6, 10, mats.grassLight);
+    terrainBox(3.5, 0.1, 1.2, 10, 0.6, 11, mats.grassLight);
+    terrainBox(0, 0.25, 5.5, 13, 0.5, 8, mats.grass);
+
+    // Left hill.
+    terrainBox(-15, 1.15, -1, 10, 2.3, 11, mats.grassDark);
+    terrainBox(-15, 3.0, -1, 9, 1.8, 10, mats.grass);
+    terrainBox(-15, 4.75, -1, 8, 1.5, 9, mats.grassLight);
+
+    // Right hill.
+    terrainBox(15, 1.2, -1, 11, 2.4, 12, mats.grassDark);
+    terrainBox(15, 3.1, -1, 10, 1.8, 11, mats.grass);
+    terrainBox(15, 4.9, -1, 9, 1.5, 10, mats.grassLight);
+
+    // Foreground slopes.
+    terrainBox(-7, 0.65, 12, 11, 1.3, 7, mats.grass);
+    terrainBox(7, 0.65, 12, 11, 1.3, 7, mats.grass);
+    terrainBox(0, 0.55, 16, 13, 1.1, 6, mats.grassLight);
+
+    // -------------------------------------------------------------------------
+    // River and waterfall
+    // -------------------------------------------------------------------------
+
+    const waterGroup = new THREE.Group();
+    scene.add(waterGroup);
+
+    function waterBox(x, y, z, sx, sy, sz, mat = mats.water) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      waterGroup.add(mesh);
+      return mesh;
+    }
+
+    // River on the right and foreground.
+    waterBox(14, 0.55, -1, 5, 0.55, 24, mats.water);
+    waterBox(14, 0.55, 12, 5, 0.55, 12, mats.water);
+    waterBox(14, 0.55, 22, 5, 0.55, 12, mats.water);
+    waterBox(14, 0.55, 31, 5, 0.55, 10, mats.water);
+
+    // River on the left.
+    waterBox(-15, 0.55, -1, 5, 0.55, 24, mats.water);
+    waterBox(-15, 0.55, 11, 5, 0.55, 11, mats.water);
+
+    // Waterfall.
+    for (let i = 0; i < 13; i++) {
+      waterBox(
+        -15,
+        0.75 + i * 0.12,
+        9.7 - i * 0.13,
+        4.2,
+        0.12,
+        0.5,
+        i % 2 === 0 ? mats.waterLight : mats.water
+      );
+    }
+
+    // Small stream in foreground.
+    waterBox(4.5, 0.45, 15.5, 4.5, 0.45, 3.2, mats.waterLight);
+
+    // -------------------------------------------------------------------------
+    // Castle
+    // -------------------------------------------------------------------------
+
+    const castle = new THREE.Group();
+    scene.add(castle);
+
+    function castleBox(x, y, z, sx, sy, sz, mat) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      castle.add(mesh);
+      return mesh;
+    }
+
+    // Main platform.
+    castleBox(0, 0.55, 0, 11.4, 1.1, 9.2, mats.stoneDark);
+    castleBox(0, 1.25, 0, 10.5, 0.5, 8.3, mats.stone);
+
+    // Central keep.
+    castleBox(0, 2.0, 0, 4.0, 4.0, 4.0, mats.stone);
+    castleBox(0, 4.0, 0, 4.3, 0.65, 4.3, mats.stoneLight);
+    castleBox(0, 4.45, 0, 3.6, 0.65, 3.6, mats.stone);
+
+    // Tall central spire.
+    castleBox(0, 5.25, 0, 2.15, 4.0, 2.15, mats.stone);
+    castleBox(0, 7.25, 0, 2.5, 0.65, 2.5, mats.stoneLight);
+    castleBox(0, 7.7, 0, 1.85, 0.85, 1.85, mats.roof);
+
+    // Spire roof tiers.
+    castleBox(0, 8.45, 0, 1.2, 1.05, 1.2, mats.roof);
+    castleBox(0, 9.25, 0, 0.65, 0.65, 0.65, mats.roofLight);
+    castleBox(0, 9.8, 0, 0.35, 0.55, 0.35, mats.gold);
+
+    // Main roof.
+    castleBox(0, 5.55, 0, 8.3, 0.8, 5.0, mats.roof);
+    castleBox(0, 6.05, 0, 7.7, 0.45, 4.5, mats.roofLight);
+
+    // Side wings.
+    castleBox(-5.0, 2.0, 0, 3.2, 3.6, 5.0, mats.stone);
+    castleBox(-5.0, 3.9, 0, 3.5, 0.65, 5.3, mats.stoneLight);
+    castleBox(-5.0, 4.35, 0, 2.8, 0.65, 4.6, mats.roof);
+
+    castleBox(5.0, 2.0, 0, 3.2, 3.6, 5.0, mats.stone);
+    castleBox(5.0, 3.9, 0, 3.5, 0.65, 5.3, mats.stoneLight);
+    castleBox(5.0, 4.35, 0, 2.8, 0.65, 4.6, mats.roof);
+
+    // Front gable.
+    castleBox(0, 5.55, 2.48, 7.2, 0.75, 0.75, mats.roof);
+    castleBox(0, 6.0, 2.85, 6.4, 0.45, 0.45, mats.roofLight);
+
+    // Arched entrance.
+    castleBox(0, 1.65, 2.62, 2.2, 2.15, 0.45, mats.stoneLight);
+    castleBox(0, 1.65, 2.88, 1.75, 1.75, 0.28, mats.stone);
+    castleBox(0, 1.65, 3.04, 1.3, 1.3, 0.2, mats.stoneDark);
+    castleBox(0, 1.65, 3.15, 0.68, 0.68, 0.12, mats.red);
+
+    // Entrance steps.
+    castleBox(0, 0.55, 3.65, 3.0, 0.45, 1.2, mats.stoneLight);
+    castleBox(0, 0.35, 4.45, 3.8, 0.4, 1.2, mats.stone);
+
+    // Large front window.
+    castleBox(0, 4.25, 2.55, 2.15, 2.35, 0.42, mats.stoneLight);
+    castleBox(0, 4.25, 2.79, 1.65, 1.85, 0.24, mats.stone);
+    castleBox(0, 4.25, 2.94, 0.78, 0.78, 0.16, mats.blue);
+    castleBox(0, 4.25, 3.04, 0.35, 0.35, 0.1, mats.gold);
+
+    // Decorative window frames.
+    function windowSet(x, y, z, width = 0.65, height = 0.85) {
+      castleBox(x, y, z, width, height, 0.35, mats.stoneLight);
+      castleBox(x, y, z + 0.2, width * 0.72, height * 0.8, 0.18, mats.stone);
+      castleBox(x, y, z + 0.31, width * 0.38, height * 0.45, 0.1, mats.gold);
+    }
+
+    // Front windows.
+    windowSet(-3.15, 2.35, 2.62);
+    windowSet(3.15, 2.35, 2.62);
+    windowSet(-3.15, 2.35, 2.62);
+    windowSet(3.15, 2.35, 2.62);
+
+    // Side windows.
+    windowSet(-6.0, 2.35, -1.45, 0.65, 0.85);
+    windowSet(-6.0, 2.35, 1.45, 0.65, 0.85);
+    windowSet(6.0, 2.35, -1.45, 0.65, 0.85);
+    windowSet(6.0, 2.35, 1.45, 0.65, 0.85);
+
+    // Tower side windows.
+    windowSet(-1.1, 3.0, 2.07, 0.55, 0.75);
+    windowSet(1.1, 3.0, 2.07, 0.55, 0.75);
+    windowSet(-1.1, 5.55, 1.08, 0.5, 0.7, 0.25);
+    windowSet(1.1, 5.55, 1.08, 0.5, 0.7, 0.25);
+
+    // Bridges and roads.
+    const path = new THREE.Group();
+    scene.add(path);
+
+    function pathBox(x, y, z, sx, sy, sz, mat) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        mat
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      path.add(mesh);
+      return mesh;
+    }
+
+    // Main approach road.
+    pathBox(0, 0.45, 8.0, 3.2, 0.5, 7.0, mats.path);
+    pathBox(0, 0.35, 12.8, 4.2, 0.4, 3.2, mats.path);
+    pathBox(-1.2, 0.35, 13.8, 4.0, 0.4, 4.0, mats.path);
+    pathBox(1.2, 0.35, 13.8, 4.0, 0.4, 4.0, mats.path);
+
+    // Curving path made from small voxel segments.
+    [
+      [-7.2, 0.38, 6.2, 1.0, 0.35, 1.0],
+      [-6.7, 0.38, 7.2, 0.9, 0.35, 1.0],
+      [-6.0, 0.38, 8.2, 0.8, 0.35, 1.0],
+      [-5.2, 0.38, 9.2, 0.7, 0.35, 1.0],
+      [-4.3, 0.38, 10.2, 0.6, 0.35, 1.0],
+      [4.3, 0.38, 10.2, 0.6, 0.35, 1.0],
+      [5.2, 0.38, 9.2, 0.7, 0.35, 1.0],
+      [6.0, 0.38, 8.2, 0.8, 0.35, 1.0],
+      [6.7, 0.38, 7.2, 0.9, 0.35, 1.0],
+      [7.2, 0.38, 6.2, 1.0, 0.35, 1.0]
+    ].forEach((p) => pathBox(p[0], p[1], p[2], p[3], p[4], p[5], mats.path));
+
+    // Bridge over the river.
+    pathBox(13.8, 0.45, 11.8, 2.5, 0.5, 1.6, mats.wood);
+    pathBox(13.8, 0.45, 13.2, 2.5, 0.5, 1.6, mats.wood);
+
+    // Bridge rails.
+    for (let i = 0; i < 6; i++) {
+      pathBox(12.9, 0.8, 11.1 + i * 0.3, 0.12, 0.65, 0.12, mats.wood);
+      pathBox(14.7, 0.8, 11.1 + i * 0.3, 0.12, 0.65, 0.12, mats.wood);
+    }
+
+    // -------------------------------------------------------------------------
+    // Flags
+    // -------------------------------------------------------------------------
+
+    const flags = new THREE.Group();
+    scene.add(flags);
+
+    function flag(x, y, z, direction = 1) {
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.055, 2.1, 8),
+        mats.gold
+      );
+      pole.position.set(x, y + 1.05, z);
+      pole.castShadow = true;
+      flags.add(pole);
+
+      const flagMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.85, 0.48),
+        mats.red
+      );
+      flagMesh.position.set(x + direction * 0.43, y + 1.8, z);
+      flagMesh.rotation.y = direction > 0 ? -0.12 : 0.12;
+      flagMesh.castShadow = true;
+      flags.add(flagMesh);
+    }
+
+    flag(-4.45, 5.4, 2.55, -1);
+    flag(4.45, 5.4, 2.55, 1);
+    flag(0, 9.2, 1.3, 1);
+
+    // -------------------------------------------------------------------------
+    // Village and landscape details
+    // -------------------------------------------------------------------------
+
+    // Small houses on the left hill.
+    function house(x, z, scale = 1, roofMat = mats.roof) {
+      const group = new THREE.Group();
+
+      const walls = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0 * scale, 1.6 * scale, 1.8 * scale),
+        mats.stoneLight
+      );
+      walls.position.y = 0.8 * scale;
+      walls.castShadow = true;
+      walls.receiveShadow = true;
+      group.add(walls);
+
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(1.45 * scale, 1.25 * scale, 4),
+        roofMat
+      );
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = 2.05 * scale;
+      roof.castShadow = true;
+      roof.receiveShadow = true;
+      group.add(roof);
+
+      const door = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45 * scale, 0.9 * scale, 0.12),
+        mats.wood
+      );
+      door.position.set(0, 0.45 * scale, 0.96 * scale);
+      group.add(door);
+
+      const window = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3 * scale, 0.35 * scale, 0.1),
+        mats.gold
+      );
+      window.position.set(0.55 * scale, 1.2 * scale, 0.97 * scale);
+      group.add(window);
+
+      group.position.set(x, 0, z);
+      scene.add(group);
+    }
+
+    house(-9.5, -6.5, 0.9);
+    house(-10.4, -4.8, 0.72, mats.roofLight);
+    house(-8.4, -7.7, 0.65, mats.roof);
+
+    // Village on right hill.
+    house(9.4, -6.4, 0.82);
+    house(10.4, -4.7, 0.68, mats.roofLight);
+    house(8.4, -7.6, 0.6, mats.roof);
+
+    // Fields and crop rows.
+    const field = new THREE.Group();
+    scene.add(field);
+
+    box(0, 0.78, 10.5, 8.6, 0.35, 4.0, mats.soil);
+    box(-7.4, 0.78, 9.0, 4.0, 0.35, 3.5, mats.soil);
+    box(7.4, 0.78, 9.0, 4.0, 0.35, 3.5, mats.soil);
+
+    // Crop rows.
+    for (let i = 0; i < 11; i++) {
+      box(-3.3 + i * 0.7, 1.02, 10.5, 0.12, 0.25, 3.4, mats.leafDark);
+    }
+
+    for (let i = 0; i < 7; i++) {
+      box(-8.6 + i * 0.6, 0.98, 8.0, 0.12, 0.25, 2.8, mats.leafDark);
+    }
+
+    for (let i = 0; i < 7; i++) {
+      box(8.6 - i * 0.6, 0.98, 8.0, 0.12, 0.25, 2.8, mats.leafDark);
+    }
+
+    // Flower patches.
+    const flowerMat = material(0xe8a545);
+    const flowerSmallMat = material(0xd94f61);
+
+    for (let i = 0; i < 30; i++) {
+      const x = -3.5 + Math.random() * 7;
+      const z = 9.2 + Math.random() * 1.7;
+      const flower = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.35, 5),
+        Math.random() > 0.5 ? flowerMat : flowerSmallMat
+      );
+      flower.position.set(x, 1.25, z);
+      flower.castShadow = true;
+      scene.add(flower);
+    }
+
+    // Small dock.
+    box(6.2, 0.35, 15.2, 2.8, 0.35, 1.2, mats.wood);
+    box(6.2, 0.65, 15.9, 2.8, 0.25, 0.8, mats.wood);
+
+    // Boat.
+    const boat = new THREE.Group();
+    const hull = new THREE.Mesh(
+      new THREE.ConeGeometry(0.85, 1.3, 4),
+      mats.wood
+    );
+    hull.rotation.z = Math.PI / 2;
+    hull.rotation.y = Math.PI / 4;
+    hull.castShadow = true;
+    boat.add(hull);
+
+    const boatTop = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.12, 0.9),
+      mats.woodLight
+    );
+    boatTop.position.set(0, 0.7, 0);
+    boat.add(boatTop);
+
+    boat.position.set(6.2, 0.7, 15.9);
+    scene.add(boat);
+
+    // Rocks.
+    const rockMat = material(0x777b70);
+    [
+      [-5.8, 0.4, 11.8],
+      [-4.8, 0.4, 12.4],
+      [4.8, 0.4, 12.2],
+      [5.8, 0.4, 11.6],
+      [-9.2, 0.5, 4.8],
+      [9.2, 0.5, 4.8]
+    ].forEach((p) => {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.55, 0),
+        rockMat
+      );
+      rock.position.set(p[0], p[1], p[2]);
+      rock.scale.set(1.2, 0.8, 1);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      scene.add(rock);
+    });
+
+    // -------------------------------------------------------------------------
+    // Clouds
+    // -------------------------------------------------------------------------
+
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xf6f4e8,
+      roughness: 1,
+      transparent: true,
+      opacity: 0.88,
+      depthWrite: false
+    });
+
+    function cloud(x, y, z, scale) {
+      const group = new THREE.Group();
+
+      const pieces = [
+        [-1.2, 0, 0, 1.15, 0.55, 0.7],
+        [-0.35, 0.25, 0, 1.45, 0.7, 0.85],
+        [0.75, 0.05, 0, 1.25, 0.55, 0.7],
+        [1.65, -0.1, 0, 0.75, 0.45, 0.55],
+        [0.15, -0.15, 0.15, 1.8, 0.45, 1.0]
+      ];
+
+      pieces.forEach((p) => {
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 12, 8),
+          cloudMat
+        );
+        mesh.position.set(p[0], p[1], p[2]);
+        mesh.scale.set(p[3], p[4], p[5]);
+        group.add(mesh);
+      });
+
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      scene.add(group);
+    }
+
+    cloud(-15, 18, -22, 1.25);
+    cloud(14, 20, -25, 1.45);
+    cloud(-28, 24, 6, 1.1);
+    cloud(29, 22, 8, 1.0);
+
+    // Sun disc.
+    const sunDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(5.5, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0xfff4c3,
+        fog: false
+      })
+    );
+    sunDisc.position.set(31, 24, -45);
+    scene.add(sunDisc);
+
+    // -------------------------------------------------------------------------
+    // Direct camera controls: orbit, zoom, and reset
+    // -------------------------------------------------------------------------
+
+    const cameraState = {
+      azimuth: Math.PI * 0.22,
+      polar: Math.PI * 0.37,
+      radius: 39
+    };
+
+    const defaultCamera = {
+      azimuth: Math.PI * 0.22,
+      polar: Math.PI * 0.37,
+      radius: 39
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(cameraState.polar);
+
+      camera.position.set(
+        cameraState.radius * sinPolar * Math.sin(cameraState.azimuth),
+        cameraState.radius * Math.cos(cameraState.polar),
+        cameraState.radius * sinPolar * Math.cos(cameraState.azimuth)
+      );
+
+      camera.lookAt(0, 3.0, 0);
+    }
+
+    updateCamera();
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      cameraState.azimuth -= dx * 0.005;
+      cameraState.polar = THREE.MathUtils.clamp(
+        cameraState.polar - dy * 0.004,
+        0.18,
+        Math.PI * 0.49
+      );
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      if (
+        event.pointerId !== undefined &&
+        renderer.domElement.hasPointerCapture(event.pointerId)
+      ) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        cameraState.radius = THREE.MathUtils.clamp(
+          cameraState.radius + event.deltaY * 0.025,
+          20,
+          65
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // Pinch zoom for touch devices.
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (pinchDistance > 0) {
+          cameraState.radius = THREE.MathUtils.clamp(
+            cameraState.radius + (pinchDistance - distance) * 0.018,
+            20,
+            65
+          );
+          updateCamera();
+        }
+
+        pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    // Keyboard controls.
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") cameraState.azimuth += 0.08;
+      if (event.key === "ArrowRight") cameraState.azimuth -= 0.08;
+      if (event.key === "ArrowUp") {
+        cameraState.polar = Math.max(0.18, cameraState.polar - 0.06);
+      }
+      if (event.key === "ArrowDown") {
+        cameraState.polar = Math.min(Math.PI * 0.49, cameraState.polar + 0.06);
+      }
+      if (event.key === "r" || event.key === "R") {
+        cameraState.azimuth = defaultCamera.azimuth;
+        cameraState.polar = defaultCamera.polar;
+        cameraState.radius = defaultCamera.radius;
+      }
+      updateCamera();
+    });
+
+    // -------------------------------------------------------------------------
+    // Resize and render loop
+    // -------------------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Gentle water shimmer.
+      waterGroup.children.forEach((mesh, i) => {
+        mesh.material = mesh.material.clone();
+        mesh.material.color.offsetHSL(
+          0,
+          0,
+          Math.sin(performance.now() * 0.0015 + i) * 0.025
+        );
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
