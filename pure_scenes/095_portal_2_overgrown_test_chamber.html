@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Laboratory Ruin</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #070b0d;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 10;
+      color: #e8f1ec;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+    }
+
+    .hud h1 {
+      margin: 0 0 5px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hud p {
+      margin: 0;
+      color: #9cb5ad;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      position: fixed;
+      right: 20px;
+      bottom: 18px;
+      z-index: 10;
+      padding: 9px 12px;
+      border: 1px solid rgba(151, 205, 195, 0.25);
+      border-radius: 8px;
+      color: #a8c4bb;
+      background: rgba(8, 15, 17, 0.55);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 14px;
+        left: 14px;
+      }
+
+      .controls {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <div class="hud">
+    <h1>Overgrowth Lab</h1>
+    <p>Subsection 7 · Containment breach</p>
+  </div>
+
+  <div class="controls">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const container = document.getElementById("scene");
+
+    // -------------------------------------------------------------------------
+    // Renderer and Scene
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080d0f);
+    scene.fog = new THREE.FogExp2(0x080d0f, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(
+      38,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      tile: new THREE.MeshStandardMaterial({
+        color: 0x78837d,
+        roughness: 0.9,
+        metalness: 0.05
+      }),
+      tileDark: new THREE.MeshStandardMaterial({
+        color: 0x303b38,
+        roughness: 0.95
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x87908a,
+        roughness: 0.92
+      }),
+      wallDark: new THREE.MeshStandardMaterial({
+        color: 0x3b4441,
+        roughness: 0.9
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x514332,
+        roughness: 0.96
+      }),
+      woodLight: new THREE.MeshStandardMaterial({
+        color: 0x756047,
+        roughness: 0.94
+      }),
+      metal: new THREE.MeshStandardMaterial({
+        color: 0x263033,
+        roughness: 0.48,
+        metalness: 0.68
+      }),
+      metalLight: new THREE.MeshStandardMaterial({
+        color: 0x87918e,
+        roughness: 0.38,
+        metalness: 0.72
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x090c0d,
+        roughness: 0.75
+      }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x8fe9df,
+        emissive: 0x2bd7c4,
+        emissiveIntensity: 1.8,
+        roughness: 0.3
+      }),
+      pink: new THREE.MeshStandardMaterial({
+        color: 0xff8fa8,
+        emissive: 0xd92f68,
+        emissiveIntensity: 1.4,
+        roughness: 0.35
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x55783b,
+        roughness: 0.96
+      }),
+      greenLight: new THREE.MeshStandardMaterial({
+        color: 0x78924b,
+        roughness: 0.96
+      }),
+      stem: new THREE.MeshStandardMaterial({
+        color: 0x425d36,
+        roughness: 0.95
+      }),
+      skull: new THREE.MeshStandardMaterial({
+        color: 0xd7cbb0,
+        roughness: 0.85
+      }),
+      eye: new THREE.MeshStandardMaterial({
+        color: 0x111210,
+        roughness: 0.65
+      }),
+      glass: new THREE.MeshStandardMaterial({
+        color: 0x8fe8d9,
+        emissive: 0x39d8c3,
+        emissiveIntensity: 1.1,
+        transparent: true,
+        opacity: 0.85,
+        roughness: 0.15,
+        metalness: 0.1
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Geometry Helpers
+    // -------------------------------------------------------------------------
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    function box(w, h, d, material, x, y, z, parent = world) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function voxelBox(w, h, d, material, x, y, z, parent = world) {
+      const mesh = box(w, h, d, material, x, y, z, parent);
+      return mesh;
+    }
+
+    function cylinder(radius, height, material, x, y, z, parent = world, segments = 12) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x9ec5bf, 0x18201d, 1.35));
+
+    const keyLight = new THREE.DirectionalLight(0xffe4bd, 3.1);
+    keyLight.position.set(-4, 7, 5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -9;
+    keyLight.shadow.camera.right = 9;
+    keyLight.shadow.camera.top = 9;
+    keyLight.shadow.camera.bottom = -9;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.bias = -0.0004;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x63d7d0, 1.8);
+    rimLight.position.set(5, 4, -6);
+    scene.add(rimLight);
+
+    const warmFill = new THREE.PointLight(0xffa05c, 18, 12, 2);
+    warmFill.position.set(-1, 2.3, 2.5);
+    scene.add(warmFill);
+
+    // -------------------------------------------------------------------------
+    // Background wall and tiled floor
+    // -------------------------------------------------------------------------
+
+    box(18, 10, 0.5, materials.wall, 0, 4.8, -4.1);
+    box(18.5, 0.35, 0.7, materials.wallDark, 0, 9.8, -4.0);
+
+    // Wall tile grid.
+    for (let x = -8; x <= 8; x += 1) {
+      box(0.035, 9.4, 0.05, materials.tileDark, x, 4.8, -3.78);
+    }
+
+    for (let y = 0.5; y < 9.5; y += 1) {
+      box(17.6, 0.035, 0.05, materials.tileDark, 0, y, -3.78);
+    }
+
+    // Floor base.
+    box(18, 0.45, 9, materials.tileDark, 0, -0.25, 0);
+
+    // Individual floor tiles with irregular offsets.
+    for (let z = -3.5; z <= 4; z += 1) {
+      for (let x = -8; x <= 8; x += 1) {
+        const px = x + ((z * 3) % 2) * 0.13;
+        const py = -0.05 + ((x + z) % 5) * 0.018;
+        const tile = box(
+          0.94,
+          0.12,
+          0.94,
+          materials.tile,
+          px,
+          py,
+          z
+        );
+        tile.rotation.y = ((x + z * 2) % 3) * 0.008;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Left wall: circular containment door and hologram
+    // -------------------------------------------------------------------------
+
+    const door = new THREE.Group();
+    door.position.set(-6.4, 2.2, -3.35);
+    world.add(door);
+
+    const doorRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.75, 0.22, 10, 36),
+      materials.metal
+    );
+    doorRing.castShadow = true;
+    door.add(doorRing);
+
+    box(3.2, 3.25, 0.22, materials.tileDark, 0, 0, 0, door);
+    box(2.65, 2.65, 0.08, materials.metal, 0, 0, 0.16, door);
+
+    // Holographic running figure.
+    const hologram = new THREE.Group();
+    hologram.position.set(-6.4, 2.25, -3.16);
+    world.add(hologram);
+
+    const figureMaterial = new THREE.MeshBasicMaterial({
+      color: 0x8fffe7,
+      transparent: true,
+      opacity: 0.82,
+      depthWrite: false
+    });
+
+    function hologramPart(x, y, z, sx, sy, sz, material = figureMaterial) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.28, 8, 6),
+        material
+      );
+      mesh.scale.set(sx, sy, sz);
+      mesh.position.set(x, y, z);
+      hologram.add(mesh);
+      return mesh;
+    }
+
+    hologramPart(0, 0.25, 0, 0.82, 0.48, 0.35);
+    hologramPart(-0.12, 0.58, 0, 0.18, 0.72, 0.22);
+    hologramPart(0.12, 0.58, 0, 0.18, 0.72, 0.22);
+    hologramPart(-0.3, 0.9, 0, 0.22, 0.22, 0.22);
+    hologramPart(0.3, 0.9, 0, 0.22, 0.22, 0.22);
+    hologramPart(0, 1.2, 0, 0.48, 0.3, 0.38);
+
+    // Door details.
+    for (let i = 0; i < 6; i++) {
+      const bolt = cylinder(
+        0.055,
+        0.08,
+        materials.metalLight,
+        Math.cos((i / 6) * Math.PI * 2) * 1.48,
+        Math.sin((i / 6) * Math.PI * 2) * 1.48,
+        0.29,
+        door,
+        8
+      );
+      bolt.rotation.x = Math.PI / 2;
+    }
+
+    // -------------------------------------------------------------------------
+    // Central reactor / puzzle console
+    // -------------------------------------------------------------------------
+
+    const consoleGroup = new THREE.Group();
+    consoleGroup.position.set(1.2, 0.15, 0.2);
+    world.add(consoleGroup);
+
+    box(3.5, 0.45, 2.5, materials.tileDark, 0, 0.22, 0, consoleGroup);
+    box(2.8, 1.1, 1.85, materials.metal, 0, 0.95, 0, consoleGroup);
+    box(3.15, 0.22, 2.05, materials.tile, 0, 1.55, 0, consoleGroup);
+
+    // Two circular reactor lenses.
+    for (const side of [-1, 1]) {
+      const housing = cylinder(
+        0.66,
+        0.32,
+        materials.metal,
+        side * 0.72,
+        1.85,
+        0,
+        consoleGroup,
+        24
+      );
+      housing.rotation.x = Math.PI / 2;
+
+      const lens = cylinder(
+        0.45,
+        0.34,
+        materials.pink,
+        side * 0.72,
+        1.86,
+        0.02,
+        consoleGroup,
+        24
+      );
+      lens.rotation.x = Math.PI / 2;
+
+      const core = cylinder(
+        0.18,
+        0.36,
+        materials.cyan,
+        side * 0.72,
+        1.87,
+        0.04,
+        consoleGroup,
+        16
+      );
+      core.rotation.x = Math.PI / 2;
+
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const bolt = box(
+          0.11,
+          0.11,
+          0.38,
+          materials.metalLight,
+          side * 0.72 + Math.cos(angle) * 0.61,
+          1.86 + Math.sin(angle) * 0.61,
+          0,
+          consoleGroup
+        );
+        bolt.rotation.z = angle;
+      }
+    }
+
+    // Control panel.
+    box(1.45, 0.65, 0.16, materials.black, -0.65, 1.27, 0.98, consoleGroup);
+    box(0.55, 0.12, 0.08, materials.cyan, -0.95, 1.38, 1.08, consoleGroup);
+    box(0.3, 0.1, 0.08, materials.pink, -0.45, 1.35, 1.08, consoleGroup);
+
+    // -------------------------------------------------------------------------
+    // Skeleton in the ruins
+    // -------------------------------------------------------------------------
+
+    const skeleton = new THREE.Group();
+    skeleton.position.set(3.5, 0.22, 1.25);
+    skeleton.rotation.y = -0.35;
+    world.add(skeleton);
+
+    const spine = cylinder(0.11, 0.85, materials.skull, 0, 1.15, 0, skeleton, 10);
+    spine.rotation.z = -0.08;
+
+    const skull = new THREE.Group();
+    skull.position.set(0, 2.0, 0);
+    skull.rotation.x = -0.12;
+    skeleton.add(skull);
+
+    const skullBase = new THREE.Mesh(
+      new THREE.SphereGeometry(0.39, 12, 8),
+      materials.skull
+    );
+    skullBase.scale.set(1, 0.72, 0.88);
+    skullBase.castShadow = true;
+    skull.add(skullBase);
+
+    const skullTop = new THREE.Mesh(
+      new THREE.SphereGeometry(0.34, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
+      materials.skull
+    );
+    skullTop.position.y = 0.27;
+    skull.add(skullTop);
+
+    box(0.3, 0.23, 0.22, materials.eye, -0.11, 0.08, 0.08, skull);
+    box(0.3, 0.23, 0.22, materials.eye, 0.11, 0.08, 0.08, skull);
+
+    const jaw = new THREE.Mesh(
+      new THREE.ConeGeometry(0.28, 0.36, 3),
+      materials.skull
+    );
+    jaw.rotation.z = Math.PI;
+    jaw.position.y = -0.48;
+    jaw.scale.z = 0.8;
+    skull.add(jaw);
+
+    // Rib cage.
+    for (let i = 0; i < 5; i++) {
+      const rib = new THREE.Mesh(
+        new THREE.TorusGeometry(0.28 - i * 0.025, 0.035, 6, 14, Math.PI * 1.45),
+        materials.skull
+      );
+      rib.rotation.z = Math.PI / 2;
+      rib.position.set(0, 0.55 - i * 0.16, 0.08);
+      rib.rotation.y = Math.PI / 2;
+      skeleton.add(rib);
+    }
+
+    // Arms and hands.
+    const leftArm = cylinder(0.07, 0.72, materials.skull, -0.28, 1.35, 0, skeleton, 8);
+    leftArm.rotation.z = -0.65;
+    const rightArm = cylinder(0.07, 0.72, materials.skull, 0.28, 1.35, 0, skeleton, 8);
+    rightArm.rotation.z = 0.65;
+
+    const leftHand = new THREE.Mesh(
+      new THREE.SphereGeometry(0.13, 8, 6),
+      materials.skull
+    );
+    leftHand.position.set(-0.63, 1.0, 0);
+    skeleton.add(leftHand);
+
+    const rightHand = leftHand.clone();
+    rightHand.position.set(0.63, 1.0, 0);
+    skeleton.add(rightHand);
+
+    // -------------------------------------------------------------------------
+    // Broken machinery and pipes
+    // -------------------------------------------------------------------------
+
+    const brokenMachine = new THREE.Group();
+    brokenMachine.position.set(-2.2, 0.2, 0.7);
+    brokenMachine.rotation.y = 0.25;
+    world.add(brokenMachine);
+
+    box(2.2, 0.35, 1.1, materials.metal, 0, 0.3, 0, brokenMachine);
+    box(1.55, 0.8, 0.85, materials.tileDark, 0, 0.8, 0, brokenMachine);
+    box(1.35, 0.12, 0.75, materials.metalLight, 0, 1.25, 0, brokenMachine);
+
+    const pipe = cylinder(0.13, 2.3, materials.metal, 0.5, 0.75, 0.3, brokenMachine, 12);
+    pipe.rotation.z = 0.35;
+
+    const cyanPipe = cylinder(0.075, 1.8, materials.cyan, -0.45, 0.95, 0.12, brokenMachine, 12);
+    cyanPipe.rotation.z = -0.18;
+
+    // Fallen equipment.
+    const fallenBox = box(1.5, 0.18, 0.9, materials.metal, -3.4, 0.42, 1.6);
+    fallenBox.rotation.y = 0.45;
+    fallenBox.rotation.z = -0.08;
+
+    box(0.75, 0.14, 0.45, materials.black, -3.85, 0.55, 1.35);
+    box(0.45, 0.1, 0.3, materials.cyan, -3.95, 0.64, 1.35);
+
+    const fallenCylinder = cylinder(0.38, 0.85, materials.metal, 4.4, 0.43, 0.7, world, 16);
+    fallenCylinder.rotation.z = 0.35;
+    fallenCylinder.rotation.x = 0.12;
+    box(0.6, 0.15, 0.4, materials.black, 4.65, 0.85, 0.7);
+
+    // -------------------------------------------------------------------------
+    // Overgrowth: procedural plants, vines, and grass
+    // -------------------------------------------------------------------------
+
+    const plantGroups = [];
+
+    function fern(x, y, z, scale = 1, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2 + Math.sin(i * 2.3) * 0.35;
+        const frond = new THREE.Group();
+        frond.position.set(0, 0, 0);
+        frond.rotation.y = angle;
+        group.add(frond);
+
+        for (let j = 0; j < 5; j++) {
+          const leaf = box(
+            0.12,
+            0.52,
+            0.055,
+            j % 2 ? materials.green : materials.greenLight,
+            Math.sin(j * 1.7) * 0.16,
+            0.25 + j * 0.12,
+            0,
+            frond
+          );
+          leaf.rotation.z = Math.sin(j * 1.7) * 0.35;
+          leaf.rotation.x = Math.cos(j * 1.7) * 0.25;
+        }
+      }
+
+      plantGroups.push(group);
+      return group;
+    }
+
+    function bush(x, y, z, scale = 1, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      for (let i = 0; i < 8; i++) {
+        const leaf = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(0.28 + (i % 3) * 0.06, 1),
+          i % 2 ? materials.green : materials.greenLight
+        );
+        leaf.position.set(
+          (i - 3.5) * 0.24,
+          0.2 + (i % 2) * 0.18,
+          (i % 2 ? 1 : -1) * 0.12
+        );
+        leaf.scale.y = 0.75;
+        leaf.castShadow = true;
+        group.add(leaf);
+      }
+
+      plantGroups.push(group);
+      return group;
+    }
+
+    function vine(x, y, z, length = 2.5, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      parent.add(group);
+
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0.12, length * 0.3, 0.08),
+        new THREE.Vector3(-0.08, length * 0.65, -0.05),
+        new THREE.Vector3(0.18, length, 0.1)
+      ]);
+
+      const mesh = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 12, 0.035, 6, false),
+        materials.stem
+      );
+      mesh.castShadow = true;
+      group.add(mesh);
+
+      for (let i = 0; i < 4; i++) {
+        const t = i / 3;
+        const point = curve.getPoint(t);
+        const leaf = new THREE.Mesh(
+          new THREE.SphereGeometry(0.15, 7, 5),
+          i % 2 ? materials.green : materials.greenLight
+        );
+        leaf.scale.set(0.45, 1.4, 0.2);
+        leaf.position.copy(point);
+        leaf.rotation.z = Math.sin(t * 5) * 0.4;
+        leaf.castShadow = true;
+        group.add(leaf);
+      }
+
+      plantGroups.push(group);
+      return group;
+    }
+
+    function grassTuft(x, y, z, scale = 1, parent = world) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.scale.setScalar(scale);
+      parent.add(group);
+
+      for (let i = 0; i < 5; i++) {
+        const blade = box(
+          0.045,
+          0.28,
+          0.035,
+          i % 2 ? materials.greenLight : materials.green,
+          (i - 2) * 0.07,
+          0.14,
+          0,
+          group
+        );
+        blade.rotation.z = (i - 2) * 0.12;
+      }
+
+      plantGroups.push(group);
+      return group;
+    }
+
+    // Hanging vines from ceiling beams.
+    for (let i = 0; i < 13; i++) {
+      const x = -7.5 + i * 1.35 + Math.sin(i * 2.1) * 0.25;
+      const z = -2.9 + (i % 3) * 0.45;
+      const length = 1.4 + (i % 4) * 0.28;
+      vine(x, 8.75 - (i % 3) * 0.2, z, length);
+    }
+
+    // Floor vegetation.
+    for (let i = 0; i < 55; i++) {
+      const x = -7.7 + Math.random() * 15.4;
+      const z = -3.25 + Math.random() * 7.2;
+      const y = 0.05;
+      const scale = 0.35 + Math.random() * 0.75;
+
+      if (i % 3 !== 0) {
+        bush(x, y, z, scale * 0.75);
+      } else {
+        grassTuft(x, y, z, scale);
+      }
+    }
+
+    // Large foreground plants.
+    fern(-4.5, 0.05, 2.6, 1.45);
+    fern(4.7, 0.05, 2.4, 1.55);
+    fern(-1.3, 0.05, 3.1, 1.15);
+    bush(5.5, 0.05, 2.7, 1.15);
+    bush(-5.8, 0.05, 2.9, 1.0);
+    bush(0.2, 0.05, 3.25, 1.25);
+
+    // Vines climbing the reactor.
+    vine(2.65, 0.2, 1.45, 3.1);
+    vine(4.15, 0.2, 1.7, 2.8);
+
+    // Small yellow flowers.
+    const flowerMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe4c84d,
+      roughness: 0.9
+    });
+
+    for (let i = 0; i < 10; i++) {
+      const flower = new THREE.Group();
+      const x = -6.8 + Math.random() * 13.2;
+      const z = -2.8 + Math.random() * 6.5;
+      flower.position.set(x, 0.35, z);
+      world.add(flower);
+
+      const stem = cylinder(0.018, 0.22, materials.stem, 0, 0.11, 0, flower, 6);
+      stem.rotation.z = Math.random() * 0.3;
+
+      const bloom = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.075, 1),
+        flowerMaterial
+      );
+      bloom.position.y = 0.25;
+      bloom.scale.y = 0.55;
+      flower.add(bloom);
+    }
+
+    // -------------------------------------------------------------------------
+    // Additional environmental details
+    // -------------------------------------------------------------------------
+
+    // Ceiling beams and broken frame.
+    for (let x = -7; x <= 7; x += 2.8) {
+      box(0.22, 0.22, 7.5, materials.metal, x, 9.2, -0.5);
+    }
+
+    const brokenFrame = new THREE.Group();
+    brokenFrame.position.set(5.6, 6.2, -3.1);
+    brokenFrame.rotation.z = -0.25;
+    world.add(brokenFrame);
+
+    box(2.2, 0.18, 0.18, materials.metal, 0, 0, 0, brokenFrame);
+    box(0.18, 1.2, 0.18, materials.metal, 0, 0.6, 0, brokenFrame);
+    box(0.18, 0.18, 1.5, materials.metal, 0, -0.55, 0, brokenFrame);
+
+    // Hanging lamp fragments.
+    const lamp = new THREE.Group();
+    lamp.position.set(-3.8, 7.8, -2.3);
+    world.add(lamp);
+
+    const bulb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 10, 8),
+      materials.cyan
+    );
+    lamp.add(bulb);
+
+    const lampCage = new THREE.Mesh(
+      new THREE.ConeGeometry(0.42, 0.45, 4),
+      materials.metal
+    );
+    lampCage.rotation.y = Math.PI / 4;
+    lampCage.position.y = 0.3;
+    lamp.add(lampCage);
+
+    // A small control lever.
+    const lever = new THREE.Group();
+    lever.position.set(-5.4, 1.1, -2.7);
+    lever.rotation.z = -0.2;
+    world.add(lever);
+
+    cylinder(0.08, 0.65, materials.metal, 0, 0.32, 0, lever, 10);
+    const leverHandle = box(0.16, 0.16, 0.55, materials.red || materials.pink, 0, 0.68, 0, lever);
+    leverHandle.rotation.z = 0.35;
+
+    // -------------------------------------------------------------------------
+    // Camera controls implemented directly
+    // -------------------------------------------------------------------------
+
+    const cameraState = {
+      radius: 14.8,
+      theta: 0.72,
+      phi: 1.02,
+      target: new THREE.Vector3(0, 2.2, 0)
+    };
+
+    const initialCamera = { ...cameraState };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+      camera.position.set(
+        cameraState.target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+      camera.lookAt(cameraState.target);
+    }
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let previousRadius = cameraState.radius;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      previousRadius = cameraState.radius;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const deltaX = event.clientX - previousX;
+      const deltaY = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      cameraState.theta -= deltaX * 0.006;
+      cameraState.phi = THREE.MathUtils.clamp(
+        cameraState.phi - deltaY * 0.005,
+        0.35,
+        1.42
+      );
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        cameraState.radius = THREE.MathUtils.clamp(
+          cameraState.radius + event.deltaY * 0.008,
+          8.5,
+          22
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle reactor pulse.
+      materials.pink.emissiveIntensity = 1.25 + Math.sin(elapsed * 2.1) * 0.2;
+      materials.cyan.emissiveIntensity = 1.65 + Math.sin(elapsed * 1.7 + 0.8) * 0.25;
+
+      // Subtle hologram movement.
+      hologram.rotation.y = elapsed * 0.28;
+      hologram.position.y = 2.25 + Math.sin(elapsed * 1.4) * 0.025;
+
+      // Leaves sway.
+      plantGroups.forEach((group, index) => {
+        group.rotation.z = Math.sin(elapsed * 0.7 + index) * 0.018;
+        group.rotation.x = Math.cos(elapsed * 0.55 + index * 0.7) * 0.012;
+      });
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
