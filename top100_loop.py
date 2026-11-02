@@ -29,8 +29,8 @@ os.makedirs(RENDER_DIR, exist_ok=True)
 
 ID_BASE = 1000
 MAX_ATTEMPTS = 2
-# Gate tolerances (cap 30x30, height ~13): float/wall-thickness slack only.
-XZ_CAP, Y_CAP = 30.5, 13.3
+# Gate tolerances (owner: size close is enough; height barely matters).
+XZ_CAP, Y_CAP = 32.0, 20.0
 
 IMAGE_TYPE = (
     "IMAGE TYPE: this image is a single gameplay SCREEN — one place at player-view scale, "
@@ -247,9 +247,9 @@ def attempt(e, n):
             rec["measured"] = {"x": round(x, 2), "z": round(z, 2), "y_max": round(ms["max"][1], 2),
                                "y_min": round(ms["min"][1], 2)}
             if x > XZ_CAP or z > XZ_CAP:
-                rec["fails"].append(f"footprint {x:.1f}x{z:.1f} > 30")
+                rec["fails"].append(f"footprint {x:.1f}x{z:.1f} > 32")
             if ms["max"][1] > Y_CAP:
-                rec["fails"].append(f"height {ms['max'][1]:.1f} > 13")
+                rec["fails"].append(f"height {ms['max'][1]:.1f} > 20")
             if not (ms.get("spawn") and ms.get("doors") and ms.get("relic")):
                 rec["fails"].append("spawn/doors/relic missing in module")
         except Exception as ex:
