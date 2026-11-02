@@ -334,5 +334,13 @@
     "status": "pass",
     "filename": "1042-the_simpsons_742_evergreen_terrace.html",
     "updated_at": "2026-11-02 03:49 EST"
+  },
+  "43": {
+    "rank": 43,
+    "game": "Castlevania",
+    "name": "Dracula&#x27;s Castle",
+    "status": "pass",
+    "filename": "1043-castlevania_draculax27s_castle.html",
+    "updated_at": "2026-11-02 03:54 EST"
   }
 }
