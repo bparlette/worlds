@@ -98,6 +98,13 @@
     "module": "modules/030.js"
   },
   {
+    "id": "031",
+    "title": "The Legend of Zelda: Link&#x27;s Awakening",
+    "sub": "Koholint Island",
+    "system": "Console",
+    "module": "modules/031.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
