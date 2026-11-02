@@ -6,5 +6,157 @@
     "status": "pass",
     "filename": "1001-sonic_the_hedgehog_green_hill_zone.html",
     "updated_at": "2026-11-02 00:17 EST"
+  },
+  "2": {
+    "rank": 2,
+    "game": "Super Mario Bros.",
+    "name": "World 1-1",
+    "status": "pass",
+    "filename": "1002-super_mario_bros_world_1_1.html",
+    "updated_at": "2026-11-02 00:21 EST"
+  },
+  "3": {
+    "rank": 3,
+    "game": "Doom",
+    "name": "E1M1 \u2014 Hangar",
+    "status": "pass",
+    "filename": "1003-doom_e1m1_hangar.html",
+    "updated_at": "2026-11-02 00:26 EST"
+  },
+  "4": {
+    "rank": 4,
+    "game": "Super Mario World",
+    "name": "Yoshi&#x27;s Island 1",
+    "status": "pass",
+    "filename": "1004-super_mario_world_yoshix27s_island_1.html",
+    "updated_at": "2026-11-02 00:30 EST"
+  },
+  "5": {
+    "rank": 5,
+    "game": "Pac-Man",
+    "name": "The Maze",
+    "status": "pass",
+    "filename": "1005-pac_man_the_maze.html",
+    "updated_at": "2026-11-02 00:33 EST"
+  },
+  "6": {
+    "rank": 6,
+    "game": "Sonic the Hedgehog 2",
+    "name": "Emerald Hill Zone",
+    "status": "pass",
+    "filename": "1006-sonic_the_hedgehog_2_emerald_hill_zone.html",
+    "updated_at": "2026-11-02 00:38 EST"
+  },
+  "7": {
+    "rank": 7,
+    "game": "Mortal Kombat",
+    "name": "The Courtyard",
+    "status": "pass",
+    "filename": "1007-mortal_kombat_the_courtyard.html",
+    "updated_at": "2026-11-02 00:42 EST"
+  },
+  "8": {
+    "rank": 8,
+    "game": "Kingdom Hearts",
+    "name": "Traverse Town",
+    "status": "pass",
+    "filename": "1008-kingdom_hearts_traverse_town.html",
+    "updated_at": "2026-11-02 00:49 EST"
+  },
+  "9": {
+    "rank": 9,
+    "game": "Super Mario Bros. 3",
+    "name": "World 1-2",
+    "status": "pass",
+    "filename": "1009-super_mario_bros_3_world_1_2.html",
+    "updated_at": "2026-11-02 00:54 EST"
+  },
+  "10": {
+    "rank": 10,
+    "game": "Sonic the Hedgehog 2",
+    "name": "Chemical Plant Zone",
+    "status": "pass",
+    "filename": "1010-sonic_the_hedgehog_2_chemical_plant_zone.html",
+    "updated_at": "2026-11-02 00:55 EST"
+  },
+  "11": {
+    "rank": 11,
+    "game": "The Legend of Zelda: Majora&#x27;s Mask",
+    "name": "Clock Town (West)",
+    "status": "pass",
+    "filename": "1011-the_legend_of_zelda_majorax27s_mask_clock_town_west.html",
+    "updated_at": "2026-11-02 01:00 EST"
+  },
+  "12": {
+    "rank": 12,
+    "game": "The Legend of Zelda: The Wind Waker",
+    "name": "Outset Island",
+    "status": "pass",
+    "filename": "1012-the_legend_of_zelda_the_wind_waker_outset_island.html",
+    "updated_at": "2026-11-02 01:05 EST"
+  },
+  "13": {
+    "rank": 13,
+    "game": "Pok\u00e9mon Red / Blue",
+    "name": "Pallet Town",
+    "status": "pass",
+    "filename": "1013-pokmon_red_blue_pallet_town.html",
+    "updated_at": "2026-11-02 01:11 EST"
+  },
+  "14": {
+    "rank": 14,
+    "game": "Sonic the Hedgehog 3",
+    "name": "Angel Island",
+    "status": "pass",
+    "filename": "1014-sonic_the_hedgehog_3_angel_island.html",
+    "updated_at": "2026-11-02 01:15 EST"
+  },
+  "15": {
+    "rank": 15,
+    "game": "Super Mario World 2: Yoshi&#x27;s Island",
+    "name": "Yoshi&#x27;s Island",
+    "status": "pass",
+    "filename": "1015-super_mario_world_2_yoshix27s_island_yoshix27s_island.html",
+    "updated_at": "2026-11-02 01:21 EST"
+  },
+  "16": {
+    "rank": 16,
+    "game": "Mega Man",
+    "name": "Dr. Wily&#x27;s Castle",
+    "status": "pass",
+    "filename": "1016-mega_man_dr_wilyx27s_castle.html",
+    "updated_at": "2026-11-02 01:27 EST"
+  },
+  "17": {
+    "rank": 17,
+    "game": "Super Mario",
+    "name": "Peach&#x27;s Castle",
+    "status": "pass",
+    "filename": "1017-super_mario_peachx27s_castle.html",
+    "updated_at": "2026-11-02 01:32 EST"
+  },
+  "18": {
+    "rank": 18,
+    "game": "DuckTales",
+    "name": "Scrooge&#x27;s Money Bin",
+    "status": "pass",
+    "filename": "1018-ducktales_scroogex27s_money_bin.html",
+    "updated_at": "2026-11-02 01:35 EST"
+  },
+  "19": {
+    "rank": 19,
+    "game": "The Simpsons",
+    "name": "Bart&#x27;s Classroom",
+    "status": "pass",
+    "filename": "1019-the_simpsons_bartx27s_classroom.html",
+    "updated_at": "2026-11-02 01:42 EST"
+  },
+  "20": {
+    "rank": 20,
+    "game": "Kirby&#x27;s Dream Land",
+    "name": "Dream Land \u2014 Star Door Hill",
+    "status": "pass",
+    "filename": "1020-kirbyx27s_dream_land_dream_land_star_door_hill.html",
+    "updated_at": "2026-11-02 01:46 EST"
   }
 }

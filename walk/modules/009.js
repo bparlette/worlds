@@ -1,0 +1,1138 @@
+// @world {"id": "009", "title": "Super Mario Bros. 3", "sub": "World 1-2", "system": "Console"}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    return {
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): clouds, py, pz, sx, sy
+  let clouds = 0;
+  let py = 0;
+  let pz = 0;
+  let sx = 0;
+  let sy = 0;
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    // scene redirect
+    scene.background = new THREE.Color(0xbfeef2);
+    scene.fog = new THREE.Fog(0xbfeef2, 25, 52);
+
+    camera = new THREE.OrthographicCamera(-18, 18, 12, -12, 0.1, 100);
+
+    renderer = dummyRenderer();
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.SRGBColorSpace;
+    renderer.toneMappingExposure = 1.05;
+    
+
+    const hemi = new THREE.HemisphereLight(0xeaffff, 0x6c8d49, 2.1);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff4cf, 3.2);
+    sun.position.set(-9, 15, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 45;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x89d8ff, 0.75);
+    fill.position.set(10, 7, -12);
+    scene.add(fill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const mat = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x65b94d,
+        roughness: 0.95
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x47963d,
+        roughness: 1
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x83c958,
+        roughness: 1
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x9a6335,
+        roughness: 1
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0xa96732,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x4fb847,
+        roughness: 1
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x78c95a,
+        roughness: 1
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xe24b4b,
+        roughness: 0.85
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffd54b,
+        roughness: 0.75
+      }),
+      orange: new THREE.MeshStandardMaterial({
+        color: 0xf58b36,
+        roughness: 0.9
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf7f4df,
+        roughness: 1
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x263b3c,
+        roughness: 0.9
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xd98352,
+        roughness: 0.9
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x2879c8,
+        roughness: 0.75
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0x8f55c4,
+        roughness: 0.85
+      }),
+      flower: new THREE.MeshStandardMaterial({
+        color: 0xfff4c8,
+        roughness: 1
+      }),
+      flowerCenter: new THREE.MeshStandardMaterial({
+        color: 0xe7a83b,
+        roughness: 1
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const voxel = (
+      x,
+      y,
+      z,
+      size = 1,
+      material = mat.grass,
+      castShadow = true,
+      receiveShadow = true
+    ) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    const blockRow = (
+      startX,
+      startY,
+      startZ,
+      count,
+      size = 1,
+      material = mat.wood
+    ) => {
+      for (let i = 0; i < count; i++) {
+        voxel(
+          startX + i * size,
+          startY,
+          startZ,
+          size,
+          material
+        );
+      }
+    };
+
+    const cylinderVoxel = (
+      x,
+      y,
+      z,
+      radius = 1,
+      height = 2,
+      material = mat.leaf
+    ) => {
+      const segments = 12;
+      const geometry = new THREE.CylinderGeometry(
+        radius,
+        radius,
+        height,
+        segments
+      );
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    // -------------------------------------------------------------------------
+    // Sky, clouds, and distant background
+    // -------------------------------------------------------------------------
+
+    const cloudMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf8fff9,
+      roughness: 1
+    });
+
+    function makeCloud(x, y, z, scale = 1) {
+      const cloud = new THREE.Group();
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
+
+      const pieces = [
+        [-1.35, 0, 0, 0.75, 0.55],
+        [-0.55, 0.18, 0, 0.95, 0.75],
+        [0.45, 0.05, 0, 0.9, 0.7],
+        [1.25, -0.05, 0, 0.65, 0.5],
+        [0.05, -0.18, 0, 1.05, 0.55]
+      ];
+
+      for (const [px, py, pz, sx, sy] of pieces) {
+        const puff = new THREE.Mesh(
+          new THREE.BoxGeometry(sx, sy, 0.55),
+          cloudMaterial
+        );
+        puff.position.set(px, py, pz);
+        puff.castShadow = false;
+        cloud.add(puff);
+      }
+
+      scene.add(cloud);
+    }
+
+    makeCloud(-9, 8.8, -10, 1.25);
+    makeCloud(0.5, 10.1, -13, 1.5);
+    makeCloud(8.7, 8.4, -10, 1.1);
+    makeCloud(-13, 6.8, -8, 0.9);
+    makeCloud(13.8, 5.8, -11, 1.2);
+
+    // -------------------------------------------------------------------------
+    // Island terrain
+    // -------------------------------------------------------------------------
+
+    const island = new THREE.Group();
+
+    function terrainBlock(x, y, z, material = mat.grass) {
+      const block = voxel(x, y, z, 1, material);
+      island.add(block);
+      return block;
+    }
+
+    // Main island footprint, with a front cutaway.
+    const islandWidth = 24;
+    const islandDepth = 15;
+
+    for (let x = -10; x <= 10; x++) {
+      const edge = Math.max(0, 10 - Math.abs(x));
+      const depth = 6 + edge;
+
+      for (let z = -depth; z < depth; z++) {
+        const side = Math.abs(z) > depth - 3;
+        const front = z >= 5;
+
+        if (front && Math.abs(x) < 8) continue;
+
+        const y = side ? 0.5 : 0.25;
+        terrainBlock(x, y, z, side ? mat.grassDark : mat.grass);
+      }
+    }
+
+    // Island side and base.
+    for (let x = -10; x <= 10; x++) {
+      for (let z = -7; z <= 6; z++) {
+        if (Math.abs(x) < 8 && z >= 5) continue;
+        voxel(
+          x,
+          -0.75,
+          z,
+          1.2,
+          mat.soil
+        );
+      }
+    }
+
+    // Dirt paths.
+    const pathPoints = [
+      [-8, 0.55, 3],
+      [-5, 0.55, 3],
+      [-2, 0.55, 3],
+      [1, 0.55, 3],
+      [4, 0.55, 3],
+      [7, 0.55, 3],
+      [9, 0.55, 3]
+    ];
+
+    for (const [x, y, z] of pathPoints) {
+      voxel(x, y, z, 1.05, mat.soil);
+    }
+
+    // Flower beds.
+    const flowerPositions = [
+      [-7.2, 0.7, 1.2],
+      [-6.8, 0.7, 1.5],
+      [-6.4, 0.7, 1.2],
+      [-7.2, 0.7, 2.0],
+      [-6.8, 0.7, 2.3],
+      [-6.4, 0.7, 2.0],
+      [2.2, 0.7, 1.0],
+      [2.6, 0.7, 1.3],
+      [2.2, 0.7, 1.7],
+      [2.6, 0.7, 2.0]
+    ];
+
+    for (const [x, y, z] of flowerPositions) {
+      voxel(x, y, z, 0.65, mat.grassLight);
+      voxel(x, y + 0.38, z, 0.3, mat.flower);
+      voxel(x, y + 0.55, z, 0.18, mat.flowerCenter);
+    }
+
+    // -------------------------------------------------------------------------
+    // Pipes
+    // -------------------------------------------------------------------------
+
+    function makePipe(x, y, z, height = 4) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      const outer = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.75, 0.75, height, 16),
+        mat.leaf
+      );
+      outer.position.y = height / 2;
+      outer.castShadow = true;
+      outer.receiveShadow = true;
+      group.add(outer);
+
+      const rim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.82, 0.82, 0.22, 16),
+        mat.leafLight
+      );
+      rim.position.y = height;
+      rim.castShadow = true;
+      group.add(rim);
+
+      scene.add(group);
+      return group;
+    }
+
+    makePipe(-8.3, 0.6, 1.7, 4.3);
+    makePipe(7.2, 0.6, 2.0, 3.6);
+    makePipe(-11.2, 0.6, -2.5, 2.5);
+
+    // -------------------------------------------------------------------------
+    // Trees
+    // -------------------------------------------------------------------------
+
+    function makeTree(x, z, scale = 1, trunkMaterial = mat.wood) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.55, z);
+      group.scale.setScalar(scale);
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.34, 0.42, 2.1, 8),
+        trunkMaterial
+      );
+      trunk.position.y = 1.05;
+      trunk.castShadow = true;
+      group.add(trunk);
+
+      const crown = new THREE.Mesh(
+        new THREE.ConeGeometry(1.25, 3.25, 8),
+        mat.leaf
+      );
+      crown.position.y = 3.05;
+      crown.castShadow = true;
+      crown.receiveShadow = true;
+      group.add(crown);
+
+      const crownTop = new THREE.Mesh(
+        new THREE.ConeGeometry(0.82, 2.25, 8),
+        mat.leafLight
+      );
+      crownTop.position.y = 4.35;
+      crownTop.castShadow = true;
+      group.add(crownTop);
+
+      scene.add(group);
+      return group;
+    }
+
+    makeTree(-3.4, -2.1, 0.9);
+    makeTree(-4.8, -3.4, 0.75);
+    makeTree(3.5, -2.8, 0.85);
+    makeTree(4.8, -4.0, 0.65);
+    makeTree(-7.8, -3.8, 0.8);
+    makeTree(8.8, -3.8, 0.75);
+    makeTree(8.7, 3.9, 0.85);
+
+    // Watermelon-like bushes.
+    function makeBush(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.55, z);
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.85, 0.75, 1.25, 10),
+        mat.grassDark
+      );
+      body.position.y = 0.62;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      const stripe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.79, 0.79, 0.72, 10),
+        mat.leafLight
+      );
+      stripe.position.y = 0.98;
+      stripe.castShadow = true;
+      group.add(stripe);
+
+      scene.add(group);
+      return group;
+    }
+
+    makeBush(-2.5, 0.1, 0.9);
+    makeBush(0.1, 0.1, 0.8);
+    makeBush(5.5, 0.2, 0.75);
+    makeBush(-8.7, 3.2, 0.65);
+    makeBush(8.2, 2.5, 0.65);
+
+    // -------------------------------------------------------------------------
+    // Goombas
+    // -------------------------------------------------------------------------
+
+    function makeGoomba(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.6, z);
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.48, 0.7, 10),
+        mat.orange
+      );
+      body.position.y = 0.35;
+      body.castShadow = true;
+      group.add(body);
+
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.52, 0.52, 0.18, 10),
+        mat.red
+      );
+      cap.position.y = 0.77;
+      cap.castShadow = true;
+      group.add(cap);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 8, 6),
+        mat.black
+      );
+      eye.position.set(-0.19, 0.83, 0.35);
+      group.add(eye);
+
+      const eye2 = eye.clone();
+      eye2.position.x = 0.19;
+      group.add(eye2);
+
+      const nose = new THREE.Mesh(
+        new THREE.ConeGeometry(0.08, 0.18, 6),
+        mat.black
+      );
+      nose.rotation.x = Math.PI / 2;
+      nose.position.set(0, 0.83, 0.56);
+      group.add(nose);
+
+      scene.add(group);
+      return group;
+    }
+
+    makeGoomba(4.5, 2.1, 0.9);
+    makeGoomba(5.4, 2.6, 0.65);
+    makeGoomba(-5.7, 1.4, 0.72);
+
+    // -------------------------------------------------------------------------
+    // Princess Peach
+    // -------------------------------------------------------------------------
+
+    function makePeach(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.6, z);
+      group.scale.setScalar(scale);
+
+      const dress = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.78, 0.95, 1.15, 12),
+        mat.purple
+      );
+      dress.position.y = 0.58;
+      dress.castShadow = true;
+      group.add(dress);
+
+      const collar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.82, 0.82, 0.18, 12),
+        mat.yellow
+      );
+      collar.position.y = 1.18;
+      collar.castShadow = true;
+      group.add(collar);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.48, 12, 10),
+        mat.purple
+      );
+      head.position.y = 1.72;
+      head.castShadow = true;
+      group.add(head);
+
+      const crown = new THREE.Mesh(
+        new THREE.ConeGeometry(0.43, 0.42, 4),
+        mat.yellow
+      );
+      crown.rotation.y = Math.PI / 4;
+      crown.position.y = 2.18;
+      crown.castShadow = true;
+      group.add(crown);
+
+      const arm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.13, 0.16, 0.8, 8),
+        mat.purple
+      );
+      arm.rotation.z = -0.65;
+      arm.position.set(-0.48, 1.35, 0);
+      arm.castShadow = true;
+      group.add(arm);
+
+      scene.add(group);
+      return group;
+    }
+
+    makePeach(2.2, 1.8, 0.95);
+
+    // -------------------------------------------------------------------------
+    // Bowser
+    // -------------------------------------------------------------------------
+
+    function makeBowser(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.55, z);
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.85, 1.05, 1.65, 10),
+        mat.orange
+      );
+      body.position.y = 0.85;
+      body.castShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.65, 12, 10),
+        mat.orange
+      );
+      head.position.set(0, 1.85, 0);
+      head.scale.set(0.85, 1.05, 0.85);
+      head.castShadow = true;
+      group.add(head);
+
+      const snout = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.26, 0.36, 0.7, 10),
+        mat.orange
+      );
+      snout.rotation.x = Math.PI / 2;
+      snout.position.set(0.35, 1.86, 0);
+      snout.castShadow = true;
+      group.add(snout);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 8, 6),
+        mat.black
+      );
+      eye.position.set(-0.1, 2.02, 0.39);
+      group.add(eye);
+
+      const eye2 = eye.clone();
+      eye2.position.x = 0.1;
+      group.add(eye2);
+
+      const horn = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.42, 7),
+        mat.wood
+      );
+      horn.rotation.z = Math.PI / 2;
+      horn.position.set(-0.32, 2.38, 0);
+      horn.castShadow = true;
+      group.add(horn);
+
+      const horn2 = horn.clone();
+      horn2.position.x = 0.32;
+      group.add(horn2);
+
+      scene.add(group);
+      return group;
+    }
+
+    makeBowser(-0.2, 0.2, 1.05);
+
+    // -------------------------------------------------------------------------
+    // Koopa Troopa
+    // -------------------------------------------------------------------------
+
+    function makeKoopa(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.55, z);
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.45, 0.38, 0.7, 10),
+        mat.green
+      );
+      body.position.y = 0.35;
+      body.castShadow = true;
+      group.add(body);
+
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.42, 0.42, 0.18, 10),
+        mat.green
+      );
+      cap.position.y = 0.76;
+      cap.castShadow = true;
+      group.add(cap);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 8, 6),
+        mat.black
+      );
+      eye.position.set(-0.14, 0.82, 0.36);
+      group.add(eye);
+
+      const eye2 = eye.clone();
+      eye2.position.x = 0.14;
+      group.add(eye2);
+
+      scene.add(group);
+      return group;
+    }
+
+    const green = new THREE.MeshStandardMaterial({
+      color: 0x77b955,
+      roughness: 0.9
+    });
+
+    makeKoopa(6.2, 1.2, 0.75);
+    makeKoopa(7.0, 1.7, 0.55);
+
+    // -------------------------------------------------------------------------
+    // Mario
+    // -------------------------------------------------------------------------
+
+    function makeMario(x, y, z, rotation = 0, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.34, 0.65, 10),
+        mat.blue
+      );
+      body.position.y = 0.48;
+      body.castShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 12, 10),
+        mat.skin
+      );
+      head.position.y = 0.96;
+      head.castShadow = true;
+      group.add(head);
+
+      const hat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.29, 0.34, 0.18, 12),
+        mat.red
+      );
+      hat.position.y = 1.22;
+      hat.castShadow = true;
+      group.add(hat);
+
+      const brim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36, 0.36, 0.06, 12),
+        mat.red
+      );
+      brim.position.y = 1.12;
+      brim.castShadow = true;
+      group.add(brim);
+
+      const nose = new THREE.Mesh(
+        new THREE.ConeGeometry(0.06, 0.12, 6),
+        mat.skin
+      );
+      nose.rotation.x = Math.PI / 2;
+      nose.position.set(0, 0.98, 0.31);
+      group.add(nose);
+
+      const arm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.14, 0.55, 8),
+        mat.blue
+      );
+      arm.rotation.z = 0.55;
+      arm.position.set(-0.37, 0.55, 0);
+      arm.castShadow = true;
+      group.add(arm);
+
+      scene.add(group);
+      return group;
+    }
+
+    makeMario(-3.1, 0.7, 0.5, -0.5, 0.95);
+
+    // Flying Mario.
+    const flyingMario = makeMario(
+      -3.5,
+      5.7,
+      -0.4,
+      Math.PI * 0.75,
+      0.85
+    );
+
+    // -------------------------------------------------------------------------
+    // Coins
+    // -------------------------------------------------------------------------
+
+    const coinMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd65b,
+      metalness: 0.25,
+      roughness: 0.55
+    });
+
+    function makeCoin(x, y, z, scale = 1) {
+      const coin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22 * scale, 0.22 * scale, 0.12 * scale, 16),
+        coinMaterial
+      );
+      coin.position.set(x, y, z);
+      coin.castShadow = true;
+      scene.add(coin);
+      return coin;
+    }
+
+    makeCoin(-1.1, 4.8, -0.3, 0.8);
+    makeCoin(-0.65, 4.8, -0.3, 0.8);
+    makeCoin(0.1, 4.8, -0.3, 0.8);
+    makeCoin(-6.5, 3.2, -1.2, 0.8);
+    makeCoin(-5.9, 3.2, -1.2, 0.8);
+    makeCoin(5.8, 2.7, -0.8, 0.8);
+
+    // Coin tube.
+    const coinTube = cylinderVoxel(
+      5.7,
+      3.1,
+      -0.8,
+      0.48,
+      1.2,
+      mat.yellow
+    );
+    coinTube.castShadow = true;
+
+    // -------------------------------------------------------------------------
+    // Piranha Plant
+    // -------------------------------------------------------------------------
+
+    function makePiranhaPlant(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.6, z);
+      group.scale.setScalar(scale);
+
+      const pot = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.65, 0.5, 1.25, 12),
+        mat.leaf
+      );
+      pot.position.y = 0.62;
+      pot.castShadow = true;
+      pot.receiveShadow = true;
+      group.add(pot);
+
+      const rim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.68, 0.68, 0.18, 12),
+        mat.leafLight
+      );
+      rim.position.y = 1.25;
+      rim.castShadow = true;
+      group.add(rim);
+
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.25, 0.9, 8),
+        mat.leaf
+      );
+      stem.position.y = 1.75;
+      stem.castShadow = true;
+      group.add(stem);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.48, 12, 10),
+        mat.red
+      );
+      head.position.set(0, 2.25, 0);
+      head.scale.set(0.9, 1.1, 0.9);
+      head.castShadow = true;
+      group.add(head);
+
+      const mouth = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.2, 8),
+        mat.black
+      );
+      mouth.rotation.x = Math.PI / 2;
+      mouth.position.set(0, 2.08, 0.43);
+      group.add(mouth);
+
+      const eye = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 8, 6),
+        mat.white
+      );
+      eye.position.set(-0.18, 2.38, 0.34);
+      group.add(eye);
+
+      const eye2 = eye.clone();
+      eye2.position.x = 0.18;
+      group.add(eye2);
+
+      scene.add(group);
+      return group;
+    }
+
+    makePiranhaPlant(1.0, 4.1, 1.0);
+
+    // -------------------------------------------------------------------------
+    // Blocks / Bricks
+    // -------------------------------------------------------------------------
+
+    function makeBrickBlock(x, y, z, width = 3) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      for (let i = 0; i < width; i++) {
+        const brick = new THREE.Mesh(
+          new THREE.BoxGeometry(0.72, 0.72, 0.72),
+          i % 2 === 0 ? mat.wood : mat.soil
+        );
+        brick.position.x = (i - (width - 1) / 2) * 0.76;
+        brick.castShadow = true;
+        brick.receiveShadow = true;
+        group.add(brick);
+      }
+
+      scene.add(group);
+      return group;
+    }
+
+    makeBrickBlock(0.2, 0.55, -0.7, 4);
+
+    // -------------------------------------------------------------------------
+    // Fence
+    // -------------------------------------------------------------------------
+
+    function makeFence(x, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0.55, z);
+      group.rotation.y = rotation;
+
+      for (let i = 0; i < 5; i++) {
+        const post = new THREE.Mesh(
+          new THREE.BoxGeometry(0.25, 0.65, 0.18),
+          mat.wood
+        );
+        post.position.set((i - 2) * 0.48, 0.32, 0);
+        post.castShadow = true;
+        group.add(post);
+      }
+
+      for (const y of [0.42, 0.62]) {
+        const rail = new THREE.Mesh(
+          new THREE.BoxGeometry(2.4, 0.12, 0.12),
+          mat.wood
+        );
+        rail.position.set(0, y, 0);
+        rail.castShadow = true;
+        group.add(rail);
+      }
+
+      scene.add(group);
+    }
+
+    makeFence(-1.8, 0.4, 0.2);
+    makeFence(3.3, 0.2, -0.15);
+    makeFence(-7.8, -1.0, 0.4);
+
+    // -------------------------------------------------------------------------
+    // Stars / fireflies
+    // -------------------------------------------------------------------------
+
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xfff5b0
+    });
+
+    const fireflies = [];
+
+    for (let i = 0; i < 18; i++) {
+      const firefly = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08 + Math.random() * 0.08, 6, 4),
+        fireflyMaterial
+      );
+      firefly.position.set(
+        -12 + Math.random() * 24,
+        2.5 + Math.random() * 6,
+        -8 + Math.random() * 13
+      );
+      scene.add(firefly);
+      fireflies.push(firefly);
+    }
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+
+    let target = new THREE.Vector3(0, 2.2, 0);
+    let azimuth = 0.72;
+    let polar = 1.08;
+    let distance = 29;
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      const sinPolar = Math.sin(polar);
+
+      camera.position.set(
+        target.x + distance * sinPolar * Math.sin(azimuth),
+        target.y + distance * Math.cos(polar),
+        target.z + distance * sinPolar * Math.cos(azimuth)
+      );
+
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      azimuth -= dx * 0.006;
+      polar = THREE.MathUtils.clamp(polar - dy * 0.005, 0.35, 1.42);
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      distance = THREE.MathUtils.clamp(
+        distance + event.deltaY * 0.015,
+        18,
+        42
+      );
+      updateCamera();
+    }, { passive: false });
+
+    function resetCamera() {
+      target.set(0, 2.2, 0);
+      azimuth = 0.72;
+      polar = 1.08;
+      distance = 29;
+      updateCamera();
+    }
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key.toLowerCase() === "r") {
+        resetCamera();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      camera.left = -18;
+      camera.right = 18;
+      camera.top = 13;
+      camera.bottom = -13;
+      camera.updateProjectionMatrix();
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      flyingMario.position.x = -3.5 + Math.sin(elapsed * 0.8) * 1.3;
+      flyingMario.position.y = 5.7 + Math.cos(elapsed * 0.7) * 0.45;
+      flyingMario.rotation.z = Math.sin(elapsed * 0.9) * 0.08;
+
+      for (let i = 0; i < fireflies.length; i++) {
+        const firefly = fireflies[i];
+        firefly.position.y += Math.sin(elapsed * 0.8 + i) * 0.0015;
+        firefly.scale.setScalar(0.8 + Math.sin(elapsed * 1.4 + i) * 0.2);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Super Mario Bros. 3 Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0xbfeef2, fogColor: 0xbfeef2, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
+  };
+}

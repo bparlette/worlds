@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Village</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b9d8d1;
+      font-family: system-ui, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #info {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      padding: 12px 15px;
+      color: #294d49;
+      background: rgba(244, 250, 245, 0.82);
+      border: 1px solid rgba(41, 77, 73, 0.25);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 25px rgba(35, 65, 60, 0.12);
+      pointer-events: none;
+    }
+
+    #info h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #info p {
+      margin: 0;
+      font-size: 12px;
+      color: #557570;
+    }
+
+    #hint {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      padding: 8px 11px;
+      color: #365d58;
+      background: rgba(244, 250, 245, 0.72);
+      border-radius: 8px;
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      #info {
+        top: 10px;
+        left: 10px;
+        padding: 9px 11px;
+      }
+
+      #info h1 {
+        font-size: 15px;
+      }
+
+      #info p {
+        font-size: 10px;
+      }
+
+      #hint {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <h1>Voxel Village</h1>
+    <p>A tiny neighborhood built one cube at a time</p>
+  </div>
+  <div id="hint">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb9d8d1);
+    scene.fog = new THREE.Fog(0xb9d8d1, 28, 55);
+
+    const camera = new THREE.PerspectiveCamera(
+      38,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0xe8f8f1, 0x78928a, 2.1));
+
+    const sun = new THREE.DirectionalLight(0xfff4d6, 3.2);
+    sun.position.set(12, 20, 10);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 50;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0xb9e4e6, 0.75);
+    fill.position.set(-10, 8, -8);
+    scene.add(fill);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const materials = {
+      base: new THREE.MeshStandardMaterial({
+        color: 0x91b7aa,
+        roughness: 0.9
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0xd8d2bd,
+        roughness: 1
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x93b991,
+        roughness: 1
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x6f9b78,
+        roughness: 1
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0xb4cb9d,
+        roughness: 1
+      }),
+      path: new THREE.MeshStandardMaterial({
+        color: 0xe5d8b8,
+        roughness: 1
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf2f0df,
+        roughness: 0.85
+      }),
+      trim: new THREE.MeshStandardMaterial({
+        color: 0xd9e3d8,
+        roughness: 0.8
+      }),
+      roof: new THREE.MeshStandardMaterial({
+        color: 0x78b4bd,
+        roughness: 0.72,
+        metalness: 0.05
+      }),
+      roofDark: new THREE.MeshStandardMaterial({
+        color: 0x57939a,
+        roughness: 0.75
+      }),
+      roofLight: new THREE.MeshStandardMaterial({
+        color: 0x9bc8c7,
+        roughness: 0.7
+      }),
+      window: new THREE.MeshStandardMaterial({
+        color: 0x8fc5c5,
+        roughness: 0.28,
+        metalness: 0.15
+      }),
+      windowDark: new THREE.MeshStandardMaterial({
+        color: 0x4e7f80,
+        roughness: 0.35
+      }),
+      door: new THREE.MeshStandardMaterial({
+        color: 0x708b6c,
+        roughness: 0.8
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x55a9bd,
+        roughness: 0.24,
+        metalness: 0.12
+      }),
+      waterDark: new THREE.MeshStandardMaterial({
+        color: 0x357f91,
+        roughness: 0.28
+      }),
+      bark: new THREE.MeshStandardMaterial({
+        color: 0x79684f,
+        roughness: 1
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x9ec99a,
+        roughness: 1
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0xc2d9a8,
+        roughness: 1
+      }),
+      leafDark: new THREE.MeshStandardMaterial({
+        color: 0x709d78,
+        roughness: 1
+      }),
+      flower: new THREE.MeshStandardMaterial({
+        color: 0xd98f78,
+        roughness: 0.9
+      }),
+      flowerLight: new THREE.MeshStandardMaterial({
+        color: 0xe6b58f,
+        roughness: 0.9
+      }),
+      fence: new THREE.MeshStandardMaterial({
+        color: 0x738c78,
+        roughness: 0.9
+      }),
+      fenceDark: new THREE.MeshStandardMaterial({
+        color: 0x4e6c5e,
+        roughness: 0.9
+      })
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+    const voxel = (
+      x,
+      y,
+      z,
+      material,
+      size = 1,
+      castShadow = true,
+      receiveShadow = true
+    ) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    function makeHouse({
+      x,
+      z,
+      width,
+      depth,
+      height,
+      rotation = 0,
+      wallMaterial = materials.white,
+      roofMaterial = materials.roof
+    }) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      const wallHeight = height;
+
+      // Main body.
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(width, wallHeight, depth),
+        wallMaterial
+      );
+      body.position.y = wallHeight / 2;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      // Lower foundation.
+      const foundation = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.35, 0.35, depth + 0.35),
+        materials.trim
+      );
+      foundation.position.y = 0.17;
+      foundation.castShadow = true;
+      foundation.receiveShadow = true;
+      group.add(foundation);
+
+      // Roof: two sloped rectangular planes built from voxel strips.
+      const roofHalfDepth = depth / 2;
+      const roofRise = 1.25;
+      const roofLength = Math.sqrt(roofHalfDepth * roofHalfDepth + roofRise * roofRise);
+
+      const leftRoof = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.55, 0.28, roofLength),
+        roofMaterial
+      );
+      leftRoof.position.set(0, wallHeight + roofRise / 2, -roofHalfDepth / 2);
+      leftRoof.rotation.z = Math.atan2(roofRise, roofHalfDepth);
+      leftRoof.castShadow = true;
+      leftRoof.receiveShadow = true;
+      group.add(leftRoof);
+
+      const rightRoof = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.55, 0.28, roofLength),
+        roofMaterial
+      );
+      rightRoof.position.set(0, wallHeight + roofRise / 2, roofHalfDepth / 2);
+      rightRoof.rotation.z = -Math.atan2(roofRise, roofHalfDepth);
+      rightRoof.castShadow = true;
+      rightRoof.receiveShadow = true;
+      group.add(rightRoof);
+
+      // Roof ridge.
+      const ridge = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.65, 0.22, 0.28),
+        materials.roofDark
+      );
+      ridge.position.y = wallHeight + roofRise + 0.12;
+      ridge.castShadow = true;
+      group.add(ridge);
+
+      // Front and side windows.
+      const windowWidth = Math.min(0.72, width * 0.16);
+      const windowHeight = Math.min(0.62, height * 0.32);
+      const windowY = height * 0.58;
+
+      for (let i = 0; i < 3; i++) {
+        const wx = -width * 0.28 + (width * 0.56) * i;
+        if (wx + windowWidth / 2 > width / 2) continue;
+
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(windowWidth, windowHeight, 0.12),
+          i === 1 ? materials.windowDark : materials.window
+        );
+        windowMesh.position.set(wx, windowY, depth / 2 + 0.03);
+        windowMesh.castShadow = true;
+        group.add(windowMesh);
+
+        const frame = new THREE.Mesh(
+          new THREE.BoxGeometry(windowWidth + 0.12, windowHeight + 0.12, 0.1),
+          materials.trim
+        );
+        frame.position.set(wx, windowY, depth / 2 + 0.055);
+        frame.castShadow = true;
+        group.add(frame);
+      }
+
+      // Side windows.
+      for (let i = 0; i < 2; i++) {
+        const wz = -depth * 0.24 + depth * 0.48 * i;
+        const windowMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, windowHeight, windowWidth),
+          materials.window
+        );
+        windowMesh.position.set(width / 2 + 0.03, windowY, wz);
+        windowMesh.castShadow = true;
+        group.add(windowMesh);
+      }
+
+      // Door.
+      const doorMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.min(0.78, width * 0.22), 1.35, 0.12),
+        materials.door
+      );
+      doorMesh.position.set(
+        width * 0.16,
+        0.67,
+        depth / 2 + 0.04
+      );
+      doorMesh.castShadow = true;
+      group.add(doorMesh);
+
+      // Small porch.
+      const porch = new THREE.Mesh(
+        new THREE.BoxGeometry(width * 0.75, 0.18, 0.72),
+        materials.trim
+      );
+      porch.position.set(
+        width * 0.16,
+        0.1,
+        depth / 2 + 0.32
+      );
+      porch.castShadow = true;
+      porch.receiveShadow = true;
+      group.add(porch);
+
+      // Chimney.
+      const chimney = new THREE.Mesh(
+        new THREE.BoxGeometry(0.38, 1.25, 0.38),
+        materials.trim
+      );
+      chimney.position.set(-width * 0.2, wallHeight + 0.62, -depth * 0.18);
+      chimney.castShadow = true;
+      group.add(chimney);
+
+      // Roof tiles: thin voxel-like ribs.
+      const tileCount = Math.max(3, Math.floor(width / 0.45));
+      for (let i = 0; i < tileCount; i++) {
+        const tx = -width * 0.5 + (width * i) / (tileCount - 1);
+        const tile = new THREE.Mesh(
+          new THREE.BoxGeometry(0.075, 0.12, roofLength * 0.82),
+          i % 2 === 0 ? roofDark : roofLight
+        );
+        tile.position.set(tx, wallHeight + roofRise + 0.15, 0);
+        tile.rotation.z = 0;
+        tile.castShadow = true;
+        group.add(tile);
+      }
+
+      scene.add(group);
+    }
+
+    // ------------------------------------------------------------
+    // Terrain and village layout
+    // ------------------------------------------------------------
+    const terrain = new THREE.Mesh(
+      new THREE.PlaneGeometry(44, 38),
+      materials.base
+    );
+    terrain.rotation.x = -Math.PI / 2;
+    terrain.position.y = -0.12;
+    terrain.receiveShadow = true;
+    scene.add(terrain);
+
+    // Main courtyard.
+    const courtyard = new THREE.Mesh(
+      new THREE.PlaneGeometry(28, 23),
+      materials.soil
+    );
+    courtyard.rotation.x = -Math.PI / 2;
+    courtyard.position.set(0, -0.055, 1);
+    courtyard.receiveShadow = true;
+    scene.add(courtyard);
+
+    // Main path.
+    const mainPath = new THREE.Mesh(
+      new THREE.PlaneGeometry(10, 26),
+      materials.path
+    );
+    mainPath.rotation.x = -Math.PI / 2;
+    mainPath.position.set(0, -0.035, 0.5);
+    mainPath.receiveShadow = true;
+    scene.add(mainPath);
+
+    // Side paths.
+    const leftPath = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.2, 18),
+      materials.path
+    );
+    leftPath.rotation.x = -Math.PI / 2;
+    leftPath.position.set(-10, -0.03, 1.5);
+    leftPath.receiveShadow = true;
+    scene.add(leftPath);
+
+    const rightPath = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.2, 18),
+      materials.path
+    );
+    rightPath.rotation.x = -Math.PI / 2;
+    rightPath.position.set(10, -0.03, 1.5);
+    rightPath.receiveShadow = true;
+    scene.add(rightPath);
+
+    // Cross path.
+    const crossPath = new THREE.Mesh(
+      new THREE.PlaneGeometry(24, 5),
+      materials.path
+    );
+    crossPath.rotation.x = -Math.PI / 2;
+    crossPath.position.set(0, -0.03, -6.5);
+    crossPath.receiveShadow = true;
+    scene.add(crossPath);
+
+    // ------------------------------------------------------------
+    // Houses
+    // ------------------------------------------------------------
+    makeHouse({
+      x: -7.3,
+      z: -6.2,
+      width: 6.4,
+      depth: 5.2,
+      height: 3.25,
+      rotation: -0.08,
+      wallMaterial: materials.white,
+      roofMaterial: materials.roof
+    });
+
+    makeHouse({
+      x: 7.3,
+      z: -6.2,
+      width: 6.4,
+      depth: 5.2,
+      height: 3.25,
+      rotation: 0.08,
+      wallMaterial: materials.trim,
+      roofMaterial: materials.roofLight
+    });
+
+    makeHouse({
+      x: 0.2,
+      z: 4.5,
+      width: 8.6,
+      depth: 6.2,
+      height: 3.8,
+      rotation: 0,
+      wallMaterial: materials.white,
+      roofMaterial: materials.roofDark
+    });
+
+    // ------------------------------------------------------------
+    // Gardens
+    // ------------------------------------------------------------
+    function makeGarden(x, z, width, depth, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      const bed = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, depth),
+        materials.grassDark
+      );
+      bed.rotation.x = -Math.PI / 2;
+      bed.position.y = 0.015;
+      bed.receiveShadow = true;
+      group.add(bed);
+
+      // Border stones.
+      const borderMaterial = materials.trim;
+      const borderThickness = 0.25;
+
+      for (let i = 0; i < 7; i++) {
+        const stone = new THREE.Mesh(
+          new THREE.BoxGeometry(borderThickness, 0.2, borderThickness),
+          borderMaterial
+        );
+        stone.position.set(-width / 2 + 0.2, 0.12, -depth / 2 + i * (depth - 0.4) / 6);
+        stone.castShadow = true;
+        stone.receiveShadow = true;
+        group.add(stone);
+      }
+
+      for (let i = 0; i < 7; i++) {
+        const stone = new THREE.Mesh(
+          new THREE.BoxGeometry(borderThickness, 0.2, borderThickness),
+          borderMaterial
+        );
+        stone.position.set(-width / 2 + i * (width - 0.4) / 6, 0.12, depth / 2 - 0.2);
+        stone.castShadow = true;
+        stone.receiveShadow = true;
+        group.add(stone);
+      }
+
+      // Plants and flowers.
+      const plantCount = 10;
+      for (let i = 0; i < plantCount; i++) {
+        const px = -width * 0.36 + (width * 0.72 * i) / (plantCount - 1);
+        const pz = (Math.random() - 0.5) * depth * 0.65;
+
+        const plant = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.25, 0.35 + Math.random() * 0.18, 6),
+          i % 3 === 0 ? materials.leafDark : materials.leaf
+        );
+        plant.position.set(px, 0.2, pz);
+        plant.castShadow = true;
+        plant.receiveShadow = true;
+        group.add(plant);
+
+        if (i % 2 === 0) {
+          const flower = new THREE.Mesh(
+            new THREE.SphereGeometry(0.16, 7, 5),
+            i % 4 === 0 ? materials.flowerLight : materials.flower
+          );
+          flower.position.set(px, 0.43, pz);
+          flower.castShadow = true;
+          group.add(flower);
+        }
+      }
+
+      scene.add(group);
+    }
+
+    makeGarden(-7.4, 0.3, 5.6, 6.3, 0.05);
+    makeGarden(7.4, 0.3, 5.6, 6.3, -0.05);
+
+    // ------------------------------------------------------------
+    // Water feature
+    // ------------------------------------------------------------
+    const waterGroup = new THREE.Group();
+    waterGroup.position.set(-6.6, 0, -5.25);
+    waterGroup.rotation.y = 0.08;
+
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.3, 7.3),
+      materials.water
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = 0.04;
+    water.receiveShadow = true;
+    waterGroup.add(water);
+
+    // Water border / bridge.
+    for (let i = 0; i < 8; i++) {
+      const stone = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.32, 0.55),
+        i % 2 === 0 ? materials.trim : materials.fence
+      );
+      stone.position.set(-1.9 + i * 0.5, 0.16, -3.35);
+      stone.rotation.y = 0.12;
+      stone.castShadow = true;
+      stone.receiveShadow = true;
+      waterGroup.add(stone);
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const stone = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.32, 0.55),
+        i % 2 === 0 ? materials.trim : materials.fence
+      );
+      stone.position.set(-1.9 + i * 0.5, 0.16, 3.35);
+      stone.rotation.y = -0.12;
+      stone.castShadow = true;
+      stone.receiveShadow = true;
+      waterGroup.add(stone);
+    }
+
+    // Water ripples made from small pale cubes.
+    for (let i = 0; i < 12; i++) {
+      const ripple = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22 + Math.random() * 0.35, 0.025, 0.12),
+        materials.waterDark
+      );
+      ripple.position.set(
+        (Math.random() - 0.5) * 3.5,
+        0.075,
+        (Math.random() - 0.5) * 6.2
+      );
+      waterGroup.add(ripple);
+    }
+
+    scene.add(waterGroup);
+
+    // ------------------------------------------------------------
+    // Trees
+    // ------------------------------------------------------------
+    function makeTree(x, z, scale = 1, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
+
+      // Trunk.
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.27, 1.65, 7),
+        materials.bark
+      );
+      trunk.position.y = 0.82;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      group.add(trunk);
+
+      // Voxel canopy.
+      const layers = [
+        { y: 1.65, sx: 1.25, sz: 1.25 },
+        { y: 2.25, sx: 1.05, sz: 1.05 },
+        { y: 2.8, sx: 0.78, sz: 0.78 }
+      ];
+
+      for (const layer of layers) {
+        const canopy = new THREE.Mesh(
+          new THREE.BoxGeometry(layer.sx, 0.42, layer.sz),
+          Math.random() > 0.5 ? materials.leaf : materials.leafLight
+        );
+        canopy.position.y = layer.y;
+        canopy.castShadow = true;
+        canopy.receiveShadow = true;
+        group.add(canopy);
+      }
+
+      scene.add(group);
+    }
+
+    const treePositions = [
+      [-12.7, -10.8], [-11.8, -9.7], [-10.8, -8.7],
+      [-12.7, -7.8], [-11.7, -6.8], [-10.7, -5.8],
+      [-12.7, -4.8], [-11.7, -3.8], [-10.7, -2.8],
+      [-12.7, -1.8], [-11.7, -0.8], [-10.7, 0.2],
+      [-12.7, 1.2], [-11.7, 2.2], [-10.7, 3.2],
+      [-12.7, 4.2], [-11.7, 5.2], [-10.7, 6.2],
+      [-12.7, 7.2], [-11.7, 8.2], [-10.7, 9.2],
+      [-12.7, 10.2], [-11.7, 11.2], [-10.7, 12.2],
+      [12.7, -10.8], [11.7, -9.7], [10.7, -8.7],
+      [12.7, -7.8], [11.7, -6.8], [10.7, -5.8],
+      [12.7, -4.8], [11.7, -3.8], [10.7, -2.8],
+      [12.7, -1.8], [11.7, -0.8], [10.7, 0.2],
+      [12.7, 1.2], [11.7, 2.2], [10.7, 3.2],
+      [12.7, 4.2], [11.7, 5.2], [10.7, 6.2],
+      [12.7, 7.2], [11.7, 8.2], [10.7, 9.2],
+      [12.7, 10.2], [11.7, 11.2], [10.7, 12.2],
+      [4.7, -12.2], [5.7, -13.1], [6.7, -14.0],
+      [-4.7, -12.2], [-5.7, -13.1], [-6.7, -14.0],
+      [4.7, 12.2], [5.7, 13.1], [6.7, 14.0],
+      [-4.7, 12.2], [-5.7, 13.1], [-6.7, 14.0]
+    ];
+
+    treePositions.forEach(([x, z], i) => {
+      makeTree(x, z, 0.88 + (i % 4) * 0.07, i * 0.7);
+    });
+
+    // Smaller trees around the water.
+    makeTree(-9.6, -8.4, 0.78);
+    makeTree(9.6, -8.4, 0.78);
+    makeTree(-9.6, 7.8, 0.75);
+    makeTree(9.6, 7.8, 0.75);
+
+    // ------------------------------------------------------------
+    // Fence along the front and sides
+    // ------------------------------------------------------------
+    function makeFence(x, z, width, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotation;
+
+      const postCount = Math.ceil(width / 1.25);
+      const postSpacing = width / postCount;
+
+      for (let i = 0; i <= postCount; i++) {
+        const px = -width / 2 + i * postSpacing;
+        const post = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 0.85, 0.2),
+          materials.fence
+        );
+        post.position.set(px, 0.42, 0);
+        post.castShadow = true;
+        post.receiveShadow = true;
+        group.add(post);
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const rail = new THREE.Mesh(
+          new THREE.BoxGeometry(width, 0.13, 0.13),
+          i === 1 ? materials.fenceDark : materials.fence
+        );
+        rail.position.set(0, 0.25 + i * 0.25, 0);
+        rail.castShadow = true;
+        rail.receiveShadow = true;
+        group.add(rail);
+      }
+
+      scene.add(group);
+    }
+
+    makeFence(0, 14.25, 28.5, 0);
+    makeFence(-14.25, 0, 28.5, Math.PI / 2);
+    makeFence(14.25, 0, 28.5, -Math.PI / 2);
+
+    // Corner posts.
+    for (const [x, z] of [
+      [-14.25, -14.25],
+      [14.25, -14.25],
+      [-14.25, 14.25],
+      [14.25, 14.25]
+    ]) {
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 1.1, 0.45),
+        materials.fenceDark
+      );
+      post.position.set(x, 0.55, z);
+      post.castShadow = true;
+      post.receiveShadow = true;
+      scene.add(post);
+    }
+
+    // ------------------------------------------------------------
+    // Small foreground details
+    // ------------------------------------------------------------
+    // A few stepping stones lead toward the water.
+    for (let i = 0; i < 5; i++) {
+      const stone = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.38, 0.46, 0.18, 7),
+        i % 2 ? materials.trim : materials.path
+      );
+      stone.position.set(-6.6 + i * 0.18, 0.08, -10.2 - i * 0.55);
+      stone.rotation.y = i * 0.6;
+      stone.castShadow = true;
+      stone.receiveShadow = true;
+      scene.add(stone);
+    }
+
+    // Small bench.
+    const bench = new THREE.Group();
+    bench.position.set(2.5, 0, -1.8);
+    bench.rotation.y = -0.35;
+
+    const seat = new THREE.Mesh(
+      new THREE.BoxGeometry(2.1, 0.18, 0.62),
+      materials.bark
+    );
+    seat.position.y = 0.7;
+    seat.castShadow = true;
+    seat.receiveShadow = true;
+    bench.add(seat);
+
+    for (const x of [-0.85, 0.85]) {
+      const leg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.7, 0.48),
+        materials.fenceDark
+      );
+      leg.position.set(x, 0.35, 0);
+      leg.castShadow = true;
+      bench.add(leg);
+    }
+
+    scene.add(bench);
+
+    // ------------------------------------------------------------
+    // Custom camera controls
+    // ------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 0.7, 0),
+      radius: 31,
+      theta: Math.PI * 0.22,
+      phi: Math.PI * 0.25,
+      minRadius: 13,
+      maxRadius: 48,
+      minPhi: 0.28,
+      maxPhi: 1.32
+    };
+
+    const initialControls = {
+      target: controls.target.clone(),
+      radius: controls.radius,
+      theta: controls.theta,
+      phi: controls.phi
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    let dragging = false;
+    let panning = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      panning = event.button === 2 || event.shiftKey;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      if (panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const panScale = controls.radius * 0.0015;
+        controls.target.addScaledVector(right, -dx * panScale);
+        controls.target.addScaledVector(up, dy * panScale);
+        controls.target.y = THREE.MathUtils.clamp(controls.target.y, -1, 7);
+      } else {
+        controls.theta -= dx * 0.006;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - dy * 0.005,
+          controls.minPhi,
+          controls.maxPhi
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      panning = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", (event) => event.preventDefault());
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius * Math.exp(event.deltaY * 0.001),
+        controls.minRadius,
+        controls.maxRadius
+      );
+      updateCamera();
+    }, { passive: false });
+
+    updateCamera();
+
+    // ------------------------------------------------------------
+    // Resize and animation
+    // ------------------------------------------------------------
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Gentle water movement.
+      waterGroup.children.forEach((child, index) => {
+        if (child.isMesh && child.material === materials.water) {
+          child.position.y = 0.045 + Math.sin(performance.now() * 0.0015 + index) * 0.012;
+        }
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

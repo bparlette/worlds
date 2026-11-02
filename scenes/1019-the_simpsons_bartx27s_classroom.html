@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Art Classroom</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #9eb8c4;
+      font-family: system-ui, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hud {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      padding: 12px 16px;
+      color: #17303a;
+      background: rgba(255, 248, 232, 0.9);
+      border: 2px solid #334b55;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(20, 40, 50, 0.18);
+      pointer-events: none;
+    }
+
+    .hud h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      letter-spacing: 0.04em;
+    }
+
+    .hud p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.72;
+    }
+
+    .controls {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 10;
+      padding: 10px 14px;
+      color: #17303a;
+      background: rgba(255, 248, 232, 0.9);
+      border: 2px solid #334b55;
+      border-radius: 10px;
+      box-shadow: 0 8px 25px rgba(20, 40, 50, 0.18);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 10px;
+        left: 10px;
+      }
+
+      .controls {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <h1>Pixel Art Classroom</h1>
+    <p>An interactive voxel teaching environment</p>
+  </div>
+  <div class="controls">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from
+      "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xa9c1cc);
+    scene.fog = new THREE.Fog(0xa9c1cc, 24, 48);
+
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    document.body.appendChild(renderer.domElement);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const material = (color, roughness = 0.82, metalness = 0) =>
+      new THREE.MeshStandardMaterial({
+        color,
+        roughness,
+        metalness
+      });
+
+    const mats = {
+      wall: material(0xa5d7b4),
+      wallDark: material(0x79b892),
+      ceiling: material(0xe3a08a),
+      trim: material(0x38515a),
+      desk: material(0xd88f91),
+      deskEdge: material(0xa95c65),
+      chair: material(0xd96578),
+      chairLeg: material(0x38484e),
+      floor: material(0x6b4b43),
+      floorLine: material(0x8b6254),
+      blackboard: material(0x263943),
+      boardFrame: material(0x38515a),
+      gold: material(0xd5a64d, 0.65, 0.15),
+      white: material(0xf3eee0),
+      red: material(0xd95f58),
+      blue: material(0x4e8da8),
+      purple: material(0x8c63a8),
+      green: material(0x63ad78),
+      yellow: material(0xe9c45e),
+      orange: material(0xe58b43),
+      pink: material(0xd9839c),
+      dark: material(0x263238),
+      paper: material(0xf5ead6),
+      glass: material(0x83b6c1, 0.35, 0.1)
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+    const cube = new THREE.BoxGeometry(1, 1, 1);
+    const voxel = (
+      x,
+      y,
+      z,
+      sx = 1,
+      sy = 1,
+      sz = 1,
+      mat,
+      castShadow = true,
+      receiveShadow = true
+    ) => {
+      const mesh = new THREE.Mesh(cube, mat);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      scene.add(mesh);
+      return mesh;
+    };
+
+    const voxels = [];
+
+    function addVoxel(x, y, z, sx, sy, sz, mat) {
+      voxels.push({
+        x,
+        y,
+        z,
+        sx,
+        sy,
+        sz,
+        mat
+      });
+    }
+
+    function addBox(x, y, z, sx, sy, sz, mat) {
+      const mesh = voxel(x, y, z, sx, sy, sz, mat);
+      return mesh;
+    }
+
+    // ------------------------------------------------------------
+    // Room shell
+    // ------------------------------------------------------------
+    const room = new THREE.Group();
+    scene.add(room);
+
+    const roomW = 19;
+    const roomD = 13;
+
+    // Back and left walls
+    addBox(0, 4.5, -roomD / 2, roomW, 9, 0.35, mats.wall);
+    addBox(-roomW / 2, 4.5, 0, 0.35, 9, roomD, mats.wall);
+
+    // Wall trim and baseboards
+    addBox(0, 1.05, -roomD / 2 + 0.19, roomW, 0.18, 0.12, mats.trim);
+    addBox(-roomW / 2 + 0.19, 1.05, 0, 0.12, 0.18, roomD, mats.trim);
+    addBox(0, 8.65, -roomD / 2 + 0.18, roomW, 0.18, 0.12, mats.trim);
+    addBox(-roomW / 2 + 0.18, 8.65, 0, 0.12, 0.18, roomD, mats.trim);
+
+    // Ceiling
+    addBox(0, 9.05, 0, roomW + 0.4, 0.35, roomD + 0.4, mats.ceiling);
+
+    // Ceiling panels
+    for (let x = -7.5; x <= 7.5; x += 2.5) {
+      for (let z = -5.5; z <= 5.5; z += 2.5) {
+        addBox(x, 8.87, z, 2.25, 0.12, 2.25, mats.wallDark);
+      }
+    }
+
+    // Ceiling beams
+    for (let x = -7.5; x <= 7.5; x += 2.5) {
+      addBox(x, 8.72, 0, 0.16, 0.16, 11, mats.trim);
+    }
+
+    // Floor
+    addBox(0, 0.1, 0, roomW, 0.2, roomD, mats.floor);
+
+    // Floor grid
+    for (let x = -8.5; x <= 8.5; x += 1) {
+      addBox(x, 0.215, 0, 0.035, 0.015, roomD - 1, mats.floorLine);
+    }
+    for (let z = -6; z <= 6; z += 1) {
+      addBox(0, 0.216, z, roomW - 1, 0.015, 0.035, mats.floorLine);
+    }
+
+    // ------------------------------------------------------------
+    // Windows
+    // ------------------------------------------------------------
+    function addWindow(x, y, z, width = 2.6, height = 2.4) {
+      addBox(x, y, z, width, height, 0.18, mats.trim);
+      addBox(x, y, z + 0.12, width - 0.25, height - 0.25, 0.08, mats.white);
+      addBox(x, y, z + 0.21, 0.08, height - 0.25, 0.05, mats.trim);
+      addBox(x, y, z + 0.21, width - 0.25, 0.08, 0.05, mats.trim);
+
+      // Pixel sky
+      for (let dx = -3; dx <= 3; dx++) {
+        for (let dy = -3; dy <= 3; dy++) {
+          const pixel = Math.abs(dx) + Math.abs(dy) <= 2;
+          if (!pixel) continue;
+          addBox(
+            x + dx * 0.23,
+            y + dy * 0.23,
+            z + 0.25,
+            0.2,
+            0.2,
+            0.08,
+            (dx + dy) % 2 === 0 ? mats.blue : mats.white
+          );
+        }
+      }
+    }
+
+    addWindow(-6.65, 6.55, -6.55, 2.2, 2.1);
+    addWindow(6.65, 6.55, -6.55, 2.2, 2.1);
+
+    // ------------------------------------------------------------
+    // Door
+    // ------------------------------------------------------------
+    const door = new THREE.Group();
+    door.position.set(5.75, 0, -6.25);
+    room.add(door);
+
+    addBox(0, 2.9, 0, 1.55, 5.8, 0.25, mats.trim);
+    addBox(0, 2.9, 0.16, 1.28, 5.5, 0.1, mats.white);
+    addBox(0, 2.9, 0.25, 0.9, 4.1, 0.08, mats.blue);
+    addBox(0, 2.9, 0.3, 0.8, 3.7, 0.06, mats.glass);
+    addBox(0.45, 2.9, 0.34, 0.12, 0.65, 0.12, mats.gold);
+
+    // Door frame
+    addBox(4.35, 2.9, -6.25, 0.2, 5.8, 0.3, mats.trim);
+    addBox(7.15, 2.9, -6.25, 0.2, 5.8, 0.3, mats.trim);
+
+    // ------------------------------------------------------------
+    // Blackboard
+    // ------------------------------------------------------------
+    const board = new THREE.Group();
+    board.position.set(-1.25, 4.25, -6.0);
+    board.rotation.y = 0.02;
+    room.add(board);
+
+    addBox(0, 0, 0, 7.2, 3.8, 0.3, mats.boardFrame);
+    addBox(0, 0, 0.18, 6.85, 3.45, 0.12, mats.blackboard);
+
+    // Pixel lettering: "PIXEL ART IS NOT REAL ART"
+    const text = "PIXEL ART IS NOT REAL ART";
+    const fontSize = 0.29;
+    const spacing = 0.34;
+
+    function pixelText(text, centerX, centerY, z, colorMat, fontSize = 0.29) {
+      const chars = [...text];
+      const totalWidth = chars.length * spacing + (chars.length - 1) * fontSize * 0.65;
+      const startX = centerX - totalWidth / 2;
+
+      for (let i = 0; i < chars.length; i++) {
+        const glyph = getGlyph(chars[i]);
+        const row = glyph.rows;
+
+        for (let y = 0; y < row; y++) {
+          for (let x = 0; x < glyph.cols; x++) {
+            if (glyph.mask[y][x] === 1) {
+              addBox(
+                startX + (i * spacing + x) * fontSize,
+                centerY + (row - 1 - y) * fontSize,
+                z,
+                fontSize * 0.78,
+                fontSize * 0.78,
+                0.08,
+                colorMat
+              );
+            }
+          }
+        }
+      }
+    }
+
+    function getGlyph(char) {
+      const glyphs = {
+        A: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0]
+          ]
+        },
+        B: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        C: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0]
+          ]
+        },
+        D: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        E: {
+          rows: 5,
+          mask: [
+            [1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1]
+          ]
+        },
+        F: {
+          rows: 5,
+          mask: [
+            [1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1]
+          ]
+        },
+        G: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 1],
+            [0, 1, 0, 1, 0]
+          ]
+        },
+        H: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        I: {
+          rows: 5,
+          mask: [
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        J: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [1, 1, 1, 1, 1]
+          ]
+        },
+        K: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        L: {
+          rows: 5,
+          mask: [
+            [1, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1]
+          ]
+        },
+        M: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        N: {
+          rows: 5,
+          mask: [
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1],
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        O: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        P: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1]
+          ]
+        },
+        Q: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1],
+            [1, 0, 1, 0, 1]
+          ]
+        },
+        R: {
+          rows: 5,
+          mask: [
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        S: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 1],
+            [0, 1, 0, 1, 0]
+          ]
+        },
+        T: {
+          rows: 5,
+          mask: [
+            [1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        U: {
+          rows: 5,
+          mask: [
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1]
+          ]
+        },
+        V: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        W: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        X: {
+          rows: 5,
+          mask: [
+            [1, 0, 0, 0, 1],
+            [0, 1, 0, 1, 0],
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        Y: {
+          rows: 5,
+          mask: [
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1]
+          ]
+        },
+        Z: {
+          rows: 5,
+          mask: [
+            [1, 1, 1, 1, 1],
+            [0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [1, 0, 0, 0, 1]
+          ]
+        }
+      };
+
+      return glyphs[char.toUpperCase()] || {
+        rows: 5,
+        mask: [
+          [1, 1, 1, 1, 1],
+          [1, 0, 0, 0, 1],
+          [1, 0, 0, 0, 1],
+          [1, 0, 0, 0, 1],
+          [1, 1, 1, 1, 1]
+        ]
+      };
+    }
+
+    pixelText(text, 0, 0.25, 0.29, mats.gold, 0.3);
+
+    // Small board decoration
+    addBox(2.75, 0.65, 0.35, 0.75, 0.75, 0.1, mats.yellow);
+    addBox(2.75, 0.65, 0.42, 0.48, 0.48, 0.05, mats.white);
+
+    // ------------------------------------------------------------
+    // Wall alphabet strip
+    // ------------------------------------------------------------
+    const alphabet = "Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz";
+    const alphabetGroup = new THREE.Group();
+    alphabetGroup.position.set(-1.25, 7.75, -5.95);
+    room.add(alphabetGroup);
+
+    for (let i = 0; i < alphabet.length; i++) {
+      const char = alphabet[i];
+      const glyph = getGlyph(char);
+      const totalWidth = alphabet.length * 0.27 + alphabet.length * 0.08;
+      const startX = -totalWidth / 2;
+
+      for (let y = 0; y < glyph.rows; y++) {
+        for (let x = 0; x < glyph.cols; x++) {
+          if (glyph.mask[y][x] === 1) {
+            alphabetGroup.add(
+              voxel(
+                startX + (i * 0.27 + x) * 0.22,
+                0.23,
+                0,
+                0.17,
+                0.17,
+                0.1,
+                mats.white
+              )
+            );
+          }
+        }
+      }
+    }
+
+    // ------------------------------------------------------------
+    // Clock
+    // ------------------------------------------------------------
+    const clock = new THREE.Group();
+    clock.position.set(-6.75, 7.9, -5.95);
+    room.add(clock);
+
+    addBox(0, 0, 0, 0.85, 0.85, 0.18, mats.trim);
+    addBox(0, 0, 0.11, 0.68, 0.68, 0.1, mats.white);
+    addBox(0, 0.08, 0.17, 0.12, 0.12, 0.06, mats.red);
+    addBox(0, 0.25, 0.17, 0.045, 0.045, 0.05, mats.red);
+
+    // ------------------------------------------------------------
+    // Bulletin board
+    // ------------------------------------------------------------
+    const bulletin = new THREE.Group();
+    bulletin.position.set(6.55, 4.25, -5.95);
+    room.add(bulletin);
+
+    addBox(0, 0, 0, 4.4, 3.25, 0.28, mats.purple);
+    addBox(0, 0, 0.18, 4.1, 2.95, 0.12, mats.trim);
+
+    // Pixel drawing: a stylized sunflower
+    const flower = new THREE.Group();
+    flower.position.set(0.9, 0.25, 0.32);
+    bulletin.add(flower);
+
+    for (let y = 0; y < 5; y++) {
+      for (let x = 0; x < 5; x++) {
+        const dist = Math.sqrt((x - 2) ** 2 + (y - 2) ** 2);
+        if (dist <= 2.2 && dist >= 0.45) {
+          flower.add(
+            voxel(
+              (x - 2) * 0.2,
+              (2 - y) * 0.2,
+              0,
+              0.18,
+              0.18,
+              0.1,
+              mats.yellow
+            )
+          );
+        }
+      }
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      flower.add(
+        voxel(
+          Math.cos(angle) * 0.45,
+          Math.sin(angle) * 0.45,
+          0,
+          0.12,
+          0.25,
+          0.08,
+          mats.orange
+        )
+      );
+    }
+
+    // Notes and schedule
+    for (let i = 0; i < 5; i++) {
+      const note = new THREE.Group();
+      note.position.set(-1.35 + i * 0.75, 0.2, 0.3);
+      bulletin.add(note);
+
+      addBox(0, 0, 0, 0.48, 0.68, 0.08, mats.paper);
+      addBox(0, 0.18, 0.06, 0.38, 0.12, 0.04, mats.blue);
+      addBox(0, -0.12, 0.06, 0.38, 0.12, 0.04, mats.orange);
+    }
+
+    // ------------------------------------------------------------
+    // Teacher's desk and supplies
+    // ------------------------------------------------------------
+    const teacherDesk = new THREE.Group();
+    teacherDesk.position.set(-1.25, 0, -4.75);
+    room.add(teacherDesk);
+
+    addBox(0, 0.85, 0, 3.4, 0.16, 1.35, mats.desk);
+    addBox(0, 0.72, 0, 3.55, 0.3, 1.45, mats.deskEdge);
+    addBox(0, 0.36, 0, 3.4, 0.72, 1.35, mats.deskEdge);
+
+    for (const x of [-1.45, 1.45]) {
+      for (const z of [-0.48, 0.48]) {
+        addBox(x, 0.1, z, 0.12, 0.65, 0.12, mats.chairLeg);
+      }
+    }
+
+    // Teacher's chair
+    addBox(0, 0.45, 1.25, 0.9, 0.18, 0.9, mats.chair);
+    addBox(0, 1.05, 1.25, 0.9, 0.6, 0.9, mats.chair);
+    for (const x of [-0.35, 0.35]) {
+      for (const z of [0.85, 1.65]) {
+        addBox(x, 0.08, z, 0.1, 0.55, 0.1, mats.chairLeg);
+      }
+    }
+
+    // Teacher's stack of books
+    for (let i = 0; i < 4; i++) {
+      addBox(
+        -0.65,
+        1.05 + i * 0.14,
+        0.25,
+        0.65,
+        0.12,
+        0.5,
+        [mats.blue, mats.green, mats.yellow, mats.purple][i]
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Student desks
+    // ------------------------------------------------------------
+    function addStudentDesk(x, z, rotation = 0) {
+      const desk = new THREE.Group();
+      desk.position.set(x, 0, z);
+      desk.rotation.y = rotation;
+      room.add(desk);
+
+      addBox(0, 0.85, 0, 1.45, 0.15, 0.7, mats.desk);
+      addBox(0, 0.72, 0, 1.55, 0.25, 0.75, mats.deskEdge);
+      addBox(0, 0.36, 0, 1.45, 0.7, 0.7, mats.deskEdge);
+
+      for (const lx of [-0.57, 0.57]) {
+        for (const lz of [-0.25, 0.25]) {
+          addBox(lx, 0.08, lz, 0.08, 0.55, 0.08, mats.chairLeg);
+        }
+      }
+
+      // Small pixel book on each desk
+      addBox(
+        0.25,
+        1.0,
+        0,
+        0.42,
+        0.1,
+        0.3,
+        [mats.red, mats.blue, mats.green, mats.yellow][
+          Math.round((x + z) * 1.7) % 4
+        ]
+      );
+    }
+
+    addStudentDesk(-4.75, 1.25, Math.PI);
+    addStudentDesk(-3.25, 1.25, Math.PI);
+    addStudentDesk(0.25, 1.25, Math.PI);
+    addStudentDesk(1.75, 1.25, Math.PI);
+    addStudentDesk(3.25, 1.25, Math.PI);
+    addStudentDesk(4.75, 1.25, Math.PI);
+
+    // Chairs
+    function addStudentChair(x, z, rotation = 0) {
+      const chair = new THREE.Group();
+      chair.position.set(x, 0, z);
+      chair.rotation.y = rotation;
+      room.add(chair);
+
+      addBox(0, 0.45, 0, 0.72, 0.15, 0.72, mats.chair);
+      for (const lx of [-0.28, 0.28]) {
+        for (const lz of [-0.28, 0.28]) {
+          addBox(lx, 0.08, lz, 0.08, 0.5, 0.08, mats.chairLeg);
+        }
+      }
+    }
+
+    for (const x of [-4.75, -3.25, 0.25, 1.75, 3.25, 4.75]) {
+      addStudentChair(x, 0.05, Math.PI);
+    }
+
+    // ------------------------------------------------------------
+    // Teacher's cart / bookshelf
+    // ------------------------------------------------------------
+    const bookshelf = new THREE.Group();
+    bookshelf.position.set(6.25, 0, 2.65);
+    bookshelf.rotation.y = -0.1;
+    room.add(bookshelf);
+
+    addBox(0, 1.25, 0, 3.8, 0.18, 1.15, mats.blue);
+    addBox(0, 2.65, 0, 3.8, 0.18, 1.15, mats.blue);
+    addBox(0, 0.58, 0, 3.8, 0.1, 1.15, mats.blue);
+    addBox(0, 1.95, 0, 3.8, 0.1, 1.15, mats.blue);
+
+    for (const x of [-1.65, 1.65]) {
+      addBox(x, 0.08, 0, 0.12, 1.25, 0.12, mats.chairLeg);
+    }
+
+    // Books
+    const bookMats = [
+      mats.red,
+      mats.blue,
+      mats.green,
+      mats.yellow,
+      mats.purple,
+      mats.orange,
+      mats.white
+    ];
+
+    for (let shelf = 0; shelf < 3; shelf++) {
+      const y = 0.78 + shelf * 1.25;
+      let x = -1.4;
+
+      while (x < 1.35) {
+        const count = 5 + Math.floor(Math.random() * 4);
+        const bookWidth = 0.34;
+
+        for (let i = 0; i < count; i++) {
+          addBox(
+            x + bookWidth * (i + 0.5),
+            y + 0.12,
+            0,
+            bookWidth,
+            0.55,
+            0.48,
+            bookMats[(i + shelf) % bookMats.length]
+          );
+        }
+
+        x += count * bookWidth + 0.1;
+      }
+    }
+
+    // ------------------------------------------------------------
+    // Wall clock and small decorations
+    // ------------------------------------------------------------
+    addBox(5.7, 7.9, -5.95, 0.55, 0.55, 0.15, mats.red);
+    addBox(5.7, 7.9, -5.84, 0.38, 0.38, 0.08, mats.white);
+    addBox(5.7, 8.05, -5.78, 0.045, 0.045, 0.06, mats.red);
+    addBox(5.7, 7.8, -5.78, 0.045, 0.045, 0.06, mats.red);
+
+    // Small wall clock
+    addBox(-6.7, 6.8, -5.9, 0.45, 0.45, 0.15, mats.red);
+    addBox(-6.7, 6.8, -5.82, 0.28, 0.28, 0.08, mats.white);
+    addBox(-6.7, 6.9, -5.76, 0.04, 0.04, 0.06, mats.red);
+    addBox(-6.7, 6.66, -5.76, 0.04, 0.04, 0.06, mats.red);
+
+    // Fire alarm
+    addBox(3.25, 6.65, -5.95, 0.35, 0.45, 0.18, mats.red);
+    addBox(3.25, 6.55, -5.85, 0.24, 0.24, 0.08, mats.white);
+
+    // Wall speaker
+    addBox(2.4, 6.7, -5.95, 0.55, 0.55, 0.18, mats.trim);
+    addBox(2.4, 6.7, -5.84, 0.35, 0.35, 0.08, mats.black);
+
+    // Small plant in a pot
+    const plant = new THREE.Group();
+    plant.position.set(-8.25, 0, -5.8);
+    room.add(plant);
+
+    addBox(0, 0.25, 0, 0.55, 0.5, 0.55, mats.orange);
+    addBox(0, 0.5, 0, 0.42, 0.12, 0.42, mats.trim);
+
+    for (let i = 0; i < 9; i++) {
+      const angle = (i / 9) * Math.PI * 2;
+      const h = 0.8 + (i % 3) * 0.22;
+      plant.add(
+        voxel(
+          Math.cos(angle) * 0.18,
+          h,
+          Math.sin(angle) * 0.18,
+          0.18,
+          0.45,
+          0.18,
+          mats.green
+        )
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Lighting
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0xd9f2ff, 0x6a4b3c, 1.55));
+
+    const sun = new THREE.DirectionalLight(0xffe6bd, 2.4);
+    sun.position.set(-7, 12, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -13;
+    sun.shadow.camera.right = 13;
+    sun.shadow.camera.top = 13;
+    sun.shadow.camera.bottom = -13;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.00025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8bc9e6, 0.8);
+    fill.position.set(8, 7, -9);
+    scene.add(fill);
+
+    // Rectangular ceiling lights
+    for (const x of [-5.5, 0, 5.5]) {
+      const light = new THREE.PointLight(0xffe3a8, 22, 12, 2);
+      light.position.set(x, 8.45, 0);
+      scene.add(light);
+    }
+
+    // ------------------------------------------------------------
+    // Pixel-art foreground decorations
+    // ------------------------------------------------------------
+    // A pixel-style "HOMEWORK" sign on the front wall
+    const homeworkSign = new THREE.Group();
+    homeworkSign.position.set(0, 5.4, 6.45);
+    room.add(homeworkSign);
+
+    addBox(0, 0, 0, 3.2, 0.55, 0.22, mats.trim);
+    addBox(0, 0, 0.14, 2.9, 0.3, 0.1, mats.paper);
+
+    pixelText("HOMEWORK", 0, 0, 0.2, mats.red, 0.2);
+
+    // ------------------------------------------------------------
+    // Convert all voxels to a single instanced mesh
+    // ------------------------------------------------------------
+    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const voxelMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.84,
+      metalness: 0.02
+    });
+
+    const voxelMesh = new THREE.InstancedMesh(
+      voxelGeometry,
+      voxelMaterial,
+      voxels.length
+    );
+
+    const dummy = new THREE.Object3D();
+    const color = new THREE.Color();
+
+    voxels.forEach((v, i) => {
+      dummy.position.set(v.x, v.y, v.z);
+      dummy.scale.set(v.sx, v.sy, v.sz);
+      dummy.updateMatrix();
+
+      voxelMesh.setMatrixAt(i, dummy.matrix);
+
+      color.setHex(v.mat.color);
+      voxelMesh.setColorAt(i, color);
+    });
+
+    voxelMesh.instanceMatrix.needsUpdate = true;
+    voxelMesh.instanceColor.needsUpdate = true;
+    voxelMesh.castShadow = true;
+    voxelMesh.receiveShadow = true;
+    scene.add(voxelMesh);
+
+    // ------------------------------------------------------------
+    // Custom camera controls
+    // ------------------------------------------------------------
+    const orbit = {
+      theta: 0.68,
+      phi: 1.08,
+      radius: 23,
+      target: new THREE.Vector3(0, 3.8, 0)
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(orbit.phi);
+      camera.position.set(
+        orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+        orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+        orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
+      );
+      camera.lookAt(orbit.target);
+    }
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      orbit.theta -= dx * 0.006;
+      orbit.phi = THREE.MathUtils.clamp(
+        orbit.phi - dy * 0.005,
+        0.42,
+        1.42
+      );
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        orbit.radius = THREE.MathUtils.clamp(
+          orbit.radius + event.deltaY * 0.015,
+          13,
+          34
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    updateCamera();
+
+    // ------------------------------------------------------------
+    // Resize and animation
+    // ------------------------------------------------------------
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

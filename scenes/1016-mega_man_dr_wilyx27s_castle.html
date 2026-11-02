@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Wumpa Island</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #111316;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .title {
+      position: fixed;
+      top: 22px;
+      left: 28px;
+      z-index: 2;
+      color: #f5f2df;
+      pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+    }
+
+    .title h1 {
+      margin: 0 0 5px;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .title p {
+      margin: 0;
+      color: #aeb8c4;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      position: fixed;
+      right: 20px;
+      bottom: 16px;
+      z-index: 2;
+      color: rgba(235, 239, 246, 0.55);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        top: 15px;
+        left: 16px;
+      }
+
+      .title h1 {
+        font-size: 20px;
+      }
+
+      .hint {
+        right: 12px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="title">
+    <h1>Wumpa Island</h1>
+    <p>Crash Bandicoot · Voxel Settlement</p>
+  </div>
+  <div class="hint">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x171b22);
+    scene.fog = new THREE.Fog(0x171b22, 24, 55);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const cameraTarget = new THREE.Vector3(0, 2.8, 0);
+    const spherical = new THREE.Spherical(18.5, Math.PI * 0.39, Math.PI * 0.25);
+
+    function updateCamera() {
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.18, Math.PI - 0.18);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 10, 30);
+      camera.position.setFromSpherical(spherical).add(cameraTarget);
+      camera.lookAt(cameraTarget);
+    }
+
+    updateCamera();
+
+    // ------------------------------------------------------------
+    // Lights
+    // ------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0x9bb8dc, 0x3c2114, 2.0));
+
+    const keyLight = new THREE.DirectionalLight(0xffe6b5, 3.4);
+    keyLight.position.set(8, 14, 9);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -13;
+    keyLight.shadow.camera.right = 13;
+    keyLight.shadow.camera.top = 13;
+    keyLight.shadow.camera.bottom = -13;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 40;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x6daeff, 1.8);
+    rimLight.position.set(-9, 7, -10);
+    scene.add(rimLight);
+
+    const warmLight = new THREE.PointLight(0xff7b32, 22, 18, 2);
+    warmLight.position.set(0, 1.2, 2.2);
+    scene.add(warmLight);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+    const materials = {
+      earth: new THREE.MeshStandardMaterial({
+        color: 0x6b351e,
+        roughness: 0.95
+      }),
+      earthDark: new THREE.MeshStandardMaterial({
+        color: 0x422116,
+        roughness: 1
+      }),
+      earthLight: new THREE.MeshStandardMaterial({
+        color: 0x874729,
+        roughness: 0.95
+      }),
+      concrete: new THREE.MeshStandardMaterial({
+        color: 0x8b9296,
+        roughness: 0.82,
+        metalness: 0.08
+      }),
+      concreteDark: new THREE.MeshStandardMaterial({
+        color: 0x4b5358,
+        roughness: 0.85,
+        metalness: 0.12
+      }),
+      steel: new THREE.MeshStandardMaterial({
+        color: 0x73838e,
+        roughness: 0.48,
+        metalness: 0.62
+      }),
+      steelDark: new THREE.MeshStandardMaterial({
+        color: 0x35414a,
+        roughness: 0.55,
+        metalness: 0.58
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x348bc2,
+        roughness: 0.55,
+        metalness: 0.18
+      }),
+      blueDark: new THREE.MeshStandardMaterial({
+        color: 0x174f79,
+        roughness: 0.58,
+        metalness: 0.25
+      }),
+      blueLight: new THREE.MeshStandardMaterial({
+        color: 0x74b8e5,
+        roughness: 0.48,
+        metalness: 0.15
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xc83b2d,
+        roughness: 0.7,
+        metalness: 0.08
+      }),
+      redDark: new THREE.MeshStandardMaterial({
+        color: 0x7d1d20,
+        roughness: 0.78
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xe4e4d9,
+        roughness: 0.72
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xf2bd35,
+        roughness: 0.62
+      }),
+      orange: new THREE.MeshStandardMaterial({
+        color: 0xe96c2c,
+        roughness: 0.65
+      }),
+      glass: new THREE.MeshStandardMaterial({
+        color: 0x183b50,
+        roughness: 0.22,
+        metalness: 0.72
+      }),
+      window: new THREE.MeshStandardMaterial({
+        color: 0xffd877,
+        emissive: 0xffa92e,
+        emissiveIntensity: 1.8,
+        roughness: 0.35
+      }),
+      wumpa: new THREE.MeshStandardMaterial({
+        color: 0x42b856,
+        emissive: 0x174d16,
+        emissiveIntensity: 0.35,
+        roughness: 0.45
+      })
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+    const voxel = (size, material, x, y, z, parent = scene) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    const block = (w, h, d, material, x, y, z, parent = scene) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    const addWindowGrid = (x, y, z, width, height, axis = "z") => {
+      const count = Math.max(2, Math.floor(width / 0.34));
+      const spacing = width / count;
+
+      for (let i = 0; i < count; i++) {
+        const px = x - width / 2 + spacing * (i + 0.5);
+
+        if (axis === "z") {
+          voxel(
+            spacing * 0.72,
+            height * 0.62,
+            0.08,
+            materials.window,
+            px,
+            y,
+            z + 0.065
+          );
+        } else {
+          voxel(
+            0.08,
+            height * 0.62,
+            spacing * 0.72,
+            materials.window,
+            px + 0.065,
+            y,
+            z
+          );
+        }
+      }
+    };
+
+    const addDoor = (x, y, z, width = 1.1, height = 2.0) => {
+      block(
+        width,
+        height,
+        0.14,
+        materials.steelDark,
+        x,
+        y + height / 2,
+        z + 0.08
+      );
+
+      const frame = new THREE.Mesh(
+        new THREE.TorusGeometry(0.43, 0.09, 6, 18),
+        materials.yellow
+      );
+      frame.rotation.y = Math.PI / 2;
+      frame.position.set(x, y + height / 2, z + 0.18);
+      frame.scale.set(1, height / 0.86, 1);
+      frame.castShadow = true;
+      scene.add(frame);
+    };
+
+    // ------------------------------------------------------------
+    // Island / base
+    // ------------------------------------------------------------
+    const island = new THREE.Group();
+    scene.add(island);
+
+    // Pixelated stepped island silhouette.
+    const islandLayers = [
+      { y: 0.25, halfW: 7.0, halfD: 5.0 },
+      { y: 0.65, halfW: 6.3, halfD: 4.5 },
+      { y: 1.05, halfW: 5.5, halfD: 3.8 },
+      { y: 1.45, halfW: 4.6, halfD: 3.1 }
+    ];
+
+    for (const layer of islandLayers) {
+      const width = layer.halfW * 2;
+      const depth = layer.halfD * 2;
+      const columns = Math.ceil(width / 0.55);
+      const rows = Math.ceil(depth / 0.55);
+
+      for (let x = 0; x < columns; x++) {
+        for (let z = 0; z < rows; z++) {
+          const px = -width / 2 + (x + 0.5) * width / columns;
+          const pz = -depth / 2 + (z + 0.5) * depth / rows;
+
+          const edge =
+            Math.abs(px) > width * 0.72 ||
+            Math.abs(pz) > depth * 0.72;
+
+          const material = edge
+            ? materials.earthDark
+            : materials.earth;
+
+          voxel(
+            0.52,
+            0.42,
+            0.52,
+            material,
+            px,
+            layer.y,
+            pz,
+            island
+          );
+        }
+      }
+    }
+
+    // A smaller foreground voxel hill.
+    for (let y = 0; y < 4; y++) {
+      for (let x = 0; x < 5; x++) {
+        for (let z = 0; z < 4; z++) {
+          if (x === 2 && z === 2) continue;
+          voxel(
+            0.48,
+            0.42,
+            0.48,
+            y === 3 ? materials.earthLight : materials.earth,
+            -1.3 + x * 0.5,
+            1.65 + y * 0.42,
+            1.5 + z * 0.5,
+            island
+          );
+        }
+      }
+    }
+
+    // ------------------------------------------------------------
+    // Central main building and Wumpa logo
+    // ------------------------------------------------------------
+    const mainBuilding = new THREE.Group();
+    mainBuilding.position.set(0, 0, 0);
+    scene.add(mainBuilding);
+
+    // Main lower structure.
+    block(5.0, 1.25, 4.0, materials.concreteDark, 0, 0.62, 0, mainBuilding);
+    block(4.25, 0.25, 3.35, materials.steel, 0, 1.35, 0, mainBuilding);
+
+    // Central skull-shaped facade.
+    block(2.15, 1.55, 0.65, materials.steel, 0, 2.35, 0, mainBuilding);
+
+    // Eye sockets.
+    voxel(0.62, 0.62, 0.12, materials.glass, -0.55, 2.63, 0.405, mainBuilding);
+    voxel(0.62, 0.62, 0.12, materials.glass, 0.55, 2.63, 0.405, mainBuilding);
+
+    // Nose.
+    voxel(0.30, 0.52, 0.12, materials.glass, 0, 2.20, 0.405, mainBuilding);
+
+    // Jaw.
+    block(1.95, 0.45, 0.58, materials.steel, 0, 1.88, 0, mainBuilding);
+    voxel(1.12, 0.34, 0.12, materials.glass, 0, 1.91, 0.31, mainBuilding);
+
+    // Wumpa Island logo above the skull.
+    const logoGroup = new THREE.Group();
+    logoGroup.position.set(0, 3.25, 0);
+    mainBuilding.add(logoGroup);
+
+    // Circular emblem.
+    const emblem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.72, 0.72, 0.18, 24),
+      materials.blue
+    );
+    emblem.rotation.x = Math.PI / 2;
+    emblem.castShadow = true;
+    logoGroup.add(emblem);
+
+    // Pixel W letter.
+    voxel(0.25, 0.25, 0.12, materials.white, -0.16, 0, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, 0.00, 0, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, 0.17, 0, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, -0.16, 0.25, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, 0.00, 0.25, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, 0.17, 0.25, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, -0.16, -0.25, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, 0.00, -0.25, 0.115, logoGroup);
+    voxel(0.25, 0.25, 0.12, materials.white, 0.17, -0.25, 0.115, logoGroup);
+
+    // ------------------------------------------------------------
+    // Left side buildings
+    // ------------------------------------------------------------
+    const leftBuildings = new THREE.Group();
+    scene.add(leftBuildings);
+
+    // Left rear building.
+    block(2.0, 2.4, 2.0, materials.blue, -2.7, 1.2, -1.35, leftBuildings);
+    block(2.25, 0.22, 2.2, materials.steel, -2.7, 2.52, -1.35, leftBuildings);
+    block(1.45, 0.85, 0.12, materials.blueLight, -2.7, 1.55, -0.30, leftBuildings);
+    addWindowGrid(-2.7, 1.55, -0.22, 1.25, 0.65);
+    block(0.85, 0.65, 0.12, materials.blueLight, -3.55, 1.65, -0.30, leftBuildings);
+    addWindowGrid(-3.55, 1.65, -0.22, 0.65, 0.45);
+
+    // Left front building.
+    block(2.35, 2.2, 2.05, materials.blue, -2.95, 1.1, 1.25, leftBuildings);
+    block(2.55, 0.2, 2.25, materials.steel, -2.95, 2.32, 1.25, leftBuildings);
+    block(1.25, 1.45, 0.12, materials.blueLight, -2.95, 1.15, 2.33, leftBuildings);
+    addWindowGrid(-2.95, 1.15, 2.35, 1.05, 0.75);
+    block(0.75, 0.75, 0.12, materials.blueLight, -3.75, 1.15, 2.33, leftBuildings);
+    addWindowGrid(-3.75, 1.15, 2.35, 0.55, 0.55);
+    addDoor(-2.05, 0.05, 2.36, 0.85, 1.65);
+
+    // Small side annex.
+    block(1.15, 1.45, 1.25, materials.blueDark, -4.55, 0.72, 0.25, leftBuildings);
+    block(1.35, 0.18, 1.45, materials.steel, -4.55, 1.55, 0.25, leftBuildings);
+    block(0.55, 0.65, 0.12, materials.blueLight, -4.55, 1.05, 0.93, leftBuildings);
+    addWindowGrid(-4.55, 1.05, 0.94, 0.4, 0.45);
+
+    // ------------------------------------------------------------
+    // Right side buildings
+    // ------------------------------------------------------------
+    const rightBuildings = new THREE.Group();
+    scene.add(rightBuildings);
+
+    // Right rear building.
+    block(2.15, 2.5, 2.0, materials.blue, 2.95, 1.25, -1.35, rightBuildings);
+    block(2.4, 0.22, 2.25, materials.steel, 2.95, 2.62, -1.35, rightBuildings);
+    block(1.3, 0.8, 0.12, materials.blueLight, 2.95, 1.65, -0.30, rightBuildings);
+    addWindowGrid(2.95, 1.65, -0.22, 1.1, 0.6);
+    block(0.75, 0.7, 0.12, materials.blueLight, 3.75, 1.65, -0.30, rightBuildings);
+    addWindowGrid(3.75, 1.65, -0.22, 0.5, 0.5);
+
+    // Right front building.
+    block(2.4, 2.25, 2.0, materials.blue, 3.05, 1.12, 1.25, rightBuildings);
+    block(2.6, 0.2, 2.25, materials.steel, 3.05, 2.35, 1.25, rightBuildings);
+    block(1.35, 1.45, 0.12, materials.blueLight, 3.05, 1.15, 2.33, rightBuildings);
+    addWindowGrid(3.05, 1.15, 2.35, 1.1, 0.75);
+    block(0.75, 0.75, 0.12, materials.blueLight, 3.85, 1.15, 2.33, rightBuildings);
+    addWindowGrid(3.85, 1.15, 2.35, 0.5, 0.5);
+    addDoor(4.05, 0.05, 2.36, 0.8, 1.6);
+
+    // ------------------------------------------------------------
+    // Buildings with red roofs
+    // ------------------------------------------------------------
+    const roofBuildings = new THREE.Group();
+    scene.add(roofBuildings);
+
+    function redRoofBuilding(x, z, width, depth, height) {
+      block(width, height, depth, materials.concrete, x, height / 2, z, roofBuildings);
+      block(width + 0.2, 0.18, depth + 0.2, materials.steel, x, height + 0.05, z, roofBuildings);
+
+      // Stepped red roof.
+      for (let i = 0; i < 3; i++) {
+        block(
+          width - i * 0.42,
+          0.32,
+          depth - i * 0.38,
+          i === 2 ? materials.redDark : materials.red,
+          x,
+          height + 0.28 + i * 0.34,
+          z,
+          roofBuildings
+        );
+      }
+
+      // Roof cross / vent.
+      voxel(
+        0.30,
+        0.42,
+        0.30,
+        materials.steelDark,
+        x,
+        height + 1.05,
+        z,
+        roofBuildings
+      );
+    }
+
+    redRoofBuilding(-0.65, -1.8, 2.5, 2.1, 1.75);
+    redRoofBuilding(1.15, -1.85, 2.4, 2.0, 1.8);
+
+    // ------------------------------------------------------------
+    // Skeleton towers
+    // ------------------------------------------------------------
+    function skeletonTower(x, z, height, rotation = 0) {
+      const tower = new THREE.Group();
+      tower.position.set(x, 0, z);
+      tower.rotation.y = rotation;
+      scene.add(tower);
+
+      // Base.
+      block(1.25, 0.35, 1.25, materials.steelDark, 0, 0.17, 0, tower);
+
+      // Four vertical bones.
+      const boneMaterial = materials.white;
+      const bonePositions = [
+        [-0.37, 0.37],
+        [0.37, 0.37],
+        [-0.37, -0.37],
+        [0.37, -0.37]
+      ];
+
+      for (const [bx, bz] of bonePositions) {
+        voxel(
+          0.22,
+          height,
+          0.22,
+          boneMaterial,
+          bx,
+          height / 2,
+          bz,
+          tower
+        );
+      }
+
+      // Joint blocks.
+      for (let y = 0.55; y < height - 0.2; y += 1.1) {
+        const joint = new THREE.Mesh(
+          new THREE.BoxGeometry(1.05, 0.28, 1.05),
+          materials.steelDark
+        );
+        joint.position.y = y;
+        joint.castShadow = true;
+        tower.add(joint);
+      }
+
+      // Top cap.
+      voxel(0.9, 0.3, 0.9, materials.redDark, 0, height + 0.1, 0, tower);
+
+      // Cross-like branches.
+      voxel(0.38, 0.22, 0.22, boneMaterial, 0, height + 0.35, 0, tower);
+      voxel(0.22, 0.22, 0.38, boneMaterial, 0, height + 0.35, 0, tower);
+    }
+
+    skeletonTower(-4.05, -1.65, 3.8, 0.18);
+    skeletonTower(4.25, -1.75, 4.15, -0.12);
+
+    // ------------------------------------------------------------
+    // Satellite dishes
+    // ------------------------------------------------------------
+    function satelliteDish(x, y, z, rotationY, rotationX) {
+      const dish = new THREE.Group();
+      dish.position.set(x, y, z);
+      dish.rotation.y = rotationY;
+      dish.rotation.x = rotationX;
+      scene.add(dish);
+
+      // Support mast.
+      voxel(0.18, 2.1, 0.18, materials.steel, 0, 1.05, 0, dish);
+      voxel(0.75, 0.18, 0.18, materials.steel, 0, 2.05, 0, dish);
+
+      // Dish bowl made from segmented voxels.
+      const segments = 7;
+      const radius = 1.25;
+
+      for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const side = new THREE.Group();
+        side.rotation.y = angle;
+        dish.add(side);
+
+        const rim = new THREE.Mesh(
+          new THREE.TorusGeometry(
+            radius * (0.72 + i * 0.08),
+            0.13,
+            6,
+            18
+          ),
+          materials.steel
+        );
+        rim.rotation.x = Math.PI / 2;
+        rim.position.set(
+          Math.sin(angle) * radius * (0.72 + i * 0.08),
+          0,
+          Math.cos(angle) * radius * (0.72 + i * 0.08)
+        );
+        rim.castShadow = true;
+        side.add(rim);
+      }
+
+      // Feed horn.
+      const horn = new THREE.Mesh(
+        new THREE.ConeGeometry(0.28, 0.65, 12),
+        materials.redDark
+      );
+      horn.rotation.z = Math.PI;
+      horn.position.set(0, 1.1, 0);
+      horn.castShadow = true;
+      dish.add(horn);
+    }
+
+    satelliteDish(-1.0, 3.2, -2.15, 0.2, -0.35);
+    satelliteDish(0.85, 3.1, -2.25, -0.3, 0.3);
+
+    // ------------------------------------------------------------
+    // Pipes, vents, antennas, and details
+    // ------------------------------------------------------------
+    const details = new THREE.Group();
+    scene.add(details);
+
+    // Horizontal pipes on rear building.
+    for (let i = 0; i < 3; i++) {
+      voxel(
+        2.0,
+        0.24,
+        0.24,
+        i === 1 ? materials.orange : materials.steel,
+        0,
+        3.1 + i * 0.34,
+        -2.0,
+        details
+      );
+    }
+
+    // Vent stacks.
+    for (const [x, z] of [[-1.2, -2.1], [1.25, -2.15], [-3.1, -2.1]]) {
+      voxel(0.45, 1.25, 0.45, materials.steel, x, 3.05, z, details);
+      voxel(0.62, 0.18, 0.62, materials.steelDark, x, 3.72, z, details);
+    }
+
+    // Small antenna.
+    voxel(0.12, 1.6, 0.12, materials.steel, 3.85, 3.65, -1.65, details);
+    voxel(0.75, 0.12, 0.12, materials.steel, 3.85, 4.35, -1.65, details);
+    voxel(0.12, 0.45, 0.12, materials.steel, 3.85, 4.6, -1.65, details);
+
+    // Windows and rooftop details.
+    addWindowGrid(2.95, 1.65, -0.22, 1.1, 0.6);
+    addWindowGrid(-2.95, 1.15, 2.35, 1.1, 0.75);
+
+    // Exterior pipes.
+    voxel(0.22, 2.3, 0.22, materials.steel, -4.05, 1.15, -0.15, details);
+    voxel(0.22, 2.3, 0.22, materials.steel, 4.25, 1.15, -0.15, details);
+    voxel(0.22, 0.22, 2.2, materials.steel, -4.05, 2.2, -0.15, details);
+    voxel(0.22, 0.22, 2.2, materials.steel, 4.25, 2.2, -0.15, details);
+
+    // Small crates / barrels.
+    const barrelMaterial = materials.orange;
+    for (const [x, z] of [[-4.35, 1.1], [4.35, 1.0], [-1.8, 2.25]]) {
+      const barrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.3, 0.8, 10),
+        barrelMaterial
+      );
+      barrel.position.set(x, 0.4, z);
+      barrel.castShadow = true;
+      scene.add(barrel);
+
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.31, 0.035, 6, 14),
+        materials.steelDark
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(x, 0.4, z);
+      scene.add(ring);
+    }
+
+    // ------------------------------------------------------------
+    // Small foreground details
+    // ------------------------------------------------------------
+    const foreground = new THREE.Group();
+    scene.add(foreground);
+
+    // Two small utility outbuildings.
+    block(1.15, 0.85, 1.1, materials.blueDark, -4.8, 0.42, 2.5, foreground);
+    block(1.35, 0.15, 1.3, materials.steel, -4.8, 0.95, 2.5, foreground);
+    block(0.45, 0.55, 0.1, materials.blueLight, -4.8, 0.5, 3.07, foreground);
+    addWindowGrid(-4.8, 0.5, 3.08, 0.3, 0.4);
+
+    block(1.0, 0.8, 1.0, materials.blueDark, 4.75, 0.4, 2.5, foreground);
+    block(1.2, 0.15, 1.2, materials.steel, 4.75, 0.95, 2.5, foreground);
+    block(0.4, 0.5, 0.1, materials.blueLight, 4.75, 0.5, 3.07, foreground);
+    addWindowGrid(4.75, 0.5, 3.08, 0.3, 0.4);
+
+    // Pixel tree.
+    const tree = new THREE.Group();
+    tree.position.set(-3.25, 1.45, 2.4);
+    scene.add(tree);
+
+    voxel(0.55, 0.55, 0.55, materials.wood, 0, 0.25, 0, tree);
+    voxel(0.55, 0.55, 0.55, materials.wood, 0, 0.75, 0, tree);
+    voxel(0.48, 0.48, 0.48, materials.wood, 0, 1.2, 0, tree);
+
+    const leaves = new THREE.MeshStandardMaterial({
+      color: 0x2f6b43,
+      roughness: 0.9
+    });
+
+    voxel(0.85, 0.85, 0.85, leaves, 0, 1.65, 0, tree);
+    voxel(0.65, 0.65, 0.65, materials.blueLight, 0, 2.15, 0, tree);
+    voxel(0.48, 0.48, 0.48, materials.orange, 0, 2.6, 0, tree);
+
+    // ------------------------------------------------------------
+    // Pixel trees around the island
+    // ------------------------------------------------------------
+    function pixelTree(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 1.25 * scale, z);
+      tree.scale.setScalar(scale);
+      scene.add(tree);
+
+      voxel(0.45, 0.45, 0.45, materials.wood, 0, 0.22, 0, tree);
+      voxel(0.48, 0.48, 0.48, materials.wood, 0, 0.68, 0, tree);
+
+      const leafMat = new THREE.MeshStandardMaterial({
+        color: 0x356b45,
+        roughness: 0.92
+      });
+
+      voxel(0.8, 0.8, 0.8, leafMat, 0, 1.15, 0, tree);
+      voxel(0.62, 0.62, 0.62, materials.blueLight, 0, 1.65, 0, tree);
+      voxel(0.46, 0.46, 0.46, materials.orange, 0, 2.1, 0, tree);
+    }
+
+    pixelTree(-5.45, -2.45, 0.9);
+    pixelTree(5.55, -2.55, 0.85);
+    pixelTree(-5.75, 2.35, 0.72);
+    pixelTree(5.75, 2.4, 0.68);
+    pixelTree(-1.45, -3.2, 0.62);
+
+    // ------------------------------------------------------------
+    // Ground-level details
+    // ------------------------------------------------------------
+    const groundDetails = new THREE.Group();
+    scene.add(groundDetails);
+
+    // Path stones.
+    const pathStoneMaterial = materials.earthLight;
+    for (let i = 0; i < 8; i++) {
+      voxel(
+        0.48,
+        0.18,
+        0.5,
+        pathStoneMaterial,
+        -0.35 + i * 0.65,
+        0.16,
+        2.8,
+        groundDetails
+      );
+    }
+
+    // Small crates.
+    for (const [x, z] of [[-5.0, -0.2], [4.9, -0.3], [-1.25, 2.5]]) {
+      voxel(0.45, 0.45, 0.45, materials.orange, x, 0.22, z, groundDetails);
+      voxel(0.52, 0.08, 0.52, materials.steelDark, x, 0.48, z, groundDetails);
+    }
+
+    // ------------------------------------------------------------
+    // Animation
+    // ------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle pulse on the central emblem.
+      emblem.material.emissiveIntensity = 0.22 + Math.sin(elapsed * 1.6) * 0.12;
+
+      // Subtle warm light flicker.
+      warmLight.intensity = 20 + Math.sin(elapsed * 2.1) * 1.5;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // ------------------------------------------------------------
+    // Direct camera controls (no addons)
+    // ------------------------------------------------------------
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let pointerId = null;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      pointerId = event.pointerId;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging || event.pointerId !== pointerId) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      spherical.theta -= dx * 0.006;
+      spherical.phi -= dy * 0.005;
+      updateCamera();
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+    });
+
+    function endDrag(event) {
+      if (event.pointerId !== pointerId) return;
+      dragging = false;
+      pointerId = null;
+      renderer.domElement.style.cursor = "grab";
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        spherical.radius += event.deltaY * 0.012;
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

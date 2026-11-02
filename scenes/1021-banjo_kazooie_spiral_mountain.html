@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Cliff Dwelling</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #a9c8b5;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .title {
+      position: fixed;
+      top: 22px;
+      left: 24px;
+      z-index: 10;
+      color: #23352c;
+      pointer-events: none;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .title p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.72;
+    }
+
+    .help {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 10;
+      padding: 8px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      color: #24372d;
+      background: rgba(255, 255, 255, 0.68);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        top: 14px;
+        left: 15px;
+      }
+
+      .help {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="title">
+    <h1>Whisperfang Hollow</h1>
+    <p>A voxel sanctuary above the forest</p>
+  </div>
+  <div class="help">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // ------------------------------------------------------------
+    // Renderer and scene
+    // ------------------------------------------------------------
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xa9c8b5);
+    scene.fog = new THREE.Fog(0xa9c8b5, 28, 68);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      120
+    );
+
+    const hemi = new THREE.HemisphereLight(0xe8f7df, 0x46533d, 2.15);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff3cf, 3.25);
+    sun.position.set(-14, 22, 12);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -24;
+    sun.shadow.camera.right = 24;
+    sun.shadow.camera.top = 24;
+    sun.shadow.camera.bottom = -24;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 60;
+    sun.shadow.bias = -0.00035;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x91b9d2, 0.65);
+    fill.position.set(15, 8, -12);
+    scene.add(fill);
+
+    // ------------------------------------------------------------
+    // Materials
+    // ------------------------------------------------------------
+
+    const materials = {
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x8b806b,
+        roughness: 0.96,
+        metalness: 0
+      }),
+      rockLight: new THREE.MeshStandardMaterial({
+        color: 0xb0a18b,
+        roughness: 0.94
+      }),
+      rockDark: new THREE.MeshStandardMaterial({
+        color: 0x625d51,
+        roughness: 1
+      }),
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x78955b,
+        roughness: 1
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x91aa63,
+        roughness: 1
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x4f7147,
+        roughness: 1
+      }),
+      path: new THREE.MeshStandardMaterial({
+        color: 0xb59a72,
+        roughness: 1
+      }),
+      root: new THREE.MeshStandardMaterial({
+        color: 0x68533a,
+        roughness: 1
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x6e4930,
+        roughness: 0.95
+      }),
+      woodLight: new THREE.MeshStandardMaterial({
+        color: 0x95704b,
+        roughness: 0.95
+      }),
+      gem: new THREE.MeshStandardMaterial({
+        color: 0x82ff9b,
+        emissive: 0x35ff68,
+        emissiveIntensity: 1.7,
+        roughness: 0.22,
+        metalness: 0.08
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x765a3c,
+        roughness: 1
+      })
+    };
+
+    // ------------------------------------------------------------
+    // Voxel helpers
+    // ------------------------------------------------------------
+
+    const voxel = (x, y, z, sx, sy, sz, material, parent = scene) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    const voxelizeSphere = (
+      cx,
+      cy,
+      cz,
+      radius,
+      material,
+      parent = scene,
+      cell = 0.45
+    ) => {
+      const range = Math.ceil(radius / cell);
+      const min = -range;
+      const max = range;
+
+      for (let x = min; x <= max; x++) {
+        for (let y = min; y <= max; y++) {
+          for (let z = min; z <= max; z++) {
+            const px = x * cell;
+            const py = y * cell;
+            const pz = z * cell;
+            const d = px * px + py * py + pz * pz;
+
+            if (d <= radius * radius) {
+              const edge = Math.max(0, 1 - d / (radius * radius));
+              const materialToUse =
+                edge < 0.28 ? materials.rockDark : material;
+
+              voxel(
+                cx + px,
+                cy + py,
+                cz + pz,
+                cell * 0.94,
+                cell * 0.94,
+                cell * 0.94,
+                materialToUse,
+                parent
+              );
+            }
+          }
+        }
+      }
+    };
+
+    const makeRock = (x, y, z, radius, material = materials.rock, cell = 0.55) => {
+      voxelizeSphere(x, y, z, radius, material, scene, cell);
+    };
+
+    const makeGrassTuft = (x, y, z, height = 0.35, material = materials.grass) => {
+      const count = 5;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        voxel(
+          x + Math.cos(angle) * 0.12,
+          y + height,
+          z + Math.sin(angle) * 0.12,
+          0.12,
+          height,
+          0.12,
+          material
+        );
+      }
+    };
+
+    const makeTree = (x, y, z, scale = 1) => {
+      const trunkHeight = 2.1 * scale;
+
+      voxel(
+        x,
+        y + trunkHeight * 0.5,
+        z,
+        0.48 * scale,
+        trunkHeight,
+        0.48 * scale,
+        materials.wood
+      );
+
+      voxel(
+        x,
+        y + trunkHeight * 0.76,
+        z,
+        0.72 * scale,
+        0.55 * scale,
+        0.72 * scale,
+        materials.woodLight
+      );
+
+      makeGrassTuft(x, y + trunkHeight, z, 0.7 * scale, materials.grassLight);
+    };
+
+    const makeRope = (x1, z1, x2, z2, sag, thickness = 0.11) => {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const length = Math.hypot(dx, dz);
+      const count = Math.ceil(length / 0.22);
+
+      for (let i = 0; i <= count; i++) {
+        const t = i / count;
+        const x = THREE.MathUtils.lerp(x1, x2, t);
+        const z = THREE.MathUtils.lerp(z1, z2, t);
+        const y = yAt(t, sag);
+
+        voxel(
+          x,
+          y,
+          z,
+          thickness,
+          thickness * 0.8,
+          thickness,
+          materials.woodLight
+        );
+      }
+
+      for (let i = 0; i < count; i++) {
+        const t = i / count;
+        const x = THREE.MathUtils.lerp(x1, x2, t);
+        const z = THREE.MathUtils.lerp(z1, z2, t);
+        const y = yAt(t, sag);
+
+        voxel(
+          x + 0.08,
+          y + 0.07,
+          z,
+          0.08,
+          0.08,
+          0.22,
+          materials.wood
+        );
+      }
+    };
+
+    function yAt(t, sag) {
+      return 0.45 + Math.sin(t * Math.PI) * sag;
+    }
+
+    // ------------------------------------------------------------
+    // Terrain
+    // ------------------------------------------------------------
+
+    const terrain = new THREE.Group();
+    scene.add(terrain);
+
+    // Main right cliff, built as a broad voxel mass.
+    makeRock(
+      4.2,
+      3.2,
+      0,
+      11.5,
+      materials.rock,
+      0.72
+    );
+
+    // Upper plateau.
+    makeRock(
+      2.8,
+      7.2,
+      -1.3,
+      8.2,
+      materials.rockLight,
+      0.65
+    );
+
+    // Left cliff.
+    makeRock(
+      -7.7,
+      2.4,
+      -0.5,
+      9.2,
+      materials.rock,
+      0.7
+    );
+
+    // Foreground island.
+    makeRock(
+      -0.5,
+      0.45,
+      4.5,
+      5.4,
+      materials.rock,
+      0.62
+    );
+
+    // Distant background cliffs.
+    makeRock(-11, 1.2, -10, 6.5, materials.rockDark, 0.8);
+    makeRock(11, 1.0, -12, 7, materials.rock, 0.8);
+    makeRock(14, 2.0, -17, 5.5, materials.rockDark, 0.8);
+
+    // Sand-colored foreground.
+    voxel(
+      -10.5,
+      0.02,
+      8.4,
+      10.5,
+      0.2,
+      7.5,
+      materials.path,
+      terrain
+    );
+
+    voxel(
+      10.8,
+      0.02,
+      8.2,
+      10,
+      0.2,
+      7.2,
+      materials.path,
+      terrain
+    );
+
+    // ------------------------------------------------------------
+    // Paths and winding river
+    // ------------------------------------------------------------
+
+    // Main path on the right cliff.
+    for (let i = 0; i < 22; i++) {
+      const x = -5.8 + i * 0.58;
+      const y = 5.45;
+      const z = 1.1 + Math.sin(i * 0.64) * 1.25;
+
+      voxel(
+        x,
+        y,
+        z,
+        0.46,
+        0.18,
+        0.5,
+        materials.path,
+        terrain
+      );
+    }
+
+    // Lower path.
+    for (let i = 0; i < 25; i++) {
+      const x = -8.7 + i * 0.66;
+      const z = 6.6 + Math.sin(i * 0.47) * 1.1;
+
+      voxel(
+        x,
+        0.18,
+        z,
+        0.5,
+        0.16,
+        0.46,
+        materials.path,
+        terrain
+      );
+    }
+
+    // A narrow river through the valley.
+    for (let i = 0; i < 38; i++) {
+      const x = -9.5 + i * 0.59;
+      const z = 11.2 + Math.sin(i * 0.5) * 1.2;
+      voxel(
+        x,
+        0.12,
+        z,
+        0.48,
+        0.12,
+        0.38,
+        materials.grassDark,
+        terrain
+      );
+    }
+
+    // ------------------------------------------------------------
+    // The giant cliff face
+    // ------------------------------------------------------------
+
+    const face = new THREE.Group();
+    face.position.set(3.0, 4.8, 0.15);
+    scene.add(face);
+
+    // Broad forehead / brow.
+    makeRock(
+      0,
+      1.25,
+      0,
+      3.8,
+      materials.rockLight,
+      0.55
+    );
+
+    // Nose.
+    makeRock(
+      0,
+      -0.25,
+      0.55,
+      1.25,
+      materials.rock,
+      0.42
+    );
+
+    // Nose tip.
+    makeRock(
+      0,
+      -0.85,
+      1.15,
+      0.55,
+      materials.rockLight,
+      0.34
+    );
+
+    // Chins.
+    makeRock(
+      -0.58,
+      -1.32,
+      0.05,
+      0.7,
+      materials.rock,
+      0.36
+    );
+
+    makeRock(
+      0.58,
+      -1.32,
+      0.05,
+      0.7,
+      materials.rock,
+      0.36
+    );
+
+    // Thick brows.
+    makeRock(
+      -0.78,
+      1.42,
+      0.15,
+      0.68,
+      materials.rockDark,
+      0.38
+    );
+
+    makeRock(
+      0.78,
+      1.42,
+      0.15,
+      0.68,
+      materials.rockDark,
+      0.38
+    );
+
+    // Eyes: glowing gemstones set into dark sockets.
+    const leftSocket = voxel(
+      -0.72,
+      0.83,
+      0.66,
+      0.42,
+      0.38,
+      0.2,
+      materials.rockDark,
+      face
+    );
+
+    const rightSocket = voxel(
+      0.72,
+      0.83,
+      0.66,
+      0.42,
+      0.38,
+      0.2,
+      materials.rockDark,
+      face
+    );
+
+    const leftEye = voxel(
+      -0.72,
+      0.83,
+      0.83,
+      0.27,
+      0.27,
+      0.13,
+      materials.gem,
+      face
+    );
+
+    const rightEye = voxel(
+      0.72,
+      0.83,
+      0.83,
+      0.27,
+      0.27,
+      0.13,
+      materials.gem,
+      face
+    );
+
+    // Mouth.
+    voxel(
+      0,
+      -1.7,
+      0.72,
+      1.25,
+      0.22,
+      0.18,
+      materials.rockDark,
+      face
+    );
+
+    // Hair-like rock overhang.
+    makeRock(
+      0,
+      2.25,
+      -0.45,
+      4.2,
+      materials.rock,
+      0.6
+    );
+
+    // ------------------------------------------------------------
+    // Hanging roots and vines
+    // ------------------------------------------------------------
+
+    const vineMaterial = materials.root;
+
+    for (let i = 0; i < 28; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = side * (0.55 + (i % 5) * 0.12);
+      const z = 0.15 + (i % 3) * 0.12;
+      const length = 0.75 + (i % 7) * 0.16;
+
+      voxel(
+        x,
+        1.45 - length * 0.5,
+        z,
+        0.12,
+        length,
+        0.12,
+        vineMaterial,
+        face
+      );
+    }
+
+    // Vines curling down the cheeks.
+    for (let i = 0; i < 8; i++) {
+      const x = i % 2 === 0 ? -0.9 : 0.9;
+      voxel(
+        x,
+        -0.35 - i * 0.18,
+        0.7,
+        0.12,
+        0.3,
+        0.12,
+        vineMaterial,
+        face
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Hanging house / balcony
+    // ------------------------------------------------------------
+
+    const house = new THREE.Group();
+    house.position.set(2.8, 3.0, 1.0);
+    scene.add(house);
+
+    // Stone balcony slab.
+    voxel(
+      0,
+      0,
+      0,
+      4.7,
+      0.35,
+      2.5,
+      materials.rockLight,
+      house
+    );
+
+    // House body.
+    makeRock(
+      0,
+      0.65,
+      -0.25,
+      1.75,
+      materials.rock,
+      0.42
+    );
+
+    // Roof.
+    makeRock(
+      0,
+      1.55,
+      -0.35,
+      1.95,
+      materials.rock,
+      0.4
+    );
+
+    // Door.
+    voxel(
+      0,
+      0.35,
+      1.25,
+      0.55,
+      0.85,
+      0.12,
+      materials.wood,
+      house
+    );
+
+    // Window.
+    voxel(
+      -0.72,
+      1.05,
+      0.65,
+      0.28,
+      0.3,
+      0.1,
+      materials.gem,
+      house
+    );
+
+    // Balcony railing.
+    for (let i = 0; i < 7; i++) {
+      const x = -2.05 + i * 0.68;
+      voxel(
+        x,
+        0.48,
+        1.05,
+        0.12,
+        0.65,
+        0.12,
+        materials.wood,
+        house
+      );
+    }
+
+    voxel(
+      0,
+      0.8,
+      1.05,
+      4.3,
+      0.12,
+      0.12,
+      materials.wood,
+      house
+    );
+
+    // ------------------------------------------------------------
+    // Rope bridge
+    // ------------------------------------------------------------
+
+    const bridge = new THREE.Group();
+    bridge.position.set(-2.6, 3.3, 1.35);
+    scene.add(bridge);
+
+    makeRope(-2.2, 0.1, 2.2, 0.1, 0.42, 0.1);
+
+    // Bridge supports.
+    for (const x of [-2.2, 0, 2.2]) {
+      voxel(
+        x,
+        0.05,
+        0.1,
+        0.16,
+        0.25,
+        0.16,
+        materials.wood,
+        bridge
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Trees and vegetation
+    // ------------------------------------------------------------
+
+    const treePositions = [
+      [-5.4, 5.0, 1.5, 0.9],
+      [-6.2, 5.1, -0.8, 0.72],
+      [-4.8, 5.2, -1.7, 0.65],
+      [6.3, 6.0, -1.4, 0.85],
+      [7.0, 6.1, 0.6, 0.7],
+      [-1.2, 7.2, -2.2, 0.78],
+      [0.2, 7.3, -3.0, 0.62],
+      [-8.0, 0.35, -2.0, 0.72],
+      [-7.1, 0.35, 2.0, 0.65],
+      [8.0, 0.35, -1.8, 0.72],
+      [8.8, 0.35, 1.8, 0.64]
+    ];
+
+    treePositions.forEach((args) => {
+      makeTree(...args);
+    });
+
+    // Small bushes.
+    function makeBush(x, y, z, size = 0.5) {
+      for (let i = 0; i < 9; i++) {
+        const angle = (i / 9) * Math.PI * 2;
+        voxel(
+          x + Math.cos(angle) * size * 0.45,
+          y + size * (0.45 + (i % 3) * 0.13),
+          z + Math.sin(angle) * size * 0.45,
+          size * 0.75,
+          size * 0.65,
+          size * 0.75,
+          i % 2 ? materials.grassLight : materials.grass,
+          terrain
+        );
+      }
+    }
+
+    [
+      [-3.4, 5.3, 2.2, 0.45],
+      [4.4, 5.5, 2.0, 0.5],
+      [-1.0, 6.2, 1.0, 0.4],
+      [3.8, 6.3, -0.8, 0.48],
+      [-6.5, 0.3, 4.0, 0.42],
+      [6.5, 0.3, 4.1, 0.45],
+      [-2.0, 0.3, 6.0, 0.38],
+      [1.8, 0.3, 6.1, 0.4]
+    ].forEach((args) => makeBush(...args));
+
+    // Tiny mushrooms.
+    const mushroomStem = materials.woodLight;
+    const mushroomCap = materials.rockDark;
+
+    for (let i = 0; i < 16; i++) {
+      const x = -4.5 + (i % 8) * 0.72;
+      const z = 3.2 + Math.floor(i / 8) * 0.55;
+
+      voxel(
+        x,
+        0.12,
+        z,
+        0.1,
+        0.2,
+        0.1,
+        mushroomStem,
+        terrain
+      );
+
+      voxel(
+        x,
+        0.28,
+        z,
+        0.18,
+        0.09,
+        0.18,
+        mushroomCap,
+        terrain
+      );
+    }
+
+    // ------------------------------------------------------------
+    // Small details
+    // ------------------------------------------------------------
+
+    // Rocks scattered around the foreground.
+    [
+      [-4.3, 0.35, 7.2, 0.45],
+      [-3.7, 0.3, 7.8, 0.32],
+      [4.4, 0.3, 7.4, 0.48],
+      [5.0, 0.25, 8.0, 0.3],
+      [-9.2, 0.25, 5.7, 0.34],
+      [9.2, 0.25, 5.8, 0.36],
+      [-1.5, 0.25, 8.8, 0.28]
+    ].forEach((args) => {
+      makeRock(...args, materials.rockDark, 0.35);
+    });
+
+    // A few fallen logs.
+    voxel(
+      -3.4,
+      0.35,
+      4.8,
+      1.2,
+      0.28,
+      0.3,
+      materials.wood,
+      terrain
+    );
+
+    voxel(
+      4.0,
+      0.3,
+      4.8,
+      0.3,
+      0.28,
+      1.2,
+      materials.wood,
+      terrain
+    );
+
+    // ------------------------------------------------------------
+    // Custom camera controls
+    // ------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 3.2, 0),
+      radius: 23,
+      theta: 0.68,
+      phi: 1.12,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.panning = event.button === 2 || event.shiftKey;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const scale = controls.radius * 0.0015;
+        controls.target.addScaledVector(right, -dx * scale);
+        controls.target.addScaledVector(up, dy * scale);
+        controls.target.x = THREE.MathUtils.clamp(controls.target.x, -12, 12);
+        controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.5, 10);
+        controls.target.z = THREE.MathUtils.clamp(controls.target.z, -12, 12);
+      } else {
+        controls.theta -= dx * 0.006;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - dy * 0.005,
+          0.28,
+          Math.PI * 0.49
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      controls.panning = false;
+
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius * Math.exp(event.deltaY * 0.001),
+          9,
+          39
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    // ------------------------------------------------------------
+    // Resize and animation
+    // ------------------------------------------------------------
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle gem pulse.
+      materials.gem.emissiveIntensity = 1.55 + Math.sin(elapsed * 2.2) * 0.22;
+
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

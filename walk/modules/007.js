@@ -1,4 +1,4 @@
-// @world {"id": "007", "title": "Marvel Super Heroes vs. Street Fighter", "sub": "Death Valley", "system": "Arcade"}
+// @world {"id": "007", "title": "Mortal Kombat", "sub": "The Courtyard", "system": "Console"}
 // Converted from  into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -9,7 +9,6 @@ export function createWorld(THREE) {
   let scene = {
     add: (...objs) => objs.forEach(o => o && group.add(o)),
     updateMatrixWorld: () => {},
-    children: group.children,
     background: null,
     fog: null
   };
@@ -36,9 +35,8 @@ export function createWorld(THREE) {
   }
 
   function dummyCamera() {
-    const p = new Proxy({}, { get: () => () => p });
     return {
-      position: p,
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
       lookAt: () => {},
       updateProjectionMatrix: () => {}
     };
@@ -62,7 +60,9 @@ export function createWorld(THREE) {
     };
     return node;
   };
-  // DOM / UI fallbacks
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
   const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
     innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
   };
@@ -82,802 +82,612 @@ export function createWorld(THREE) {
 
     
 
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Renderer and scene
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
-    const container = dummyEl();
+    // scene redirect
+    scene.background = new THREE.Color(0x111416);
+    scene.fog = new THREE.Fog(0x111416, 18, 38);
+
+    camera = dummyCamera();
 
     renderer = dummyRenderer();
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
-    container.appendChild(renderer.domElement);
+    
 
-    // scene redirect
-    scene.background = new THREE.Color(0x8ebbd5);
-    scene.fog = new THREE.Fog(0xc7b477, 24, 62);
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
 
-    camera = dummyCamera();
-
-    // ------------------------------------------------------------
-    // Direct camera controls: orbit, pan, zoom
-    // ------------------------------------------------------------
-
-    const cameraState = {
-      target: new THREE.Vector3(0, 2.2, 0),
-      azimuth: Math.PI * 0.22,
-      polar: 1.15,
-      distance: 24,
-      dragging: false,
-      panning: false,
-      lastX: 0,
-      lastY: 0
+    const voxel = (x, y, z, sx, sy, sz, material) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
     };
 
-    const initialTarget = cameraState.target.clone();
-    const initialAzimuth = cameraState.azimuth;
-    const initialPolar = cameraState.polar;
-    const initialDistance = cameraState.distance;
+    const cube = (x, y, z, size, material) => {
+      return voxel(x, y, z, size, size, size, material);
+    };
+
+    const bar = (x, y, z, sx, sy, sz, material) => {
+      return voxel(x, y, z, sx, sy, sz, material);
+    };
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0x6f7775,
+        roughness: 0.95
+      }),
+      darkStone: new THREE.MeshStandardMaterial({
+        color: 0x343a3a,
+        roughness: 0.95
+      }),
+      lightStone: new THREE.MeshStandardMaterial({
+        color: 0x9a9b8e,
+        roughness: 0.9
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x9d2828,
+        roughness: 0.8
+      }),
+      darkRed: new THREE.MeshStandardMaterial({
+        color: 0x6e171a,
+        roughness: 0.85
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xc69532,
+        metalness: 0.3,
+        roughness: 0.6
+      }),
+      goldDark: new THREE.MeshStandardMaterial({
+        color: 0x76521c,
+        metalness: 0.25,
+        roughness: 0.7
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x285b3d,
+        roughness: 0.85
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x164d68,
+        roughness: 0.55,
+        metalness: 0.1
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x15191a,
+        roughness: 0.75
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xb97850,
+        roughness: 0.85
+      }),
+      scorpionYellow: new THREE.MeshStandardMaterial({
+        color: 0xe2ad32,
+        roughness: 0.55
+      }),
+      scorpionBlack: new THREE.MeshStandardMaterial({
+        color: 0x171a1b,
+        roughness: 0.7
+      }),
+      subBlue: new THREE.MeshStandardMaterial({
+        color: 0x1f88b5,
+        roughness: 0.45,
+        metalness: 0.12
+      }),
+      subBlack: new THREE.MeshStandardMaterial({
+        color: 0x10171c,
+        roughness: 0.65
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+
+    scene.add(new THREE.HemisphereLight(0x9bb4c8, 0x282119, 1.25));
+
+    const keyLight = new THREE.DirectionalLight(0xffe4b8, 3.2);
+    keyLight.position.set(-6, 11, 8);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -12;
+    keyLight.shadow.camera.right = 12;
+    keyLight.shadow.camera.top = 12;
+    keyLight.shadow.camera.bottom = -12;
+    keyLight.shadow.camera.near = 1;
+    keyLight.shadow.camera.far = 35;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x6daeff, 1.8);
+    rimLight.position.set(8, 5, -9);
+    scene.add(rimLight);
+
+    const warmFill = new THREE.PointLight(0xff8a3d, 18, 25, 2);
+    warmFill.position.set(-4, 4, 3);
+    scene.add(warmFill);
+
+    // -------------------------------------------------------------------------
+    // Ground platform
+    // -------------------------------------------------------------------------
+
+    cube(0, -1.2, 0, 34, 1.2, 18, materials.darkStone);
+    cube(0, -0.45, 0, 32, 0.65, 16, materials.stone);
+    cube(0, 0.05, 0, 30, 0.25, 14, materials.lightStone);
+
+    // Stage side blocks.
+    for (let x = -14; x <= 14; x += 2) {
+      cube(x, 0.28, 7.15, 1.8, 0.45, 0.65, materials.stone);
+      cube(x, 0.28, -7.15, 1.8, 0.45, 0.65, materials.stone);
+    }
+
+    // -------------------------------------------------------------------------
+    // Background palace / mountain backdrop
+    // -------------------------------------------------------------------------
+
+    // Distant mountain walls.
+    for (let i = 0; i < 10; i++) {
+      const x = (i - 5) * 4.2;
+      const height = 3.5 + ((i * 7) % 4);
+      bar(x, height / 2, -10, 3.7, height, 1.2, materials.darkStone);
+      bar(x, height + 0.08, -10, 3.4, 0.18, 1.35, materials.stone);
+    }
+
+    // Main palace structure.
+    const palaceZ = -6.2;
+
+    // Back wall.
+    bar(0, 4.15, palaceZ, 12.5, 2.3, 1.2, materials.darkStone);
+    bar(0, 5.4, palaceZ, 11.8, 0.35, 1.45, materials.stone);
+
+    // Roof tiers.
+    bar(0, 6.25, palaceZ, 13.2, 0.45, 4.2, materials.red);
+    bar(0, 7.0, palaceZ, 12.4, 0.35, 3.5, materials.darkRed);
+    bar(0, 7.55, palaceZ, 10.8, 0.3, 2.8, materials.red);
+
+    // Roof tile details.
+    for (let x = -6; x <= 6; x += 0.7) {
+      bar(x, 7.72, palaceZ, 0.22, 0.12, 2.8, materials.goldDark);
+    }
+
+    // Decorative roof corners.
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const x = side * (5.8 - i * 0.8);
+        const y = 6.3 + i * 0.38;
+        const z = palaceZ + (i % 2) * 0.7;
+        cube(x, y, z, 0.42, 0.42, 0.42, materials.red);
+      }
+    }
+
+    // Red pillars.
+    for (const x of [-5.4, -2.7, 0, 2.7, 5.4]) {
+      cube(x, 3.25, palaceZ, 0.62, 2.5, 0.62, materials.red);
+      cube(x, 4.6, palaceZ, 0.82, 0.3, 0.82, materials.goldDark);
+    }
+
+    // Horizontal beams.
+    bar(0, 4.45, palaceZ, 11.2, 0.32, 0.45, materials.darkRed);
+    bar(0, 4.45, palaceZ - 0.35, 11.2, 0.2, 0.2, materials.goldDark);
+
+    // Dragon statues.
+    function createDragon(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+
+      const body = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.32, 1.15, 4, 8),
+        materials.gold
+      );
+      body.rotation.z = Math.PI / 2;
+      body.castShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.ConeGeometry(0.35, 0.85, 6),
+        materials.gold
+      );
+      head.rotation.z = -Math.PI / 2;
+      head.position.x = 0.95;
+      head.castShadow = true;
+      group.add(head);
+
+      const tail = new THREE.Mesh(
+        new THREE.ConeGeometry(0.16, 1.4, 5),
+        materials.goldDark
+      );
+      tail.rotation.z = Math.PI;
+      tail.position.x = -1.35;
+      group.add(tail);
+
+      for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(
+          new THREE.SphereGeometry(0.08, 8, 6),
+          materials.black
+        );
+        eye.position.set(1.15, 0.1, side * 0.2);
+        group.add(eye);
+      }
+
+      scene.add(group);
+    }
+
+    createDragon(-4.4, -6.25, 1.15);
+    createDragon(4.4, -6.25, 1.15);
+
+    // Throne.
+    cube(-0.65, 5.45, -6.2, 1.7, 0.55, 1.2, materials.darkStone);
+    cube(-0.65, 5.95, -6.2, 1.1, 0.35, 0.85, materials.gold);
+    cube(-0.65, 6.3, -6.2, 0.55, 0.3, 0.55, materials.goldDark);
+
+    // -------------------------------------------------------------------------
+    // Crowd of tiny voxel spectators
+    // -------------------------------------------------------------------------
+
+    const spectatorColors = [
+      materials.black,
+      materials.red,
+      materials.goldDark,
+      materials.blue
+    ];
+
+    for (let row = 0; row < 3; row++) {
+      for (let i = 0; i < 34; i++) {
+        const x = -12.5 + i * 0.73;
+        const z = -3.35 + row * 1.05;
+        const y = 0.55 + row * 0.58;
+
+        cube(x, y, z, 0.34, 0.48, 0.34, spectatorColors[i % spectatorColors.length]);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Fighters
+    // -------------------------------------------------------------------------
+
+    function createScorpion() {
+      const group = new THREE.Group();
+      group.position.set(-2.15, 0.62, 1.25);
+      group.rotation.y = -0.12;
+
+      // Legs.
+      const legPositions = [
+        [-0.38, -0.18], [0.38, -0.18],
+        [-0.38, 0.25], [0.38, 0.25],
+        [-0.25, 0.5], [0.25, 0.5]
+      ];
+
+      for (const [x, z] of legPositions) {
+        const leg = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.13, 0.42, 3, 6),
+          materials.scorpionBlack
+        );
+        leg.position.set(x, 0.15, z);
+        leg.castShadow = true;
+        group.add(leg);
+      }
+
+      // Torso.
+      const torso = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.34, 0.52, 4, 8),
+        materials.scorpionBlack
+      );
+      torso.position.y = 0.55;
+      torso.castShadow = true;
+      group.add(torso);
+
+      // Yellow chest armor.
+      const chest = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.27, 0.31, 0.18, 8),
+        materials.scorpionYellow
+      );
+      chest.rotation.x = Math.PI / 2;
+      chest.position.y = 0.62;
+      chest.castShadow = true;
+      group.add(chest);
+
+      // Head and mask.
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.27, 10, 8),
+        materials.scorpionYellow
+      );
+      head.position.set(0, 1.04, 0);
+      head.castShadow = true;
+      group.add(head);
+
+      const mask = new THREE.Mesh(
+        new THREE.BoxGeometry(0.43, 0.22, 0.16),
+        materials.scorpionBlack
+      );
+      mask.position.set(0, 1.03, 0.22);
+      group.add(mask);
+
+      // Eyes.
+      for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(
+          new THREE.SphereGeometry(0.045, 8, 6),
+          materials.black
+        );
+        eye.position.set(side * 0.12, 1.05, 0.31);
+        group.add(eye);
+      }
+
+      // Arms.
+      const leftArm = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.13, 0.42, 3, 6),
+        materials.scorpionBlack
+      );
+      leftArm.position.set(-0.43, 0.72, 0.05);
+      leftArm.rotation.z = -0.45;
+      leftArm.castShadow = true;
+      group.add(leftArm);
+
+      const rightArm = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.13, 0.42, 3, 6),
+        materials.scorpionBlack
+      );
+      rightArm.position.set(0.43, 0.72, 0.05);
+      rightArm.rotation.z = 0.45;
+      rightArm.castShadow = true;
+      group.add(rightArm);
+
+      // Kick.
+      const kickLeg = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.13, 0.6, 3, 6),
+        materials.scorpionBlack
+      );
+      kickLeg.position.set(0.38, 0.38, 0.42);
+      kickLeg.rotation.z = -0.75;
+      kickLeg.rotation.x = -0.25;
+      kickLeg.castShadow = true;
+      group.add(kickLeg);
+
+      // Spear.
+      const spear = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 1.45, 6),
+        materials.gold
+      );
+      spear.position.set(-0.55, 0.55, -0.25);
+      spear.rotation.z = -0.55;
+      spear.castShadow = true;
+      group.add(spear);
+
+      scene.add(group);
+      return group;
+    }
+
+    function createSubZero() {
+      const group = new THREE.Group();
+      group.position.set(2.15, 0.62, 1.25);
+      group.rotation.y = 0.12;
+
+      // Legs.
+      const legPositions = [
+        [-0.38, -0.18], [0.38, -0.18],
+        [-0.38, 0.25], [0.38, 0.25],
+        [-0.25, 0.5], [0.25, 0.5]
+      ];
+
+      for (const [x, z] of legPositions) {
+        const leg = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.13, 0.42, 3, 6),
+          materials.subBlack
+        );
+        leg.position.set(x, 0.15, z);
+        leg.castShadow = true;
+        group.add(leg);
+      }
+
+      // Torso.
+      const torso = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.34, 0.52, 4, 8),
+        materials.subBlack
+      );
+      torso.position.y = 0.55;
+      torso.castShadow = true;
+      group.add(torso);
+
+      // Blue chest armor.
+      const chest = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.27, 0.31, 0.18, 8),
+        materials.subBlue
+      );
+      chest.rotation.x = Math.PI / 2;
+      chest.position.y = 0.62;
+      chest.castShadow = true;
+      group.add(chest);
+
+      // Head and mask.
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.27, 10, 8),
+        materials.subBlue
+      );
+      head.position.set(0, 1.04, 0);
+      head.castShadow = true;
+      group.add(head);
+
+      const mask = new THREE.Mesh(
+        new THREE.BoxGeometry(0.43, 0.22, 0.16),
+        materials.subBlack
+      );
+      mask.position.set(0, 1.03, 0.22);
+      group.add(mask);
+
+      // Eyes.
+      for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(
+          new THREE.SphereGeometry(0.045, 8, 6),
+          materials.black
+        );
+        eye.position.set(side * 0.12, 1.05, 0.31);
+        group.add(eye);
+      }
+
+      // Arms.
+      const leftArm = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.13, 0.42, 3, 6),
+        materials.subBlack
+      );
+      leftArm.position.set(-0.43, 0.72, 0.05);
+      leftArm.rotation.z = 0.45;
+      leftArm.castShadow = true;
+      group.add(leftArm);
+
+      const rightArm = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.13, 0.42, 3, 6),
+        materials.subBlack
+      );
+      rightArm.position.set(0.43, 0.72, 0.05);
+      rightArm.rotation.z = -0.45;
+      rightArm.castShadow = true;
+      group.add(rightArm);
+
+      // Ice blade.
+      const blade = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.1, 0.72, 8),
+        materials.subBlue
+      );
+      blade.position.set(-0.43, 0.7, 0.28);
+      blade.rotation.z = -0.65;
+      blade.castShadow = true;
+      group.add(blade);
+
+      scene.add(group);
+      return group;
+    }
+
+    const scorpion = createScorpion();
+    const subZero = createSubZero();
+
+    // -------------------------------------------------------------------------
+    // Floating particles / snow
+    // -------------------------------------------------------------------------
+
+    const particleCount = 90;
+    const particles = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSpeeds = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 24;
+      particlePositions[i * 3 + 1] = Math.random() * 12;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 14;
+      particleSpeeds[i] = 0.08 + Math.random() * 0.18;
+    }
+
+    particles.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+    scene.add(particles);
+
+    // -------------------------------------------------------------------------
+    // Custom camera controls
+    // -------------------------------------------------------------------------
+
+    const cameraState = {
+      theta: 0.05,
+      phi: Math.PI / 2,
+      radius: 21,
+      target: new THREE.Vector3(0, 3.1, 0)
+    };
+
+    const defaultCamera = {
+      theta: 0.05,
+      phi: Math.PI / 2,
+      radius: 21
+    };
 
     function updateCamera() {
-      const sinPolar = Math.sin(cameraState.polar);
-
+      const sinPhi = Math.sin(cameraState.phi);
       camera.position.set(
-        cameraState.target.x +
-          cameraState.distance * sinPolar * Math.sin(cameraState.azimuth),
-        cameraState.target.y +
-          cameraState.distance * Math.cos(cameraState.polar),
-        cameraState.target.z +
-          cameraState.distance * sinPolar * Math.cos(cameraState.azimuth)
+        cameraState.target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
       );
-
       camera.lookAt(cameraState.target);
     }
 
+    updateCamera();
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let pointerId = null;
+
     renderer.domElement.addEventListener("pointerdown", (event) => {
-      cameraState.dragging = true;
-      cameraState.panning = event.shiftKey;
-      cameraState.lastX = event.clientX;
-      cameraState.lastY = event.clientY;
-      renderer.domElement.setPointerCapture(event.pointerId);
+      dragging = true;
+      pointerId = event.pointerId;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(pointerId);
+      renderer.domElement.style.cursor = "grabbing";
     });
 
     renderer.domElement.addEventListener("pointermove", (event) => {
-      if (!cameraState.dragging) return;
+      if (!dragging || event.pointerId !== pointerId) return;
 
-      const dx = event.clientX - cameraState.lastX;
-      const dy = event.clientY - cameraState.lastY;
+      const deltaX = event.clientX - previousX;
+      const deltaY = event.clientY - previousY;
 
-      cameraState.lastX = event.clientX;
-      cameraState.lastY = event.clientY;
+      previousX = event.clientX;
+      previousY = event.clientY;
 
-      if (cameraState.panning) {
-        const right = new THREE.Vector3();
-        const up = new THREE.Vector3();
-
-        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
-
-        const panScale = cameraState.distance * 0.0015;
-
-        cameraState.target.addScaledVector(right, -dx * panScale);
-        cameraState.target.addScaledVector(up, dy * panScale);
-
-        cameraState.target.x = THREE.MathUtils.clamp(
-          cameraState.target.x,
-          -14,
-          14
-        );
-
-        cameraState.target.y = THREE.MathUtils.clamp(
-          cameraState.target.y,
-          0.5,
-          8
-        );
-
-        cameraState.target.z = THREE.MathUtils.clamp(
-          cameraState.target.z,
-          -14,
-          14
-        );
-      } else {
-        cameraState.azimuth -= dx * 0.006;
-        cameraState.polar = THREE.MathUtils.clamp(
-          cameraState.polar - dy * 0.005,
-          0.38,
-          Math.PI * 0.49
-        );
-      }
+      cameraState.theta -= deltaX * 0.006;
+      cameraState.phi = THREE.MathUtils.clamp(
+        cameraState.phi + deltaY * 0.005,
+        0.62,
+        1.48
+      );
 
       updateCamera();
     });
 
     function endDrag(event) {
-      cameraState.dragging = false;
-      cameraState.panning = false;
+      if (event.pointerId !== pointerId) return;
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
 
-      if (event.pointerId !== undefined &&
-          renderer.domElement.hasPointerCapture(event.pointerId)) {
-        renderer.domElement.releasePointerCapture(event.pointerId);
+      if (renderer.domElement.hasPointerCapture(pointerId)) {
+        renderer.domElement.releasePointerCapture(pointerId);
       }
+
+      pointerId = null;
     }
 
     renderer.domElement.addEventListener("pointerup", endDrag);
     renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
 
     renderer.domElement.addEventListener("wheel", (event) => {
       event.preventDefault();
-
-      cameraState.distance = THREE.MathUtils.clamp(
-        cameraState.distance + event.deltaY * 0.018,
-        9,
-        48
+      cameraState.radius = THREE.MathUtils.clamp(
+        cameraState.radius + event.deltaY * 0.012,
+        13,
+        30
       );
-
       updateCamera();
     }, { passive: false });
 
-    // ------------------------------------------------------------
-    // Materials
-    // ------------------------------------------------------------
-
-    const materials = {
-      sand: new THREE.MeshStandardMaterial({
-        color: 0xc98a3d,
-        roughness: 0.96
-      }),
-      sandLight: new THREE.MeshStandardMaterial({
-        color: 0xe0a654,
-        roughness: 0.94
-      }),
-      sandDark: new THREE.MeshStandardMaterial({
-        color: 0x8b5727,
-        roughness: 1
-      }),
-      rock: new THREE.MeshStandardMaterial({
-        color: 0x8a5529,
-        roughness: 0.98
-      }),
-      rockLight: new THREE.MeshStandardMaterial({
-        color: 0xb87839,
-        roughness: 0.95
-      }),
-      rockDark: new THREE.MeshStandardMaterial({
-        color: 0x59341d,
-        roughness: 1
-      }),
-      mushroomStem: new THREE.MeshStandardMaterial({
-        color: 0xe8d9a5,
-        roughness: 0.9
-      }),
-      mushroomCap: new THREE.MeshStandardMaterial({
-        color: 0xe75336,
-        roughness: 0.72
-      }),
-      mushroomCapDark: new THREE.MeshStandardMaterial({
-        color: 0xb82f25,
-        roughness: 0.78
-      }),
-      blueCreature: new THREE.MeshStandardMaterial({
-        color: 0x3678d4,
-        roughness: 0.82
-      }),
-      greenCreature: new THREE.MeshStandardMaterial({
-        color: 0x66b95b,
-        roughness: 0.84
-      }),
-      eye: new THREE.MeshStandardMaterial({
-        color: 0x10120e,
-        roughness: 0.35
-      }),
-      white: new THREE.MeshStandardMaterial({
-        color: 0xfff4c6,
-        roughness: 0.7
-      })
-    };
-
-    // ------------------------------------------------------------
-    // Voxel helpers
-    // ------------------------------------------------------------
-
-    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
-
-    function voxel(x, y, z, material, sx = 1, sy = 1, sz = 1) {
-      const mesh = new THREE.Mesh(voxelGeometry, material);
-      mesh.position.set(x, y, z);
-      mesh.scale.set(sx, sy, sz);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      return mesh;
-    }
-
-    function voxelBox(x, y, z, width, height, depth, material) {
-      const mesh = new THREE.Mesh(voxelGeometry, material);
-      mesh.position.set(x, y, z);
-      mesh.scale.set(width, height, depth);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      return mesh;
-    }
-
-    function addRockStack(x, z, baseY, levels, material, rotation = 0) {
-      const group = new THREE.Group();
-      group.position.set(x, baseY, z);
-      group.rotation.y = rotation;
-
-      const levelsData = [
-        { y: 0, w: 5, h: 1, d: 4 },
-        { y: 1, w: 4, h: 1, d: 3 },
-        { y: 2, w: 3, h: 1, d: 3 },
-        { y: 3, w: 2, h: 1, d: 2 }
-      ];
-
-      for (let i = 0; i < levelsData.length; i++) {
-        const level = levelsData[i];
-        const materialIndex = i % 3 === 0
-          ? materials.rockDark
-          : i % 2 === 0
-            ? materials.rock
-            : materials.rockLight;
-
-        const rock = new THREE.Mesh(voxelGeometry, materialIndex);
-        rock.position.set(0, level.y, 0);
-        rock.scale.set(level.w, level.h, level.d);
-        rock.rotation.y = (Math.random() - 0.5) * 0.18;
-        rock.castShadow = true;
-        rock.receiveShadow = true;
-        group.add(rock);
-      }
-
-      scene.add(group);
-      return group;
-    }
-
-    function addCanyonWall(x, z, width, height, material) {
-      const group = new THREE.Group();
-      group.position.set(x, 0, z);
-
-      const levels = [
-        { y: 0, w: width + 1, h: 1, d: 2 },
-        { y: 1, w: width, h: 1, d: 2 },
-        { y: 2, w: width - 1, h: 1, d: 2 },
-        { y: 3, w: width - 2, h: 1, d: 2 }
-      ];
-
-      for (let i = 0; i < levels.length; i++) {
-        const level = levels[i];
-        const materialIndex = i % 2 === 0
-          ? materials.rockDark
-          : materials.rock;
-
-        const wall = new THREE.Mesh(voxelGeometry, materialIndex);
-        wall.position.set(0, level.y, 0);
-        wall.scale.set(level.w, level.h, level.d);
-        wall.rotation.y = (Math.random() - 0.5) * 0.12;
-        wall.castShadow = true;
-        wall.receiveShadow = true;
-        group.add(wall);
-      }
-
-      scene.add(group);
-      return group;
-    }
-
-    // ------------------------------------------------------------
-    // Terrain and canyon
-    // ------------------------------------------------------------
-
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(90, 90, 1, 1),
-      materials.sand
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.08;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // Broad foreground dunes.
-    for (let x = -25; x <= 25; x += 2) {
-      for (let z = -18; z <= 18; z += 2) {
-        const wave =
-          Math.sin(x * 0.38 + z * 0.14) * 0.38 +
-          Math.sin(z * 0.27 - x * 0.08) * 0.25;
-
-        voxel(
-          x,
-          0.02 + wave,
-          z,
-          Math.random() > 0.5 ? materials.sand : materials.sandLight,
-          1.75,
-          0.35,
-          1.75
-        );
-      }
-    }
-
-    // Left canyon wall.
-    addCanyonWall(-11, -8, 11, 7, materials.rockDark);
-
-    // Right canyon wall.
-    addCanyonWall(11, -8, 12, 8, materials.rock);
-
-    // Background mesas.
-    addRockStack(-20, -25, 0, 6, materials.rockDark, 0.25);
-    addRockStack(20, -27, 0, 7, materials.rock, -0.2);
-    addRockStack(-30, -35, 0, 5, materials.rockDark, 0.1);
-    addRockStack(30, -37, 0, 5, materials.rock, -0.15);
-
-    // Low foreground rocks.
-    addRockStack(-5, 5, 0, 3, materials.rockLight, 0.15);
-    addRockStack(7, 4, 0, 3, materials.rock, -0.1);
-    addRockStack(-14, 2, 0, 2, materials.rockDark, 0.05);
-    addRockStack(15, 2, 0, 2, materials.rockLight, -0.05);
-
-    // ------------------------------------------------------------
-    // Giant floating mushroom
-    // ------------------------------------------------------------
-
-    const mushroom = new THREE.Group();
-    mushroom.position.set(0, 0, -1);
-    mushroom.rotation.y = -0.18;
-    scene.add(mushroom);
-
-    // Stem made from stacked tapered voxel rings.
-    for (let i = 0; i < 7; i++) {
-      const radius = 1.65 - i * 0.18;
-      const y = 1.25 + i * 0.72;
-
-      const stem = new THREE.Mesh(voxelGeometry, materials.mushroomStem);
-      stem.position.set(0, y, 0);
-      stem.scale.set(radius * 1.35, 0.7, radius);
-      stem.rotation.y = 0.12 * i;
-      stem.castShadow = true;
-      stem.receiveShadow = true;
-      mushroom.add(stem);
-    }
-
-    // Cap built as a low voxel dome with a dark underside.
-    const capLevels = [
-      { y: 4.05, radius: 2.65, height: 0.65 },
-      { y: 4.75, radius: 2.25, height: 0.65 },
-      { y: 5.45, radius: 1.65, height: 0.65 },
-      { y: 6.15, radius: 0.95, height: 0.65 }
-    ];
-
-    for (const level of capLevels) {
-      const segments = 12;
-
-      for (let i = 0; i < segments; i++) {
-        const angle = (i / segments) * Math.PI * 2;
-        const x = Math.cos(angle) * level.radius;
-        const z = Math.sin(angle) * level.radius;
-
-        const cap = new THREE.Mesh(voxelGeometry, materials.mushroomCap);
-        cap.position.set(x, level.y, z);
-        cap.scale.set(0.95, level.height, 0.95);
-        cap.rotation.y = angle;
-        cap.castShadow = true;
-        cap.receiveShadow = true;
-        mushroom.add(cap);
-      }
-    }
-
-    // Dark inner cap/underside.
-    const underside = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.1, 1.45, 0.25, 16),
-      materials.mushroomCapDark
-    );
-    underside.position.set(0, 4.2, 0);
-    underside.scale.z = 0.85;
-    underside.rotation.x = Math.PI;
-    underside.castShadow = true;
-    mushroom.add(underside);
-
-    // Small glowing cap accents.
-    for (let i = 0; i < 7; i++) {
-      const angle = (i / 7) * Math.PI * 2;
-      voxel(
-        Math.cos(angle) * 2.35,
-        4.1,
-        Math.sin(angle) * 2.35,
-        materials.mushroomCapDark,
-        0.45,
-        0.22,
-        0.45
-      );
-    }
-
-    // ------------------------------------------------------------
-    // Flag on the mushroom stem
-    // ------------------------------------------------------------
-
-    const flagPole = new THREE.Group();
-    flagPole.position.set(0, 0, -1);
-    flagPole.rotation.y = -0.18;
-    scene.add(flagPole);
-
-    const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.09, 9, 8),
-      materials.rockLight
-    );
-    pole.position.y = 4.5;
-    pole.castShadow = true;
-    flagPole.add(pole);
-
-    const flag = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.4, 1.35, 8, 2),
-      new THREE.MeshStandardMaterial({
-        color: 0xf05a36,
-        roughness: 0.8,
-        side: THREE.DoubleSide
-      })
-    );
-    flag.position.set(1.25, 8.45, 0);
-    flag.castShadow = true;
-    flagPole.add(flag);
-
-    // Slight wind animation.
-    const originalFlagGeometry = flag.geometry.clone();
-    const originalFlagPosition = flag.position.clone();
-
-    function animateFlag(time) {
-      flag.geometry = originalFlagGeometry.clone();
-      flag.position.copy(originalFlagPosition);
-
-      const positions = flag.geometry.attributes.position;
-
-      for (let i = 0; i < positions.count; i++) {
-        const x = positions.getX(i);
-        const y = positions.getY(i);
-
-        const wave =
-          Math.sin(time * 3.2 + x * 2.2) * 0.12 +
-          Math.sin(time * 5.1 + x * 4.0) * 0.045;
-
-        positions.setZ(i, wave * (1 + x / 2.4));
-      }
-
-      positions.needsUpdate = true;
-      flag.geometry.computeVertexNormals();
-    }
-
-    // ------------------------------------------------------------
-    // Blue creature
-    // ------------------------------------------------------------
-
-    const blueCreature = new THREE.Group();
-    blueCreature.position.set(-3.2, 0.25, 1.2);
-    blueCreature.rotation.y = 0.6;
-    scene.add(blueCreature);
-
-    // Body.
-    const body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.95, 12, 8),
-      materials.blueCreature
-    );
-    body.scale.set(1.25, 0.75, 0.85);
-    body.position.y = 0.55;
-    body.castShadow = true;
-    body.receiveShadow = true;
-    blueCreature.add(body);
-
-    // Head.
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.68, 12, 8),
-      materials.blueCreature
-    );
-    head.position.set(0.45, 1.15, 0);
-    head.scale.set(0.9, 1.05, 0.9);
-    head.castShadow = true;
-    blueCreature.add(head);
-
-    // Eyes.
-    const blueEyeLeft = new THREE.Mesh(
-      new THREE.SphereGeometry(0.11, 8, 6),
-      materials.eye
-    );
-    blueEyeLeft.position.set(0.18, 1.38, 0.5);
-    blueCreature.add(blueEyeLeft);
-
-    const blueEyeRight = blueEyeLeft.clone();
-    blueEyeRight.position.z = -0.5;
-    blueCreature.add(blueEyeRight);
-
-    // Arms and legs.
-    const limbGeometry = new THREE.CylinderGeometry(0.16, 0.2, 0.65, 8);
-
-    const leftArm = new THREE.Mesh(limbGeometry, materials.blueCreature);
-    leftArm.position.set(-0.75, 0.65, 0);
-    leftArm.rotation.z = -0.7;
-    leftArm.castShadow = true;
-    blueCreature.add(leftArm);
-
-    const rightArm = leftArm.clone();
-    rightArm.position.set(0.95, 0.65, 0);
-    rightArm.rotation.z = 0.7;
-    blueCreature.add(rightArm);
-
-    const leftLeg = new THREE.Mesh(limbGeometry, materials.blueCreature);
-    leftLeg.position.set(-0.48, 0.18, 0.38);
-    leftLeg.rotation.x = -0.5;
-    leftLeg.castShadow = true;
-    blueCreature.add(leftLeg);
-
-    const rightLeg = leftLeg.clone();
-    rightLeg.position.set(0.48, 0.18, 0.38);
-    rightLeg.rotation.x = -0.5;
-    blueCreature.add(rightLeg);
-
-    // Small horn.
-    const horn = new THREE.Mesh(
-      new THREE.ConeGeometry(0.16, 0.55, 8),
-      materials.white
-    );
-    horn.position.set(0.45, 1.75, 0);
-    horn.rotation.z = -0.35;
-    horn.castShadow = true;
-    blueCreature.add(horn);
-
-    // ------------------------------------------------------------
-    // Green creature
-    // ------------------------------------------------------------
-
-    const greenCreature = new THREE.Group();
-    greenCreature.position.set(3.2, 0.25, 1.5);
-    greenCreature.rotation.y = -0.55;
-    scene.add(greenCreature);
-
-    const bodyGreen = new THREE.Mesh(
-      new THREE.SphereGeometry(0.82, 12, 8),
-      materials.greenCreature
-    );
-    bodyGreen.scale.set(1.25, 0.72, 0.85);
-    bodyGreen.position.y = 0.5;
-    bodyGreen.castShadow = true;
-    bodyGreen.receiveShadow = true;
-    greenCreature.add(bodyGreen);
-
-    const headGreen = new THREE.Mesh(
-      new THREE.SphereGeometry(0.6, 12, 8),
-      materials.greenCreature
-    );
-    headGreen.position.set(0.42, 1.08, 0);
-    headGreen.scale.set(0.9, 1.05, 0.9);
-    headGreen.castShadow = true;
-    greenCreature.add(headGreen);
-
-    const greenEyeLeft = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 8, 6),
-      materials.eye
-    );
-    greenEyeLeft.position.set(0.16, 1.3, 0.49);
-    greenCreature.add(greenEyeLeft);
-
-    const greenEyeRight = greenEyeLeft.clone();
-    greenEyeRight.position.z = -0.49;
-    greenCreature.add(greenEyeRight);
-
-    const greenArm = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 0.19, 0.58, 8),
-      materials.greenCreature
-    );
-    greenArm.position.set(-0.7, 0.55, 0);
-    greenArm.rotation.z = 0.8;
-    greenArm.castShadow = true;
-    greenCreature.add(greenArm);
-
-    const greenLeg = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.2, 0.55, 8),
-      materials.greenCreature
-    );
-    greenLeg.position.set(-0.45, 0.18, 0.4);
-    greenLeg.rotation.x = -0.45;
-    greenLeg.castShadow = true;
-    greenCreature.add(greenLeg);
-
-    // Tiny backpack.
-    const backpack = new THREE.Mesh(
-      new THREE.SphereGeometry(0.3, 8, 6),
-      materials.mushroomCapDark
-    );
-    backpack.position.set(-0.4, 0.95, -0.1);
-    backpack.scale.set(0.9, 1.1, 0.8);
-    backpack.castShadow = true;
-    greenCreature.add(backpack);
-
-    // ------------------------------------------------------------
-    // Lantern and scattered items
-    // ------------------------------------------------------------
-
-    const lantern = new THREE.Group();
-    lantern.position.set(0.4, 1.0, -0.5);
-    scene.add(lantern);
-
-    const lanternGlow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 10, 8),
-      new THREE.MeshStandardMaterial({
-        color: 0xffd27a,
-        emissive: 0xff8c2a,
-        emissiveIntensity: 2.2,
-        roughness: 0.45
-      })
-    );
-    lantern.add(lanternGlow);
-
-    const lanternFrame = new THREE.Mesh(
-      new THREE.TorusGeometry(0.28, 0.035, 6, 12),
-      materials.rockDark
-    );
-    lanternFrame.rotation.x = Math.PI / 2;
-    lanternFrame.position.y = 0.25;
-    lantern.add(lanternFrame);
-
-    // A small campfire.
-    const fire = new THREE.Group();
-    fire.position.set(-0.5, 0.2, -1.2);
-    scene.add(fire);
-
-    const fireLog = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 0.28, 0.7, 8),
-      materials.rockDark
-    );
-    fireLog.rotation.z = Math.PI / 2;
-    fireLog.castShadow = true;
-    fire.add(fireLog);
-
-    const flameMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff6b22,
-      emissive: 0xff3b08,
-      emissiveIntensity: 2.4,
-      roughness: 0.5
-    });
-
-    const flame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.3, 0.7, 7),
-      flameMaterial
-    );
-    flame.position.y = 0.45;
-    fire.add(flame);
-
-    // ------------------------------------------------------------
-    // Sky, clouds, sun, and distant mountains
-    // ------------------------------------------------------------
-
-    const sky = new THREE.Mesh(
-      new THREE.SphereGeometry(70, 32, 18),
-      new THREE.MeshBasicMaterial({
-        color: 0x8ebbd5,
-        side: THREE.BackSide
-      })
-    );
-    scene.add(sky);
-
-    // Gradient sky via a giant vertical plane behind the scene.
-    const skyGradient = new THREE.Mesh(
-      new THREE.PlaneGeometry(80, 35),
-      new THREE.MeshBasicMaterial({
-        color: 0xb9d9ef,
-        side: THREE.BackSide
-      })
-    );
-    skyGradient.position.set(0, 18, -45);
-    scene.add(skyGradient);
-
-    // Cloud groups made from white/soft voxels.
-    const cloudMaterial = new THREE.MeshStandardMaterial({
-      color: 0xf4f1df,
-      roughness: 1,
-      transparent: true,
-      opacity: 0.88
-    });
-
-    function addCloud(x, y, z, scale) {
-      const cloud = new THREE.Group();
-      cloud.position.set(x, y, z);
-      cloud.scale.setScalar(scale);
-
-      const pieces = [
-        [-1.4, 0, 0, 1.1, 0.55, 0.7],
-        [-0.55, 0.2, 0, 1.35, 0.8, 0.85],
-        [0.55, 0.05, 0, 1.25, 0.65, 0.75],
-        [1.4, -0.05, 0, 0.9, 0.45, 0.6],
-        [0, -0.25, 0.1, 1.5, 0.45, 0.7]
-      ];
-
-      for (const piece of pieces) {
-        const puff = new THREE.Mesh(voxelGeometry, cloudMaterial);
-        puff.position.set(piece[0], piece[1], piece[2]);
-        puff.scale.set(piece[3], piece[4], piece[5]);
-        puff.castShadow = false;
-        cloud.add(puff);
-      }
-
-      scene.add(cloud);
-    }
-
-    addCloud(-12, 13, -30, 2.1);
-    addCloud(14, 15, -34, 2.6);
-    addCloud(25, 10, -40, 1.5);
-    addCloud(-25, 11, -38, 1.4);
-
-    // Sun disc.
-    const sun = new THREE.Mesh(
-      new THREE.CircleGeometry(3.2, 32),
-      new THREE.MeshBasicMaterial({
-        color: 0xffd58a,
-        fog: false
-      })
-    );
-    sun.position.set(24, 15, -48);
-    scene.add(sun);
-
-    // Distant mountain silhouette.
-    const distantMountains = new THREE.Mesh(
-      new THREE.ConeGeometry(28, 16, 7),
-      new THREE.MeshStandardMaterial({
-        color: 0x6b5944,
-        roughness: 1,
-        flatShading: true
-      })
-    );
-    distantMountains.position.set(0, 7, -48);
-    distantMountains.scale.z = 0.7;
-    scene.add(distantMountains);
-
-    // ------------------------------------------------------------
-    // Lighting
-    // ------------------------------------------------------------
-
-    const hemisphere = new THREE.HemisphereLight(
-      0xb9dcff,
-      0x8a5425,
-      2.1
-    );
-    scene.add(hemisphere);
-
-    const sunLight = new THREE.DirectionalLight(
-      0xffd39b,
-      3.2
-    );
-    sunLight.position.set(-12, 20, 14);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.set(2048, 2048);
-    sunLight.shadow.camera.left = -24;
-    sunLight.shadow.camera.right = 24;
-    sunLight.shadow.camera.top = 24;
-    sunLight.shadow.camera.bottom = -24;
-    sunLight.shadow.camera.near = 1;
-    sunLight.shadow.camera.far = 65;
-    sunLight.shadow.bias = -0.00035;
-    sunLight.shadow.normalBias = 0.025;
-    scene.add(sunLight);
-
-    const fillLight = new THREE.DirectionalLight(
-      0x8eb9e8,
-      0.8
-    );
-    fillLight.position.set(15, 8, -15);
-    scene.add(fillLight);
-
-    const fireLight = new THREE.PointLight(
-      0xff6c22,
-      1.8,
-      6,
-      2
-    );
-    fireLight.position.set(-0.5, 1, -1.2);
-    scene.add(fireLight);
-
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Animation
-    // ------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     const clock = new THREE.Clock();
 
@@ -886,34 +696,42 @@ export function createWorld(THREE) {
 
       const elapsed = clock.getElapsedTime();
 
-      animateFlag(elapsed);
+      // Subtle fighter breathing and idle movement.
+      scorpion.position.y = 0.62 + Math.sin(elapsed * 1.7) * 0.018;
+      subZero.position.y = 0.62 + Math.sin(elapsed * 1.7 + 1.4) * 0.018;
 
-      // Gentle creature breathing.
-      blueCreature.scale.y = 1 + Math.sin(elapsed * 2.1) * 0.025;
-      greenCreature.scale.y = 1 + Math.sin(elapsed * 2.4 + 1) * 0.02;
+      scorpion.rotation.y = -0.12 + Math.sin(elapsed * 0.7) * 0.035;
+      subZero.rotation.y = 0.12 - Math.sin(elapsed * 0.7 + 1.1) * 0.035;
 
-      // Subtle flame flicker.
-      flame.scale.y = 0.9 + Math.sin(elapsed * 8.5) * 0.12;
-      flame.rotation.z = Math.sin(elapsed * 6.2) * 0.08;
-      fireLight.intensity = 1.6 + Math.sin(elapsed * 7.1) * 0.25;
+      // Animate particles.
+      const positions = particles.attributes.position.array;
+
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3 + 1] -= particleSpeeds[i] * 0.016;
+        positions[i * 3] += Math.sin(elapsed * 0.4 + i) * 0.0015;
+
+        if (positions[i * 3 + 1] < 0.2) {
+          positions[i * 3 + 1] = 12;
+        }
+      }
+
+      particles.attributes.position.needsUpdate = true;
 
       renderer.render(scene, camera);
     }
 
-    // ------------------------------------------------------------
-    // Resize
-    // ------------------------------------------------------------
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    updateCamera();
     animate();
+
+    // -------------------------------------------------------------------------
+    // Resize
+    // -------------------------------------------------------------------------
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
   
 
   // --- Walker Update Protocol ---
@@ -930,7 +748,7 @@ export function createWorld(THREE) {
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
     relic: { id: "crown", name: "The Mountain King's Crown", x: -10.0, z: -12.0 },
-    env:   { background: 0x8ebbd5, fogColor: 0x8ebbd5, fogDensity: 0.025 },
+    env:   { background: 0x111416, fogColor: 0x111416, fogDensity: 0.025 },
     doors: {
       next: { x: 12.0, z: -10.0 },
       prev: { x: -12.0, z: 10.0 }

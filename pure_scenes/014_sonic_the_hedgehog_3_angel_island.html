@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Floating Island</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #d9e3e8;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    #hud {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 2;
+      padding: 12px 16px;
+      border: 1px solid rgba(255,255,255,.55);
+      border-radius: 12px;
+      color: #17313a;
+      background: rgba(255,255,255,.72);
+      box-shadow: 0 8px 28px rgba(28,55,65,.16);
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+    #hud strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 13px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    #hint {
+      font-size: 11px;
+      opacity: .75;
+    }
+    .credit {
+      position: fixed;
+      right: 16px;
+      bottom: 12px;
+      z-index: 2;
+      color: rgba(23,49,58,.7);
+      font-size: 11px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <strong>Floating Sanctuary</strong>
+    <div id="hint">Drag to orbit · Scroll to zoom</div>
+  </div>
+  <div class="credit">A voxel world in Three.js</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer, scene, lighting
+    // -------------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xd9e3e8);
+    scene.fog = new THREE.Fog(0xd9e3e8, 24, 48);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const hemi = new THREE.HemisphereLight(0xe9f6ff, 0x6b4c2b, 2.25);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff0cf, 3.4);
+    sun.position.set(11, 18, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -16;
+    sun.shadow.camera.right = 16;
+    sun.shadow.camera.top = 16;
+    sun.shadow.camera.bottom = -16;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 50;
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.025;
+    scene.add(sun);
+
+    const rim = new THREE.DirectionalLight(0xb9d9ff, 1.25);
+    rim.position.set(-10, 8, -12);
+    scene.add(rim);
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+    const world = new THREE.Group();
+    scene.add(world);
+
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x68b64d, roughness: 0.88, metalness: 0
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x83c65a, roughness: 0.9
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x4e913b, roughness: 0.95
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: 0x9a5e31, roughness: 0.96
+      }),
+      rockLight: new THREE.MeshStandardMaterial({
+        color: 0xb87743, roughness: 0.94
+      }),
+      rockDark: new THREE.MeshStandardMaterial({
+        color: 0x684026, roughness: 1
+      }),
+      snow: new THREE.MeshStandardMaterial({
+        color: 0xf5f7ef, roughness: 0.95
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd8a93d,
+        roughness: 0.48,
+        metalness: 0.38
+      }),
+      goldDark: new THREE.MeshStandardMaterial({
+        color: 0x9b6c1e,
+        roughness: 0.6,
+        metalness: 0.3
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x49b9d6,
+        roughness: 0.28,
+        metalness: 0.08,
+        emissive: 0x0c3540,
+        emissiveIntensity: 0.2
+      }),
+      waterLight: new THREE.MeshStandardMaterial({
+        color: 0x8be5f2,
+        roughness: 0.24,
+        metalness: 0.05
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0x754326, roughness: 0.93
+      }),
+      roof: new THREE.MeshStandardMaterial({
+        color: 0x4f7782, roughness: 0.85
+      }),
+      wall: new THREE.MeshStandardMaterial({
+        color: 0xe9dfbd, roughness: 0.9
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xc93e31, roughness: 0.75
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x3b82a3, roughness: 0.8
+      }),
+      leaf: new THREE.MeshStandardMaterial({
+        color: 0x39783b, roughness: 0.92
+      }),
+      leafLight: new THREE.MeshStandardMaterial({
+        color: 0x65a744, roughness: 0.9
+      }),
+      brown: new THREE.MeshStandardMaterial({
+        color: 0x6b452c, roughness: 1
+      })
+    };
+
+    function addVoxel(parent, x, y, z, size, material, castShadow = true) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addBlockColumn(parent, x, y, z, width, height, depth, material) {
+      return addVoxel(parent, x, y, z, width, height, depth, material);
+    }
+
+    // -------------------------------------------------------------------------
+    // Island base: a broad voxel plateau with a hollowed lake basin
+    // -------------------------------------------------------------------------
+    const island = new THREE.Group();
+    world.add(island);
+
+    const grid = 1;
+    const baseY = 0;
+
+    // Main top surface, built from a grid of grass blocks.
+    // The lake is carved into the terrain and surrounded by stone.
+    const topRows = [
+      [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      [-11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      [-12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      [-13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [-14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    ];
+
+    const lakeRows = [
+      [-4, -3, -2, -1, 0, 1, 2, 3],
+      [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+      [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6],
+      [-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7]
+    ];
+
+    // Side walls and underside. The island is intentionally asymmetrical.
+    for (let row = 0; row < topRows.length; row++) {
+      const rowTop = topRows[row];
+      const rowLake = lakeRows[Math.min(row, lakeRows.length - 1)];
+
+      for (let col = 0; col < rowTop.length; col++) {
+        const x = col - 13;
+        const z = row - 7;
+
+        // Lake bed and water.
+        if (rowLake.includes(col)) {
+          addBlockColumn(island, x, baseY + 0.18, z, 1, 0.36, 1, materials.water);
+          if (Math.abs(col - 1) < 3) {
+            addBlockColumn(island, x, baseY + 0.52, z, 0.76, 0.16, 0.76, materials.waterLight);
+          }
+          continue;
+        }
+
+        // Main top.
+        const material = Math.random() > 0.82 ? materials.grassLight : materials.grass;
+        addBlockColumn(island, x, baseY + 0.42, z, 1, 0.84, 1, material);
+
+        // Exposed side faces.
+        addBlockColumn(island, x - 0.5, baseY + 0.2, z, 0.42, 0.4, 0.95, materials.rockLight);
+        addBlockColumn(island, x + 0.5, baseY + 0.2, z, 0.42, 0.4, 0.95, materials.rockLight);
+
+        // Front lip.
+        addBlockColumn(island, x, baseY + 0.18, z + 0.5, 0.9, 0.36, 0.45, materials.rock);
+      }
+    }
+
+    // Lower island layers and hanging voxel cliffs.
+    for (let layer = 0; layer < 3; layer++) {
+      const y = baseY - 1.1 - layer * 1.05;
+      const reach = 12 + layer * 1.3;
+
+      for (let col = -reach; col <= reach; col++) {
+        for (let row = -6; row <= 6; row++) {
+          const edge = Math.abs(col) + Math.abs(row);
+          if (edge > 11 + layer && Math.random() < 0.65) continue;
+
+          const x = col - 13;
+          const z = row - 7;
+
+          if (Math.random() > 0.55) {
+            addBlockColumn(island, x, y, z, 1, 1.05, 1, layer === 1 ? materials.rock : materials.rockDark);
+          }
+        }
+      }
+    }
+
+    // Central mountain peak, constructed as stacked irregular voxel rings.
+    const mountain = new THREE.Group();
+    island.add(mountain);
+
+    function mountainRing(y, radius, height, material, seed) {
+      for (let i = 0; i < 18; i++) {
+        const angle = (i / 18) * Math.PI * 2;
+        const wobble = 0.9 + Math.sin(angle * 3 + seed) * 0.12 + Math.sin(angle * 7 + seed) * 0.05;
+        const x = Math.cos(angle) * radius * wobble;
+        const z = Math.sin(angle) * radius * wobble;
+        addBlockColumn(mountain, x, y, z, 1.08, height + Math.sin(i * 1.7 + seed) * 0.22, 1.08, material);
+      }
+    }
+
+    mountainRing(4.2, 5.2, 1.5, materials.rockLight, 0.4);
+    mountainRing(5.25, 4.25, 1.7, materials.rock, 1.7);
+    mountainRing(6.45, 3.2, 1.9, materials.rockLight, 3.1);
+    mountainRing(7.7, 2.15, 2.05, materials.rock, 4.6);
+    mountainRing(9.05, 1.15, 2.2, materials.rockLight, 6.2);
+    mountainRing(10.45, 0.48, 2.35, materials.rock, 7.8);
+
+    // Snow caps on the highest peaks.
+    addBlockColumn(mountain, -1.1, 10.9, 0.1, 0.85, 0.55, 0.85, materials.snow);
+    addBlockColumn(mountain, 0.5, 10.95, -0.35, 0.7, 0.45, 0.7, materials.snow);
+    addBlockColumn(mountain, 1.55, 10.85, 0.55, 0.55, 0.4, 0.55, materials.snow);
+
+    // -------------------------------------------------------------------------
+    // Lake rim architecture
+    // -------------------------------------------------------------------------
+    const temple = new THREE.Group();
+    temple.position.set(0, 0, 0);
+    island.add(temple);
+
+    // Stone walkway around the lake.
+    for (let i = 0; i < 7; i++) {
+      const angle = -Math.PI / 2 + (i / 6) * Math.PI;
+      const x = Math.cos(angle) * 3.9;
+      const z = Math.sin(angle) * 3.9;
+      addBlockColumn(temple, x, 0.8, z, 0.95, 0.8, 0.95, materials.rockLight);
+    }
+
+    // Central shrine.
+    addBlockColumn(temple, 0, 1.15, 0, 2.25, 1.1, 2.25, materials.wall);
+    addBlockColumn(temple, 0, 2.0, 0, 2.85, 0.65, 2.85, materials.roof);
+    addBlockColumn(temple, 0, 2.6, 0, 1.35, 0.65, 1.35, materials.roof);
+    addBlockColumn(temple, 0, 3.0, 0, 0.6, 0.45, 0.6, materials.wall);
+
+    // Two slender gate-like towers on opposite shores.
+    for (const side of [-1, 1]) {
+      const x = side * 4.15;
+      const z = 0.25;
+      addBlockColumn(temple, x, 1.1, z, 0.65, 2.2, 0.65, materials.wall);
+      addBlockColumn(temple, x, 2.35, z, 0.85, 0.45, 0.85, materials.roof);
+      addBlockColumn(temple, x, 2.75, z, 0.3, 0.35, 0.3, materials.gold);
+    }
+
+    // -------------------------------------------------------------------------
+    // Right-side sanctuary on a grassy plateau
+    // -------------------------------------------------------------------------
+    const rightSanctuary = new THREE.Group();
+    rightSanctuary.position.set(4.1, 0, -3.0);
+    island.add(rightSanctuary);
+
+    addBlockColumn(rightSanctuary, 0, 0.65, 0, 5.0, 1.3, 4.2, materials.grassLight);
+    addBlockColumn(rightSanctuary, 0, 1.55, 0, 3.6, 1.0, 3.2, materials.wall);
+    addBlockColumn(rightSanctuary, 0, 2.45, 0, 4.5, 0.65, 4.0, materials.roof);
+    addBlockColumn(rightSanctuary, 0, 2.95, 0, 2.0, 0.5, 2.0, materials.roof);
+    addBlockColumn(rightSanctuary, 0, 3.45, 0, 0.65, 0.4, 0.65, materials.gold);
+
+    // -------------------------------------------------------------------------
+    // Golden stepped pyramid
+    // -------------------------------------------------------------------------
+    const pyramid = new THREE.Group();
+    pyramid.position.set(-2.1, 0, 1.4);
+    island.add(pyramid);
+
+    addBlockColumn(pyramid, 0, 0.45, 0, 3.4, 0.9, 3.4, materials.goldDark);
+    addBlockColumn(pyramid, 0, 1.35, 0, 2.5, 0.9, 2.5, materials.gold);
+    addBlockColumn(pyramid, 0, 2.25, 0, 1.6, 0.8, 1.6, materials.gold);
+    addBlockColumn(pyramid, 0, 2.95, 0, 0.8, 0.55, 0.8, materials.goldLight || materials.gold);
+
+    // -------------------------------------------------------------------------
+    // Forest clearing: mushrooms, shrubs, and small trees
+    // -------------------------------------------------------------------------
+    function addMushroom(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      island.add(group);
+
+      addBlockColumn(group, 0, 0.32, 0, 0.5, 0.64, 0.5, materials.wood);
+      addBlockColumn(group, 0, 0.69, 0, 0.48, 0.28, 0.48, materials.red);
+      addBlockColumn(group, 0, 0.88, 0, 0.28, 0.12, 0.28, materials.red);
+    }
+
+    addMushroom(-3.1, 2.4, 1.0);
+    addMushroom(-2.55, 2.9, 0.78);
+    addMushroom(-3.65, 1.85, 0.66);
+    addMushroom(1.8, 3.1, 0.75);
+    addMushroom(2.35, 2.75, 0.6);
+
+    function addShrub(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      island.add(group);
+
+      addBlockColumn(group, 0, 0.28, 0, 0.65, 0.56, 0.65, materials.leaf);
+      addBlockColumn(group, -0.28, 0.58, 0.08, 0.42, 0.42, 0.42, materials.leafLight);
+      addBlockColumn(group, 0.27, 0.57, -0.08, 0.4, 0.4, 0.4, materials.leaf);
+    }
+
+    addShrub(-4.6, 3.5, 1.0);
+    addShrub(-4.0, 4.0, 0.7);
+    addShrub(5.7, 0.3, 0.9);
+    addShrub(6.25, -0.5, 0.65);
+    addShrub(-5.6, -2.8, 0.8);
+
+    function addTree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.scale.setScalar(scale);
+      island.add(group);
+
+      addBlockColumn(group, 0, 0.55, 0, 0.42, 1.1, 0.42, materials.wood);
+      addBlockColumn(group, 0, 1.45, 0, 1.15, 1.35, 1.15, materials.leaf);
+      addBlockColumn(group, -0.45, 1.85, 0.1, 0.75, 0.8, 0.75, materials.leafLight);
+      addBlockColumn(group, 0.48, 1.9, -0.1, 0.78, 0.82, 0.78, materials.leaf);
+    }
+
+    addTree(-5.2, -1.7, 0.95);
+    addTree(-6.0, -2.4, 0.7);
+    addTree(6.6, 3.7, 0.9);
+    addTree(7.3, 2.8, 0.65);
+    addTree(-4.0, 4.7, 0.72);
+
+    // A few blue flowers.
+    for (let i = 0; i < 13; i++) {
+      const x = 2.5 + (Math.random() - 0.5) * 4.8;
+      const z = 2.0 + (Math.random() - 0.5) * 2.7;
+      addBlockColumn(island, x, 0.3, z, 0.12, 0.6, 0.12, materials.blue);
+      addBlockColumn(island, x, 0.67, z, 0.18, 0.18, 0.18, materials.white || materials.wall);
+    }
+
+    // -------------------------------------------------------------------------
+    // Waterfalls and streams
+    // -------------------------------------------------------------------------
+    const waterfall = new THREE.Group();
+    waterfall.position.set(-3.2, 0, 3.0);
+    island.add(waterfall);
+
+    addBlockColumn(waterfall, 0, 0.7, 0, 0.75, 1.4, 0.85, materials.waterLight);
+    addBlockColumn(waterfall, 0, 1.35, 0, 0.55, 0.7, 0.65, materials.water);
+    addBlockColumn(waterfall, 0, 1.85, 0, 0.35, 0.5, 0.45, materials.waterLight);
+
+    // Small stream descending toward the front.
+    for (let i = 0; i < 4; i++) {
+      addBlockColumn(island, 2.4 + i * 0.38, 0.18, 3.6 - i * 0.24, 0.28, 0.36, 0.28, materials.water);
+    }
+
+    // -------------------------------------------------------------------------
+    // Cliff details, stalactites, and foreground rocks
+    // -------------------------------------------------------------------------
+    for (let i = 0; i < 20; i++) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const x = side * (4.2 + Math.random() * 6.8);
+      const z = -4.5 + Math.random() * 8.5;
+      const size = 0.35 + Math.random() * 1.25;
+      addBlockColumn(island, x, -0.65 - Math.random() * 1.2, z, size, 0.7, size, materials.rockDark);
+    }
+
+    for (let i = 0; i < 12; i++) {
+      const x = -8 + Math.random() * 16;
+      const z = 5.2 + Math.random() * 3.2;
+      addBlockColumn(island, x, 0.35, z, 0.65 + Math.random() * 0.8, 0.7, 0.65 + Math.random() * 0.8, materials.rock);
+    }
+
+    // -------------------------------------------------------------------------
+    // Floating particles
+    // -------------------------------------------------------------------------
+    const particles = new THREE.Group();
+    world.add(particles);
+
+    const particleMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 48; i++) {
+      const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.055 + Math.random() * 0.08, 0), particleMaterial);
+      mesh.position.set(
+        (Math.random() - 0.5) * 21,
+        1.5 + Math.random() * 12,
+        (Math.random() - 0.5) * 19
+      );
+      mesh.userData.speed = 0.25 + Math.random() * 0.45;
+      mesh.userData.phase = Math.random() * Math.PI * 2;
+      particles.add(mesh);
+    }
+
+    // -------------------------------------------------------------------------
+    // Camera controls implemented directly, without external addons
+    // -------------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 3.2, 0),
+      azimuth: 0.72,
+      polar: 1.12,
+      radius: 25,
+      dragging: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    function updateCamera() {
+      const sinPolar = Math.sin(controls.polar);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPolar * Math.sin(controls.azimuth),
+        controls.target.y + controls.radius * Math.cos(controls.polar),
+        controls.target.z + controls.radius * sinPolar * Math.cos(controls.azimuth)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    updateCamera();
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      controls.azimuth -= dx * 0.006;
+      controls.polar = THREE.MathUtils.clamp(controls.polar - dy * 0.005, 0.48, 1.42);
+      updateCamera();
+    });
+
+    renderer.domElement.addEventListener("pointerup", (event) => {
+      controls.dragging = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    renderer.domElement.addEventListener("pointercancel", () => {
+      controls.dragging = false;
+    });
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      controls.radius = THREE.MathUtils.clamp(
+        controls.radius + event.deltaY * 0.018,
+        13,
+        38
+      );
+      updateCamera();
+    }, { passive: false });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle water shimmer.
+      materials.water.roughness = 0.25 + Math.sin(elapsed * 0.8) * 0.035;
+
+      // Drift particles slowly.
+      for (const mesh of particles.children) {
+        mesh.position.y += mesh.userData.speed * 0.016;
+        mesh.rotation.x += 0.008;
+        mesh.rotation.y += 0.006;
+
+        if (mesh.position.y > 15) {
+          mesh.position.y = 0.5;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
