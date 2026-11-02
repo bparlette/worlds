@@ -222,7 +222,7 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.getElementById("app").appendChild(renderer.domElement);
-    renderer.localClippingEnabled = true; // Worlds Collide: seam clipping per world half
+    renderer.localClippingEnabled = true; // Worlds Collide: ground-sheet centre clipping (blendWorld)
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
@@ -303,26 +303,56 @@
       return i === -1 ? r[r.length - 1] : r[(i - 1 + r.length) % r.length];
     };
     // ---------------------------------------------------------------------
-    // The 4-wall grid (this game): the manifest order is laid out row-major
-    // on a torus grid; every world's four boundary walls lead to its four
-    // grid neighbours (E/W wrap within the row, N/S within the column).
+    // The endless grid (Worlds Collide): there is no manifest of rooms
+    // and no torus. The world is an infinite grid of cells addressed by
+    // integer coordinates (i, j) — "i,j" is the cell's id everywhere the
+    // old host used a world id. Every cell's room is an ordered pair of
+    // two distinct worlds drawn deterministically from a hash of (i, j)
+    // over the world defs, so the same cell always builds the same pair
+    // however and whenever you reach it. Every cell's four boundary
+    // walls lead to its four neighbouring cells, forever.
     // ---------------------------------------------------------------------
     const OPP_WALL = { E: "W", W: "E", N: "S", S: "N" };
-    function gridNeighbor(id, wall) {
-      const ids = defs.map(d => d.id);
-      const i = ids.indexOf(id);
-      if (i === -1) return ids[0];
-      const cols = Math.max(2, Math.ceil(Math.sqrt(ids.length)));
-      const rows = Math.ceil(ids.length / cols);
-      const r = Math.floor(i / cols), c = i % cols;
-      const rowStart = r * cols, rowLen = Math.min(cols, ids.length - rowStart);
-      let colH = 0;
-      for (let rr = 0; rr < rows; rr++) if (rr * cols + c < ids.length) colH++;
-      if (wall === "E") return ids[rowStart + ((c + 1) % rowLen)];
-      if (wall === "W") return ids[rowStart + ((c - 1 + rowLen) % rowLen)];
-      if (wall === "S") return ids[(((r + 1) % colH) * cols) + c];
-      if (wall === "N") return ids[(((r - 1 + colH) % colH) * cols) + c];
-      return ids[0];
+    function cellKey(i, j) { return i + "," + j; }
+    function parseCellKey(key) {
+      if (typeof key !== "string") return null;
+      const m = /^(-?\d+),(-?\d+)$/.exec(key);
+      return m ? { i: parseInt(m[1], 10), j: parseInt(m[2], 10) } : null;
+    }
+    function cellHash(i, j) {
+      let h = Math.imul(i, 374761393) ^ Math.imul(j, 668265263) ^ 0x5bf03635;
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return (h ^ (h >>> 16)) >>> 0;
+    }
+    function cellPair(i, j) {
+      const n = defs.length;
+      const h = cellHash(i, j);
+      const a = h % n;
+      let b = (h >>> 8) % n;
+      if (b === a) b = (b + 1 + (h % (n - 1))) % n;
+      return [defs[a], defs[b]];
+    }
+    // The synthetic room def for a cell: everything the HUD, title card,
+    // wall labels and journal need, derived purely from the coordinates.
+    function roomDefFor(key) {
+      const c = parseCellKey(key);
+      if (!c) return null;
+      const pair = cellPair(c.i, c.j);
+      const A = pair[0], B = pair[1];
+      return {
+        id: key, cell: c, cellLabel: c.i + ", " + c.j,
+        title: A.title + " \u00d7 " + B.title, sub: A.sub + " \u00d7 " + B.sub,
+        system: A.system, worldA: A.id, worldB: B.id, pairId: B.id
+      };
+    }
+    function gridNeighbor(key, wall) {
+      const c = parseCellKey(key);
+      if (!c) return key;
+      if (wall === "E") return cellKey(c.i + 1, c.j);
+      if (wall === "W") return cellKey(c.i - 1, c.j);
+      if (wall === "S") return cellKey(c.i, c.j + 1);
+      if (wall === "N") return cellKey(c.i, c.j - 1);
+      return key;
     }
     function neighborIds(id) { return ["E", "W", "N", "S"].map(w => gridNeighbor(id, w)); }
     function preloadNeighbors(id) { for (const nid of neighborIds(id)) ensureLoaded(nid); }
@@ -351,30 +381,61 @@
       }
       return best || inst.doors.next;
     }
-    function allowedIds(id) { return new Set([id, ...neighborIds(id)]); }
+    function allowedIds(key) {
+      // Endless streaming: keep the current cell and everything within
+      // Chebyshev distance 2 of it built; farther cells are disposed.
+      const c = parseCellKey(key);
+      if (!c) return new Set([key]);
+      const out = new Set();
+      for (let di = -2; di <= 2; di++)
+        for (let dj = -2; dj <= 2; dj++) out.add(cellKey(c.i + di, c.j + dj));
+      return out;
+    }
 
+    // Loader shim (module files themselves are never modified): two
+    // converted worlds (1057, 1079) end their build with the original
+    // page's loading-overlay fade — setTimeout(() => dummyEl().remove())
+    // — but the converter's dummyEl stub has no remove(), so the timer
+    // throws an uncaught TypeError ~600 ms after those worlds build.
+    // The host completes the stub's obvious intent at import time:
+    // fetch the source, add the missing no-op to the stub literals,
+    // and import a blob copy. Any failure in the shim path falls back
+    // to a plain import of the untouched file.
+    const DUMMYEL_STUB_FIX = /(addEventListener: \(\) => \{\},\s*removeEventListener: \(\) => \{\})(\s*)\}/g;
+    async function importWorldModule(url) {
+      try {
+        const src = await (await fetch(url)).text();
+        if (src.includes("dummyEl")) {
+          const patched = src.replace(DUMMYEL_STUB_FIX, "$1, remove: () => {}$2}");
+          if (patched !== src) {
+            const blobUrl = URL.createObjectURL(new Blob([patched], { type: "text/javascript" }));
+            try { return await import(blobUrl); }
+            finally { URL.revokeObjectURL(blobUrl); }
+          }
+        }
+      } catch (e) { /* best-effort shim — plain import below */ }
+      return import(url);
+    }
     async function loadModule(id) {
       if (moduleCache.has(id)) return moduleCache.get(id);
       if (!loadPromises.has(id)) {
         const def = defById.get(id);
         const url = new URL(def.module, window.location.href).href;
-        loadPromises.set(id, import(url).then(ns => { moduleCache.set(id, ns); return ns; }));
+        loadPromises.set(id, importWorldModule(url).then(ns => { moduleCache.set(id, ns); return ns; }));
       }
       return loadPromises.get(id);
     }
 
     // ---------------------------------------------------------------------
-    // Worlds Collide — two worlds per room, split by a glowing seam.
+    // Worlds Collide — two worlds per room, BLENDED, never split.
     // Each world is recentred on the room origin (Box3 centre x/z; y is
-    // kept) and clipped to its half by a vertical plane at x = SEAM_X:
-    // A renders only at x <= SEAM_X, B only at x >= SEAM_X. Spawn, doors,
-    // relic and env all come from A; B is scenery the player can walk
-    // into. World materials are created per-module, so writing
-    // clippingPlanes per material (arrays included) cannot leak across
-    // the seam; a material shared within one world just gets the same
-    // plane twice-guarded by the seen-set.
+    // kept) and stays whole; the pair dissolves through each other
+    // across a blend zone centred on x = 0 (see blendWorld). Spawn,
+    // doors, relic and env all come from A; B is scenery the player can
+    // walk into. World materials are created per-module, so patching
+    // them per world cannot leak across the pair.
     // ---------------------------------------------------------------------
-    const SEAM_X = 0.4;
+    const BLEND_HALF = 3.0; // blend zone spans x in [-BLEND_HALF, +BLEND_HALF]
     const urlModuleCache = new Map(); // module path -> import() promise
     function loadModuleUrl(modulePath) {
       if (!urlModuleCache.has(modulePath)) {
@@ -403,6 +464,137 @@
       });
       return acc;
     }
+    // NaN-safe geometry bounds, installed once per build (ensureLoaded).
+    // finiteWorldBox above protects the recentring, but three itself
+    // still computes a poisoned geometry's bounds lazily — via
+    // Box3.setFromObject (worldBounds), Mesh.raycast (ground checks) and
+    // frustum culling — logging a NaN console error each time and
+    // caching a NaN bound. Scanning the raw positions once and
+    // pre-installing finite boundingBox/boundingSphere keeps every one
+    // of those later calls silent. For a healthy geometry the scan
+    // reproduces three's own box/sphere exactly (same centre, same max
+    // distance), so visuals and culling are unchanged; a poisoned
+    // geometry simply gets the bounds of its finite vertices, which is
+    // all that ever renders. Only host-side bound caches are written —
+    // the module geometries themselves are never modified.
+    function sanitizeGeometryBounds(geo) {
+      const pos = geo && geo.attributes && geo.attributes.position;
+      if (!pos || pos.count === 0) return;
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+      let poisoned = false, finiteCount = 0;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) { poisoned = true; continue; }
+        finiteCount++;
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+        if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+      }
+      const bb = geo.boundingBox, bs = geo.boundingSphere;
+      const bbBad = !!bb && ![bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z].every(Number.isFinite);
+      const bsBad = !!bs && !(Number.isFinite(bs.center.x) && Number.isFinite(bs.center.y) &&
+        Number.isFinite(bs.center.z) && Number.isFinite(bs.radius));
+      if (!poisoned && !bbBad && !bsBad) return;
+      if (finiteCount === 0) {
+        geo.boundingBox = new THREE.Box3();
+        geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 0);
+        return;
+      }
+      const centre = new THREE.Vector3((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+      let r2 = 0;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+        const dx = x - centre.x, dy = y - centre.y, dz = z - centre.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > r2) r2 = d2;
+      }
+      geo.boundingBox = new THREE.Box3(
+        new THREE.Vector3(minX, minY, minZ), new THREE.Vector3(maxX, maxY, maxZ));
+      geo.boundingSphere = new THREE.Sphere(centre, Math.sqrt(r2));
+    }
+    // InstancedMesh keeps its own bound caches, derived from instance
+    // matrices. Clean instances: three's own instanced bounds are exact
+    // and warning-free once the geometry is sanitized — just make sure
+    // they exist. Poisoned instance matrices: install conservative
+    // finite bounds from the finite instances (translation box padded
+    // by each instance's scaled geometry reach). Over-estimates can
+    // only make culling/raycast early-outs draw MORE, never less, so
+    // the picture is unchanged either way.
+    function sanitizeInstancedBounds(im) {
+      const geo = im.geometry;
+      if (!geo) return;
+      if (!geo.boundingBox) geo.computeBoundingBox();
+      if (!geo.boundingSphere) geo.computeBoundingSphere();
+      const m = new THREE.Matrix4();
+      let poisoned = false;
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        if (!m.elements.every(Number.isFinite)) { poisoned = true; break; }
+      }
+      const bb = im.boundingBox, bs = im.boundingSphere;
+      const bbBad = !!bb && ![bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z].every(Number.isFinite);
+      const bsBad = !!bs && !(Number.isFinite(bs.center.x) && Number.isFinite(bs.center.y) &&
+        Number.isFinite(bs.center.z) && Number.isFinite(bs.radius));
+      if (!poisoned) {
+        if (!bb || bbBad) im.computeBoundingBox();
+        if (!bs || bsBad) im.computeBoundingSphere();
+        return;
+      }
+      const gc = geo.boundingSphere.center, gr = geo.boundingSphere.radius;
+      const reach = e => {
+        const sx = Math.hypot(e[0], e[1], e[2]);
+        const sy = Math.hypot(e[4], e[5], e[6]);
+        const sz = Math.hypot(e[8], e[9], e[10]);
+        return (gc.length() + gr) * Math.max(sx, sy, sz);
+      };
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+      let finiteCount = 0, maxReach = 0;
+      const centres = [];
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        const e = m.elements;
+        const x = e[12], y = e[13], z = e[14];
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+        finiteCount++;
+        centres.push([x, y, z]);
+        const r = reach(e);
+        if (r > maxReach) maxReach = r;
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+        if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+      }
+      if (finiteCount === 0) {
+        im.boundingBox = new THREE.Box3();
+        im.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 0);
+        return;
+      }
+      const centre = new THREE.Vector3((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+      let r = 0;
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        const e = m.elements;
+        if (!Number.isFinite(e[12]) || !Number.isFinite(e[13]) || !Number.isFinite(e[14])) continue;
+        const d = Math.hypot(e[12] - centre.x, e[13] - centre.y, e[14] - centre.z) + reach(e);
+        if (d > r) r = d;
+      }
+      im.boundingBox = new THREE.Box3(
+        new THREE.Vector3(minX - maxReach, minY - maxReach, minZ - maxReach),
+        new THREE.Vector3(maxX + maxReach, maxY + maxReach, maxZ + maxReach));
+      im.boundingSphere = new THREE.Sphere(centre, r);
+    }
+    function sanitizeWorldBounds(group) {
+      const seen = new Set();
+      group.traverse(o => {
+        if (o.geometry && !seen.has(o.geometry)) {
+          seen.add(o.geometry);
+          sanitizeGeometryBounds(o.geometry);
+        }
+        if (o.isInstancedMesh) sanitizeInstancedBounds(o);
+      });
+    }
     function recenterWorld(inst) {
       const box = finiteWorldBox(inst.group);
       if (box.isEmpty()) return;
@@ -415,26 +607,75 @@
       shift(inst.spawn); shift(inst.relic);
       if (inst.doors) for (const k of Object.keys(inst.doors)) shift(inst.doors[k]);
     }
-    function clipWorld(inst, plane) {
-      const seen = new Set();
+    // The blend itself: a world-position alpha fade patched into every
+    // material via onBeforeCompile. World A is fully itself at
+    // x <= -BLEND_HALF and fades to nothing by x >= +BLEND_HALF; world B
+    // mirrors it. Opaque materials use alphaHash — a stochastic
+    // dissolve that needs no transparency sorting and keeps depth
+    // writes on — so the two worlds genuinely interpenetrate: A objects
+    // stand inside B's territory and vice versa, with no wall, no line
+    // and no seam geometry anywhere. Already-transparent materials
+    // (water, glass) keep real alpha blending with the same fade curve.
+    function patchBlendMaterial(mat, fadeIn) {
+      if (!mat.transparent && !mat.alphaHash) mat.alphaHash = true;
+      const prev = mat.onBeforeCompile;
+      mat.onBeforeCompile = (shader, renderer) => {
+        if (typeof prev === "function") prev(shader, renderer);
+        shader.vertexShader = shader.vertexShader
+          .replace("#include <common>",
+            "#include <common>\nvarying float vCollideX;")
+          .replace("#include <project_vertex>",
+            "vec4 cwp4 = vec4(transformed, 1.0);\n" +
+            "#ifdef USE_INSTANCING\n  cwp4 = instanceMatrix * cwp4;\n#endif\n" +
+            "cwp4 = modelMatrix * cwp4;\n  vCollideX = cwp4.x;\n" +
+            "#include <project_vertex>");
+        shader.fragmentShader = shader.fragmentShader
+          .replace("#include <common>",
+            "#include <common>\nvarying float vCollideX;")
+          .replace("#include <color_fragment>",
+            "#include <color_fragment>\n" +
+            "  float cbf = smoothstep(" + (-BLEND_HALF).toFixed(2) + ", " +
+              BLEND_HALF.toFixed(2) + ", vCollideX);\n" +
+            "  diffuseColor.a *= " + (fadeIn ? "cbf" : "(1.0 - cbf)") + ";");
+      };
+      // The two fade directions must never share a compiled program.
+      mat.customProgramCacheKey = () => "collide-blend-" + (fadeIn ? "in" : "out");
+    }
+    function isGroundMesh(mesh) {
+      // Ground = the one huge thin sheet under a world (its floor).
+      // Two coplanar grounds dissolved into each other shimmer, so
+      // grounds alone keep a hard clip at the centre line (x = 0).
+      const b = finiteWorldBox(mesh);
+      if (b.isEmpty()) return false;
+      const sx = b.max.x - b.min.x, sy = b.max.y - b.min.y, sz = b.max.z - b.min.z;
+      return sx >= 13 && sz >= 13 && sy <= 1.5;
+    }
+    function blendWorld(inst, fadeIn, clipPlane) {
+      // Decide each material's mode: a material used by any
+      // above-ground mesh fades; a ground-only material clips.
+      const modes = new Map();
       inst.group.traverse(o => {
-        if (!o.material) return;
+        if (!o.isMesh || !o.material) return;
+        const ground = isGroundMesh(o);
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         for (const m of mats) {
           // Some generated worlds hang non-material data on .material
-          // (e.g. a numeric material index) — only real materials clip.
-          if (!m || !m.isMaterial || seen.has(m)) continue;
-          seen.add(m);
-          m.clippingPlanes = [plane];
-          m.clipShadows = true;
+          // (e.g. a numeric material index) — only real materials blend.
+          if (!m || !m.isMaterial) continue;
+          if (!ground) modes.set(m, "fade");
+          else if (!modes.has(m)) modes.set(m, "clip");
         }
       });
+      for (const [m, mode] of modes) {
+        if (mode === "fade") patchBlendMaterial(m, fadeIn);
+        else { m.clippingPlanes = [clipPlane]; m.clipShadows = true; }
+      }
     }
     function mashWorlds(instA, instB) {
       recenterWorld(instA);
       recenterWorld(instB);
-      clipWorld(instA, new THREE.Plane(new THREE.Vector3(-1, 0, 0), SEAM_X));
-      clipWorld(instB, new THREE.Plane(new THREE.Vector3(1, 0, 0), -SEAM_X));
+      blendWorld(instA, false, new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0));
+      blendWorld(instB, true, new THREE.Plane(new THREE.Vector3(1, 0, 0), 0));
       const group = new THREE.Group();
       group.add(instA.group, instB.group);
       return {
@@ -446,47 +687,22 @@
         spawn: instA.spawn, relic: instA.relic, env: instA.env, doors: instA.doors
       };
     }
-    // The seam: a bright curtain at x = SEAM_X between two softer sheets,
-    // plus a real light column — pure geometry and light, no textures.
-    function addSeam(rec, bounds) {
-      const h = Math.max(4, bounds.max.y - bounds.min.y);
-      const cz = (bounds.min.z + bounds.max.z) / 2;
-      const spanZ = bounds.max.z - bounds.min.z;
-      const y = bounds.min.y + h / 2;
-      const seam = new THREE.Group();
-      const sheet = (x, color, opacity) => {
-        const m = new THREE.Mesh(
-          new THREE.PlaneGeometry(spanZ, h),
-          new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false })
-        );
-        m.rotation.y = Math.PI / 2;
-        m.position.set(x, y, cz);
-        seam.add(m);
-      };
-      sheet(SEAM_X - 0.45, 0x6fb7ff, 0.10);
-      sheet(SEAM_X, 0xbfe3ff, 0.50);
-      sheet(SEAM_X + 0.45, 0x6fb7ff, 0.10);
-      const light = new THREE.PointLight(0x9fd0ff, 30, 26, 1.9);
-      light.position.set(SEAM_X, bounds.min.y + Math.min(6, h * 0.6), cz);
-      seam.add(light);
-      rec.group.add(seam);
-      rec.seam = seam;
-    }
-
-    async function ensureLoaded(id) {
-      if (instances.has(id)) return instances.get(id);
-      const ns = await loadModule(id);
-      if (instances.has(id)) return instances.get(id);
-      let inst = ns.createWorld(THREE);
-      const roomDef = defById.get(id);
-      if (roomDef && roomDef.pairModule) {
-        const nsB = await loadModuleUrl(roomDef.pairModule);
-        if (instances.has(id)) return instances.get(id);
-        inst = mashWorlds(inst, nsB.createWorld(THREE));
-      }
+    async function ensureLoaded(key) {
+      if (instances.has(key)) return instances.get(key);
+      const roomDef = roomDefFor(key);
+      if (!roomDef) return null;
+      const nsA = await loadModule(roomDef.worldA);
+      if (instances.has(key)) return instances.get(key);
+      const nsB = await loadModule(roomDef.worldB);
+      if (instances.has(key)) return instances.get(key);
+      const inst = mashWorlds(nsA.createWorld(THREE), nsB.createWorld(THREE));
+      // Pre-install finite geometry bounds before anything asks three
+      // for them (worldBounds, ground raycasts, frustum culling) — see
+      // sanitizeWorldBounds. Covers plain and mashed instances alike.
+      sanitizeWorldBounds(inst.group);
       inst.group.updateMatrixWorld(true);
       const rec = {
-        id, def: defById.get(id), inst,
+        id: key, def: roomDef, inst,
         group: inst.group, t: 0,
         portals: [],
         meshes: []
@@ -503,8 +719,8 @@
       if (bounds) {
         const walls = wallSet(bounds);
         for (const wname of ["E", "W", "N", "S"]) {
-          const destId = gridNeighbor(id, wname);
-          const portal = makeWallRift(defById.get(destId), destId, walls[wname], bounds);
+          const destId = gridNeighbor(key, wname);
+          const portal = makeWallRift(roomDefFor(destId), destId, walls[wname], bounds);
           if (!portal) continue;
           portal.side = wname;
           portal.wallName = wname;
@@ -517,9 +733,9 @@
         // Bounds unusable: legacy oval rifts at the next/prev door anchors.
         for (const side of ["next", "prev"]) {
           const door = inst.doors[side];
-          const destId = side === "next" ? gridNeighbor(id, "E") : gridNeighbor(id, "W");
+          const destId = side === "next" ? gridNeighbor(key, "E") : gridNeighbor(key, "W");
           const gy = sampleGround(rec, door.x, door.z, 40, 15);
-          const portal = makeRift(defById.get(destId), destId);
+          const portal = makeRift(roomDefFor(destId), destId);
           portal.group.position.set(door.x, gy === null ? 0 : gy, door.z);
           portal.armed = true;
           portal.side = side;
@@ -536,15 +752,14 @@
         rec.relicGroundY = gy === null ? 0 : gy;
         rec.relicProp = makeRelicProp(inst.relic.id);
         rec.relicProp.group.position.set(inst.relic.x, rec.relicGroundY + 1.05, inst.relic.z);
-        rec.relicProp.group.visible = !relicFound(id);
+        rec.relicProp.group.visible = !relicFound(key);
         rec.group.add(rec.relicProp.group);
       }
-      if (roomDef && roomDef.pairModule && bounds) addSeam(rec, bounds);
       rec.group.visible = false;
       scene.add(rec.group);
-      instances.set(id, rec);
+      instances.set(key, rec);
       refreshRiftTints();
-      sweepLoaded();
+      sweepLoaded(key);
       return rec;
     }
 
@@ -570,10 +785,15 @@
       disposeCount++;
     }
 
-    // Keep at most {current, next, prev} built.
-    function sweepLoaded() {
+    // Streaming sweep: dispose anything outside the keep radius of the
+    // current cell. The just-built cell is always protected — a far
+    // fast-travel (BackRomsState.travelTo) builds its destination while
+    // the player is still many cells away, and an unprotected sweep
+    // would dispose the destination before setCurrent ever shows it.
+    function sweepLoaded(keepKey) {
       if (!current) return;
       const allowed = allowedIds(current.id);
+      if (keepKey) allowed.add(keepKey);
       for (const id of [...instances.keys()]) {
         if (!allowed.has(id)) disposeWorld(id);
       }
@@ -607,7 +827,10 @@
     // way. BackRomsState.set() persists through persistSave() directly,
     // so a patch is never stomped by its own sync.
     // ---------------------------------------------------------------------
-    const SAVE_KEY = "backroms-collide-v1";
+    // Endless edition: "world" and every relic/visited entry are CELL
+    // KEYS ("i,j"), not world ids — a different stored shape from the
+    // finite game, so it lives under its own key rather than migrating.
+    const SAVE_KEY = "backroms-collide-v2";
     const SAVE_VERSION = 2;
     const SAVE_FIELDS = new Set([
       "v", "world", "pos", "yaw", "relics", "relicMeta",
@@ -784,17 +1007,25 @@
       if (!save.visited.includes(id)) save.visited.push(id);
     }
     function isFavorite(id) { return save.favorites.includes(id); }
-    function foundCount() { return defs.filter(d => relicFound(d.id)).length; }
-    function updateRelicCounter() { stRelics.textContent = `${foundCount()} / ${defs.length}`; }
+    function foundCount() { return save.relics.length; }
+    function updateRelicCounter() { stRelics.textContent = `${foundCount()} found`; }
 
     function renderJournal() {
-      journalList.innerHTML = defs.map(d => {
-        const got = relicFound(d.id);
-        const name = got ? ((save.relicMeta[d.id] || {}).name || "Relic") : "· · · hidden";
-        return `<div class="jrow"><span class="jid">#${d.id}</span>` +
-          `<span class="jworld">${d.title}</span>` +
-          `<span class="jrelic ${got ? "got" : ""}">${got ? "✦ " : "✧ "}${name}</span>` +
-          `<span class="jmark">${got ? "🏆" : "—"}</span></div>`;
+      // The grid is endless, so the journal lists what you HAVE found
+      // (one relic per cell, keyed by its coordinates) rather than a
+      // finite checklist. The pair name is re-derived from the cell key.
+      if (!save.relics.length) {
+        journalList.innerHTML =
+          `<div class="jrow"><span class="jworld">No relics yet — every cell hides one.</span></div>`;
+        return;
+      }
+      journalList.innerHTML = save.relics.map(key => {
+        const m = save.relicMeta[key] || {};
+        const rd = roomDefFor(key);
+        return `<div class="jrow"><span class="jid">\u2b21 ${key.replace(",", ", ")}</span>` +
+          `<span class="jworld">${rd ? rd.title : key}</span>` +
+          `<span class="jrelic got">\u2726 ${m.name || "Relic"}</span>` +
+          `<span class="jmark">🏆</span></div>`;
       }).join("");
     }
 
@@ -929,7 +1160,7 @@
       rim.position.set(0, RIFT_H / 2, 0.02);
       g.add(rim);
 
-      const label = makeLabelSprite(`#${destDef.id} · ${destDef.title}`);
+      const label = makeLabelSprite(`${destDef.cellLabel ? "\u2b21 " + destDef.cellLabel : "#" + destDef.id} · ${destDef.title}`);
       label.position.set(0, RIFT_H + 0.85, 0);
       g.add(label);
 
@@ -989,12 +1220,11 @@
       const whole = new THREE.Box3().setFromObject(rec.group);
       if (!whole.isEmpty() && finite(whole)) return whole;
       // A NaN-poisoned object (seen in the wild) must not poison the box:
-      // fall back to a per-mesh union that skips non-finite boxes.
-      const acc = new THREE.Box3(); const tmp = new THREE.Box3();
-      for (const m of rec.meshes) {
-        tmp.setFromObject(m);
-        if (!tmp.isEmpty() && finite(tmp)) acc.union(tmp);
-      }
+      // fall back to the raw finite-vertex scan, which never routes
+      // through three's bounds routines and so stays silent. (Builds are
+      // sanitizeWorldBounds-guarded, so this is insurance for any
+      // geometry a module swaps in after build time.)
+      const acc = finiteWorldBox(rec.group);
       return acc.isEmpty() || !finite(acc) ? null : acc;
     }
 
@@ -1067,7 +1297,7 @@
       rim.position.z = -0.02;
       g.add(rim);
 
-      const label = makeLabelSprite(`#${destDef.id} · ${destDef.title}`);
+      const label = makeLabelSprite(`${destDef.cellLabel ? "\u2b21 " + destDef.cellLabel : "#" + destDef.id} · ${destDef.title}`);
       label.position.set(0, height / 2 + 0.85, 0);
       g.add(label);
 
@@ -1196,13 +1426,13 @@
     // ---------------------------------------------------------------------
     let titleTimer = 0;
     function showTitle(def) {
-      tcNum.textContent = "#" + def.id;
+      tcNum.textContent = def.cellLabel ? "\u2b21 " + def.cellLabel : "#" + def.id;
       tcTitle.textContent = def.title;
       tcSub.textContent = `${def.sub} · ${def.system}`;
       tcWhisper.textContent = current && current.inst.relic
         ? (relicFound(def.id) ? "✦ Relic found" : "✧ A relic is hidden here")
         : "";
-      stIdx.textContent = `#${def.id} / ${defs.length}`;
+      stIdx.textContent = def.cellLabel ? `Cell ${def.cellLabel}` : `#${def.id} / ${defs.length}`;
       stName.textContent = def.title;
       titlecard.classList.add("show");
       clearTimeout(titleTimer);
@@ -1471,7 +1701,12 @@
     function glitchVisitReset() {
       const fledEncounter = glitch.active;
       if (glitch.active) endGlitch();
-      glitch.visits++;
+      // Endless edition: the haunting cadence counts NEW cells only —
+      // re-entering a cell you have already visited never advances the
+      // roll. (setCurrent marks the visit AFTER this reset runs, so the
+      // visited check still sees the pre-entry state.)
+      const isNewCell = !!current && !save.visited.includes(current.id);
+      if (isNewCell) glitch.visits++;
       glitch.visitTime = 0;
       glitch.spawnedThisVisit = false;
       glitch.stareTime = 0;
@@ -1481,7 +1716,8 @@
       // Fleeing an encounter counts as finishing it; rushing through the
       // haunted room before it materialized spends the haunting too.
       // Either way the next one is rolled 3–5 rooms out.
-      if (fledEncounter || glitch.visits > glitch.hauntVisit) scheduleNextHaunt();
+      if (fledEncounter || glitch.visits > glitch.hauntVisit ||
+          (!isNewCell && glitch.visits >= glitch.hauntVisit)) scheduleNextHaunt();
       // If THIS room is the haunted one, roll when it will materialize:
       // 30–60 s in (which also honors "never in the first 20 s").
       glitch.spawnDelay = GLITCH_SPAWN_MIN + Math.random() * (GLITCH_SPAWN_MAX - GLITCH_SPAWN_MIN);
@@ -1819,26 +2055,11 @@
     // ---------------------------------------------------------------------
     (async function boot() {
       defs = await (await fetch("worlds.json")).json();
-      // Ring order = manifest order sorted by numeric id — no world list is
-      // hardcoded anywhere in this host; the manifest is the only source.
+      // The manifest lists the single worlds — the only source, sorted by
+      // numeric id so cellPair's indexing is stable. Rooms are NOT in
+      // the manifest: they are cells of the endless grid, paired
+      // deterministically from these defs at build time (see cellPair).
       defs.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
-      // Worlds Collide: pair consecutive worlds into mashup rooms. A room
-      // keeps world A's id, module and relic (save/journal stay per-A);
-      // world B rides along as pairModule and is clipped to the right half
-      // of the room at build time (see mashWorlds).
-      const pairedDefs = [];
-      for (let i = 0; i + 1 < defs.length; i += 2) {
-        const A = defs[i], B = defs[i + 1];
-        pairedDefs.push({
-          ...A,
-          title: `${A.title} \u00d7 ${B.title}`,
-          sub: `${A.sub} \u00d7 ${B.sub}`,
-          pairId: B.id, pairModule: B.module,
-          pairTitle: B.title, pairSub: B.sub
-        });
-      }
-      if (defs.length % 2) pairedDefs.push({ ...defs[defs.length - 1] });
-      defs = pairedDefs;
       defs.forEach(d => defById.set(d.id, d));
       updateRelicCounter();
       // Ring before any world is built: portal destinations bake at build
@@ -1849,9 +2070,9 @@
       // within ±4 units of the saved height — worlds get regenerated, and
       // a stale save falls back to the world's normal spawn with relics,
       // visited and favorites intact. A stale save never soft-locks.
-      let startId = defs[0].id;
+      let startId = "0,0";
       let spawnOverride = null;
-      if (save.world && defById.has(save.world)) {
+      if (save.world && parseCellKey(save.world)) {
         startId = save.world;
         if (Array.isArray(save.pos)) {
           const sx = save.pos[0], sy = save.pos[1], sz = save.pos[2];
@@ -1913,8 +2134,7 @@
       ringIds = computeRing();
       const curId = current ? current.id : null;
       for (const id of [...instances.keys()]) disposeWorld(id);
-      const targetId = curId && defById.has(curId) ? curId
-        : (ringIds && ringIds.length ? ringIds[0] : defs[0].id);
+      const targetId = curId && parseCellKey(curId) ? curId : "0,0";
       const rec = await ensureLoaded(targetId);
       if (targetId === curId) {
         setCurrent(rec, { x: player.x, z: player.z, yaw: player.yaw });
@@ -1952,7 +2172,7 @@
         }
       },
       async travelTo(id) {
-        if (!defById.has(id) || transition) return false;
+        if (!parseCellKey(id) || transition) return false;
         if (current && current.id === id) return true;
         const rec = await ensureLoaded(id);
         if (transition) return false;
@@ -2016,7 +2236,7 @@
             : null
         };
       },
-      relicCount() { return { found: foundCount(), total: defs.length }; },
+      relicCount() { return { found: foundCount(), total: null }; }, // total: endless
       // Legacy v1-shaped view (existing tests/tools): found relics only.
       journal() {
         const out = {};
