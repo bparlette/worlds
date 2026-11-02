@@ -318,5 +318,13 @@
     "status": "pass",
     "filename": "1040-super_mario_64_peachx27s_castle_exterior.html",
     "updated_at": "2026-11-02 03:39 EST"
+  },
+  "41": {
+    "rank": 41,
+    "game": "The Legend of Zelda: Ocarina of Time",
+    "name": "Kokiri Forest",
+    "status": "pass",
+    "filename": "1041-the_legend_of_zelda_ocarina_of_time_kokiri_forest.html",
+    "updated_at": "2026-11-02 03:44 EST"
   }
 }
