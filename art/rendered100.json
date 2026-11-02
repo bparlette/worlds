@@ -28,20 +28,6 @@
   "source": "Sketchfab"
  },
  {
-  "rank": 3,
-  "game": "Street Fighter II",
-  "name": "China \u2014 Chun-Li",
-  "status": "hunting",
-  "flat_url": "https://vgmaps.com/Atlas/Arcade/StreetFighterII-WorldWarrior-China(ChunLi).png"
- },
- {
-  "rank": 4,
-  "game": "Super Mario Bros. 3",
-  "name": "World 1-1 (gameplay)",
-  "status": "hunting",
-  "flat_url": "https://upload.wikimedia.org/wikipedia/en/2/2d/Super_Mario_Bros_3_Gameplay.png"
- },
- {
   "rank": 5,
   "game": "Doom",
   "name": "E1M1 \u2014 Hangar",
@@ -56,20 +42,6 @@
   "source": "Sketchfab"
  },
  {
-  "rank": 6,
-  "game": "Sonic the Hedgehog 2",
-  "name": "Chemical Plant Zone",
-  "status": "hunting",
-  "flat_url": "https://info.sonicretro.org/images/2/2c/Chemicalplant.png"
- },
- {
-  "rank": 7,
-  "game": "Marvel Super Heroes vs. Street Fighter",
-  "name": "Death Valley",
-  "status": "hunting",
-  "flat_url": "https://vgmaps.com/Atlas/Arcade/MarvelSuperHeroesVsStreetFighter-DeathValley.png"
- },
- {
   "rank": 8,
   "game": "Super Mario World",
   "name": "Yoshi's Island 1",
@@ -82,13 +54,6 @@
   "image_url": "https://media.sketchfab.com/models/e47c2d9f032244c0ab1f6b669d629031/thumbnails/acf3eba6222c4029b048aacc0355e3bc/bbdf405d8e794c91b7eef3c4a0361ce9.jpeg",
   "page_url": "https://sketchfab.com/3d-models/e47c2d9f032244c0ab1f6b669d629031",
   "source": "Sketchfab"
- },
- {
-  "rank": 9,
-  "game": "X-Men vs. Street Fighter",
-  "name": "On The Hilltop",
-  "status": "hunting",
-  "flat_url": "https://vgmaps.com/Atlas/Arcade/X-MenVsStreetFighter-OnTheHilltop.png"
  },
  {
   "rank": 10,
