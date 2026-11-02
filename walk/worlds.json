@@ -161,6 +161,13 @@
     "module": "modules/051.js"
   },
   {
+    "id": "052",
+    "title": "The Legend of Zelda: Link&#x27;s Awakening DX",
+    "sub": "Mabe Village",
+    "system": "Console",
+    "module": "modules/052.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
