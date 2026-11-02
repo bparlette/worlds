@@ -302,53 +302,6 @@ for (let i = 0; i < 7; i++) {
   world.add(tip);
 }
 
-// Relic: the "Moonward Crown", a recognizable treasure object.
-const relic = new THREE.Group();
-relic.position.set(3.45, .4, 3.85);
-world.add(relic);
-
-const crownBase = cyl(.55, .48, .28, M.gold, 0, .18, 0, relic, 16);
-crownBase.rotation.y = .12;
-const crownTop = cyl(.42, .62, .42, M.purple, 0, .58, 0, relic, 16);
-crownTop.rotation.y = -.18;
-const band = cyl(.49, .49, .12, M.gold, 0, .31, 0, relic, 16);
-band.rotation.y = .2;
-const moon = new THREE.Mesh(
-  new THREE.IcosahedronGeometry(.38, 2),
-  new THREE.MeshStandardMaterial({
-    color: 0xe7f4ff,
-    emissive: 0x759bff,
-    emissiveIntensity: 1.25,
-    roughness: .25,
-    metalness: .35
-  })
-);
-moon.position.set(0, .86, 0);
-moon.rotation.y = .35;
-const moonHalo = new THREE.Mesh(
-  new THREE.TorusGeometry(.52, .045, 8, 24),
-  M.gold
-);
-moonHalo.position.set(0, .86, .04);
-moonHalo.rotation.x = Math.PI / 2;
-relic.add(moonHalo);
-const crownSpoke = cyl(.055, .055, 1.3, M.gold, 0, .58, 0, relic, 8);
-crownSpoke.rotation.z = .2;
-const gem = new THREE.Mesh(
-  new THREE.OctahedronGeometry(.25, 0),
-  new THREE.MeshStandardMaterial({
-    color: 0x65e6ff,
-    emissive: 0x2aa8ff,
-    emissiveIntensity: 1.5,
-    roughness: .18
-  })
-);
-gem.position.set(0, 1.25, 0);
-relic.add(gem);
-const relicGlow = new THREE.PointLight(0x70b9ff, 1.3, 5, 2);
-relicGlow.position.set(3.45, 1.3, 3.85);
-world.add(relicGlow);
-
 // Treasure pedestal.
 box(1.65, .22, 1.65, M.stoneLight, 3.45, .55, 3.85);
 box(1.25, .16, 1.25, M.stone, 3.45, .72, 3.85);
@@ -578,10 +531,6 @@ function animate() {
     if (mote.position.y > 7.8) mote.position.y = .6;
   }
 
-  const t = elapsed * .75;
-  relic.rotation.y = Math.sin(t * .35) * .08;
-  gem.rotation.x = t * .55;
-  gem.rotation.y = t * .4;
 
   
     } catch (e) {
@@ -605,7 +554,7 @@ animate();
     group,
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
-    relic: { name: "Adventure Relic", x: -10.0, z: -12.0 },
+    relic: { id: "chalice", name: "Enchanted Chalice", x: -10.0, z: -12.0 },
     env:   { background: 0x080b14, fogColor: 0x080b14, fogDensity: 0.024 },
     doors: {
       next: { x: 12.0, z: -10.0 },

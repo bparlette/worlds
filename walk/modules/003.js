@@ -507,64 +507,6 @@ export function createWorld(THREE) {
     }
 
     // ---------------------------------------------------------------------
-    // The single iconic relic: the "Heart of the Reactor" — a pure 3D
-    // faceted gem on a small plinth, positioned off the main path.
-    // ---------------------------------------------------------------------
-
-    const relic = new THREE.Group();
-    relic.position.set(5.5, 0, 2.3);
-    world.add(relic);
-
-    box(1.45, .22, 1.45, mats.darkMetal, 0, .12, 0, relic);
-    box(1.1, .2, 1.1, mats.black, 0, .34, 0, relic);
-
-    const relicCore = new THREE.Mesh(
-      new THREE.OctahedronGeometry(.48, 0),
-      new THREE.MeshPhysicalMaterial({
-        color: 0xffd27a,
-        emissive: 0x7b3500,
-        emissiveIntensity: 1.5,
-        roughness: .18,
-        metalness: .45,
-        flatShading: true
-      })
-    );
-    relicCore.position.y = .7;
-    relic.add(relicCore);
-
-    const relicHalo = new THREE.Mesh(
-      new THREE.OctahedronGeometry(.72, 0),
-      new THREE.MeshBasicMaterial({
-        color: 0xffa53d,
-        transparent: true,
-        opacity: .18,
-        wireframe: true,
-        depthWrite: false
-      })
-    );
-    relicHalo.position.y = .7;
-    relic.add(relicHalo);
-
-    const relicLight = new THREE.PointLight(0xffa53d, 2.2, 4.5, 2);
-    relicLight.position.set(0, .85, 0);
-    relic.add(relicLight);
-
-    // A small flag / marker on the relic plinth.
-    const flag = new THREE.Group();
-    flag.position.set(0, .45, 0);
-    relic.add(flag);
-    const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .75, 6), mats.metal);
-    flagPole.rotation.z = -.12;
-    flag.add(flagPole);
-    const flagCloth = new THREE.Mesh(
-      new THREE.PlaneGeometry(.48, .48, 4, 4),
-      new THREE.MeshStandardMaterial({ color: 0xd6a43c, side: THREE.DoubleSide, roughness: .7 })
-    );
-    flagCloth.position.x = .25;
-    flagCloth.rotation.y = -.15;
-    flag.add(flagCloth);
-
-    // ---------------------------------------------------------------------
     // Decorative floor tiles and route markers.
     // ---------------------------------------------------------------------
 
@@ -712,26 +654,6 @@ export function createWorld(THREE) {
 
     renderer.domElement.addEventListener("dblclick", resetCamera);
 
-    renderer.domElement.addEventListener("click", event => {
-      if (dragging && event.pointerId === pointerId) return;
-
-      pointer.x = (event.clientX / innerWidth) * 2 - 1;
-      pointer.y = -(event.clientY / innerHeight) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-
-      const hit = raycaster.intersectObject(relic, false)[0];
-      if (hit) {
-        relic.group.traverse(object => {
-          if (object.isMesh && object.material) {
-            object.material.emissive?.set(0x3a1600);
-          }
-        });
-        relicLight.intensity = 4.5;
-        relicCore.rotation.y += .35;
-        relicCore.rotation.x += .1;
-      }
-    });
-
     window.addEventListener("keydown", event => {
       if (event.key === "Escape" || event.key === "0") resetCamera();
     });
@@ -760,10 +682,6 @@ export function createWorld(THREE) {
       coreHalo.rotation.x = t * .8;
       coreHalo.rotation.y = t * .55;
       core.scale.setScalar(1 + Math.sin(t * 3.1) * .08);
-      relicHalo.rotation.x = t * .5;
-      relicHalo.rotation.y = t * .35;
-      relicCore.rotation.x += .008;
-      relicCore.rotation.y += .012;
 
       for (const item of drones) {
         item.group.position.y += Math.sin(t * item.speed + item.phase) * .0025;
@@ -785,8 +703,6 @@ export function createWorld(THREE) {
         }
       }
 
-      relicLight.intensity = 2.0 + Math.sin(t * 2.2) * .35;
-      relicCore.material.emissiveIntensity = 1.35 + Math.sin(t * 3.1) * .35;
 
       
     } catch (e) {
@@ -811,7 +727,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: -0.4, z: 13.6, yaw: 0 },
-    relic: { name: "H.E.R.O. Relic", x: -10.4, z: -12.4 },
+    relic: { id: "crystal-urn", name: "Crystal Urn", x: -10.4, z: -12.4 },
     env:   { background: 0x080d0d, fogColor: 0x080d0d, fogDensity: 0.035 },
     doors: {
       next: { x: 11.6, z: -10.4 },

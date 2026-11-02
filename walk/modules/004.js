@@ -469,6 +469,6 @@ export function createWorld(THREE) {
       next: { x: 0, z: -14.8 },
       prev: { x: 0, z: 31 }
     },
-    relic: { name: "Zorlon Core", x: -10.5, z: -40 }
+    relic: { id: "zorlon-core", name: "Zorlon Core", x: -10.5, z: -40 }
   };
 }

@@ -427,41 +427,6 @@ export function createWorld(THREE) {
       ripples.push({ mesh: r, phase: Math.random() * Math.PI * 2, speed: 0.7 + Math.random() * 0.8 });
     }
 
-    // The relic: Adventure's Chalice, built from pure Three.js primitives.
-    const relic = new THREE.Group();
-    relic.position.set(8.7, 2.25, 3.8);
-    relic.rotation.y = 0.45;
-    world.add(relic);
-
-    // Pedestal.
-    cylinder(0.62, 0.78, 0.22, materials.rockDark, 0, 0.11, 0, 12, relic);
-    cylinder(0.48, 0.56, 0.16, materials.rock, 0, 0.31, 0, 12, relic);
-
-    // Stem.
-    const chaliceStem = cylinder(0.15, 0.22, 0.78, materials.gold, 0, 0.72, 0, 14, relic);
-    chaliceStem.rotation.z = -0.08;
-
-    // Bowl.
-    const bowl = mesh(new THREE.SphereGeometry(0.48, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), materials.gold, [0, 1.15, 0], relic);
-    bowl.scale.y = 1.35;
-    bowl.rotation.z = -0.08;
-
-    // Rim.
-    torus(0.46, 0.085, materials.goldDark, 0, 1.39, 0, relic);
-
-    // Handle.
-    const handle = torus(0.27, 0.065, materials.goldDark, 0, 0.78, 0, relic);
-    handle.rotation.y = Math.PI / 2;
-
-    // Small gold cap and jewel.
-    cylinder(0.12, 0.12, 0.12, materials.goldDark, 0, 1.58, 0, 12, relic);
-    const jewel = mesh(new THREE.OctahedronGeometry(0.13, 0), materials.lamp, [0, 1.72, 0], relic);
-    jewel.scale.y = 1.4;
-
-    // A subtle halo ring around the relic.
-    const relicHalo = torus(0.82, 0.025, materials.lamp, 0, 0.48, 0, relic);
-    relicHalo.rotation.x = Math.PI / 2;
-
     // Add a small path marker near the relic.
     const marker = cylinder(0.12, 0.16, 0.35, materials.woodLight, 6.9, 0.28, 4.4, 8);
     marker.rotation.z = 0.12;
@@ -478,9 +443,6 @@ export function createWorld(THREE) {
     coolFill.position.set(7, 4.5, -7);
     scene.add(coolFill);
 
-    const relicLight = new THREE.PointLight(0xffb74f, 10, 6, 2);
-    relicLight.position.set(8.7, 2.5, 3.8);
-    scene.add(relicLight);
 
     // Soft directional light from above.
     const sun = new THREE.DirectionalLight(0xffd59a, 1.5);
@@ -645,11 +607,6 @@ export function createWorld(THREE) {
         ripple.mesh.material.opacity = 0.16 + (Math.sin(t * 1.1 + ripple.phase) + 1) * 0.08;
       }
 
-      relicHalo.rotation.z = t * 0.28;
-      relicHalo.rotation.x = Math.sin(t * 0.55) * 0.08;
-      jewel.rotation.y = t * 0.7;
-      jewel.rotation.x = Math.sin(t * 0.8) * 0.25;
-      relicLight.intensity = 9 + Math.sin(t * 2.1) * 1.4;
       caveLight.intensity = 23 + Math.sin(t * 0.7) * 1.8;
 
       
@@ -683,7 +640,7 @@ export function createWorld(THREE) {
     group,
     update,
     spawn: { x: 0.0, z: 14.0, yaw: 0 },
-    relic: { name: "Pitfall II: Lost Caverns Relic", x: -10.0, z: -12.0 },
+    relic: { id: "golden-idol", name: "Golden Idol", x: -10.0, z: -12.0 },
     env:   { background: 0x090c12, fogColor: 0x101722, fogDensity: 0.035 },
     doors: {
       next: { x: 12.0, z: -10.0 },
