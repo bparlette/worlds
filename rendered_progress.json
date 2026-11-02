@@ -518,5 +518,13 @@
     "status": "pass",
     "filename": "1065-donkey_kong_25m_level_1.html",
     "updated_at": "2026-11-02 05:50 EST"
+  },
+  "66": {
+    "rank": 66,
+    "game": "Donkey Kong",
+    "name": "Classic Donkey Kong Level (NES)",
+    "status": "pass",
+    "filename": "1066-donkey_kong_classic_donkey_kong_level_nes.html",
+    "updated_at": "2026-11-02 05:53 EST"
   }
 }

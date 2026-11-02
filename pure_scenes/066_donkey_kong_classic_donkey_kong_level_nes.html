@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Platform Journey</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #10131a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .title {
+      position: fixed;
+      top: 24px;
+      left: 28px;
+      z-index: 2;
+      color: #f7f4ed;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .title p {
+      margin: 7px 0 0;
+      color: #aeb8c7;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      position: fixed;
+      right: 22px;
+      bottom: 20px;
+      z-index: 2;
+      padding: 9px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: #aeb8c7;
+      background: rgba(12, 15, 22, 0.55);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        top: 16px;
+        left: 18px;
+      }
+
+      .hint {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="title">
+    <h1>Voxel Platform</h1>
+    <p>Jump · Climb · Explore</p>
+  </div>
+  <div class="hint">Drag to orbit · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x10131a);
+    scene.fog = new THREE.Fog(0x10131a, 18, 36);
+
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const cameraTarget = new THREE.Vector3(0, 3.8, 0);
+    const spherical = new THREE.Spherical(22, Math.PI * 0.36, Math.PI * 0.25);
+    camera.position.setFromSpherical(spherical).add(cameraTarget);
+
+    const hemisphere = new THREE.HemisphereLight(0xbdd8ff, 0x261710, 2.1);
+    scene.add(hemisphere);
+
+    const key = new THREE.DirectionalLight(0xfff0d4, 3.4);
+    key.position.set(8, 15, 10);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -14;
+    key.shadow.camera.right = 14;
+    key.shadow.camera.top = 14;
+    key.shadow.camera.bottom = -14;
+    key.shadow.camera.near = 1;
+    key.shadow.camera.far = 40;
+    key.shadow.bias = -0.0008;
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0x62b8ff, 1.7);
+    rim.position.set(-10, 8, -10);
+    scene.add(rim);
+
+    const warmFill = new THREE.PointLight(0xff8a4d, 18, 20, 2);
+    warmFill.position.set(-4, 5, 3);
+    scene.add(warmFill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const materials = {
+      platform: new THREE.MeshStandardMaterial({
+        color: 0xe33d73,
+        roughness: 0.72,
+        metalness: 0.08
+      }),
+      platformEdge: new THREE.MeshStandardMaterial({
+        color: 0x8e163f,
+        roughness: 0.8
+      }),
+      dark: new THREE.MeshStandardMaterial({
+        color: 0x171820,
+        roughness: 0.9
+      }),
+      teal: new THREE.MeshStandardMaterial({
+        color: 0x38d5d0,
+        roughness: 0.52,
+        metalness: 0.12
+      }),
+      tealDark: new THREE.MeshStandardMaterial({
+        color: 0x167f7b,
+        roughness: 0.6
+      }),
+      wood: new THREE.MeshStandardMaterial({
+        color: 0xa85a28,
+        roughness: 0.86
+      }),
+      woodLight: new THREE.MeshStandardMaterial({
+        color: 0xd58a45,
+        roughness: 0.78
+      }),
+      metal: new THREE.MeshStandardMaterial({
+        color: 0x303846,
+        roughness: 0.42,
+        metalness: 0.55
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x288dff,
+        roughness: 0.38,
+        metalness: 0.15
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xf13c55,
+        roughness: 0.58
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xffcf4b,
+        roughness: 0.55
+      }),
+      skin: new THREE.MeshStandardMaterial({
+        color: 0xd96335,
+        roughness: 0.88
+      }),
+      hair: new THREE.MeshStandardMaterial({
+        color: 0x76301e,
+        roughness: 0.95
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf4f0df,
+        roughness: 0.8
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+    const sceneRoot = new THREE.Group();
+    scene.add(sceneRoot);
+
+    function box(width, height, depth, material, x, y, z, parent = sceneRoot) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function voxelColumn(x, z, levels, width, depth, material, parent = sceneRoot) {
+      for (let i = 0; i < levels; i++) {
+        box(width, 0.34, depth, material, x, i * 0.34 + 0.17, z, parent);
+      }
+    }
+
+    function makeLadder(x, z, y, width = 0.38, depth = 0.38, parent = sceneRoot) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      parent.add(group);
+
+      box(width, 1.15, 0.12, materials.teal, 0, 0, -0.08, group);
+      box(width, 1.15, 0.12, materials.teal, 0, 0, 0.08, group);
+
+      for (let i = 0; i < 4; i++) {
+        box(width * 1.45, 0.12, 0.22, materials.teal, 0, -0.38 + i * 0.27, 0, group);
+      }
+
+      return group;
+    }
+
+    function makeBarrel(x, y, z, radius = 0.48, parent = sceneRoot) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      parent.add(group);
+
+      voxelColumn(0, 0, 3, radius * 1.45, radius * 1.45, materials.wood, group);
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * 0.91, radius * 0.09, 6, 12),
+        materials.metal
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.16;
+      rim.castShadow = true;
+      group.add(rim);
+
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // Main stacked platforms
+    // -------------------------------------------------------------------------
+    const platformLevels = [
+      { y: 0.65, z: 1.2, length: 22, width: 1.9 },
+      { y: 2.55, z: 0.8, length: 20.5, width: 1.75 },
+      { y: 4.45, z: 0.2, length: 19, width: 1.6 },
+      { y: 6.35, z: -0.4, length: 17.5, width: 1.45 },
+      { y: 8.25, z: -0.8, length: 16, width: 1.3 },
+      { y: 10.15, z: -1.2, length: 14.5, width: 1.15 },
+      { y: 12.05, z: -1.6, length: 13, width: 1.0 }
+    ];
+
+    platformLevels.forEach((level, index) => {
+      const y = level.y;
+      const z = level.z;
+      const length = level.length;
+      const width = level.width;
+
+      // Main slab.
+      box(length, 0.52, width, materials.platform, 0, y, z);
+
+      // Dark underside.
+      box(length + 0.08, 0.16, width + 0.08, materials.dark, 0, y - 0.39, z);
+
+      // Side trim.
+      box(length, 0.13, 0.12, materials.platformEdge, 0, y + 0.27, z - width / 2);
+      box(length, 0.13, 0.12, materials.platformEdge, 0, y + 0.27, z + width / 2);
+
+      // Small top details / seams.
+      const seamCount = Math.max(3, Math.floor(length / 1.55));
+      for (let i = 0; i <= seamCount; i++) {
+        const x = -length / 2 + (i / seamCount) * length;
+        box(0.025, 0.025, width * 0.72, materials.tealDark, x, y + 0.285, z);
+      }
+
+      // Alternating small decorative blocks.
+      if (index % 2 === 0) {
+        for (let i = 0; i < 4; i++) {
+          const x = -length / 2 + 1.2 + i * 2.8;
+          box(0.48, 0.22, 0.48, materials.tealDark, x, y + 0.31, z);
+        }
+      }
+    });
+
+    // Ladders connecting levels, placed between platforms.
+    const ladderPositions = [
+      [-6.6, 1.6],
+      [-3.1, 1.25],
+      [1.6, 0.9],
+      [5.7, 0.55],
+      [-7.4, 0.2],
+      [-3.8, -0.15],
+      [0.2, -0.5],
+      [4.2, -0.85],
+      [-6.1, -1.15],
+      [-2.4, -1.5],
+      [1.8, -1.85],
+      [5.2, -2.15]
+    ];
+
+    ladderPositions.forEach(([x, z], index) => {
+      const y = index % 2 === 0 ? 1.25 : 2.9;
+      makeLadder(x, z, y);
+    });
+
+    // -------------------------------------------------------------------------
+    // Top platform details
+    // -------------------------------------------------------------------------
+    const topY = 12.05;
+    const topZ = -1.6;
+
+    // Donkey Kong-style pixel boss.
+    const kong = new THREE.Group();
+    kong.position.set(-2.8, topY + 0.3, topZ + 0.25);
+    sceneRoot.add(kong);
+
+    // Body.
+    box(1.65, 0.85, 1.25, materials.skin, 0, 0, 0, kong);
+
+    // Torso/shoulders.
+    box(1.35, 0.65, 1.05, materials.skin, 0, 0.46, 0, kong);
+    box(0.72, 0.62, 0.88, materials.skin, -0.48, 0.48, 0, kong);
+    box(0.72, 0.62, 0.88, materials.skin, 0.48, 0.48, 0, kong);
+
+    // Head and face.
+    box(0.92, 0.88, 0.88, materials.skin, 0, 1.15, 0, kong);
+    box(0.78, 0.65, 0.68, materials.hair, 0, 1.47, 0, kong);
+
+    // Eyes.
+    box(0.13, 0.13, 0.08, materials.yellow, -0.18, 1.25, 0.46, kong);
+    box(0.13, 0.13, 0.08, materials.yellow, 0.18, 1.25, 0.46, kong);
+
+    // Nose.
+    box(0.18, 0.18, 0.1, materials.skin, 0, 1.16, 0.5, kong);
+
+    // Arms.
+    box(0.52, 0.6, 0.5, materials.skin, -1.05, 0.65, 0, kong);
+    box(0.52, 0.6, 0.5, materials.skin, 1.05, 0.65, 0, kong);
+
+    // Chest emblem.
+    box(0.38, 0.38, 0.12, materials.yellow, 0, 0.47, 0.56, kong);
+
+    // Two barrels on the left.
+    makeBarrel(-5.25, topY + 0.3, topZ - 0.55, 0.48);
+    makeBarrel(-4.35, topY + 0.3, topZ - 0.55, 0.48);
+
+    // Barrel cap details.
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.3, 0.12, 12),
+      materials.metal
+    );
+    cap.position.set(-5.25, topY + 0.72, topZ - 0.55);
+    sceneRoot.add(cap);
+
+    const cap2 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.3, 0.12, 12),
+      materials.metal
+    );
+    cap2.position.set(-4.35, topY + 0.72, topZ - 0.55);
+    sceneRoot.add(cap2);
+
+    // -------------------------------------------------------------------------
+    // Upper bridge and ladders
+    // -------------------------------------------------------------------------
+    box(6.4, 0.42, 1.15, materials.platform, 1.2, 13.55, -1.8);
+    box(5.8, 0.12, 0.12, materials.platformEdge, 1.2, 13.78, -2.38);
+
+    makeLadder(-1.5, -1.8, 13.8);
+    makeLadder(4.0, -1.8, 13.8);
+
+    // Small upper platform extension.
+    box(2.2, 0.4, 1.25, materials.platform, 4.2, 14.25, -1.8);
+    makeLadder(3.1, -1.8, 14.45);
+
+    // A few colored blocks on the top.
+    box(0.65, 0.45, 0.65, materials.yellow, 6.1, topY + 0.4, topZ + 0.45);
+    box(0.45, 0.3, 0.45, materials.red, 6.65, topY + 0.3, topZ + 0.85);
+
+    // -------------------------------------------------------------------------
+    // Bottom objective / blue barrel
+    // -------------------------------------------------------------------------
+    makeBarrel(-5.0, 0.3, 1.75, 0.62);
+
+    // Blue barrel top.
+    const blueTop = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.49, 0.49, 0.12, 16),
+      materials.blue
+    );
+    blueTop.position.set(-5.0, 0.75, 1.75);
+    sceneRoot.add(blueTop);
+
+    // Small yellow objective marker.
+    box(0.42, 0.28, 0.42, materials.yellow, 4.9, 0.47, 1.75);
+
+    // -------------------------------------------------------------------------
+    // Small environmental voxels
+    // -------------------------------------------------------------------------
+    // Tiny floating blocks.
+    for (let i = 0; i < 18; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = side * (5.5 + (i % 5) * 0.75);
+      const z = -1.4 + (i % 3) * 0.4;
+      const y = 2.2 + (i % 4) * 0.65;
+
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.28, 0.28),
+        i % 3 === 0 ? materials.yellow : materials.tealDark
+      );
+      block.position.set(x, y, z);
+      block.rotation.set(i * 0.3, i * 0.4, i * 0.2);
+      block.castShadow = true;
+      sceneRoot.add(block);
+    }
+
+    // -------------------------------------------------------------------------
+    // Direct camera controls: orbit and zoom
+    // -------------------------------------------------------------------------
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let zoom = 1;
+
+    function updateCamera() {
+      spherical.radius = 22 * zoom;
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.18, Math.PI - 0.18);
+      spherical.theta = THREE.MathUtils.clamp(spherical.theta, -Math.PI, Math.PI);
+      camera.position.setFromSpherical(spherical).add(cameraTarget);
+      camera.lookAt(cameraTarget);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      spherical.theta -= dx * 0.006;
+      spherical.phi -= dy * 0.006;
+      updateCamera();
+    });
+
+    function stopDragging() {
+      dragging = false;
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        zoom = THREE.MathUtils.clamp(zoom * Math.exp(-event.deltaY * 0.001), 0.65, 1.7);
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+
+    // Subtle idle camera drift when not dragging.
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+      if (!dragging) {
+        spherical.theta += Math.sin(elapsed * 0.18) * 0.00035;
+        updateCamera();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
