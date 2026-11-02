@@ -147,6 +147,13 @@
     "module": "modules/046.js"
   },
   {
+    "id": "047",
+    "title": "The Elder Scrolls V: Skyrim",
+    "sub": "Skyrim VG Remix Diorama",
+    "system": "Console",
+    "module": "modules/047.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
