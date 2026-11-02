@@ -1,0 +1,670 @@
+// @world {"id": "032", "title": "Pok\u00e9mon", "sub": "Pok\u00e9mon Center", "system": "Console"}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    return {
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): grass
+  let grass = 0;
+
+    
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    // scene redirect
+    scene.background = new THREE.Color(0x101b25);
+    scene.fog = new THREE.Fog(0x101b25, 18, 34);
+
+    camera = new THREE.OrthographicCamera(-10, 10, 7, -7, 0.1, 100);
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+
+    // -------------------------------------------------------------------------
+    // Lighting
+    // -------------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x302216, 2.1));
+
+    const keyLight = new THREE.DirectionalLight(0xfff1d6, 3.2);
+    keyLight.position.set(5, 9, 7);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.left = -10;
+    keyLight.shadow.camera.right = 10;
+    keyLight.shadow.camera.top = 10;
+    keyLight.shadow.camera.bottom = -10;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 30;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x68bfff, 1.5);
+    rimLight.position.set(-7, 5, -8);
+    scene.add(rimLight);
+
+    const pinkLight = new THREE.PointLight(0xff66b3, 3.5, 7, 2);
+    pinkLight.position.set(-3, 3, 3);
+    scene.add(pinkLight);
+
+    // -------------------------------------------------------------------------
+    // Materials and voxel helpers
+    // -------------------------------------------------------------------------
+    const mat = {
+      grass: new THREE.MeshStandardMaterial({ color: 0x487a3d, roughness: 0.95 }),
+      grassLight: new THREE.MeshStandardMaterial({ color: 0x639a4b, roughness: 0.95 }),
+      grassDark: new THREE.MeshStandardMaterial({ color: 0x315d35, roughness: 1 }),
+      soil: new THREE.MeshStandardMaterial({ color: 0x63402a, roughness: 1 }),
+      dirt: new THREE.MeshStandardMaterial({ color: 0x926847, roughness: 1 }),
+      concrete: new THREE.MeshStandardMaterial({ color: 0xa9aaa0, roughness: 0.9 }),
+      concreteDark: new THREE.MeshStandardMaterial({ color: 0x777d79, roughness: 0.95 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xe64b58, roughness: 0.7 }),
+      redDark: new THREE.MeshStandardMaterial({ color: 0xa72c3e, roughness: 0.8 }),
+      white: new THREE.MeshStandardMaterial({ color: 0xf4f0e7, roughness: 0.75 }),
+      cyan: new THREE.MeshStandardMaterial({
+        color: 0x65e8ff,
+        emissive: 0x1b91b5,
+        emissiveIntensity: 0.65,
+        roughness: 0.45
+      }),
+      cyanBright: new THREE.MeshStandardMaterial({
+        color: 0xb6fbff,
+        emissive: 0x22c9e5,
+        emissiveIntensity: 1.1,
+        roughness: 0.35
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xffca57,
+        emissive: 0x7a3c00,
+        emissiveIntensity: 0.35,
+        roughness: 0.5
+      }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x345b38, roughness: 1 }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x4d7647, roughness: 1 }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x203d2c, roughness: 1 }),
+      trunk: new THREE.MeshStandardMaterial({ color: 0x5b3b28, roughness: 1 }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x287eaa,
+        emissive: 0x082b3e,
+        emissiveIntensity: 0.45,
+        roughness: 0.25,
+        metalness: 0.1
+      }),
+      pink: new THREE.MeshStandardMaterial({ color: 0xf3a6b8, roughness: 0.8 }),
+      purple: new THREE.MeshStandardMaterial({ color: 0x7755aa, roughness: 0.85 })
+    };
+
+    const sceneRoot = new THREE.Group();
+    scene.add(sceneRoot);
+
+    function box(parent, x, y, z, sx, sy, sz, material, castShadow = true, receiveShadow = true) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function voxelLine(parent, points, thickness, material, castShadow = true) {
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const dz = b[2] - a[2];
+        const length = Math.hypot(dx, dy, dz);
+        const mesh = box(
+          parent,
+          (a[0] + b[0]) / 2,
+          (a[1] + b[1]) / 2,
+          (a[2] + b[2]) / 2,
+          thickness,
+          thickness,
+          length,
+          material,
+          true,
+          true
+        );
+        mesh.rotation.y = Math.atan2(dx, dz);
+        mesh.rotation.x = Math.atan2(dy, thickness);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Base terrain: cutaway island with water, grass, and soil
+    // -------------------------------------------------------------------------
+    const base = new THREE.Group();
+    sceneRoot.add(base);
+
+    // Water strip along the front/left edge.
+    box(base, 0, -1.45, 4.25, 18.4, 0.55, 3.3, mat.water, false, true);
+    box(base, -7.1, -1.45, 1.4, 3.3, 0.55, 12.6, mat.water, false, true);
+
+    // Main rectangular base.
+    box(base, 0, -2.15, 0, 18.4, 0.7, 13.2, mat.soil, false, true);
+    box(base, 0, -1.75, 0, 18.8, 0.25, 13.6, mat.grassDark, false, true);
+
+    // Front grass strip.
+    box(base, 0, -1.52, 6.15, 18.4, 0.18, 2.5, mat.grass, false, true);
+
+    // Side grass strip.
+    box(base, -8.6, -1.52, 0, 2.5, 0.18, 12.2, mat.grass, false, true);
+
+    // Soil cutaway walls.
+    box(base, 0, -1.05, -6.55, 18.4, 1.3, 0.35, mat.soil, false, true);
+    box(base, -8.6, -1.05, 0, 0.35, 1.3, 12.6, mat.soil, false, true);
+
+    // Path from entrance to the front.
+    box(base, 0.55, -1.34, 3.65, 3.6, 0.12, 4.4, mat.dirt, false, true);
+    for (let i = 0; i < 7; i++) {
+      box(base, 0.55, -1.28, 1.15 + i * 0.62, 0.34, 0.08, 0.44, mat.concreteDark, false, false);
+    }
+
+    // -------------------------------------------------------------------------
+    // Stairs and ramp
+    // -------------------------------------------------------------------------
+    const stairs = new THREE.Group();
+    sceneRoot.add(stairs);
+
+    for (let i = 0; i < 6; i++) {
+      box(
+        stairs,
+        -4.85,
+        0.35 + i * 0.28,
+        4.45 - i * 0.62,
+        2.5,
+        0.26,
+        0.66,
+        mat.concrete
+      );
+    }
+
+    // Side walls of the stairwell.
+    box(stairs, -5.8, 0.9, 3.6, 0.35, 1.8, 5.8, mat.concreteDark);
+    box(stairs, -3.8, 0.9, 3.6, 0.35, 1.8, 5.8, mat.concreteDark);
+
+    // Blue handrails.
+    voxelLine(stairs, [
+      [-5.85, 1.55, 5.7],
+      [-5.85, 1.55, 0.05]
+    ], 0.09, mat.cyanBright);
+
+    voxelLine(stairs, [
+      [-3.75, 1.55, 5.7],
+      [-3.75, 1.55, 0.05]
+    ], 0.09, mat.cyanBright);
+
+    // -------------------------------------------------------------------------
+    // Pokémon Center building
+    // -------------------------------------------------------------------------
+    const building = new THREE.Group();
+    sceneRoot.add(building);
+
+    // Main building body.
+    box(building, 0, 1.35, 0, 5.2, 2.5, 4.2, mat.pink);
+
+    // Red roof base.
+    box(building, 0, 2.75, 0, 5.8, 0.45, 4.8, mat.redDark);
+
+    // Main red roof.
+    box(building, 0, 3.1, 0, 5.5, 0.55, 4.55, mat.red);
+
+    // Roof cap / rounded top made from stacked boxes.
+    box(building, 0, 3.52, 0, 4.55, 0.35, 3.65, mat.redDark);
+    box(building, 0, 3.8, 0, 3.55, 0.25, 2.75, mat.red);
+    box(building, 0, 4.0, 0, 2.4, 0.18, 1.75, mat.redDark);
+
+    // White trim around the roof.
+    box(building, 0, 2.95, 2.43, 5.55, 0.3, 0.18, mat.white);
+    box(building, 0, 2.95, -2.43, 5.55, 0.3, 0.18, mat.white);
+    box(building, 2.78, 2.95, 0, 0.18, 0.3, 4.7, mat.white);
+    box(building, -2.78, 2.95, 0, 0.18, 0.3, 4.7, mat.white);
+
+    // Arched doorway made from rectangular voxel blocks.
+    const doorway = new THREE.Group();
+    building.add(doorway);
+
+    box(doorway, 0, 0.45, 2.13, 1.65, 0.9, 0.18, mat.redDark);
+    box(doorway, 0, 1.25, 2.13, 1.65, 0.65, 0.18, mat.red);
+    box(doorway, -0.68, 1.8, 2.13, 0.34, 0.8, 0.18, mat.red);
+    box(doorway, 0.68, 1.8, 2.13, 0.34, 0.8, 0.18, mat.red);
+    box(doorway, 0, 2.2, 2.13, 1.4, 0.2, 0.18, mat.red);
+
+    // Cyan door glow and threshold.
+    box(doorway, 0, 1.45, 2.27, 1.25, 1.7, 0.12, mat.cyan, false, false);
+    box(doorway, 0, 0.05, 2.3, 1.8, 0.12, 0.45, mat.cyanBright, false, false);
+    box(doorway, -0.55, 0.12, 2.3, 0.1, 0.1, 0.4, mat.cyanBright, false, false);
+    box(doorway, 0.55, 0.12, 2.3, 0.1, 0.1, 0.4, mat.cyanBright, false, false);
+
+    // Doorway sign.
+    box(building, 0, 3.38, 0, 0.85, 0.42, 0.25, mat.gold);
+    box(building, 0, 3.38, 0.15, 0.45, 0.2, 0.06, mat.white);
+    box(building, -0.18, 3.38, 0.2, 0.12, 0.18, 0.06, mat.white);
+    box(building, 0.18, 3.38, 0.2, 0.12, 0.18, 0.06, mat.white);
+
+    // Side windows and neon accents.
+    for (let i = 0; i < 3; i++) {
+      box(building, 1.92, 1.95 + i * 0.52, 2.13, 0.9, 0.34, 0.16, mat.cyanBright, false, false);
+      box(building, 1.92, 1.95 + i * 0.52, 2.24, 0.95, 0.4, 0.08, mat.cyan, false, false);
+    }
+
+    // Left side window.
+    box(building, -2.13, 1.95, 0.55, 0.16, 0.9, 1.25, mat.cyanBright, false, false);
+    box(building, -2.24, 1.95, 0.55, 0.08, 0.95, 1.3, mat.cyan, false, false);
+
+    // Sign above the entrance.
+    box(building, 0, 3.18, 2.35, 2.3, 0.26, 0.28, mat.gold);
+    box(building, 0, 3.18, 2.51, 1.9, 0.1, 0.08, mat.white);
+    box(building, -0.55, 3.18, 2.54, 0.13, 0.12, 0.08, mat.white);
+    box(building, 0.55, 3.18, 2.54, 0.13, 0.12, 0.08, mat.white);
+
+    // Roof beacon.
+    box(building, 0, 4.25, 0, 0.55, 0.3, 0.55, mat.gold);
+    box(building, 0, 4.48, 0, 0.42, 0.18, 0.42, mat.cyanBright);
+
+    // Entrance canopy.
+    box(building, 0, 2.55, 2.7, 3.4, 0.22, 0.8, mat.red);
+    box(building, 0, 2.4, 3.08, 2.5, 0.12, 0.25, mat.white);
+
+    // -------------------------------------------------------------------------
+    // Exterior details
+    // -------------------------------------------------------------------------
+    // Wall lamps.
+    const lampMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffc36b,
+      emissive: 0xff8a2b,
+      emissiveIntensity: 1.2
+    });
+
+    for (const x of [-2.1, 2.1]) {
+      box(building, x, 2.65, 2.35, 0.3, 0.55, 0.28, mat.gold);
+      box(building, x, 2.65, 2.53, 0.22, 0.35, 0.08, lampMaterial, false, false);
+    }
+
+    // Outdoor vending machine.
+    const vending = new THREE.Group();
+    vending.position.set(2.45, 0, 1.75);
+    building.add(vending);
+
+    box(vending, 0, 1.05, 0, 0.85, 2.0, 0.7, mat.redDark);
+    box(vending, 0, 1.35, 0.38, 0.72, 0.55, 0.1, mat.cyanBright, false, false);
+    box(vending, 0, 0.92, 0.4, 0.58, 0.18, 0.08, mat.gold, false, false);
+    box(vending, 0, 0.58, 0.4, 0.45, 0.12, 0.08, mat.cyan, false, false);
+    box(vending, 0, 0.25, 0.4, 0.3, 0.1, 0.08, mat.white, false, false);
+
+    // Entrance mat.
+    box(building, 0, -1.23, 5.45, 2.2, 0.08, 1.0, mat.dirt, false, true);
+    for (let i = 0; i < 3; i++) {
+      box(building, -0.48 + i * 0.48, -1.17, 5.45, 0.18, 0.05, 0.75, mat.cyanBright, false, false);
+    }
+
+    // -------------------------------------------------------------------------
+    // Trees
+    // -------------------------------------------------------------------------
+    function makeTree(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, -1.5, z);
+      tree.scale.setScalar(scale);
+      sceneRoot.add(tree);
+
+      box(tree, 0, 0.35, 0, 0.55, 0.7, 0.55, mat.trunk);
+
+      for (let level = 0; level < 3; level++) {
+        const radius = 0.95 - level * 0.18;
+        const y = 0.8 + level * 0.65;
+        const material = level === 1 ? mat.leaf : level === 0 ? mat.leafLight : mat.leafDark;
+
+        for (let side = -1; side <= 1; side += 2) {
+          box(
+            tree,
+            side * radius * 0.65,
+            y,
+            0,
+            radius * 1.25,
+            0.55,
+            radius * 1.25,
+            material
+          );
+        }
+      }
+
+      return tree;
+    }
+
+    makeTree(-4.45, -4.75, 1.05);
+    makeTree(-3.25, -5.2, 0.78);
+    makeTree(3.85, -4.95, 0.9);
+
+    // -------------------------------------------------------------------------
+    // Bushes and Pokémon ball
+    // -------------------------------------------------------------------------
+    function makeBush(x, z, scale = 1) {
+      const bush = new THREE.Group();
+      bush.position.set(x, -1.5, z);
+      bush.scale.setScalar(scale);
+      sceneRoot.add(bush);
+
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const bx = Math.cos(angle) * 0.42;
+        const bz = Math.sin(angle) * 0.42;
+
+        box(
+          bush,
+          bx,
+          0.22 + (i % 2) * 0.12,
+          bz,
+          0.58,
+          0.5,
+          0.58,
+          i % 2 ? mat.leaf : mat.leafLight
+        );
+      }
+
+      return bush;
+    }
+
+    makeBush(-2.25, 4.95, 0.85);
+    makeBush(-1.45, 4.85, 0.65);
+    makeBush(1.45, 4.95, 0.7);
+    makeBush(2.25, 4.95, 0.85);
+    makeBush(-4.65, 1.2, 0.7);
+    makeBush(4.65, 1.2, 0.7);
+
+    // Pokémon ball.
+    const ball = new THREE.Group();
+    ball.position.set(-0.25, -1.36, 5.25);
+    sceneRoot.add(ball);
+
+    const ballBody = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55, 20, 12),
+      mat.white
+    );
+    ballBody.castShadow = true;
+    ball.add(ballBody);
+
+    const ballTop = new THREE.Mesh(
+      new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      mat.red
+    );
+    ballTop.position.y = 0.54;
+    ballTop.castShadow = true;
+    ball.add(ballTop);
+
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(0.4, 0.075, 8, 24),
+      mat.red
+    );
+    band.rotation.x = Math.PI / 2;
+    band.castShadow = true;
+    ball.add(band);
+
+    // -------------------------------------------------------------------------
+    // Small foreground details
+    // -------------------------------------------------------------------------
+    for (let i = 0; i < 9; i++) {
+      const x = -5.2 + i * 0.7;
+      const z = 5.0;
+      box(sceneRoot, x, -1.42, z, 0.42, 0.12, 0.42, mat.leaf, false, true);
+      box(sceneRoot, x + 0.15, -1.35, z, 0.22, 0.1, 0.22, mat.leafLight, false, true);
+    }
+
+    // Small sign near the stairs.
+    const sign = new THREE.Group();
+    sign.position.set(-5.45, -1.5, 0.55);
+    sceneRoot.add(sign);
+
+    box(sign, 0, 0.35, 0, 0.12, 0.7, 0.12, mat.trunk);
+    box(sign, 0, 0.78, 0, 0.75, 0.42, 0.12, mat.gold);
+    box(sign, 0, 0.84, 0.08, 0.55, 0.12, 0.05, mat.white);
+    box(sign, 0, 0.84, 0.13, 0.25, 0.12, 0.05, mat.cyanBright);
+
+    // -------------------------------------------------------------------------
+    // Custom camera controls: orbit and zoom
+    // -------------------------------------------------------------------------
+    const target = new THREE.Vector3(0, 0.6, 0);
+    const spherical = new THREE.Spherical(13.8, Math.PI * 0.34, Math.PI * 0.28);
+    const initialSpherical = spherical.clone();
+    const initialTarget = target.clone();
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let previousDistance = spherical.radius;
+
+    function updateCamera() {
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 8, 22);
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, 0.25, Math.PI * 0.48);
+      spherical.makeSafe();
+
+      camera.position.setFromSpherical(spherical).add(target);
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      previousDistance = spherical.radius;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      spherical.theta -= dx * 0.006;
+      spherical.phi -= dy * 0.006;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      if (event.pointerId !== undefined && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      spherical.radius *= Math.exp(event.deltaY * 0.001);
+      updateCamera();
+    }, { passive: false });
+
+    // Pinch zoom for touch devices.
+    const activePointers = new Map();
+    let pinchDistance = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        pinchDistance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+      }
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!activePointers.has(event.pointerId)) return;
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 2) {
+        const points = [...activePointers.values()];
+        const distance = Math.hypot(
+          points[0].x - points[1].x,
+          points[0].y - points[1].y
+        );
+
+        if (pinchDistance > 0) {
+          spherical.radius *= pinchDistance / Math.max(distance, 1);
+          updateCamera();
+        }
+        pinchDistance = distance;
+      }
+    });
+
+    function removePointer(event) {
+      activePointers.delete(event.pointerId);
+      pinchDistance = 0;
+    }
+
+    renderer.domElement.addEventListener("pointerup", removePointer);
+    renderer.domElement.addEventListener("pointercancel", removePointer);
+
+    window.addEventListener("resize", () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      camera.left = -width / 2;
+      camera.right = width / 2;
+      camera.top = height / 2;
+      camera.bottom = -height / 2;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const elapsed = clock.getElapsedTime();
+
+      // Gentle beacon pulse.
+      mat.cyanBright.emissiveIntensity = 0.95 + Math.sin(elapsed * 2.2) * 0.18;
+      pinkLight.intensity = 3.2 + Math.sin(elapsed * 1.7) * 0.45;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    updateCamera();
+    animate();
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Pok\u00e9mon Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0x101b25, fogColor: 0x101b25, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
+  };
+}

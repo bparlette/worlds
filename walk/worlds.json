@@ -105,6 +105,13 @@
     "module": "modules/031.js"
   },
   {
+    "id": "032",
+    "title": "Pokémon",
+    "sub": "Pokémon Center",
+    "system": "Console",
+    "module": "modules/032.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
