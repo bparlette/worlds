@@ -630,5 +630,13 @@
     "status": "pass",
     "filename": "1079-resident_evil_spencer_mansion_main_hall.html",
     "updated_at": "2026-11-02 06:57 EST"
+  },
+  "80": {
+    "rank": 80,
+    "game": "Silent Hill 3",
+    "name": "The Cathedral",
+    "status": "pass",
+    "filename": "1080-silent_hill_3_the_cathedral.html",
+    "updated_at": "2026-11-02 07:01 EST"
   }
 }
