@@ -210,6 +210,13 @@
     "module": "modules/072.js"
   },
   {
+    "id": "074",
+    "title": "Pokémon Red &amp; Blue",
+    "sub": "Lavender Town",
+    "system": "Console",
+    "module": "modules/074.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
