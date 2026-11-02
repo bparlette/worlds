@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Super Island</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #9ac96d;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 12px 16px;
+      color: #314b25;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(30, 50, 20, 0.16);
+      backdrop-filter: blur(10px);
+      user-select: none;
+    }
+
+    .info h1 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+
+    .info p {
+      margin: 0;
+      font-size: 12px;
+      color: #6c7c4c;
+    }
+
+    .controls {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      padding: 8px 12px;
+      color: #365028;
+      background: rgba(255, 255, 255, 0.68);
+      border-radius: 9px;
+      box-shadow: 0 5px 18px rgba(30, 50, 20, 0.12);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .info {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+      }
+
+      .controls {
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="info">
+    <h1>Voxel Super Island</h1>
+    <p>Drag to orbit · Scroll to zoom</p>
+  </div>
+  <div class="controls">Drag to rotate · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x9ac96d);
+    scene.fog = new THREE.Fog(0x9ac96d, 20, 40);
+
+    const camera = new THREE.PerspectiveCamera(
+      38,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    document.body.appendChild(renderer.domElement);
+
+    const hemisphere = new THREE.HemisphereLight(0xe9fff1, 0x6b7642, 2.2);
+    scene.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight(0xfff2c6, 3.2);
+    sun.position.set(8, 14, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -12;
+    sun.shadow.camera.right = 12;
+    sun.shadow.camera.top = 12;
+    sun.shadow.camera.bottom = -12;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9bdcff, 0.8);
+    fill.position.set(-8, 7, -10);
+    scene.add(fill);
+
+    const voxel = (size, material, x, y, z, parent = scene) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    const materials = {
+      grass: new THREE.MeshStandardMaterial({
+        color: 0x73bd43,
+        roughness: 0.9
+      }),
+      grassLight: new THREE.MeshStandardMaterial({
+        color: 0x8bd655,
+        roughness: 0.9
+      }),
+      grassDark: new THREE.MeshStandardMaterial({
+        color: 0x4f9e32,
+        roughness: 0.95
+      }),
+      soil: new THREE.MeshStandardMaterial({
+        color: 0x8a5b35,
+        roughness: 1
+      }),
+      root: new THREE.MeshStandardMaterial({
+        color: 0x6d482e,
+        roughness: 1
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0xe33b38,
+        roughness: 0.75
+      }),
+      yellow: new THREE.MeshStandardMaterial({
+        color: 0xf5c83f,
+        roughness: 0.55
+      }),
+      white: new THREE.MeshStandardMaterial({
+        color: 0xf8f4d8,
+        roughness: 0.8
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x3579c7,
+        roughness: 0.7
+      }),
+      purple: new THREE.MeshStandardMaterial({
+        color: 0x7547b8,
+        roughness: 0.72
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x263238,
+        roughness: 0.9
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x3c9b43,
+        roughness: 0.75
+      }),
+      water: new THREE.MeshStandardMaterial({
+        color: 0x49b9d4,
+        roughness: 0.28,
+        metalness: 0.05
+      })
+    };
+
+    // Island foundation and surrounding water.
+    voxel(14.5, materials.water, 0, -1.55, 0);
+    voxel(14.1, materials.water, 0, -0.85, 0);
+
+    for (let x = -6; x <= 6; x += 1) {
+      voxel(0.9, materials.soil, x, -1.2, 0);
+    }
+
+    for (let z = -6; z <= 6; z += 1) {
+      voxel(0.9, materials.soil, 0, -1.2, z);
+    }
+
+    // Main stepped island.
+    const levels = [
+      { y: -0.25, half: 6.5 },
+      { y: 1.25, half: 5.5 },
+      { y: 2.75, half: 4.5 },
+      { y: 4.25, half: 3.5 }
+    ];
+
+    levels.forEach((level, index) => {
+      const half = level.half;
+
+      for (let x = -half; x <= half; x += 1) {
+        for (let z = -half; z <= half; z += 1) {
+          const edge = Math.max(
+            Math.abs(x) - half + 0.5,
+            Math.abs(z) - half + 0.5
+          );
+
+          const corner =
+            Math.abs(x) > half - 1 &&
+            Math.abs(z) > half - 1;
+
+          const material = corner
+            ? materials.grassDark
+            : materials.grass;
+
+          voxel(
+            0.96,
+            material,
+            x,
+            level.y,
+            z
+          );
+        }
+      }
+
+      // Exposed soil side.
+      for (let x = -half + 1; x <= half - 1; x += 1) {
+        for (let z = -half + 1; z <= half - 1; z += 1) {
+          const edge = Math.max(
+            Math.abs(x) - half + 1,
+            Math.abs(z) - half + 1
+          );
+
+          if (edge === 0) {
+            voxel(
+              0.92,
+              materials.soil,
+              x,
+              level.y - 0.48,
+              z
+            );
+          }
+        }
+      }
+    });
+
+    // Grass tufts and small details.
+    function grassTuft(x, y, z, scale = 1) {
+      voxel(0.16, materials.grassDark, x, y + 0.08, z, scene);
+      voxel(0.13, materials.grassLight, x + 0.12, y + 0.18, z, scene);
+      voxel(0.12, materials.grass, x - 0.1, y + 0.22, z + 0.06, scene);
+    }
+
+    for (let x = -5; x <= 5; x += 2) {
+      for (let z = -5; z <= 5; z += 2) {
+        if (Math.abs(x) + Math.abs(z) < 6) {
+          grassTuft(x, 4.55, z, 0.75 + Math.random() * 0.45);
+        }
+      }
+    }
+
+    // Mario.
+    const mario = new THREE.Group();
+    mario.position.set(-1.2, 5.05, 0.6);
+    scene.add(mario);
+
+    voxel(0.68, materials.red, 0, 0.38, 0, mario);
+    voxel(0.48, materials.blue, 0, 0.88, 0, mario);
+    voxel(0.5, materials.blue, 0, 0.88, 0.04, mario);
+
+    for (const x of [-0.27, 0.27]) {
+      voxel(0.18, materials.blue, x, 0.88, 0, mario);
+      voxel(0.1, materials.black, x, 1.05, 0, mario);
+    }
+
+    voxel(0.17, materials.red, -0.25, 0.38, 0, mario);
+    voxel(0.17, materials.red, 0.25, 0.38, 0, mario);
+
+    voxel(0.16, materials.black, -0.22, 0.2, 0.2, mario);
+    voxel(0.16, materials.black, 0.22, 0.2, 0.2, mario);
+
+    // Mushroom blocks.
+    function mushroomBlock(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+      scene.add(group);
+
+      voxel(0.72, materials.yellow, 0, 0, 0, group);
+
+      for (const side of [-1, 1]) {
+        voxel(
+          0.12,
+          materials.white,
+          side * 0.37,
+          0.38,
+          0,
+          group
+        );
+      }
+
+      voxel(0.12, materials.white, 0, 0.38, 0.37, group);
+      voxel(0.12, materials.white, 0, 0.38, -0.37, group);
+
+      return group;
+    }
+
+    mushroomBlock(-2.7, 4.95, -1.4, 0.2);
+    mushroomBlock(2.4, 4.95, -1.8, -0.35);
+    mushroomBlock(-2.9, 3.35, 2.4, 0.1);
+    mushroomBlock(2.7, 3.35, 2.5, -0.15);
+
+    // Blooper.
+    const blooper = new THREE.Group();
+    blooper.position.set(-0.5, 5.35, 1.2);
+    scene.add(blooper);
+
+    const blooperBody = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55, 12, 8),
+      materials.purple
+    );
+    blooperBody.scale.set(1, 0.75, 1);
+    blooperBody.castShadow = true;
+    blooper.add(blooperBody);
+
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x161b20,
+      roughness: 0.9
+    });
+
+    voxel(0.16, eyeMaterial, -0.18, 0.12, 0.32, blooper);
+    voxel(0.16, eyeMaterial, 0.18, 0.12, 0.32, blooper);
+    voxel(0.1, materials.white, -0.18, 0.12, 0.37, blooper);
+    voxel(0.1, materials.white, 0.18, 0.12, 0.37, blooper);
+
+    const tail = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.1, 1.4, 8),
+      materials.purple
+    );
+    tail.rotation.z = Math.PI / 2;
+    tail.position.x = 0.6;
+    tail.castShadow = true;
+    blooper.add(tail);
+
+    // Piranha plant.
+    const piranha = new THREE.Group();
+    piranha.position.set(-3.45, 2.85, 2.65);
+    scene.add(piranha);
+
+    voxel(0.32, materials.green, 0, 0.16, 0, piranha);
+    voxel(0.38, materials.red, 0, 0.5, 0, piranha);
+    voxel(0.16, materials.red, -0.11, 0.62, 0, piranha);
+    voxel(0.16, materials.red, 0.11, 0.62, 0, piranha);
+    voxel(0.16, materials.white, -0.09, 0.75, 0.02, piranha);
+    voxel(0.16, materials.white, 0.09, 0.75, 0.02, piranha);
+
+    // Coins.
+    const coinGeometry = new THREE.CylinderGeometry(0.13, 0.13, 0.08, 12);
+    const coinMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf7d33b,
+      roughness: 0.45,
+      metalness: 0.15
+    });
+
+    function coin(x, y, z, rotation = 0) {
+      const coinMesh = new THREE.Mesh(coinGeometry, coinMaterial);
+      coinMesh.position.set(x, y, z);
+      coinMesh.rotation.y = rotation;
+      coinMesh.castShadow = true;
+      scene.add(coinMesh);
+      return coinMesh;
+    }
+
+    [
+      [-4.3, 4.1, 1.8],
+      [-3.7, 4.1, 2.3],
+      [3.8, 4.1, 1.7],
+      [4.4, 4.1, 2.2],
+      [-4.2, 3.15, -2.6],
+      [4.2, 3.15, -2.7],
+      [-3.8, 2.15, 3.4],
+      [3.9, 2.15, 3.5],
+      [-2.1, 1.2, -3.7],
+      [2.2, 1.2, -3.8],
+      [-4.4, 0.2, 1.2],
+      [4.5, 0.2, 1.3]
+    ].forEach((p) => coin(p[0], p[1], p[2]));
+
+    // Stacked coins.
+    for (let i = 0; i < 3; i++) {
+      coin(-4.2, 4.1 + i * 0.18, 2.45, 0.4);
+    }
+
+    // Pipe on the right.
+    const pipe = new THREE.Group();
+    pipe.position.set(4.45, 3.2, -2.45);
+    scene.add(pipe);
+
+    const pipeMaterial = materials.green;
+
+    for (let i = 0; i < 5; i++) {
+      const y = 4.0 + i * 0.58;
+      voxel(0.62, pipeMaterial, 0, y, 0, pipe);
+
+      voxel(0.12, pipeMaterial, -0.27, y, 0.25, pipe);
+      voxel(0.12, pipeMaterial, 0.27, y, 0.25, pipe);
+      voxel(0.12, pipeMaterial, -0.27, y, -0.25, pipe);
+      voxel(0.12, pipeMaterial, 0.27, y, -0.25, pipe);
+    }
+
+    // Small top pipe.
+    const topPipe = new THREE.Group();
+    topPipe.position.set(3.55, 5.25, -1.65);
+    scene.add(topPipe);
+
+    voxel(0.58, materials.green, 0, 0, 0, topPipe);
+    voxel(0.12, materials.green, -0.24, 0, 0.2, topPipe);
+    voxel(0.12, materials.green, 0.24, 0, 0.2, topPipe);
+    voxel(0.12, materials.green, -0.24, 0, -0.2, topPipe);
+    voxel(0.12, materials.green, 0.24, 0, -0.2, topPipe);
+
+    // Block with question mark.
+    const questionBlock = new THREE.Group();
+    questionBlock.position.set(-3.05, 3.3, -2.6);
+    scene.add(questionBlock);
+
+    voxel(0.72, materials.yellow, 0, 0, 0, questionBlock);
+    voxel(0.13, materials.white, -0.32, 0.32, 0, questionBlock);
+    voxel(0.13, materials.white, 0.32, 0.32, 0, questionBlock);
+    voxel(0.13, materials.white, 0, 0.32, -0.32, questionBlock);
+    voxel(0.13, materials.white, 0, 0.32, 0.32, questionBlock);
+
+    const questionMark = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.08, 0.18, 8),
+      materials.white
+    );
+    questionMark.rotation.z = -0.4;
+    questionMark.position.set(0, 0.45, 0);
+    questionBlock.add(questionMark);
+
+    // Ground-level enemies.
+    const goomba = new THREE.Group();
+    goomba.position.set(-1.4, 0.05, 2.8);
+    scene.add(goomba);
+
+    const goombaBody = new THREE.Mesh(
+      new THREE.SphereGeometry(0.45, 12, 8),
+      materials.black
+    );
+    goombaBody.scale.set(1.25, 0.7, 0.9);
+    goombaBody.castShadow = true;
+    goomba.add(goombaBody);
+
+    voxel(0.13, materials.white, -0.15, 0.28, 0.28, goomba);
+    voxel(0.13, materials.white, 0.15, 0.28, 0.28, goomba);
+    voxel(0.13, materials.white, -0.15, 0.28, -0.28, goomba);
+    voxel(0.13, materials.white, 0.15, 0.28, -0.28, goomba);
+
+    const cheep = new THREE.Group();
+    cheep.position.set(1.6, 0.05, -2.9);
+    scene.add(cheep);
+
+    const cheepBody = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4, 12, 8),
+      materials.black
+    );
+    cheepBody.scale.set(1.4, 0.55, 0.85);
+    cheepBody.castShadow = true;
+    cheep.add(cheepBody);
+
+    voxel(0.12, materials.white, -0.16, 0.2, 0.2, cheep);
+    voxel(0.12, materials.white, 0.16, 0.2, 0.2, cheep);
+    voxel(0.12, materials.white, -0.16, 0.2, -0.2, cheep);
+    voxel(0.12, materials.white, 0.16, 0.2, -0.2, cheep);
+
+    // Water ripples.
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const radius = 7.3 + (i % 3) * 0.7;
+      const ripple = new THREE.Mesh(
+        new THREE.RingGeometry(0.45, 0.49, 24),
+        new THREE.MeshBasicMaterial({
+          color: 0xbcecff,
+          transparent: true,
+          opacity: 0.42,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      ripple.rotation.x = -Math.PI / 2;
+      ripple.rotation.z = angle;
+      ripple.position.set(
+        Math.cos(angle) * radius,
+        -0.79,
+        Math.sin(angle) * radius
+      );
+      scene.add(ripple);
+    }
+
+    // Custom orbit controls.
+    let azimuth = 0.72;
+    let polar = 1.02;
+    let distance = 17;
+    let target = new THREE.Vector3(0, 2.1, 0);
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+
+    function updateCamera() {
+      const sinPolar = Math.sin(polar);
+
+      camera.position.set(
+        target.x + distance * sinPolar * Math.sin(azimuth),
+        target.y + distance * Math.cos(polar),
+        target.z + distance * sinPolar * Math.cos(azimuth)
+      );
+
+      camera.lookAt(target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      azimuth -= dx * 0.006;
+      polar = THREE.MathUtils.clamp(
+        polar - dy * 0.005,
+        0.45,
+        1.42
+      );
+
+      updateCamera();
+    });
+
+    function stopDragging(event) {
+      dragging = false;
+      if (event.pointerId !== undefined) {
+        if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+          renderer.domElement.releasePointerCapture(event.pointerId);
+        }
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", stopDragging);
+    renderer.domElement.addEventListener("pointercancel", stopDragging);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        distance = THREE.MathUtils.clamp(
+          distance + event.deltaY * 0.012,
+          10,
+          25
+        );
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    updateCamera();
+
+    renderer.setAnimationLoop(() => {
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>

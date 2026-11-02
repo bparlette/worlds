@@ -462,5 +462,13 @@
     "status": "pass",
     "filename": "1058-super_mario_small_mario_habitat_block_island.html",
     "updated_at": "2026-11-02 05:19 EST"
+  },
+  "59": {
+    "rank": 59,
+    "game": "Super Mario",
+    "name": "Mario Voxelland",
+    "status": "pass",
+    "filename": "1059-super_mario_mario_voxelland.html",
+    "updated_at": "2026-11-02 05:22 EST"
   }
 }
