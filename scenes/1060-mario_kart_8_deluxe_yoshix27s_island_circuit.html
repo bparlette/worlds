@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voxel Island</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: ui-rounded, "Trebuchet MS", system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #b9e6ff;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    #hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 10;
+      padding: 12px 15px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 12px;
+      color: #17364a;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 8px 25px rgba(25, 75, 105, 0.16);
+      backdrop-filter: blur(10px);
+      user-select: none;
+    }
+
+    #hud h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+
+    #hud p {
+      margin: 0;
+      color: #527084;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    #help {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 10;
+      padding: 9px 12px;
+      border-radius: 9px;
+      color: #31566c;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: 0 6px 20px rgba(25, 75, 105, 0.12);
+      font-size: 11px;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    @media (max-width: 600px) {
+      #hud {
+        top: 10px;
+        left: 10px;
+        padding: 10px 12px;
+      }
+
+      #hud h1 {
+        font-size: 15px;
+      }
+
+      #help {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="scene"></div>
+
+  <div id="hud">
+    <h1>Voxel Island</h1>
+    <p>A tiny blocky world of islands, mountains, and cloud towers.</p>
+  </div>
+
+  <div id="help">Drag to orbit · Right-drag to pan · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from
+      "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+
+    const container = document.getElementById("scene");
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xb9e6ff);
+    scene.fog = new THREE.Fog(0xb9e6ff, 55, 115);
+
+    const camera = new THREE.PerspectiveCamera(
+      43,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      180
+    );
+
+    const hemisphere = new THREE.HemisphereLight(0xe8f7ff, 0x66734b, 2.1);
+    scene.add(hemisphere);
+
+    const sun = new THREE.DirectionalLight(0xfff4d2, 3.1);
+    sun.position.set(-35, 55, 25);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -65;
+    sun.shadow.camera.right = 65;
+    sun.shadow.camera.top = 65;
+    sun.shadow.camera.bottom = -65;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 140;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const material = (color, roughness = 0.82, metalness = 0) =>
+      new THREE.MeshStandardMaterial({ color, roughness, metalness });
+
+    const mats = {
+      sand: material(0xe9a65b),
+      sandLight: material(0xf5c77f),
+      sandDark: material(0xc87936),
+      rock: material(0x736a58),
+      rockDark: material(0x4e514a),
+      rockLight: material(0x9a8d70),
+      grass: material(0x73a95b),
+      grassLight: material(0x91bd67),
+      grassDark: material(0x4f8449),
+      snow: material(0xf8fbff),
+      water: material(0x45b9c4, 0.38, 0.08),
+      waterLight: material(0x76d1d5, 0.35, 0.08),
+      tree: material(0x3f7046),
+      treeLight: material(0x638f4d),
+      trunk: material(0x755038),
+      cream: material(0xf1e5c4),
+      red: material(0xc95e4c),
+      blue: material(0x3b82a6),
+      purple: material(0x8966b8),
+      yellow: material(0xf3c85b),
+      orange: material(0xd97842),
+      black: material(0x343b3c),
+      window: material(0x263943, 0.45, 0.15)
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    function addVoxel(parent, x, y, z, sx = 1, sy = 1, sz = 1, mat) {
+      const mesh = new THREE.Mesh(voxelGeometry, mat);
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addBlockColumn(parent, x, z, y, width, height, depth, mat) {
+      addVoxel(parent, x, y, z, width, height, depth, mat);
+    }
+
+    function addBox(parent, x, y, z, width, height, depth, mat) {
+      return addVoxel(parent, x, y, z, width, height, depth, mat);
+    }
+
+    function addLine(parent, points, thickness, mat) {
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const dz = b[2] - a[2];
+        const length = Math.hypot(dx, dy, dz);
+        const nx = dx / length;
+        const ny = dy / length;
+        const nz = dz / length;
+        const midX = (a[0] + b[0]) / 2;
+        const midY = (a[1] + b[1]) / 2;
+        const midZ = (a[2] + b[2]) / 2;
+
+        addVoxel(parent, midX, midY, midZ, thickness, length, thickness, mat);
+      }
+    }
+
+    function addCloud(parent, x, y, z, scale = 1) {
+      const cloud = new THREE.Group();
+      cloud.position.set(x, y, z);
+      cloud.scale.setScalar(scale);
+
+      const puffs = [
+        [-1.25, 0, 0, 0.9],
+        [-0.55, 0.25, 0, 1.1],
+        [0.45, 0.15, 0, 1.0],
+        [1.2, -0.02, 0, 0.72],
+        [0.1, 0.55, 0, 0.78],
+        [0.85, 0.35, 0, 0.65]
+      ];
+
+      for (const [px, py, pz, s] of puffs) {
+        const puff = new THREE.Mesh(
+          voxelGeometry,
+          mats.snow
+        );
+        puff.position.set(px, py, pz);
+        puff.scale.set(s * 1.35, s * 0.75, s);
+        puff.castShadow = true;
+        cloud.add(puff);
+      }
+
+      parent.add(cloud);
+      return cloud;
+    }
+
+    function addTree(parent, x, y, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, y, z);
+      tree.scale.setScalar(scale);
+
+      addVoxel(tree, 0, 0.35, 0, 0.28, 0.7, 0.28, mats.trunk);
+      addVoxel(tree, -0.35, 1.0, 0, 0.52, 0.7, 0.52, mats.tree);
+      addVoxel(tree, 0.35, 1.05, 0, 0.52, 0.7, 0.52, mats.treeLight);
+      addVoxel(tree, 0, 1.55, 0, 0.68, 0.65, 0.68, mats.grassLight);
+      addVoxel(tree, 0.15, 2.05, 0.05, 0.5, 0.42, 0.5, mats.grass);
+
+      parent.add(tree);
+      return tree;
+    }
+
+    function addHouse(parent, x, y, z, scale = 1, wallMat = mats.cream, roofMat = mats.red) {
+      const house = new THREE.Group();
+      house.position.set(x, y, z);
+      house.scale.setScalar(scale);
+
+      // Main blocky house.
+      addVoxel(house, 0, 0.65, 0, 1.45, 1.1, 1.25, wallMat);
+
+      // Roof made from stepped blocks.
+      addVoxel(house, 0, 1.65, 0, 1.8, 0.35, 1.55, roofMat);
+      addVoxel(house, 0, 2.0, 0, 1.25, 0.3, 0.95, roofMat);
+
+      // Windows.
+      addVoxel(house, -0.36, 0.82, 0.64, 0.16, 0.22, 0.08, mats.window);
+      addVoxel(house, 0.36, 0.82, 0.64, 0.16, 0.22, 0.08, mats.window);
+      addVoxel(house, 0, 1.35, 0.64, 0.18, 0.25, 0.08, mats.window);
+
+      // Door.
+      addVoxel(house, 0, 0.35, 0.66, 0.26, 0.7, 0.08, mats.blue);
+
+      parent.add(house);
+      return house;
+    }
+
+    function addLighthouse(parent, x, y, z, scale = 1) {
+      const lighthouse = new THREE.Group();
+      lighthouse.position.set(x, y, z);
+      lighthouse.scale.setScalar(scale);
+
+      // Tower built as stacked square rings.
+      for (let i = 0; i < 5; i++) {
+        const half = 0.62 - i * 0.09;
+        const band = i % 2 === 0 ? mats.cream : mats.red;
+
+        addVoxel(lighthouse, 0, 0.45 + i * 0.48, 0, half * 2, 0.44, half * 2, band);
+        addVoxel(lighthouse, 0, 0.71 + i * 0.48, 0, half * 1.95, 0.18, half * 1.95, mats.red);
+      }
+
+      // Roof.
+      addVoxel(lighthouse, 0, 2.72, 0, 1.25, 0.25, 1.25, mats.blue);
+      addVoxel(lighthouse, 0, 2.96, 0, 0.45, 0.3, 0.45, mats.yellow);
+
+      // Warm windows.
+      for (let i = 0; i < 4; i++) {
+        const y = 0.95 + i * 0.5;
+        addVoxel(lighthouse, 0, y, 0.64, 0.18, 0.22, 0.08, mats.window);
+      }
+
+      parent.add(lighthouse);
+      return lighthouse;
+    }
+
+    function addMountain(parent, x, z, height, baseY, colorMat, accentMat) {
+      const mountain = new THREE.Group();
+      mountain.position.set(x, baseY, z);
+
+      // Broad, stepped base.
+      addVoxel(mountain, 0, height * 0.22, 0, 4.4, height * 0.44, 3.1, colorMat);
+
+      // Upper peak.
+      addVoxel(mountain, 0, height * 0.58, 0, 2.8, height * 0.4, 2.2, colorMat);
+      addVoxel(mountain, 0, height * 0.83, 0, 1.45, height * 0.3, 1.35, accentMat);
+      addVoxel(mountain, 0, height, 0, 0.75, height * 0.18, 0.8, accentMat);
+
+      // Snow cap.
+      addVoxel(mountain, 0, height * 0.88, 0, 1.55, 0.25, 0.85, mats.snow);
+      addVoxel(mountain, 0, height * 0.96, 0, 0.8, 0.18, 0.5, mats.snow);
+
+      parent.add(mountain);
+      return mountain;
+    }
+
+    function addRock(parent, x, y, z, scale = 1, mat = mats.rock) {
+      const rock = new THREE.Group();
+      rock.position.set(x, y, z);
+      rock.scale.setScalar(scale);
+
+      addVoxel(rock, 0, 0, 0, 1.2, 0.8, 1.0, mat);
+      addVoxel(rock, 0.45, 0.2, 0.05, 0.65, 0.55, 0.65, mat);
+      addVoxel(rock, -0.35, 0.35, 0.2, 0.55, 0.6, 0.55, mat);
+
+      parent.add(rock);
+      return rock;
+    }
+
+    // -------------------------------------------------------------------------
+    // Main island
+    // -------------------------------------------------------------------------
+
+    const island = new THREE.Group();
+    scene.add(island);
+
+    // Sand base: a broad voxel plateau with an irregular edge.
+    for (let x = -19; x <= 19; x++) {
+      for (let z = -14; z <= 14; z++) {
+        const edge = Math.max(
+          0,
+          Math.abs(x) - 16,
+          Math.abs(z) - 12
+        );
+
+        if (edge > 6) continue;
+
+        const noise =
+          Math.sin(x * 0.7 + z * 0.45) * 0.5 +
+          Math.cos(z * 0.9) * 0.35;
+
+        const y = 0.15 + noise * 0.35;
+        const mat = edge > 4 ? mats.sandDark : mats.sand;
+
+        addVoxel(island, x, y, z, 1, 0.65, 1, mat);
+      }
+    }
+
+    // Grass surface, placed on top of the sand.
+    for (let x = -18; x <= 18; x += 2) {
+      for (let z = -13; z <= 13; z += 2) {
+        const edge = Math.max(
+          0,
+          Math.abs(x) - 16,
+          Math.abs(z) - 12
+        );
+
+        if (edge > 5) continue;
+
+        const y = 0.53;
+        const grassMat =
+          (x + z) % 3 === 0 ? mats.grassDark : mats.grass;
+
+        addVoxel(island, x, y, z, 1.65, 0.28, 1.65, grassMat);
+      }
+    }
+
+    // A winding road built from small tan blocks.
+    const roadPoints = [
+      [-17, 0.7, 11],
+      [-14, 0.7, 8],
+      [-12, 0.7, 5],
+      [-10, 0.7, 2],
+      [-7, 0.7, -1],
+      [-4, 0.7, -3],
+      [-1, 0.7, -4],
+      [2, 0.7, -3],
+      [5, 0.7, -1],
+      [7, 0.7, 2],
+      [9, 0.7, 5],
+      [11, 0.7, 8],
+      [14, 0.7, 11]
+    ];
+
+    addLine(island, roadPoints, 0.7, mats.sandLight);
+
+    // Road bridge over a ravine.
+    for (let i = 0; i < 7; i++) {
+      addVoxel(
+        island,
+        -1.5 + i * 0.78,
+        0.72,
+        2.2,
+        0.65,
+        0.35,
+        1.35,
+        mats.rockLight
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Mountains and peaks
+    // -------------------------------------------------------------------------
+
+    addMountain(island, -7.5, 4.5, 8.5, 0.55, mats.rock, mats.red);
+    addMountain(island, 7.5, -7.5, 6.8, 0.55, mats.rockDark, mats.purple);
+    addMountain(island, 13.5, 7.5, 4.6, 0.55, mats.rock, mats.orange);
+
+    // Small conical peaks.
+    addMountain(island, -13.5, -3.5, 3.2, 0.5, mats.rock, mats.red);
+    addMountain(island, 10.5, 5.5, 2.8, 0.5, mats.rock, mats.yellow);
+    addMountain(island, -3.5, 11.5, 2.4, 0.5, mats.rock, mats.purple);
+
+    // -------------------------------------------------------------------------
+    // Cloud towers
+    // -------------------------------------------------------------------------
+
+    function addCloudTower(parent, x, y, z, scale = 1) {
+      const tower = new THREE.Group();
+      tower.position.set(x, y, z);
+      tower.scale.setScalar(scale);
+
+      addCloud(parent, 0, 0, 0, 1.1);
+
+      // Tower shaft.
+      addVoxel(tower, 0, 2.1, 0, 1.05, 2.2, 1.05, mats.cream);
+      addVoxel(tower, 0, 3.65, 0, 1.4, 0.35, 1.4, mats.red);
+      addVoxel(tower, 0, 4.05, 0, 0.55, 0.35, 0.55, mats.yellow);
+
+      // Windows.
+      addVoxel(tower, -0.35, 2.65, 0.54, 0.16, 0.22, 0.08, mats.window);
+      addVoxel(tower, 0.35, 2.65, 0.54, 0.16, 0.22, 0.08, mats.window);
+
+      parent.add(tower);
+      return tower;
+    }
+
+    addCloudTower(island, -2.8, 3.8, -2.6, 0.9);
+    addCloudTower(island, 3.0, 4.2, -4.0, 0.72);
+
+    // A distant high tower on another cloud.
+    addCloud(island, 12.5, 12.0, -12.0, 1.8);
+    addCloudTower(island, 12.5, 13.2, -12.0, 0.8);
+
+    // -------------------------------------------------------------------------
+    // Forests and trees
+    // -------------------------------------------------------------------------
+
+    const treePositions = [
+      [-16, 1.0, 9],
+      [-15, 1.0, 6],
+      [-13, 1.0, 3],
+      [-11, 1.0, 0],
+      [-9, 1.0, -3],
+      [-6, 1.0, -5],
+      [-3, 1.0, -6],
+      [0, 1.0, -5],
+      [3, 1.0, -6],
+      [6, 1.0, -4],
+      [9, 1.0, -2],
+      [12, 1.0, 1],
+      [15, 1.0, 4],
+      [17, 1.0, 7],
+      [16, 1.0, 10]
+    ];
+
+    for (const [x, z, scale] of treePositions) {
+      addTree(island, x, 0.55, z, scale);
+    }
+
+    // -------------------------------------------------------------------------
+    // Houses and small buildings
+    // -------------------------------------------------------------------------
+
+    addHouse(island, -11.5, 0.6, 6.5, 0.85, mats.cream, mats.red);
+    addHouse(island, -7.5, 0.6, 5.8, 0.65, mats.yellow, mats.blue);
+    addHouse(island, 0.0, 0.6, 6.0, 0.7, mats.cream, mats.green || mats.tree);
+    addHouse(island, 8.0, 0.6, 7.0, 0.65, mats.purple, mats.orange);
+
+    // A small coastal village on a distant island.
+    const village = new THREE.Group();
+    village.position.set(-17, 0, -23);
+    scene.add(village);
+
+    for (let i = 0; i < 6; i++) {
+      const x = -2.5 + i * 1.1;
+      addHouse(village, x, 0, 0, 0.55, mats.cream, [
+        mats.red,
+        mats.blue,
+        mats.green,
+        mats.yellow,
+        mats.orange,
+        mats.purple
+      ][i % 6]);
+    }
+
+    addLighthouse(village, 0, 0, 3.2, 0.9);
+
+    // -------------------------------------------------------------------------
+    // Left island
+    // -------------------------------------------------------------------------
+
+    const leftIsland = new THREE.Group();
+    leftIsland.position.set(-24, 0, 3);
+    scene.add(leftIsland);
+
+    for (let x = -7; x <= 7; x++) {
+      for (let z = -5; z <= 5; z++) {
+        if (Math.abs(x) > 6 || Math.abs(z) > 4) continue;
+
+        const y = 0.1;
+        const mat = Math.abs(z) > 3 ? mats.sandDark : mats.sand;
+
+        addVoxel(leftIsland, x, y, z, 1, 0.6, 1, mat);
+      }
+    }
+
+    for (let x = -6; x <= 6; x += 2) {
+      for (let z = -4; z <= 4; z += 2) {
+        addVoxel(
+          leftIsland,
+          x,
+          0.45,
+          z,
+          1.6,
+          0.25,
+          1.6,
+          mats.grass
+        );
+      }
+    }
+
+    addMountain(leftIsland, 0, 0, 5.2, 0.4, mats.rock, mats.red);
+    addTree(leftIsland, -4.5, 0.5, 2.5, 0.8);
+    addTree(leftIsland, 4.2, 0.5, -2.0, 0.75);
+    addHouse(leftIsland, 3.0, 0.5, 2.0, 0.7, mats.cream, mats.blue);
+    addLighthouse(leftIsland, -5.8, 0.5, 3.0, 0.75);
+
+    // -------------------------------------------------------------------------
+    // Right island
+    // -------------------------------------------------------------------------
+
+    const rightIsland = new THREE.Group();
+    rightIsland.position.set(22, 0, -3);
+    scene.add(rightIsland);
+
+    for (let x = -8; x <= 8; x++) {
+      for (let z = -7; z <= 7; z++) {
+        if (Math.abs(x) > 7 || Math.abs(z) > 6) continue;
+
+        const y = 0.15;
+        const mat = Math.abs(z) > 4 ? mats.sandDark : mats.sand;
+
+        addVoxel(rightIsland, x, y, z, 1, 0.6, 1, mat);
+      }
+    }
+
+    for (let x = -6; x <= 6; x += 2) {
+      for (let z = -5; z <= 5; z += 2) {
+        addVoxel(
+          rightIsland,
+          x,
+          0.5,
+          z,
+          1.6,
+          0.25,
+          1.6,
+          mats.grass
+        );
+      }
+    }
+
+    addMountain(rightIsland, 0, 0, 4.2, 0.5, mats.rock, mats.yellow);
+    addTree(rightIsland, -4.0, 0.5, 2.0, 0.8);
+    addTree(rightIsland, 4.0, 0.5, -2.0, 0.75);
+    addHouse(rightIsland, 0, 0.5, 2.0, 0.7, mats.cream, mats.orange);
+
+    // -------------------------------------------------------------------------
+    // Floating desert islands
+    // -------------------------------------------------------------------------
+
+    function addFloatingIsland(parent, x, y, z, scale = 1) {
+      const islandGroup = new THREE.Group();
+      islandGroup.position.set(x, y, z);
+      islandGroup.scale.setScalar(scale);
+
+      for (let px = -3; px <= 3; px++) {
+        for (let pz = -2; pz <= 2; pz++) {
+          if (Math.abs(px) > 3 || Math.abs(pz) > 2) continue;
+
+          const mat = Math.abs(pz) > 1 ? mats.sandDark : mats.sand;
+          addVoxel(
+            islandGroup,
+            px,
+            0,
+            pz,
+            1,
+            0.65,
+            1,
+            mat
+          );
+        }
+      }
+
+      for (let px = -2; px <= 2; px += 2) {
+        for (let pz = -1; pz <= 1; pz += 2) {
+          addVoxel(
+            islandGroup,
+            px,
+            0.4,
+            pz,
+            1.5,
+            0.25,
+            1.5,
+            mats.grass
+          );
+        }
+      }
+
+      parent.add(islandGroup);
+      return islandGroup;
+    }
+
+    addFloatingIsland(scene, 16, 1.0, 18, 0.8);
+    addFloatingIsland(scene, -19, 1.2, -17, 0.65);
+    addFloatingIsland(scene, 25, 0.8, 18, 0.55);
+
+    // Small fruits on floating islands.
+    function addFruit(parent, x, y, z, color = mats.red) {
+      addVoxel(parent, x, y, z, 0.45, 0.5, 0.45, color);
+      addVoxel(parent, x, y + 0.2, z, 0.18, 0.12, 0.18, mats.yellow);
+    }
+
+    addFruit(scene, 1.8, 1.1, 18.0, mats.red);
+    addFruit(scene, 2.5, 1.1, 18.5, mats.orange);
+    addFruit(scene, -1.5, 1.1, -17.0, mats.purple);
+
+    // -------------------------------------------------------------------------
+    // Water and waves
+    // -------------------------------------------------------------------------
+
+    const ocean = new THREE.Mesh(
+      new THREE.PlaneGeometry(180, 180),
+      mats.water
+    );
+    ocean.rotation.x = -Math.PI / 2;
+    ocean.position.y = -0.6;
+    ocean.receiveShadow = true;
+    scene.add(ocean);
+
+    // Animated water strips.
+    const waveMaterial = new THREE.MeshBasicMaterial({
+      color: 0x9ce8ec,
+      transparent: true,
+      opacity: 0.45
+    });
+
+    const waves = [];
+
+    for (let i = 0; i < 24; i++) {
+      const wave = new THREE.Mesh(
+        new THREE.PlaneGeometry(3 + Math.random() * 8, 0.55),
+        waveMaterial
+      );
+
+      wave.rotation.x = -Math.PI / 2;
+      wave.rotation.z = Math.random() * Math.PI;
+      wave.position.set(
+        (Math.random() - 0.5) * 130,
+        -0.55 + Math.random() * 0.05,
+        (Math.random() - 0.5) * 130
+      );
+
+      scene.add(wave);
+      waves.push(wave);
+    }
+
+    // -------------------------------------------------------------------------
+    // Small details
+    // -------------------------------------------------------------------------
+
+    // Tiny flags along the road.
+    function addFlag(parent, x, y, z, color = mats.red) {
+      const flag = new THREE.Group();
+      flag.position.set(x, y, z);
+
+      addVoxel(flag, 0, 0, 0, 0.08, 1.1, 0.08, mats.trunk);
+      addVoxel(flag, 0, 0.55, 0, 0.55, 0.35, 0.08, color);
+
+      parent.add(flag);
+      return flag;
+    }
+
+    addFlag(island, -8.5, 1.05, 3.0);
+    addFlag(island, -5.5, 1.05, 0.0);
+    addFlag(island, 4.0, 1.05, -3.0);
+    addFlag(island, 10.0, 1.05, 8.0);
+
+    // Tiny water tower.
+    addVoxel(island, 6.5, 1.2, -6.0, 0.65, 2.4, 0.65, mats.cream);
+    addVoxel(island, 6.5, 2.6, -6.0, 0.9, 0.25, 0.9, mats.blue);
+    addVoxel(island, 6.5, 3.0, -6.0, 0.35, 0.3, 0.35, mats.yellow);
+
+    // A few rocks scattered around the shore.
+    for (let i = 0; i < 22; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 18 + Math.random() * 5;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      addRock(
+        scene,
+        x,
+        0.1,
+        z,
+        0.35 + Math.random() * 0.65,
+        i % 3 === 0 ? mats.rockDark : mats.rock
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Custom orbit camera controls
+    // -------------------------------------------------------------------------
+
+    const controls = {
+      target: new THREE.Vector3(0, 3, 0),
+      radius: 43,
+      theta: -0.68,
+      phi: 1.02,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0
+    };
+
+    const initialTarget = controls.target.clone();
+    const initialRadius = controls.radius;
+    const initialTheta = controls.theta;
+    const initialPhi = controls.phi;
+
+    function updateCamera() {
+      const sinPhi = Math.sin(controls.phi);
+
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      controls.dragging = true;
+      controls.panning = event.button === 2 || event.shiftKey;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (!controls.dragging) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+
+        const panScale = controls.radius * 0.0015;
+
+        controls.target.addScaledVector(right, -dx * panScale);
+        controls.target.addScaledVector(up, dy * panScale);
+      } else {
+        controls.theta -= dx * 0.006;
+        controls.phi = THREE.MathUtils.clamp(
+          controls.phi - dy * 0.005,
+          0.25,
+          Math.PI * 0.49
+        );
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      controls.dragging = false;
+      controls.panning = false;
+
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    renderer.domElement.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+
+        controls.radius = THREE.MathUtils.clamp(
+          controls.radius + event.deltaY * 0.025,
+          17,
+          85
+        );
+
+        updateCamera();
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("keydown", (event) => {
+      const step = 0.08;
+
+      if (event.key === "ArrowLeft") controls.theta += step;
+      if (event.key === "ArrowRight") controls.theta -= step;
+      if (event.key === "ArrowUp") {
+        controls.phi = Math.max(0.25, controls.phi - step);
+      }
+      if (event.key === "ArrowDown") {
+        controls.phi = Math.min(Math.PI * 0.49, controls.phi + step);
+      }
+      if (event.key === "+" || event.key === "=") {
+        controls.radius = Math.max(17, controls.radius - 2);
+      }
+      if (event.key === "-") {
+        controls.radius = Math.min(85, controls.radius + 2);
+      }
+
+      updateCamera();
+    });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      for (let i = 0; i < waves.length; i++) {
+        const wave = waves[i];
+        wave.position.y = -0.52 + Math.sin(elapsed * 0.7 + i) * 0.025;
+        wave.material.opacity = 0.38 + Math.sin(elapsed * 0.8 + i) * 0.08;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    updateCamera();
+    animate();
+  </script>
+</body>
+</html>

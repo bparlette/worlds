@@ -470,5 +470,13 @@
     "status": "pass",
     "filename": "1059-super_mario_mario_voxelland.html",
     "updated_at": "2026-11-02 05:22 EST"
+  },
+  "60": {
+    "rank": 60,
+    "game": "Mario Kart 8 Deluxe",
+    "name": "Yoshi&#x27;s Island Circuit",
+    "status": "pass",
+    "filename": "1060-mario_kart_8_deluxe_yoshix27s_island_circuit.html",
+    "updated_at": "2026-11-02 05:28 EST"
   }
 }
