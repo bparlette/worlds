@@ -91,6 +91,13 @@
     "module": "modules/026.js"
   },
   {
+    "id": "030",
+    "title": "The Legend of Zelda: Ocarina of Time",
+    "sub": "Kakariko Village",
+    "system": "Console",
+    "module": "modules/030.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",

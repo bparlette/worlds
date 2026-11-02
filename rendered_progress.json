@@ -230,5 +230,13 @@
     "status": "pass",
     "filename": "1029-super_mario_odyssey_bowserx27s_airship.html",
     "updated_at": "2026-11-02 02:40 EST"
+  },
+  "30": {
+    "rank": 30,
+    "game": "The Legend of Zelda: Ocarina of Time",
+    "name": "Kakariko Village",
+    "status": "pass",
+    "filename": "1030-the_legend_of_zelda_ocarina_of_time_kakariko_village.html",
+    "updated_at": "2026-11-02 02:45 EST"
   }
 }
