@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voxel Bell Tower</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090b10;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      color: #e8d7ad;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+    }
+
+    .title {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      max-width: min(440px, calc(100vw - 56px));
+    }
+
+    .eyebrow {
+      margin-bottom: 7px;
+      color: #b78b4e;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(25px, 4vw, 46px);
+      font-weight: 600;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      color: rgba(232, 215, 173, 0.68);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .controls {
+      position: absolute;
+      right: 24px;
+      bottom: 22px;
+      padding: 10px 14px;
+      border: 1px solid rgba(232, 215, 173, 0.16);
+      border-radius: 999px;
+      background: rgba(13, 15, 20, 0.65);
+      color: rgba(232, 215, 173, 0.65);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      backdrop-filter: blur(10px);
+    }
+
+    .controls b {
+      color: #d6ad67;
+      font-weight: 700;
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 42%, transparent 45%, rgba(0, 0, 0, 0.34) 100%),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 28%, transparent 75%, rgba(0, 0, 0, 0.28));
+    }
+
+    @media (max-width: 600px) {
+      .title {
+        top: 18px;
+        left: 20px;
+      }
+
+      .subtitle {
+        display: none;
+      }
+
+      .controls {
+        right: 14px;
+        bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div class="vignette"></div>
+    <div class="title">
+      <div class="eyebrow">Procedural voxel study</div>
+      <h1>The Bell Tower</h1>
+      <div class="subtitle">A miniature clock tower assembled from golden stone, copper bells, and exposed clockwork.</div>
+    </div>
+    <div class="controls">
+      <b>Drag</b> to orbit · <b>Scroll</b> to zoom · <b>Double-click</b> to reset
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Scene
+    // -------------------------------------------------------------------------
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090b10);
+    scene.fog = new THREE.FogExp2(0x090b10, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(
+      38,
+      innerWidth / innerHeight,
+      0.1,
+      100
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const hemi = new THREE.HemisphereLight(0xbfd6ef, 0x302012, 1.65);
+    scene.add(hemi);
+
+    const key = new THREE.DirectionalLight(0xffe3b2, 4.5);
+    key.position.set(7, 11, 8);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -8;
+    key.shadow.camera.right = 8;
+    key.shadow.camera.top = 10;
+    key.shadow.camera.bottom = -5;
+    key.shadow.camera.near = 1;
+    key.shadow.camera.far = 30;
+    key.shadow.bias = -0.0004;
+    key.shadow.normalBias = 0.025;
+    scene.add(key);
+
+    const rim = new THREE.DirectionalLight(0x76a9ff, 2.2);
+    rim.position.set(-7, 6, -8);
+    scene.add(rim);
+
+    const warmFill = new THREE.PointLight(0xff8b3d, 30, 16, 2);
+    warmFill.position.set(4, -1, 4);
+    scene.add(warmFill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+
+    const materials = {
+      stone: new THREE.MeshStandardMaterial({
+        color: 0xc9a86a,
+        roughness: 0.82,
+        metalness: 0.04
+      }),
+      stoneLight: new THREE.MeshStandardMaterial({
+        color: 0xe0bd7c,
+        roughness: 0.75,
+        metalness: 0.03
+      }),
+      stoneDark: new THREE.MeshStandardMaterial({
+        color: 0x8c6b3e,
+        roughness: 0.9,
+        metalness: 0.02
+      }),
+      roof: new THREE.MeshStandardMaterial({
+        color: 0x773427,
+        roughness: 0.88,
+        metalness: 0.02
+      }),
+      roofEdge: new THREE.MeshStandardMaterial({
+        color: 0xa85838,
+        roughness: 0.72,
+        metalness: 0.08
+      }),
+      gold: new THREE.MeshStandardMaterial({
+        color: 0xd7a74f,
+        roughness: 0.38,
+        metalness: 0.72
+      }),
+      brightGold: new THREE.MeshStandardMaterial({
+        color: 0xf0c66e,
+        roughness: 0.3,
+        metalness: 0.78
+      }),
+      darkGold: new THREE.MeshStandardMaterial({
+        color: 0x8c5d24,
+        roughness: 0.5,
+        metalness: 0.68
+      }),
+      copper: new THREE.MeshStandardMaterial({
+        color: 0xa95025,
+        roughness: 0.34,
+        metalness: 0.82
+      }),
+      copperLight: new THREE.MeshStandardMaterial({
+        color: 0xc97840,
+        roughness: 0.3,
+        metalness: 0.8
+      }),
+      black: new THREE.MeshStandardMaterial({
+        color: 0x17130f,
+        roughness: 0.72,
+        metalness: 0.15
+      }),
+      blue: new THREE.MeshStandardMaterial({
+        color: 0x243f67,
+        roughness: 0.48,
+        metalness: 0.35
+      }),
+      red: new THREE.MeshStandardMaterial({
+        color: 0x9d3024,
+        roughness: 0.55,
+        metalness: 0.18
+      }),
+      green: new THREE.MeshStandardMaterial({
+        color: 0x315b49,
+        roughness: 0.6,
+        metalness: 0.18
+      }),
+      ivory: new THREE.MeshStandardMaterial({
+        color: 0xe8d9ad,
+        roughness: 0.68,
+        metalness: 0.1
+      })
+    };
+
+    // -------------------------------------------------------------------------
+    // Voxel helpers
+    // -------------------------------------------------------------------------
+
+    const tower = new THREE.Group();
+    tower.rotation.y = -0.12;
+    scene.add(tower);
+
+    const voxel = (size, material, x = 0, y = 0, z = 0, parent = tower) => {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+
+    function blockXZ(size, material, x, z, y, parent = tower) {
+      return voxel(size, material, x, y, z, parent);
+    }
+
+    function blockY(size, material, x, y, z, parent = tower) {
+      return voxel(size, material, x, y, z, parent);
+    }
+
+    function addGear(radius, teeth, material, parent = tower) {
+      const group = new THREE.Group();
+      parent.add(group);
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, radius * 0.13, 6, teeth * 2),
+        material
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.castShadow = true;
+      group.add(rim);
+
+      const hub = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius * 0.27, radius * 0.27, radius * 0.42, 10),
+        material
+      );
+      hub.rotation.z = Math.PI / 2;
+      hub.castShadow = true;
+      group.add(hub);
+
+      const spokes = [];
+      for (let i = 0; i < 6; i++) {
+        const spoke = new THREE.Mesh(
+          new THREE.BoxGeometry(radius * 0.58, radius * 0.11, radius * 0.13),
+          material
+        );
+        spoke.rotation.z = (i / 6) * Math.PI;
+        spoke.castShadow = true;
+        group.add(spoke);
+      }
+
+      return group;
+    }
+
+    function addCockade() {
+      const group = new THREE.Group();
+      tower.add(group);
+
+      for (let i = 0; i < 7; i++) {
+        const angle = (i / 7) * Math.PI * 2;
+        const x = Math.cos(angle) * 0.15;
+        const z = Math.sin(angle) * 0.15;
+
+        const petal = new THREE.Mesh(
+          new THREE.ConeGeometry(0.075, 0.25, 3),
+          i % 2 ? materials.red : materials.blue
+        );
+        petal.position.set(x, 0.22, z);
+        petal.rotation.z = Math.cos(angle) * 0.35;
+        petal.rotation.x = Math.sin(angle) * 0.35;
+        petal.castShadow = true;
+        group.add(petal);
+      }
+    }
+
+    function addBell(parent, x, y, z, scale = 1, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+      parent.add(group);
+
+      const rim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16 * scale, 0.25 * scale, 0.11 * scale, 12),
+        materials.gold
+      );
+      rim.position.y = 0.2 * scale;
+      rim.castShadow = true;
+      group.add(rim);
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22 * scale, 0.15 * scale, 0.72 * scale, 12),
+        materials.copper
+      );
+      body.position.y = 0.56 * scale;
+      body.castShadow = true;
+      group.add(body);
+
+      const clapper = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.035 * scale, 0.035 * scale, 0.26 * scale, 8),
+        materials.darkGold
+      );
+      clapper.position.y = 0.88 * scale;
+      clapper.rotation.z = 0.1;
+      group.add(clapper);
+
+      const cap = new THREE.Mesh(
+        new THREE.ConeGeometry(0.11 * scale, 0.15 * scale, 10),
+        materials.gold
+      );
+      cap.position.y = 1.0 * scale;
+      group.add(cap);
+
+      const handle = new THREE.Mesh(
+        new THREE.TorusGeometry(0.07 * scale, 0.025 * scale, 6, 12, Math.PI),
+        materials.gold
+      );
+      handle.position.y = 0.02 * scale;
+      handle.rotation.z = Math.PI / 2;
+      group.add(handle);
+
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // Main tower body
+    // -------------------------------------------------------------------------
+
+    // Lower plinth and stepped base.
+    blockXZ(3.6, materials.stoneDark, 0, 0, 0);
+    blockXZ(3.25, materials.stone, 0, 0.38, 0);
+    blockXZ(2.9, materials.stoneLight, 0, 0.77, 0);
+
+    // Main shaft.
+    blockXZ(2.15, materials.stone, 0, 1.65, 0);
+    blockXZ(2.35, materials.stoneLight, 0, 2.08, 0);
+    blockXZ(2.1, materials.stone, 0, 2.48, 0);
+
+    // Vertical buttress-like corner columns.
+    for (const x of [-0.88, 0.88]) {
+      for (const z of [-0.88, 0.88]) {
+        blockY(0.16, materials.gold, x, 2.78, z);
+        blockY(0.12, materials.stoneLight, x, 3.0, z);
+      }
+    }
+
+    // Upper cornice.
+    blockXZ(2.8, materials.stoneLight, 0, 3.08, 0);
+    blockXZ(2.5, materials.stone, 0, 3.42, 0);
+    blockXZ(2.25, materials.stoneLight, 0, 3.78, 0);
+
+    // Roof base and stepped roof.
+    blockXZ(2.65, materials.roofEdge, 0, 4.05, 0);
+    blockXZ(2.25, materials.roof, 0, 4.38, 0);
+    blockXZ(1.85, materials.roofEdge, 0, 4.72, 0);
+    blockXZ(1.45, materials.roof, 0, 5.03, 0);
+    blockXZ(1.05, materials.roofEdge, 0, 5.32, 0);
+    blockXZ(0.65, materials.roof, 0, 5.58, 0);
+
+    // Roof finials.
+    for (const x of [-0.88, 0, 0.88]) {
+      blockY(0.13, materials.gold, x, 5.78, 0);
+      blockY(0.1, materials.roofEdge, x, 5.94, 0);
+      blockY(0.07, materials.gold, x, 6.08, 0);
+    }
+
+    // Upper belfry.
+    blockXZ(2.25, materials.stone, 0, 6.25, 0);
+    blockXZ(2.45, materials.stoneLight, 0, 6.62, 0);
+    blockXZ(2.15, materials.stone, 0, 6.98, 0);
+    blockXZ(1.9, materials.roofEdge, 0, 7.3, 0);
+    blockXZ(1.45, materials.roof, 0, 7.62, 0);
+    blockXZ(0.95, materials.roofEdge, 0, 7.89, 0);
+    blockXZ(0.55, materials.roof, 0, 8.14, 0);
+
+    // Belfry arches and columns.
+    for (const z of [-0.88, 0.88]) {
+      blockY(0.22, materials.gold, 0, 6.78, z);
+    }
+
+    // Large upper clock.
+    const upperClock = new THREE.Group();
+    upperClock.position.set(0, 6.99, 0.12);
+    tower.add(upperClock);
+
+    const upperClockRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.78, 0.13, 10, 48),
+      materials.gold
+    );
+    upperClockRim.rotation.x = Math.PI / 2;
+    upperClockRim.castShadow = true;
+    upperClock.add(upperClockRim);
+
+    const upperClockFace = new THREE.Mesh(
+      new THREE.CircleGeometry(0.66, 48),
+      materials.ivory
+    );
+    upperClockFace.rotation.y = Math.PI / 2;
+    upperClock.add(upperClockFace);
+
+    const upperHandGroup = new THREE.Group();
+    upperClock.add(upperHandGroup);
+
+    const hourHand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.48, 0.045),
+      materials.darkGold
+    );
+    hourHand.position.y = 0.1;
+    hourHand.rotation.z = -0.25;
+    hourHand.castShadow = true;
+    upperHandGroup.add(hourHand);
+
+    const minuteHand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.055, 0.62, 0.04),
+      materials.red
+    );
+    minuteHand.position.y = 0.08;
+    minuteHand.rotation.z = 0.65;
+    minuteHand.castShadow = true;
+    upperHandGroup.add(minuteHand);
+
+    const upperCenter = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 12, 8),
+      materials.gold
+    );
+    upperCenter.rotation.x = Math.PI / 2;
+    upperClock.add(upperCenter);
+
+    // Small upper side windows.
+    for (const z of [-0.88, 0.88]) {
+      blockXZ(0.25, materials.black, 0, 6.72, z + 0.03);
+      blockXZ(0.34, materials.gold, 0, 6.72, z + 0.06);
+    }
+
+    // Bell gallery.
+    blockXZ(2.55, materials.stoneLight, 0, 8.38, 0);
+    blockXZ(2.2, materials.stone, 0, 8.72, 0);
+    blockXZ(1.85, materials.roofEdge, 0, 9.02, 0);
+    blockXZ(1.35, materials.roof, 0, 9.32, 0);
+    blockXZ(0.85, materials.roofEdge, 0, 9.58, 0);
+    blockXZ(0.45, materials.roof, 0, 9.82, 0);
+
+    // Four large bells.
+    addBell(tower, -0.72, 8.78, 0, 1.05, 0.15);
+    addBell(tower, 0.72, 8.78, 0, 1.05, -0.15);
+    addBell(tower, -0.72, 9.82, 0, 0.78, 0.2);
+    addBell(tower, 0.72, 9.82, 0, 0.78, -0.2);
+
+    // Decorative bell-gallery finials.
+    for (const x of [-0.95, 0.95]) {
+      blockY(0.12, materials.gold, x, 8.95, 0);
+      blockY(0.08, materials.roofEdge, x, 9.1, 0);
+    }
+
+    // -------------------------------------------------------------------------
+    // Main clock face
+    // -------------------------------------------------------------------------
+
+    const mainClock = new THREE.Group();
+    mainClock.position.set(0, 3.95, 0.14);
+    tower.add(mainClock);
+
+    const mainClockRim = new THREE.Mesh(
+      new THREE.TorusGeometry(1.02, 0.15, 12, 64),
+      materials.gold
+    );
+    mainClockRim.rotation.x = Math.PI / 2;
+    mainClockRim.castShadow = true;
+    mainClock.add(mainClockRim);
+
+    const mainClockRimInner = new THREE.Mesh(
+      new THREE.TorusGeometry(0.91, 0.055, 8, 64),
+      materials.blue
+    );
+    mainClockRimInner.rotation.x = Math.PI / 2;
+    mainClock.add(mainClockRimInner);
+
+    const mainFace = new THREE.Mesh(
+      new THREE.CircleGeometry(0.88, 64),
+      materials.ivory
+    );
+    mainFace.rotation.y = Math.PI / 2;
+    mainClock.add(mainFace);
+
+    // Decorative clock numerals made from small blocks.
+    const numeralPositions = [
+      [0, 0.48],
+      [-0.38, 0.22],
+      [-0.68, -0.04],
+      [-0.55, -0.32],
+      [-0.2, -0.55],
+      [0.2, -0.55],
+      [0.55, -0.32],
+      [0.68, -0.04],
+      [0.38, 0.22]
+    ];
+
+    for (const [x, y] of numeralPositions) {
+      blockXZ(0.09, materials.blue, x, y, 0.905);
+    }
+
+    const mainHands = new THREE.Group();
+    mainClock.add(mainHands);
+
+    const hourHand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.72, 0.06),
+      materials.red
+    );
+    hourHand.position.y = 0.12;
+    hourHand.rotation.z = -0.2;
+    hourHand.castShadow = true;
+    mainHands.add(hourHand);
+
+    const minuteHand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.07, 0.88, 0.055),
+      materials.darkGold
+    );
+    minuteHand.position.y = 0.1;
+    minuteHand.rotation.z = 0.55;
+    minuteHand.castShadow = true;
+    mainHands.add(minuteHand);
+
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.13, 14, 10),
+      materials.gold
+    );
+    center.rotation.x = Math.PI / 2;
+    mainClock.add(center);
+
+    // Exposed gearwork behind the main clock.
+    const gearA = addGear(0.43, 14, materials.gold);
+    gearA.position.set(-0.18, 0.02, 0.18);
+    gearA.rotation.z = 0.18;
+
+    const gearB = addGear(0.31, 12, materials.blue);
+    gearB.position.set(0.35, 0.3, 0.18);
+    gearB.rotation.z = -0.35;
+
+    const gearC = addGear(0.23, 10, materials.gold);
+    gearC.position.set(0.38, -0.12, 0.18);
+    gearC.rotation.z = 0.4;
+
+    // Side clock / decorative circular panel.
+    const sidePanel = new THREE.Group();
+    sidePanel.position.set(0.02, 3.95, -0.14);
+    sidePanel.rotation.y = Math.PI;
+    tower.add(sidePanel);
+
+    const sideRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.82, 0.12, 10, 48),
+      materials.gold
+    );
+    sideRim.rotation.x = Math.PI / 2;
+    sidePanel.add(sideRim);
+
+    const sideFace = new THREE.Mesh(
+      new THREE.CircleGeometry(0.72, 48),
+      materials.ivory
+    );
+    sideFace.rotation.y = Math.PI / 2;
+    sidePanel.add(sideFace);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      blockXZ(
+        0.065,
+        materials.blue,
+        Math.sin(angle) * 0.58,
+        Math.cos(angle) * 0.58,
+        0.745,
+        sidePanel
+      );
+    }
+
+    // Small side gears.
+    const sideGear = addGear(0.28, 10, materials.blue);
+    sideGear.position.set(-0.34, 3.95, 0.17);
+    sideGear.rotation.z = 0.2;
+
+    // Corner turrets and spires.
+    const turretPositions = [
+      [-1.08, 4.1, -1.08],
+      [1.08, 4.1, -1.08],
+      [-1.08, 4.1, 1.08],
+      [1.08, 4.1, 1.08],
+      [-1.08, 6.3, -1.08],
+      [1.08, 6.3, -1.08],
+      [-1.08, 6.3, 1.08],
+      [1.08, 6.3, 1.08],
+      [-1.08, 8.4, -1.08],
+      [1.08, 8.4, -1.08],
+      [-1.08, 8.4, 1.08],
+      [1.08, 8.4, 1.08]
+    ];
+
+    for (const [x, y, z] of turretPositions) {
+      blockY(0.18, materials.stoneLight, x, y, z);
+      blockY(0.13, materials.roofEdge, x, y + 0.18, z);
+      blockY(0.09, materials.gold, x, y + 0.31, z);
+      blockY(0.06, materials.roof, x, y + 0.4, z);
+    }
+
+    // -------------------------------------------------------------------------
+    // Lower clock and side ornament
+    // -------------------------------------------------------------------------
+
+    const lowerClock = new THREE.Group();
+    lowerClock.position.set(0, 2.48, 0.14);
+    tower.add(lowerClock);
+
+    const lowerRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.8, 0.13, 10, 48),
+      materials.gold
+    );
+    lowerRim.rotation.x = Math.PI / 2;
+    lowerRim.castShadow = true;
+    lowerClock.add(lowerRim);
+
+    const lowerFace = new THREE.Mesh(
+      new THREE.CircleGeometry(0.69, 48),
+      materials.ivory
+    );
+    lowerFace.rotation.y = Math.PI / 2;
+    lowerClock.add(lowerFace);
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      blockXZ(
+        0.055,
+        materials.red,
+        Math.sin(angle) * 0.57,
+        Math.cos(angle) * 0.57,
+        0.72,
+        lowerClock
+      );
+    }
+
+    const lowerHands = new THREE.Group();
+    lowerClock.add(lowerHands);
+
+    const lowerHourHand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.55, 0.05),
+      materials.darkGold
+    );
+    lowerHourHand.position.y = 0.1;
+    lowerHourHand.rotation.z = -0.4;
+    lowerHands.add(lowerHourHand);
+
+    const lowerMinuteHand = new THREE.Mesh(
+      new THREE.BoxGeometry(0.045, 0.67, 0.045),
+      materials.blue
+    );
+    lowerMinuteHand.position.y = 0.09;
+    lowerMinuteHand.rotation.z = 0.4;
+    lowerHands.add(lowerMinuteHand);
+
+    const lowerCenter = new THREE.Mesh(
+      new THREE.SphereGeometry(0.085, 12, 8),
+      materials.gold
+    );
+    lowerCenter.rotation.x = Math.PI / 2;
+    lowerClock.add(lowerCenter);
+
+    // Diamond corner panels.
+    for (const [x, y, z, rotation] of [
+      [-1.1, 3.05, 0.1, -0.65],
+      [1.1, 3.05, 0.1, 0.65],
+      [-1.1, 3.05, -0.1, 0.65],
+      [1.1, 3.05, -0.1, -0.65]
+    ]) {
+      const panel = new THREE.Group();
+      panel.position.set(x, y, z);
+      panel.rotation.y = rotation;
+      tower.add(panel);
+
+      const inset = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, 0.54, 0.1),
+        materials.blue
+      );
+      inset.rotation.x = -0.18;
+      inset.castShadow = true;
+      panel.add(inset);
+
+      const gem = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.14),
+        materials.red
+      );
+      gem.position.y = 0.08;
+      gem.scale.z = 0.5;
+      panel.add(gem);
+    }
+
+    // Decorative horizontal bands.
+    for (const y of [1.4, 1.85, 2.3]) {
+      blockXZ(2.3, materials.gold, 0, y, 0);
+    }
+
+    // Small windows and shutters.
+    for (const y of [1.36, 1.78, 2.2]) {
+      for (const x of [-0.9, -0.55, 0.55, 0.9]) {
+        blockXZ(0.2, materials.black, x, y, 0.05);
+        blockXZ(0.25, materials.gold, x, y, 0.09);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Bell gallery details
+    // -------------------------------------------------------------------------
+
+    for (const x of [-0.88, 0.88]) {
+      blockY(0.28, materials.gold, x, 8.2, 0);
+      blockY(0.2, materials.stoneLight, x, 8.45, 0);
+      blockY(0.16, materials.roofEdge, x, 8.66, 0);
+      blockY(0.08, materials.gold, x, 8.82, 0);
+    }
+
+    // Small side windows.
+    for (const x of [-1.08, 1.08]) {
+      for (const y of [4.1, 6.3, 8.4]) {
+        blockXZ(0.25, materials.black, x, y, 0.03);
+        blockXZ(0.31, materials.gold, x, y, 0.06);
+      }
+    }
+
+    // Decorative crest above the upper clock.
+    blockXZ(0.58, materials.gold, 0, 7.48, 0);
+    blockXZ(0.62, materials.roofEdge, 0, 7.73, 0);
+    blockXZ(0.42, materials.roof, 0, 7.95, 0);
+    blockXZ(0.2, materials.gold, 0, 8.1, 0);
+
+    // Small finial.
+    blockY(0.12, materials.gold, 0, 8.22, 0);
+    blockY(0.08, materials.roofEdge, 0, 8.35, 0);
+    blockY(0.05, materials.gold, 0, 8.45, 0);
+
+    addCockade();
+
+    // -------------------------------------------------------------------------
+    // Ground pedestal and scattered voxels
+    // -------------------------------------------------------------------------
+
+    const pedestal = new THREE.Group();
+    scene.add(pedestal);
+
+    blockXZ(6.2, materials.stoneDark, 0, -0.18, 0, pedestal);
+    blockXZ(5.4, materials.stone, 0, 0.02, 0, pedestal);
+    blockXZ(4.7, materials.stoneLight, 0, 0.2, 0, pedestal);
+
+    // A few loose golden blocks around the base.
+    for (let i = 0; i < 14; i++) {
+      const angle = (i / 14) * Math.PI * 2;
+      const radius = 3.1 + (i % 3) * 0.35;
+      const size = 0.16 + (i % 2) * 0.07;
+      const material = i % 3 === 0 ? materials.roof : materials.stone;
+
+      voxel(
+        size,
+        material,
+        Math.cos(angle) * radius,
+        0.38 + (i % 2) * 0.12,
+        Math.sin(angle) * radius,
+        pedestal
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+      const delta = Math.min(clock.getDelta(), 0.05);
+
+      // Gentle, restrained movement of the exposed clock gears.
+      gearA.rotation.z = 0.18 + Math.sin(elapsed * 0.7) * 0.08;
+      gearB.rotation.z = -0.35 - Math.sin(elapsed * 0.9 + 1) * 0.12;
+      gearC.rotation.z = 0.4 + Math.sin(elapsed * 1.1 + 2) * 0.16;
+
+      upperHands.rotation.z = -0.08 + Math.sin(elapsed * 0.65) * 0.025;
+      lowerHands.rotation.z = -0.1 + Math.sin(elapsed * 0.55 + 1) * 0.02;
+
+      // Very subtle bell sway.
+      const bellLeft = tower.children.find(child =>
+        child.type === "Group" && child.position.x < 0 && child.position.y > 8
+      );
+      const bellRight = tower.children.find(child =>
+        child.type === "Group" && child.position.x > 0 && child.position.y > 8
+      );
+
+      if (bellLeft && bellRight) {
+        bellLeft.rotation.y = 0.15 + Math.sin(elapsed * 1.2) * 0.035;
+        bellRight.rotation.y = -0.15 - Math.sin(elapsed * 1.2 + 1) * 0.035;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // -------------------------------------------------------------------------
+    // Custom camera controls — no external controls addon
+    // -------------------------------------------------------------------------
+
+    const cameraState = {
+      target: new THREE.Vector3(0, 4.65, 0),
+      radius: 12.2,
+      theta: 0.72,
+      phi: 1.2,
+      minRadius: 7.2,
+      maxRadius: 18,
+      minPhi: 0.55,
+      maxPhi: 1.48
+    };
+
+    const initialCamera = {
+      target: cameraState.target.clone(),
+      radius: cameraState.radius,
+      theta: cameraState.theta,
+      phi: cameraState.phi
+    };
+
+    function updateCamera() {
+      const sinPhi = Math.sin(cameraState.phi);
+
+      camera.position.set(
+        cameraState.target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        cameraState.target.y + cameraState.radius * Math.cos(cameraState.phi),
+        cameraState.target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+
+      camera.lookAt(cameraState.target);
+    }
+
+    function resetCamera() {
+      cameraState.target.copy(initialCamera.target);
+      cameraState.radius = initialCamera.radius;
+      cameraState.theta = initialCamera.theta;
+      cameraState.phi = initialCamera.phi;
+      updateCamera();
+    }
+
+    let dragging = false;
+    let previousX = 0;
+    let previousY = 0;
+    let pointerId = null;
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      dragging = true;
+      pointerId = event.pointerId;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!dragging || event.pointerId !== pointerId) return;
+
+      const dx = event.clientX - previousX;
+      const dy = event.clientY - previousY;
+
+      previousX = event.clientX;
+      previousY = event.clientY;
+
+      cameraState.theta -= dx * 0.006;
+      cameraState.phi = THREE.MathUtils.clamp(
+        cameraState.phi - dy * 0.005,
+        cameraState.minPhi,
+        cameraState.maxPhi
+      );
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      if (event.pointerId !== pointerId) return;
+      dragging = false;
+      pointerId = null;
+      renderer.domElement.style.cursor = "grab";
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+
+      cameraState.radius = THREE.MathUtils.clamp(
+        cameraState.radius + event.deltaY * 0.008,
+        cameraState.minRadius,
+        cameraState.maxRadius
+      );
+
+      updateCamera();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("dblclick", resetCamera);
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    updateCamera();
+  </script>
+</body>
+</html>
