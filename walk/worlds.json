@@ -189,6 +189,13 @@
     "module": "modules/067.js"
   },
   {
+    "id": "070",
+    "title": "Ghosts &#x27;n Goblins",
+    "sub": "Makaimura Stage 1 Diorama",
+    "system": "Console",
+    "module": "modules/070.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
