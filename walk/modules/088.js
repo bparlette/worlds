@@ -1,0 +1,843 @@
+// @world {"id": "088", "title": "Advance Wars 1+2: Re-Boot Camp", "sub": "Battlefield Map", "system": "Console"}
+// Converted from  into a Back Roms World Walker module.
+
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+export function createWorld(THREE) {
+  const group = new THREE.Group();
+
+  let scene = {
+    add: (...objs) => objs.forEach(o => o && group.add(o)),
+    updateMatrixWorld: () => {},
+    background: null,
+    fog: null
+  };
+
+  let updateHook = null;
+
+  function dummyRenderer() {
+    return {
+      setPixelRatio: () => {},
+      setSize: () => {},
+      outputColorSpace: null,
+      toneMapping: null,
+      toneMappingExposure: null,
+      shadowMap: { enabled: false },
+      capabilities: { getMaxAnisotropy: () => 16 },
+      domElement: {
+        style: {},
+        setAttribute: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      },
+      render: () => {}
+    };
+  }
+
+  function dummyCamera() {
+    return {
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
+      lookAt: () => {},
+      updateProjectionMatrix: () => {}
+    };
+  }
+
+  let renderer = dummyRenderer();
+  let camera = dummyCamera();
+  const addEventListener = () => {};
+  const devicePixelRatio = 1;
+  const innerWidth = 1920;
+  const innerHeight = 1080;
+  const dummyEl = () => {
+    const node = {
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      prepend: () => {},
+      setAttribute: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    return node;
+  };
+  const container = dummyEl();
+  const stage = dummyEl();
+  const app = dummyEl();
+  const window = typeof globalThis.window !== "undefined" ? globalThis.window : {
+    innerWidth: 1920, innerHeight: 1080, devicePixelRatio: 1, addEventListener: () => {}
+  };
+  const document = typeof globalThis.document !== "undefined" ? globalThis.document : {
+    body: dummyEl(),
+    querySelector: () => dummyEl(),
+    querySelectorAll: () => [],
+    getElementById: () => dummyEl(),
+    createElement: () => {
+      const ctx = new Proxy({}, { get: () => () => ctx, set: () => true });
+      return { getContext: () => ctx, width: 64, height: 64, style: {}, appendChild: () => {}, setAttribute: () => {} };
+    }
+  };
+  const requestAnimationFrame = (fn) => { updateHook = fn; };
+
+  // --- Scoped Diorama Build Code ---
+
+    
+
+    // ---------------------------------------------------------------------
+    // Renderer and scene
+    // ---------------------------------------------------------------------
+    renderer = dummyRenderer();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    
+
+    // scene redirect
+    scene.background = new THREE.Color(0xb8d5e5);
+    scene.fog = new THREE.Fog(0xb8d5e5, 48, 105);
+
+    camera = dummyCamera();
+
+    const hemi = new THREE.HemisphereLight(0xeaf8ff, 0x63734b, 2.25);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff3d6, 3.1);
+    sun.position.set(18, 28, 14);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -38;
+    sun.shadow.camera.right = 38;
+    sun.shadow.camera.top = 38;
+    sun.shadow.camera.bottom = -38;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 85;
+    sun.shadow.bias = -0.00035;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x9ed9ff, 0.75);
+    fill.position.set(-15, 10, -20);
+    scene.add(fill);
+
+    // ---------------------------------------------------------------------
+    // Materials
+    // ---------------------------------------------------------------------
+    const mat = {
+      grass: new THREE.MeshStandardMaterial({ color: 0x72ad55, roughness: 0.92 }),
+      grassDark: new THREE.MeshStandardMaterial({ color: 0x4f8745, roughness: 1 }),
+      dirt: new THREE.MeshStandardMaterial({ color: 0x8a6343, roughness: 1 }),
+      road: new THREE.MeshStandardMaterial({ color: 0x343b3d, roughness: 0.96 }),
+      roadMark: new THREE.MeshStandardMaterial({ color: 0xe8e1bd, roughness: 0.9 }),
+      steel: new THREE.MeshStandardMaterial({ color: 0x52646c, roughness: 0.6, metalness: 0.15 }),
+      steelLight: new THREE.MeshStandardMaterial({ color: 0x788b91, roughness: 0.55, metalness: 0.2 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xc94332, roughness: 0.75 }),
+      redDark: new THREE.MeshStandardMaterial({ color: 0x7d2928, roughness: 0.85 }),
+      redLight: new THREE.MeshStandardMaterial({ color: 0xe55b40, roughness: 0.72 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x47a65a, roughness: 0.78 }),
+      greenDark: new THREE.MeshStandardMaterial({ color: 0x287643, roughness: 0.9 }),
+      yellow: new THREE.MeshStandardMaterial({ color: 0xf3c545, roughness: 0.72 }),
+      redWindow: new THREE.MeshStandardMaterial({
+        color: 0xffb44d,
+        emissive: 0xd86b12,
+        emissiveIntensity: 0.55,
+        roughness: 0.55
+      }),
+      tankTread: new THREE.MeshStandardMaterial({ color: 0x252a2b, roughness: 0.95 }),
+      glass: new THREE.MeshStandardMaterial({
+        color: 0x8bc7d7,
+        roughness: 0.25,
+        metalness: 0.15,
+        transparent: true,
+        opacity: 0.82
+      })
+    };
+
+    // ---------------------------------------------------------------------
+    // Voxel helpers
+    // ---------------------------------------------------------------------
+    function addBox(parent, sx, sy, sz, x, y, z, material, cast = true) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addCylinder(parent, radius, height, x, y, z, material, segments = 12) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, segments),
+        material
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    // ---------------------------------------------------------------------
+    // Terrain: river and landmasses
+    // ---------------------------------------------------------------------
+    const world = new THREE.Group();
+    scene.add(world);
+
+    // Water is a large flat voxel tile field.
+    const water = addBox(
+      world,
+      88,
+      0.35,
+      70,
+      0,
+      0,
+      0,
+      new THREE.MeshStandardMaterial({
+        color: 0x39a9d4,
+        roughness: 0.42,
+        metalness: 0.08
+      }),
+      false
+    );
+    water.receiveShadow = true;
+
+    // A subtle grid of water tiles.
+    const waterGrid = new THREE.GridHelper(88, 22, 0x247ca5, 0x3aa3c8);
+    waterGrid.position.y = 0.205;
+    waterGrid.material.transparent = true;
+    waterGrid.material.opacity = 0.22;
+    world.add(waterGrid);
+
+    const land = new THREE.Group();
+    world.add(land);
+
+    function createLandmass(x, z, width, depth, y = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+
+      // Main rounded-ish block, made from several boxes.
+      addBox(group, width, 1.25, depth, 0, 0.15, 0, mat.grass);
+      addBox(group, width + 0.65, 0.65, depth + 0.65, 0, -0.55, 0, mat.dirt);
+
+      // Low voxel mountain on some islands.
+      const mountain = new THREE.Group();
+      mountain.position.set(-width * 0.24, 1.25, depth * 0.2);
+      addBox(mountain, 2.4, 1.6, 2.4, 0, 0.8, 0, mat.grassDark);
+      addBox(mountain, 1.55, 1.15, 1.55, 0.1, 2.2, 0, mat.grass);
+      addBox(mountain, 0.9, 0.75, 0.9, -0.05, 3.2, 0.05, mat.grassDark);
+      group.add(mountain);
+
+      land.add(group);
+      return group;
+    }
+
+    createLandmass(-15, -13, 12, 8, 0);
+    createLandmass(15, -13, 13, 8, 0);
+    createLandmass(-16, 12, 11, 7, 0);
+    createLandmass(16, 12, 12, 7, 0);
+    createLandmass(-7, 23, 12, 7, 0);
+    createLandmass(7, 23, 12, 7, 0);
+    createLandmass(-29, -3, 6, 8, 0);
+    createLandmass(29, -3, 6, 8, 0);
+
+    // Roads connect the land.
+    function roadSegment(x1, z1, x2, z2, width = 2.4) {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const length = Math.hypot(dx, dz);
+      const angle = -Math.atan2(dz, dx);
+      const group = new THREE.Group();
+      group.position.set((x1 + x2) / 2, 0.72, (z1 + z2) / 2);
+      group.rotation.y = angle;
+
+      addBox(group, length, 0.22, width, 0, 0, 0, mat.road);
+      addBox(group, length - 0.25, 0.08, 0.16, 0, 0.15, -width / 2 + 0.25, mat.roadMark);
+      addBox(group, length - 0.25, 0.08, 0.16, 0, 0.15, width / 2 - 0.25, mat.roadMark);
+
+      const dashCount = Math.max(2, Math.floor(length / 3));
+      for (let i = 0; i < dashCount; i++) {
+        const t = (i + 0.5) / dashCount;
+        addBox(
+          group,
+          0.75,
+          0.08,
+          0.11,
+          (t - 0.5) * (length - 0.5),
+          0.15,
+          0,
+          mat.roadMark
+        );
+      }
+
+      land.add(group);
+    }
+
+    roadSegment(-25, -7, -17, -7);
+    roadSegment(-17, -7, -17, 1);
+    roadSegment(-17, 1, -17, 9);
+    roadSegment(-17, 9, -8, 9);
+    roadSegment(-8, 9, 0, 9);
+    roadSegment(0, 9, 8, 9);
+    roadSegment(8, 9, 17, 9);
+    roadSegment(17, 9, 25, 9);
+    roadSegment(17, 9, 17, 1);
+    roadSegment(17, 1, 25, 1);
+    roadSegment(25, 1, 25, -7);
+    roadSegment(-25, -7, -25, -15);
+    roadSegment(-25, -15, -17, -15);
+    roadSegment(-17, -15, -17, -9);
+    roadSegment(-17, -9, -8, -9);
+    roadSegment(-8, -9, 0, -9);
+    roadSegment(0, -9, 8, -9);
+    roadSegment(8, -9, 17, -9);
+    roadSegment(17, -9, 25, -9);
+    roadSegment(25, -9, 25, -15);
+    roadSegment(-17, 1, -25, 1);
+    roadSegment(-25, 1, -25, 9);
+    roadSegment(-25, 9, -17, 9);
+    roadSegment(-17, 9, -17, 15);
+    roadSegment(-17, 15, -8, 15);
+    roadSegment(-8, 15, 0, 15);
+    roadSegment(0, 15, 8, 15);
+    roadSegment(8, 15, 17, 15);
+    roadSegment(17, 15, 25, 15);
+    roadSegment(25, 15, 25, 9);
+    roadSegment(17, 1, 17, 9);
+    roadSegment(17, 9, 25, 9);
+
+    // River roads over bridges.
+    roadSegment(-17, -7, -17, 1, 2.2);
+    roadSegment(-17, 1, -17, 9, 2.2);
+    roadSegment(-17, 9, -8, 9, 2.2);
+    roadSegment(0, 9, 8, 9, 2.2);
+    roadSegment(8, 9, 17, 9, 2.2);
+    roadSegment(17, 9, 17, 1, 2.2);
+    roadSegment(17, 1, 25, 1, 2.2);
+    roadSegment(-17, -15, -17, -9, 2.2);
+    roadSegment(-17, -9, -8, -9, 2.2);
+    roadSegment(-8, -9, 0, -9, 2.2);
+    roadSegment(0, -9, 8, -9, 2.2);
+    roadSegment(8, -9, 17, -9, 2.2);
+    roadSegment(17, -9, 17, 1, 2.2);
+    roadSegment(-17, 1, -17, 9, 2.2);
+    roadSegment(-17, 9, -17, 15, 2.2);
+    roadSegment(-17, 15, -8, 15, 2.2);
+    roadSegment(-8, 15, 0, 15, 2.2);
+    roadSegment(0, 15, 8, 15, 2.2);
+    roadSegment(8, 15, 17, 15, 2.2);
+    roadSegment(17, 15, 25, 15, 2.2);
+    roadSegment(25, 15, 25, 9, 2.2);
+
+    // ---------------------------------------------------------------------
+    // Bridges
+    // ---------------------------------------------------------------------
+    function createBridge(x1, z1, x2, z2, width = 2.5) {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const length = Math.hypot(dx, dz);
+      const angle = -Math.atan2(dz, dx);
+      const group = new THREE.Group();
+      group.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
+      group.rotation.y = angle;
+
+      addBox(group, length, 0.45, width, 0, 0.25, 0, mat.steel);
+      addBox(group, length, 0.13, width * 0.72, 0, 0.55, 0, mat.steelLight);
+
+      // Side trusses.
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const px = -length / 2 + t * length;
+        addBox(group, 0.18, 1.05, 0.18, px, 0.95, -width / 2, mat.steel);
+        addBox(group, 0.18, 1.05, 0.18, px, 0.95, width / 2, mat.steel);
+        if (i < 10) {
+          addBox(group, 0.16, 1.1, 0.16, px + length / 20, 0.85, -width / 2, mat.steel);
+          addBox(group, 0.16, 1.1, 0.16, px + length / 20, 0.85, width / 2, mat.steel);
+        }
+      }
+
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 7; i++) {
+          const t = (i + 0.5) / 7;
+          const px = -length / 2 + t * length;
+          addBox(group, 0.11, 0.11, 0.11, px, 1.35, side * width / 2, mat.steelLight);
+        }
+      }
+
+      land.add(group);
+      return group;
+    }
+
+    createBridge(-17, -7, -17, 1);
+    createBridge(-17, 1, -17, 9);
+    createBridge(-17, 9, -8, 9);
+    createBridge(0, 9, 8, 9);
+    createBridge(8, 9, 17, 9);
+    createBridge(17, 9, 17, 1);
+    createBridge(17, 1, 25, 1);
+    createBridge(-17, -15, -17, -9);
+    createBridge(-17, -9, -8, -9);
+    createBridge(-8, -9, 0, -9);
+    createBridge(0, -9, 8, -9);
+    createBridge(8, -9, 17, -9);
+    createBridge(17, -9, 17, 1);
+    createBridge(-17, 1, -17, 9);
+    createBridge(-17, 9, -17, 15);
+    createBridge(-17, 15, -8, 15);
+    createBridge(-8, 15, 0, 15);
+    createBridge(0, 15, 8, 15);
+    createBridge(8, 15, 17, 15);
+    createBridge(17, 15, 25, 15);
+    createBridge(25, 15, 25, 9);
+
+    // ---------------------------------------------------------------------
+    // Trees
+    // ---------------------------------------------------------------------
+    function tree(x, z, scale = 1) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.25, z);
+      group.scale.setScalar(scale);
+
+      addBox(group, 0.55, 0.4, 0.55, 0, 0.2, 0, mat.grassDark);
+      addBox(group, 0.8, 1.05, 0.8, 0, 0.85, 0, mat.green);
+      addBox(group, 0.95, 0.55, 0.95, 0, 1.65, 0, mat.greenDark);
+      addBox(group, 0.65, 0.35, 0.65, 0, 2.15, 0, mat.green);
+
+      land.add(group);
+    }
+
+    [
+      [-21, -11, 1.1], [-18, -12, 0.85], [-13, -11, 0.9],
+      [-10, -11, 0.75], [-14, -8, 0.8], [-10, -8, 0.7],
+      [10, -11, 0.95], [13, -12, 0.8], [17, -10, 0.75],
+      [20, -11, 1.05], [22, -8, 0.8], [17, -8, 0.7],
+      [-20, 8, 0.9], [-16, 8, 0.75], [-12, 8, 0.85],
+      [-15, 10, 0.7], [-11, 10, 0.8], [11, 8, 0.9],
+      [15, 8, 0.75], [18, 8, 0.85], [21, 10, 0.7],
+      [-8, 17, 0.85], [-4, 17, 0.7], [4, 17, 0.9],
+      [8, 17, 0.75], [12, 17, 0.85], [-18, 18, 0.7],
+      [18, 18, 0.7], [-13, -18, 0.7], [13, -18, 0.7]
+    ].forEach(v => tree(...v));
+
+    // ---------------------------------------------------------------------
+    // Buildings
+    // ---------------------------------------------------------------------
+    function building(x, z, w, d, h, material = mat.red, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.25, z);
+      group.rotation.y = rotation;
+
+      addBox(group, w, h, d, 0, h / 2, 0, material);
+
+      // Window grid.
+      const cols = Math.max(2, Math.floor(w / 1.1));
+      const rows = Math.max(1, Math.floor(h / 1.25));
+      const windowW = Math.max(0.28, w / cols - 0.25);
+      const windowH = Math.max(0.28, 0.72);
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const wx = -w / 2 + (col + 0.5) * (w / cols);
+          const wy = 0.45 + row * 1.15;
+          addBox(group, windowW, windowH, 0.12, wx, wy, d / 2 + 0.08, mat.redWindow, false);
+        }
+      }
+
+      // Roof cap.
+      addBox(group, w + 0.18, 0.18, d + 0.18, 0, h + 0.08, 0, mat.redDark);
+
+      land.add(group);
+      return group;
+    }
+
+    // Red city.
+    building(-23, -5, 3.4, 3.2, 3.6);
+    building(-19.1, -5.2, 2.8, 2.8, 2.8);
+    building(-23.2, -1.2, 3.1, 2.8, 4.2);
+    building(-19.2, 2.2, 3.0, 3.0, 3.2);
+    building(-15.1, 5.0, 3.2, 3.0, 2.6);
+    building(-21.0, 7.0, 2.8, 2.6, 3.5);
+    building(-11.8, 13.5, 3.0, 3.0, 3.8);
+    building(-9.0, 13.5, 2.7, 2.8, 2.9);
+    building(-13.0, 17.0, 3.2, 3.0, 3.0);
+
+    // Green defensive city.
+    building(22, -4, 3.2, 3.0, 3.5, mat.green);
+    building(18.3, -4.2, 2.8, 2.8, 2.8, mat.green);
+    building(22.3, -0.2, 3.0, 2.8, 4.0, mat.green);
+    building(18.2, 3.0, 3.0, 3.0, 3.0, mat.green);
+    building(14.7, 5.0, 3.1, 3.0, 2.7, mat.green);
+    building(20.7, 7.0, 2.8, 2.6, 3.4, mat.green);
+    building(11.6, 13.5, 3.0, 3.0, 3.7, mat.green);
+    building(14.3, 13.5, 2.7, 2.8, 2.8, mat.green);
+    building(11.6, 17.0, 3.2, 3.0, 3.0, mat.green);
+    building(15.0, 17.0, 2.8, 2.8, 2.6, mat.green);
+
+    // Central command tower.
+    const tower = new THREE.Group();
+    tower.position.set(12.5, 1.25, 4.5);
+    addBox(tower, 2.4, 5.8, 2.4, 0, 2.9, 0, mat.steel);
+    addBox(tower, 2.8, 0.25, 2.8, 0, 5.9, 0, mat.steelLight);
+    addBox(tower, 1.25, 1.25, 1.25, 0, 6.7, 0, mat.glass);
+    addBox(tower, 1.6, 0.16, 1.6, 0, 7.4, 0, mat.steelLight);
+    land.add(tower);
+
+    // Small utility buildings.
+    function utilityBuilding(x, z, w, d, h, material) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.25, z);
+      addBox(group, w, h, d, 0, h / 2, 0, material);
+      addBox(group, w + 0.15, 0.15, d + 0.15, 0, h + 0.08, 0, mat.redDark);
+      land.add(group);
+    }
+
+    utilityBuilding(-17.2, 0.5, 2.2, 2.0, 2.0, mat.green);
+    utilityBuilding(17.2, 0.5, 2.2, 2.0, 2.0, mat.green);
+    utilityBuilding(-17.2, -12.8, 2.2, 2.0, 2.0, mat.green);
+    utilityBuilding(17.2, -12.8, 2.2, 2.0, 2.0, mat.green);
+
+    // ---------------------------------------------------------------------
+    // Tanks
+    // ---------------------------------------------------------------------
+    function tank(x, z, rotation = 0, scale = 1, armorMaterial = mat.red) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.25, z);
+      group.rotation.y = rotation;
+      group.scale.setScalar(scale);
+
+      // Tracks.
+      for (const side of [-1, 1]) {
+        addBox(group, 2.55, 0.55, 0.55, 0, 0.32, side * 0.83, mat.tankTread);
+        for (let i = 0; i < 7; i++) {
+          addBox(
+            group,
+            0.43,
+            0.58,
+            0.66,
+            -1.05 + i * 0.35,
+            0.3,
+            side * 0.83,
+            mat.tankTread
+          );
+        }
+      }
+
+      // Main body.
+      addBox(group, 1.55, 0.75, 1.35, 0, 0.92, 0, armorMaterial);
+      addBox(group, 1.2, 0.48, 1.0, 0, 1.42, 0, armorMaterial);
+
+      // Turret.
+      addBox(group, 1.05, 0.72, 0.95, 0, 1.95, 0, armorMaterial);
+      addBox(group, 0.78, 0.48, 0.72, 0, 2.38, 0, armorMaterial);
+
+      // Barrel.
+      const barrel = addCylinder(group, 0.22, 1.05, 0, 2.48, 0.28, mat.steelLight, 12);
+      barrel.rotation.z = Math.PI / 2;
+
+      // Tracks and road wheels.
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 4; i++) {
+          addCylinder(
+            group,
+            0.28,
+            0.18,
+            side * 0.42,
+            1.25,
+            0.66,
+            mat.tankTread,
+            10
+          );
+        }
+      }
+
+      // Track details.
+      for (let i = 0; i < 8; i++) {
+        addBox(
+          group,
+          0.2,
+          0.12,
+          0.62,
+          -1.18 + i * 0.33,
+          0.59,
+          0.84,
+          mat.steel
+        );
+        addBox(
+          group,
+          0.2,
+          0.12,
+          0.62,
+          -1.18 + i * 0.33,
+          0.59,
+          -0.84,
+          mat.steel
+        );
+      }
+
+      land.add(group);
+      return group;
+    }
+
+    // Red advance formation.
+    tank(-15.2, -5.2, -0.15, 1.05, mat.red);
+    tank(-15.1, -1.0, 0.15, 1.0, mat.redLight);
+    tank(-14.8, 2.4, -0.1, 0.95, mat.red);
+    tank(-12.0, 6.3, 0.2, 0.9, mat.redLight);
+    tank(-8.8, 10.2, 0.4, 0.85, mat.red);
+    tank(-18.0, 11.0, -0.3, 0.9, mat.redLight);
+    tank(-10.2, 17.0, 0.2, 0.8, mat.red);
+    tank(-15.0, 18.0, -0.1, 0.75, mat.red);
+
+    // Red supply truck.
+    function truck(x, z, rotation = 0, colorMaterial = mat.red) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.25, z);
+      group.rotation.y = rotation;
+
+      addBox(group, 2.4, 0.65, 1.35, 0, 0.75, 0, colorMaterial);
+      addBox(group, 1.25, 1.05, 1.25, 0, 1.55, 0, colorMaterial);
+      addBox(group, 1.05, 0.45, 1.05, 0, 2.15, 0, colorMaterial);
+      addBox(group, 0.9, 0.3, 0.08, 0, 2.2, 0.56, mat.glass);
+      addBox(group, 2.5, 0.2, 1.4, 0, 1.15, 0, mat.redDark);
+
+      for (const side of [-1, 1]) {
+        for (const wheelY of [0.42, 1.08]) {
+          const wheel = addCylinder(group, 0.31, 0.22, side * 1.25, wheelY, 0, mat.tankTread, 10);
+          wheel.rotation.z = Math.PI / 2;
+        }
+      }
+
+      land.add(group);
+      return group;
+    }
+
+    truck(-19.1, 0.2, 0.2, mat.red);
+    truck(-20.8, 4.2, -0.3, mat.redLight);
+    truck(19.1, 0.2, -0.2, mat.green);
+    truck(20.8, 4.2, 0.3, mat.green);
+
+    // Green defensive tanks.
+    tank(14.8, -4.0, 0.2, 1.0, mat.green);
+    tank(17.0, -7.0, -0.25, 0.95, mat.greenLight);
+    tank(20.0, -10.0, 0.15, 0.9, mat.green);
+    tank(12.0, -13.0, -0.2, 0.85, mat.green);
+    tank(16.0, 2.0, 0.3, 0.9, mat.greenLight);
+    tank(19.0, 5.0, -0.2, 0.85, mat.green);
+    tank(12.0, 10.0, 0.2, 0.8, mat.green);
+    tank(15.0, 17.0, -0.1, 0.75, mat.green);
+
+    // Green armored personnel carrier.
+    function apc(x, z, rotation = 0, material = mat.green) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.25, z);
+      group.rotation.y = rotation;
+
+      addBox(group, 2.1, 0.62, 1.35, 0, 0.78, 0, material);
+      addBox(group, 1.3, 0.9, 1.15, 0, 1.45, 0, material);
+      addBox(group, 0.9, 0.35, 0.08, 0, 1.55, 0.62, mat.glass);
+      addBox(group, 2.2, 0.16, 1.45, 0, 1.17, 0, mat.redDark);
+
+      for (const side of [-1, 1]) {
+        const wheel = addCylinder(group, 0.3, 0.2, side * 1.05, 0.4, 0, mat.tankTread, 10);
+        wheel.rotation.z = Math.PI / 2;
+      }
+
+      land.add(group);
+      return group;
+    }
+
+    apc(14.1, 2.0, 0.5, mat.greenLight);
+    apc(20.4, -1.0, -0.4, mat.green);
+
+    // ---------------------------------------------------------------------
+    // Air support
+    // ---------------------------------------------------------------------
+    function aircraft(x, y, z, rotation = 0) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.rotation.y = rotation;
+
+      // Fuselage.
+      const fuselage = addCylinder(group, 0.38, 1.65, 0, 0, 0, mat.redLight, 8);
+      fuselage.rotation.z = Math.PI / 2;
+
+      // Wings.
+      addBox(group, 2.1, 0.18, 0.55, 0, 0, 0, mat.red);
+      addBox(group, 0.55, 0.16, 1.45, -0.75, 0, 0, mat.red);
+      addBox(group, 0.55, 0.16, 1.45, 0.75, 0, 0, mat.red);
+
+      // Tail.
+      addBox(group, 0.75, 0.15, 0.35, 1.25, 0, 0, mat.red);
+      addBox(group, 0.35, 0.15, 0.75, 1.25, 0, 0, mat.red);
+
+      // Cockpit.
+      addBox(group, 0.55, 0.35, 0.5, 0, 0.18, 0, mat.glass);
+
+      // Landing gear.
+      addCylinder(group, 0.12, 0.35, -0.25, -0.38, 0, mat.steel, 8);
+      addCylinder(group, 0.12, 0.35, 0.25, -0.38, 0, mat.steel, 8);
+
+      scene.add(group);
+      return group;
+    }
+
+    const redAircraft = aircraft(-12, 20, -13, 0.3);
+    const greenAircraft = aircraft(15, 22, -8, -0.5);
+    const redAircraft2 = aircraft(2, 19, -18, 1.0);
+
+    // ---------------------------------------------------------------------
+    // Small details and flags
+    // ---------------------------------------------------------------------
+    function flag(x, z, color) {
+      const group = new THREE.Group();
+      group.position.set(x, 2.0, z);
+
+      addBox(group, 0.08, 1.6, 0.08, 0, 0.8, 0, mat.steel);
+      addBox(group, 1.2, 0.08, 0.08, 0.55, 1.55, 0, color);
+      addBox(group, 0.85, 0.09, 0.09, 0.55, 1.55, 0, color);
+
+      land.add(group);
+    }
+
+    flag(-17.4, 1.2, mat.red);
+    flag(17.4, 1.2, mat.green);
+    flag(-17.4, -12.2, mat.red);
+    flag(17.4, -12.2, mat.green);
+
+    // ---------------------------------------------------------------------
+    // Custom camera controls
+    // ---------------------------------------------------------------------
+    const controls = {
+      target: new THREE.Vector3(0, 2, 0),
+      radius: 54,
+      theta: 0.72,
+      phi: 1.02,
+      dragging: false,
+      panning: false,
+      lastX: 0,
+      lastY: 0,
+      pointerId: null
+    };
+
+    function updateCamera() {
+      controls.phi = THREE.MathUtils.clamp(controls.phi, 0.28, 1.42);
+      controls.radius = THREE.MathUtils.clamp(controls.radius, 22, 92);
+
+      const sinPhi = Math.sin(controls.phi);
+      camera.position.set(
+        controls.target.x + controls.radius * sinPhi * Math.sin(controls.theta),
+        controls.target.y + controls.radius * Math.cos(controls.phi),
+        controls.target.z + controls.radius * sinPhi * Math.cos(controls.theta)
+      );
+      camera.lookAt(controls.target);
+    }
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      controls.dragging = true;
+      controls.panning = event.button === 2 || event.shiftKey;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+      controls.pointerId = event.pointerId;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!controls.dragging || event.pointerId !== controls.pointerId) return;
+
+      const dx = event.clientX - controls.lastX;
+      const dy = event.clientY - controls.lastY;
+      controls.lastX = event.clientX;
+      controls.lastY = event.clientY;
+
+      if (controls.panning) {
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+        camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+        const scale = controls.radius * 0.0015;
+
+        controls.target.addScaledVector(right, -dx * scale);
+        controls.target.addScaledVector(up, dy * scale);
+        controls.target.x = THREE.MathUtils.clamp(controls.target.x, -25, 25);
+        controls.target.z = THREE.MathUtils.clamp(controls.target.z, -25, 25);
+      } else {
+        controls.theta -= dx * 0.006;
+        controls.phi -= dy * 0.005;
+      }
+
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      if (event.pointerId !== controls.pointerId) return;
+      controls.dragging = false;
+      controls.panning = false;
+      controls.pointerId = null;
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("contextmenu", event => event.preventDefault());
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      controls.radius *= Math.exp(event.deltaY * 0.001);
+      updateCamera();
+    }, { passive: false });
+
+    // ---------------------------------------------------------------------
+    // Animation and resize
+    // ---------------------------------------------------------------------
+    function animate(time) {
+      const t = time * 0.001;
+
+      redAircraft.position.x = -12 + Math.sin(t * 0.18) * 7;
+      redAircraft.position.y = 20 + Math.sin(t * 0.32) * 1.2;
+      redAircraft.rotation.z = Math.sin(t * 0.35) * 0.04;
+
+      greenAircraft.position.x = 15 + Math.cos(t * 0.22 + 1) * 8;
+      greenAircraft.position.y = 22 + Math.sin(t * 0.3 + 1) * 1.1;
+      greenAircraft.rotation.z = Math.cos(t * 0.32) * 0.04;
+
+      redAircraft2.position.x = 2 + Math.cos(t * 0.2 + 2) * 5;
+      redAircraft2.position.y = 19 + Math.sin(t * 0.34 + 2) * 1.0;
+      redAircraft2.rotation.z = Math.sin(t * 0.37) * 0.04;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
+
+    updateCamera();
+    requestAnimationFrame(animate);
+  
+
+  // --- Walker Update Protocol ---
+  function update(t, dt) {
+    if (typeof updateHook === "function") {
+      try {
+        updateHook(t, dt);
+      } catch (e) {}
+    }
+  }
+
+  return {
+    group,
+    update,
+    spawn: { x: 0.0, z: 14.0, yaw: 0 },
+    relic: { id: "generic", name: "Advance Wars 1+2: Re-Boot Camp Relic", x: -10.0, z: -12.0 },
+    env:   { background: 0xb8d5e5, fogColor: 0xb8d5e5, fogDensity: 0.025 },
+    doors: {
+      next: { x: 12.0, z: -10.0 },
+      prev: { x: -12.0, z: 10.0 }
+    }
+  };
+}

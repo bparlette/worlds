@@ -694,5 +694,13 @@
     "status": "pass",
     "filename": "1087-goldeneye_007_dam.html",
     "updated_at": "2026-11-02 07:37 EST"
+  },
+  "88": {
+    "rank": 88,
+    "game": "Advance Wars 1+2: Re-Boot Camp",
+    "name": "Battlefield Map",
+    "status": "pass",
+    "filename": "1088-advance_wars_12_re_boot_camp_battlefield_map.html",
+    "updated_at": "2026-11-02 07:44 EST"
   }
 }

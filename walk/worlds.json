@@ -259,6 +259,13 @@
     "module": "modules/087.js"
   },
   {
+    "id": "088",
+    "title": "Advance Wars 1+2: Re-Boot Camp",
+    "sub": "Battlefield Map",
+    "system": "Console",
+    "module": "modules/088.js"
+  },
+  {
     "id": "1001",
     "title": "Sonic the Hedgehog",
     "sub": "Green Hill Zone",
