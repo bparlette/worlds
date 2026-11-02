@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Cottage</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #171b20;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .hud {
+      position: fixed;
+      top: 18px;
+      left: 20px;
+      z-index: 10;
+      color: #fff;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(0,0,0,.55);
+    }
+    .hud h1 {
+      margin: 0 0 5px;
+      font-size: clamp(20px, 3vw, 34px);
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .hud p {
+      margin: 0;
+      color: #aeb8c1;
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .badge {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 10;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      color: #dce3e8;
+      background: rgba(18,22,27,.5);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
+      .hud { top: 12px; left: 12px; }
+      .badge { right: 10px; bottom: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <h1>Voxel Cottage</h1>
+    <p>Drag to orbit · Scroll to zoom</p>
+  </div>
+  <div class="badge">Interactive 3D Scene</div>
+
+  <script type="module">
+    import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+
+    // -------------------------------------------------------------------------
+    // Renderer and scene
+    // -------------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x171b20);
+    scene.fog = new THREE.Fog(0x171b20, 12, 25);
+
+    const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, .1, 100);
+    const target = new THREE.Vector3(0, 1.05, 0);
+
+    let azimuth = .68;
+    let polar = 1.05;
+    let radius = 11.8;
+    const minRadius = 7.2;
+    const maxRadius = 17;
+
+    function updateCamera() {
+      const sinPolar = Math.sin(polar);
+      camera.position.set(
+        target.x + radius * sinPolar * Math.sin(azimuth),
+        target.y + radius * Math.cos(polar),
+        target.z + radius * sinPolar * Math.cos(azimuth)
+      );
+      camera.lookAt(target);
+    }
+    updateCamera();
+
+    scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x4a3822, 2.0));
+
+    const sun = new THREE.DirectionalLight(0xffe4b5, 3.4);
+    sun.position.set(-5, 9, 6);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -8;
+    sun.shadow.camera.right = 8;
+    sun.shadow.camera.top = 8;
+    sun.shadow.camera.bottom = -8;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 25;
+    sun.shadow.bias = -.0004;
+    sun.shadow.normalBias = .025;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x8ebcff, 1.15);
+    fill.position.set(6, 4, -5);
+    scene.add(fill);
+
+    // -------------------------------------------------------------------------
+    // Materials
+    // -------------------------------------------------------------------------
+    const mat = {
+      earthTop: new THREE.MeshStandardMaterial({ color: 0x8e6538, roughness: .95 }),
+      earthSide: new THREE.MeshStandardMaterial({ color: 0x6f4b2b, roughness: 1 }),
+      path: new THREE.MeshStandardMaterial({ color: 0xc7a46b, roughness: 1 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0xe4c48f, roughness: .9 }),
+      wallDark: new THREE.MeshStandardMaterial({ color: 0xb98a55, roughness: .95 }),
+      trim: new THREE.MeshStandardMaterial({ color: 0xf2d39a, roughness: .85 }),
+      roof: new THREE.MeshStandardMaterial({ color: 0xc96554, roughness: .88 }),
+      roofEdge: new THREE.MeshStandardMaterial({ color: 0x8f3e36, roughness: .9 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x765039, roughness: .95 }),
+      woodLight: new THREE.MeshStandardMaterial({ color: 0xa4754d, roughness: .95 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x3f8b49, roughness: .95 }),
+      leafLight: new THREE.MeshStandardMaterial({ color: 0x65ad55, roughness: .95 }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x2e7345, roughness: .95 }),
+      flowerWhite: new THREE.MeshStandardMaterial({ color: 0xf5f0d7, roughness: .85 }),
+      flowerPink: new THREE.MeshStandardMaterial({ color: 0xe896a5, roughness: .85 }),
+      grass: new THREE.MeshStandardMaterial({ color: 0x4eaa54, roughness: 1 }),
+      grassLight: new THREE.MeshStandardMaterial({ color: 0x72bd61, roughness: 1 }),
+      soil: new THREE.MeshStandardMaterial({ color: 0x5b4031, roughness: 1 })
+    };
+
+    const unit = new THREE.BoxGeometry(1, 1, 1);
+
+    function box(w, h, d, material, x, y, z, cast = true) {
+      const mesh = new THREE.Mesh(unit, material);
+      mesh.scale.set(w, h, d);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = cast;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function voxelColumn(x, z, y, levels, material, width = 1, depth = 1) {
+      for (let i = 0; i < levels; i++) {
+        const mesh = box(width, 1, depth, material, x, y + i, z);
+        scene.add(mesh);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Island / foundation
+    // -------------------------------------------------------------------------
+    const island = box(8.8, .65, 7.7, mat.earthSide, 0, -.22, 0);
+    scene.add(island);
+
+    const islandTop = box(8.45, .22, 7.35, mat.earthTop, 0, .08, 0);
+    scene.add(islandTop);
+
+    // A stepped front foundation and path.
+    voxelColumn(0, 1.45, .25, 3, mat.earthTop, 7.2, 1.25);
+    voxelColumn(0, 2.15, .25, 2, mat.earthTop, 6.5, .9);
+    voxelColumn(0, 2.85, .25, 1, mat.earthTop, 5.7, .65);
+
+    // Winding voxel path to the door.
+    const pathCells = [
+      [0, 2.85], [0, 2.55], [0, 2.25], [0, 1.95],
+      [0, 1.65], [0, 1.35], [.2, 1.05], [.4, .75],
+      [.6, .45], [.8, .15], [1.0, -.15]
+    ];
+    for (const [x, z] of pathCells) {
+      scene.add(box(.82, .12, .72, mat.path, x, .21, z));
+    }
+
+    // -------------------------------------------------------------------------
+    // Main house shell
+    // -------------------------------------------------------------------------
+    const house = new THREE.Group();
+    house.position.y = .24;
+    scene.add(house);
+
+    // Main body
+    house.add(box(5.8, 2.5, 4.9, mat.wall, 0, 1.45, 0));
+    house.add(box(6.05, .35, 5.15, mat.wallDark, 0, .2, 0));
+
+    // Side wall accents
+    house.add(box(.18, 2.3, 4.9, mat.wallDark, -2.92, 1.4, 0));
+    house.add(box(.18, 2.3, 4.9, mat.wallDark, 2.92, 1.4, 0));
+
+    // Front facade
+    house.add(box(5.8, 2.25, .22, mat.wall, 0, 1.35, 2.48));
+    house.add(box(6.15, .22, .38, mat.trim, 0, 2.55, 2.48));
+    house.add(box(5.95, .18, .3, mat.trim, 0, .36, 2.48));
+
+    // Roof: stepped voxel gable.
+    const roofLevels = [
+      { y: 2.72, w: 6.0, d: 5.05 },
+      { y: 3.02, w: 5.65, d: 4.75 },
+      { y: 3.32, w: 5.3, d: 4.45 },
+      { y: 3.62, w: 4.9, d: 4.15 }
+    ];
+    for (const level of roofLevels) {
+      const roofMesh = box(level.w, .28, level.d, mat.roof, 0, level.y, 0);
+      house.add(roofMesh);
+    }
+
+    // Roof cornice and ridge trim.
+    house.add(box(6.1, .22, .24, mat.roofEdge, 0, 2.72, 2.55));
+    house.add(box(6.1, .22, .24, mat.roofEdge, 0, 2.72, -2.55));
+    house.add(box(.24, .22, 5.1, mat.roofEdge, 3.03, 3.45, 0));
+    house.add(box(.24, .22, 5.1, mat.roofEdge, -3.03, 3.45, 0));
+
+    // Four roof vents, made from stacked cubes.
+    const ventPositions = [
+      [-1.85, 2.05], [1.85, 2.05],
+      [-1.85, -2.05], [1.85, -2.05]
+    ];
+    for (const [x, z] of ventPositions) {
+      house.add(box(.62, .18, .62, mat.roofEdge, x, 3.7, z));
+      house.add(box(.42, .4, .42, mat.roof, x, 3.98, z));
+      house.add(box(.58, .14, .58, mat.roofEdge, x, 4.2, z));
+    }
+
+    // Door and frame
+    house.add(box(1.28, 2.25, .28, mat.wood, 0, 1.4, 2.65));
+    house.add(box(1.55, .25, .34, mat.woodLight, 0, 2.56, 2.65));
+    house.add(box(1.55, .2, .34, mat.woodLight, 0, .25, 2.65));
+    house.add(box(.18, 2.4, .2, mat.wood, -.7, 1.38, 2.73));
+    house.add(box(.18, 2.4, .2, mat.wood, .7, 1.38, 2.73));
+
+    // Door slats
+    for (let i = 0; i < 7; i++) {
+      house.add(box(.08, 1.85, .08, mat.woodLight, -.48 + i * .16, 1.4, 2.82));
+    }
+    house.add(box(.18, .18, .12, mat.woodLight, .39, 1.4, 2.91));
+
+    // Front windows
+    function makeWindow(x, z, w = 1.25, h = 1.25) {
+      const group = new THREE.Group();
+      group.position.set(x, 1.55, z);
+      house.add(group);
+
+      group.add(box(w + .28, .22, .3, mat.woodLight, 0, h / 2 + .1, 0));
+      group.add(box(w + .28, .22, .3, mat.woodLight, 0, -.1 - h / 2, 0));
+      group.add(box(.22, h + .22, .3, mat.woodLight, -w / 2, 0, 0));
+      group.add(box(.22, h + .22, .3, mat.woodLight, w / 2, 0, 0));
+
+      const glass = box(w, h, .12, mat.trim, 0, 0, .18);
+      group.add(glass);
+
+      const mullion = box(.08, h, .14, mat.wood, 0, 0, .23);
+      const horizontal = box(w, .08, .14, mat.wood, 0, 0, .23);
+      group.add(mullion);
+      group.add(horizontal);
+    }
+
+    makeWindow(-2.05, 2.65, 1.15, 1.15);
+    makeWindow(2.05, 2.65, 1.15, 1.15);
+
+    // Side windows
+    makeWindow(-2.57, 1.2, 1.05, 1.15);
+    makeWindow(2.57, 1.2, 1.05, 1.15);
+
+    // Window frames and shutters
+    for (const x of [-2.72, 2.72]) {
+      house.add(box(.18, 1.45, .2, mat.wood, x, 1.55, 2.72));
+      house.add(box(.3, .42, .12, mat.leafDark, x - .28, 1.55, 2.84));
+      house.add(box(.3, .42, .12, mat.leafDark, x + .28, 1.55, 2.84));
+    }
+
+    // -------------------------------------------------------------------------
+    // Garden
+    // -------------------------------------------------------------------------
+    const garden = new THREE.Group();
+    garden.position.y = .2;
+    scene.add(garden);
+
+    // Raised beds
+    function raisedBed(x, z, w, d) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      garden.add(group);
+
+      group.add(box(w, .18, .18, mat.wood, 0, .09, -d / 2));
+      group.add(box(w, .18, .18, mat.wood, 0, .09, d / 2));
+      group.add(box(.18, .18, d, mat.wood, -w / 2, .09, 0));
+      group.add(box(.18, .18, d, mat.wood, w / 2, .09, 0));
+      group.add(box(w - .25, .12, d - .25, mat.soil, 0, .2, 0));
+    }
+
+    raisedBed(-1.85, 1.35, 2.8, 2.6);
+    raisedBed(1.85, 1.35, 2.8, 2.6);
+    raisedBed(-1.85, -1.35, 2.8, 2.6);
+    raisedBed(1.85, -1.35, 2.8, 2.6);
+
+    // Flower patches
+    function flowerPatch(x, z, w, d, pink = false) {
+      const group = new THREE.Group();
+      group.position.set(x, .24, z);
+      garden.add(group);
+
+      for (let i = 0; i < 22; i++) {
+        const fx = (Math.random() - .5) * w;
+        const fz = (Math.random() - .5) * d;
+        const h = .25 + Math.random() * .45;
+        const flower = box(.18, h, .18, pink ? mat.flowerPink : mat.flowerWhite, fx, h / 2, fz);
+        group.add(flower);
+      }
+    }
+
+    flowerPatch(-2.55, .45, 1.3, .8, true);
+    flowerPatch(-.75, .45, 1.0, .8, false);
+    flowerPatch(2.55, .45, 1.3, .8, true);
+    flowerPatch(.75, .45, 1.0, .8, false);
+    flowerPatch(-2.55, -1.0, 1.2, .8, false);
+    flowerPatch(.75, -1.0, 1.2, .8, true);
+
+    // Bushes made from stacked cubes
+    function bush(x, z, radius = 1.0) {
+      const group = new THREE.Group();
+      group.position.set(x, .2, z);
+      garden.add(group);
+
+      const layers = [
+        [0, 0, 0, radius * 1.45, mat.leaf],
+        [-.45, .35, .05, radius * .75, mat.leaf],
+        [.45, .35, .05, radius * .75, mat.leaf],
+        [-.15, .75, -.1, radius * .68, mat.leafLight],
+        [.15, .75, -.1, radius * .68, mat.leafLight]
+      ];
+      for (const [lx, ly, lz, r, material] of layers) {
+        const cube = box(r, r, r, material, lx, ly, lz);
+        group.add(cube);
+      }
+    }
+
+    bush(-3.25, 1.75, .95);
+    bush(-2.35, 2.0, .85);
+    bush(3.25, 1.75, .95);
+    bush(2.35, 2.0, .85);
+    bush(-3.25, -1.75, .9);
+    bush(3.25, -1.75, .9);
+
+    // Small tree
+    function tree(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, .2, z);
+      garden.add(group);
+
+      voxelColumn(0, 0, .15, 3, mat.woodLight, .42, .42);
+      voxelColumn(0, 0, .65, 2, mat.wood, .38, .38);
+
+      const crown = box(.95, .95, .95, mat.leaf, 0, 1.55, 0);
+      const crown2 = box(.72, .72, .72, mat.leafLight, .25, 2.05, .05);
+      const crown3 = box(.68, .68, .68, mat.leaf, -.25, 2.0, -.08);
+      group.add(crown, crown2, crown3);
+    }
+    tree(-3.45, -2.2);
+
+    // -------------------------------------------------------------------------
+    // Tiny voxel gardener
+    // -------------------------------------------------------------------------
+    const gardener = new THREE.Group();
+    gardener.position.set(.45, .24, 2.0);
+    gardener.rotation.y = -.45;
+    scene.add(gardener);
+
+    // Legs
+    gardener.add(box(.22, .55, .25, mat.wood, -.1, .3, 0));
+    gardener.add(box(.22, .55, .25, mat.wood, .1, .3, 0));
+
+    // Body and vest
+    gardener.add(box(.58, .65, .34, mat.leafDark, 0, .88, 0));
+    gardener.add(box(.46, .43, .36, mat.flowerPink, 0, .9, .04));
+
+    // Head, hat, face
+    gardener.add(box(.48, .45, .42, mat.leafLight, 0, 1.38, 0));
+    gardener.add(box(.62, .16, .62, mat.leaf, 0, 1.69, 0));
+    gardener.add(box(.5, .12, .5, mat.leafLight, 0, 1.81, 0));
+
+    gardener.add(box(.12, .18, .08, mat.wood, -.11, 1.4, .23));
+    gardener.add(box(.12, .18, .08, mat.wood, .11, 1.4, .23));
+    gardener.add(box(.12, .12, .08, mat.flowerWhite, 0, 1.25, .23));
+
+    // Arm and tool
+    gardener.add(box(.2, .6, .24, mat.leafDark, -.45, .85, 0));
+    gardener.add(box(.12, .65, .12, mat.wood, -.58, .38, 0));
+    gardener.add(box(.14, .55, .14, mat.wood, -.62, .12, 0));
+
+    // -------------------------------------------------------------------------
+    // Small side details
+    // -------------------------------------------------------------------------
+    // A tiny stool by the path
+    const stool = new THREE.Group();
+    stool.position.set(-.45, .22, 2.65);
+    stool.rotation.y = .2;
+    scene.add(stool);
+    stool.add(box(.55, .14, .55, mat.woodLight, 0, .55, 0));
+    for (const x of [-.22, .22]) {
+      for (const z of [-.22, .22]) {
+        stool.add(box(.12, .5, .12, mat.wood, x, .25, z));
+      }
+    }
+
+    // A small planter
+    const planter = new THREE.Group();
+    planter.position.set(-3.45, .2, .85);
+    scene.add(planter);
+    planter.add(box(.75, .38, .75, mat.wood, 0, .19, 0));
+    planter.add(box(.55, .55, .55, mat.leaf, 0, .62, 0));
+    planter.add(box(.4, .12, .4, mat.flowerWhite, 0, .96, 0));
+
+    // -------------------------------------------------------------------------
+    // Ground grass tufts
+    // -------------------------------------------------------------------------
+    const tuftGeometry = new THREE.ConeGeometry(.13, .38, 3);
+    const grassMaterials = [mat.grass, mat.grassLight];
+
+    for (let i = 0; i < 190; i++) {
+      const x = (Math.random() - .5) * 7.7;
+      const z = (Math.random() - .5) * 6.6;
+
+      // Keep the path and house clear.
+      if (Math.abs(x) < 1.25 && z > -1.7 && z < 3.3) continue;
+      if (Math.abs(x) < 3.1 && (z > -2.6 && z < 2.6)) continue;
+
+      const tuft = new THREE.Mesh(tuftGeometry, grassMaterials[i % 2]);
+      tuft.position.set(x, .22, z);
+      tuft.rotation.y = Math.random() * Math.PI;
+      tuft.scale.setScalar(.75 + Math.random() * .65);
+      scene.add(tuft);
+    }
+
+    // -------------------------------------------------------------------------
+    // Custom orbit controls
+    // -------------------------------------------------------------------------
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      dragging = true;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    });
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!dragging) return;
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      lastX = event.clientX;
+      lastY = event.clientY;
+
+      azimuth -= dx * .006;
+      polar = THREE.MathUtils.clamp(polar + dy * .005, .48, 1.42);
+      updateCamera();
+    });
+
+    function endDrag(event) {
+      dragging = false;
+      renderer.domElement.style.cursor = "grab";
+      if (event && renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.style.cursor = "grab";
+
+    renderer.domElement.addEventListener("wheel", event => {
+      event.preventDefault();
+      radius = THREE.MathUtils.clamp(radius + event.deltaY * .008, minRadius, maxRadius);
+      updateCamera();
+    }, { passive: false });
+
+    // Double click resets the view.
+    renderer.domElement.addEventListener("dblclick", () => {
+      azimuth = .68;
+      polar = 1.05;
+      radius = 11.8;
+      updateCamera();
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // -------------------------------------------------------------------------
+    // Animation
+    // -------------------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Gentle flower sway.
+      const flowers = scene.children.filter(child => child.isMesh && child.material === mat.flowerWhite);
+      for (const flower of flowers) {
+        if (flower.parent === garden) {
+          flower.rotation.z = Math.sin(t * 1.2 + flower.position.x * 2 + flower.position.z) * .08;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
