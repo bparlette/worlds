@@ -190,6 +190,7 @@
 
   <script type="module">
     import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
+    import { buildRelic } from "./relics.js";
 
     const CDN = "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
     const EYE = 1.7;
@@ -357,7 +358,7 @@
       if (inst.relic) {
         const gy = sampleGround(rec, inst.relic.x, inst.relic.z, 40, 15);
         rec.relicGroundY = gy === null ? 0 : gy;
-        rec.relicProp = makeRelicProp();
+        rec.relicProp = makeRelicProp(inst.relic.id);
         rec.relicProp.group.position.set(inst.relic.x, rec.relicGroundY + 1.05, inst.relic.z);
         rec.relicProp.group.visible = !relicFound(id);
         rec.group.add(rec.relicProp.group);
@@ -650,7 +651,14 @@
     // emissive material plus a real (invisible) PointLight, nothing else.
     // A golden core inside two crossing rings reads "relic" in any world.
     // ---------------------------------------------------------------------
-    function makeRelicProp() {
+    function makeRelicProp(id) {
+      // Host-built relic visuals live in relics.js (R8): the module only
+      // names an id; the Walker builds the object. Any failure (unknown
+      // shape, bad build) falls back to the legacy core-and-rings below.
+      try {
+        const built = buildRelic(THREE, id);
+        if (built && built.group && built.core && built.light) return built;
+      } catch (e) { /* fall through to the legacy prop */ }
       const g = new THREE.Group();
       const coreMat = new THREE.MeshStandardMaterial({
         color: 0xd9a43b, emissive: 0xffae2e, emissiveIntensity: 0.9,
