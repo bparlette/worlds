@@ -1,5 +1,5 @@
 // @world {"id": "1002", "title": "Super Mario Bros.", "sub": "World 1-1", "system": ""}
-// Converted from  into a Back Roms World Walker module.
+// Converted from image-js.html into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
 
@@ -36,7 +36,7 @@ export function createWorld(THREE) {
 
   function dummyCamera() {
     return {
-      position: { set: () => {}, copy: () => {} },
+      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),
       lookAt: () => {},
       updateProjectionMatrix: () => {}
     };
@@ -79,6 +79,9 @@ export function createWorld(THREE) {
   const requestAnimationFrame = (fn) => { updateHook = fn; };
 
   // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): solid
+  let solid = 0;
 
     
 
@@ -994,7 +997,7 @@ export function createWorld(THREE) {
 
     updateCamera();
 
-    const loading = document.getElementById("loading");
+    const loading = dummyEl();
     loading.style.opacity = "0";
     setTimeout(() => loading.remove(), 550);
 

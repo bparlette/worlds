@@ -1,4 +1,4 @@
-// @world {"id": "1002", "title": "Super Mario Bros.", "sub": "World 1-1", "system": "NES"}
+// @world {"id": "1002", "title": "Super Mario Bros.", "sub": "World 1-1", "system": ""}
 // Converted from text-js.html into a Back Roms World Walker module.
 
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js";
@@ -79,6 +79,11 @@ export function createWorld(THREE) {
   const requestAnimationFrame = (fn) => { updateHook = fn; };
 
   // --- Scoped Diorama Build Code ---
+  // Converter repair: declared identifier(s) the scene used undeclared
+  // (strict modules throw where sloppy scripts did not): phase, rx, ry
+  let phase = 0;
+  let rx = 0;
+  let ry = 0;
 
 
 
