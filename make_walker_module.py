@@ -179,7 +179,7 @@ def parse_scene_to_walker(html_content: str, spec: dict, relic_anchor=None) -> s
         '',
         '  function dummyCamera() {',
         '    return {',
-        '      position: { set: () => {}, copy: () => {} },',
+        '      position: (() => { const v = { set: () => v, copy: () => v, add: () => v, sub: () => v, addScaledVector: () => v, clone: () => v }; return v; })(),',
         '      lookAt: () => {},',
         '      updateProjectionMatrix: () => {}',
         '    };',

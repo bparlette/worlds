@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SMB 1-1 — The Build Attempts</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#0d0f14; color:#e8e6df; font-family: Georgia, 'Times New Roman', serif; }
+  header { padding:22px 20px 4px; max-width:1100px; margin:0 auto; }
+  h1 { margin:0; font-size:26px; } h1 span { color:#d8a941; }
+  .sub { color:#9a97a3; font-size:14.5px; line-height:1.55; margin:8px 0 0; }
+  .ref { max-width:1100px; margin:14px auto 0; padding:0 20px; }
+  .ref img { width:100%; max-width:512px; image-rendering:pixelated; border:1px solid #262b38; border-radius:8px; display:block; }
+  .ref p { color:#5c5f6b; font-size:12.5px; margin:6px 0 0; }
+  nav { max-width:1100px; margin:18px auto 0; padding:0 20px; display:flex; flex-wrap:wrap; gap:8px; }
+  nav button { background:#161922; color:#e8e6df; border:1px solid #333a4d; border-radius:999px; padding:9px 15px; font-size:14px; cursor:pointer; font-family:inherit; }
+  nav button.on { border-color:#d8a941; color:#d8a941; }
+  nav button:disabled { opacity:.45; cursor:default; }
+  #note { max-width:1100px; margin:14px auto 0; padding:0 20px; }
+  #note .card { background:#161922; border:1px solid #262b38; border-radius:10px; padding:13px 16px; font-size:14.5px; line-height:1.55; }
+  #note b { color:#d8a941; }
+  #stage { max-width:1100px; margin:14px auto 30px; padding:0 20px; }
+  #wrap { position:relative; border:1px solid #262b38; border-radius:10px; overflow:hidden; background:#87b5dd; touch-action:none; }
+  canvas { display:block; width:100%; height:min(62vh,560px); }
+  #hud { position:absolute; left:10px; bottom:8px; color:#fff; font-size:12px; text-shadow:0 1px 3px #000; opacity:.85; pointer-events:none; }
+  footer { max-width:1100px; margin:0 auto; padding:0 20px 30px; color:#5c5f6b; font-size:12.5px; line-height:1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Super Mario Bros. <span>World 1-1</span> — the build attempts</h1>
+  <p class="sub">Four ways of asking a small local AI to build the same place, plus a fifth on the way. Drag to orbit, scroll or pinch to zoom. Judge each against the reference screen below.</p>
+</header>
+<div class="ref">
+  <img src="https://mario.wiki.gallery/images/1/13/SMB_NES_World_1-1_Screenshot.png" alt="Reference: SMB World 1-1 screenshot">
+  <p>THE REFERENCE — the actual World 1-1 screen every attempt was asked to reproduce.</p>
+</div>
+<nav id="tabs"></nav>
+<div id="note"></div>
+<div id="stage"><div id="wrap"><canvas id="cv"></canvas><div id="hud">drag to orbit · scroll / pinch to zoom</div></div></div>
+<footer>Attempts 1–4 are the 2×2 test (commit c38f8ab9), checked in as generated. Attempt 4's module was regenerated after a converter harness fix (see its note). Attempt 5 arrives when the Mac run lands.</footer>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const ATTEMPTS = [
+  { key:'image-json', label:'1 · Image → JSON', kind:'json',
+    note:'<b>Failed.</b> The model looped — 363 duplicate parts, rejected at the degeneracy gate, no module produced. What you see here is the salvaged raw parts list rendered for inspection: the repetition made visible.' },
+  { key:'image-js', label:'2 · Image → JS', kind:'module', file:'./image-js.module.js',
+    note:'<b>Built, but invented.</b> Valid code, wrong world: its own scene notes list curved paths, lanterns, cockatoos and Goombas (characters, against the rules). A pleasant diorama that is not World 1-1.' },
+  { key:'text-json', label:'3 · Text → JSON', kind:'module', file:'./text-json.module.js',
+    note:'<b>Built cleanly, faithfully to its text.</b> The description it was given lists ingredients only (brick floor, green pipes, gold blocks, hills — no layout), so it arranged them as a plaza and named it "Warp World". Brick blocks became boundary walls; the clouds went missing.' },
+  { key:'text-js', label:'4 · Text → JS', kind:'module', file:'./text-js.module.js',
+    note:'<b>Built — after a harness fix.</b> The 2×2 scored this as a crash, but the crash was in our converter\'s test dummy (a camera stub that could not chain vector calls), not in the scene. With the stub fixed, the scene converts and validates. Its content tracks the same description as attempt 3.' },
+  { key:'fifth', label:'5 · Vision description → JSON', kind:'pending',
+    note:'<b>Being produced now</b> on the Mac: the model first writes a description from the image, then builds parts from its own description. This card activates when it is checked in.' },
+];
+
+const canvas = document.getElementById('cv');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(46, 2, 0.1, 600);
+let world = null, tickers = [], center = new THREE.Vector3(0,2,0), radius = 24;
+let theta = 0.7, phi = 1.02, dist = 42;
+
+scene.add(new THREE.HemisphereLight(0xeaf4ff, 0x445533, 1.15));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2); sun.position.set(18, 30, 12); scene.add(sun);
+
+function frame(group) {
+  const box = new THREE.Box3().setFromObject(group);
+  box.getCenter(center);
+  const size = box.getSize(new THREE.Vector3());
+  radius = Math.max(size.x, size.y, size.z) * 0.5;
+  dist = Math.max(14, radius * 2.6);
+}
+function place() {
+  camera.position.set(
+    center.x + dist * Math.sin(phi) * Math.sin(theta),
+    center.y + dist * Math.cos(phi),
+    center.z + dist * Math.sin(phi) * Math.cos(theta));
+  camera.lookAt(center);
+}
+function clearWorld() {
+  if (world) { scene.remove(world); world = null; }
+  tickers = [];
+}
+function show(group, update) {
+  clearWorld();
+  world = group; scene.add(group);
+  if (update) tickers = [update];
+  frame(group); place();
+}
+
+// Lenient salvage for the gate-rejected JSON attempt: strip fences, harvest complete part objects.
+function salvageParts(raw) {
+  let s = raw.replace(/```(?:json)?/g, '');
+  const i = s.indexOf('"parts"'); if (i >= 0) s = s.slice(i);
+  const parts = []; let depth = 0, start = -1, inStr = false, esc = false;
+  for (let k = 0; k < s.length; k++) {
+    const ch = s[k];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === '{') { if (depth === 0) start = k; depth++; }
+    else if (ch === '}') { depth--; if (depth === 0 && start >= 0) { try { parts.push(JSON.parse(s.slice(start, k + 1))); } catch (e) {} start = -1; } }
+  }
+  return parts;
+}
+
+async function loadAttempt(a) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.key === a.key));
+  document.getElementById('note').innerHTML = '<div class="card">' + a.note + '</div>';
+  clearWorld();
+  try {
+    if (a.kind === 'module') {
+      const mod = await import(a.file);
+      const def = mod.default || mod;
+      const built = def.createWorld(THREE);
+      const env = built.env || {};
+      scene.background = new THREE.Color(env.sky || '#87b5dd');
+      scene.fog = env.fog ? new THREE.Fog(env.fog, 60, 160) : null;
+      show(built.group, built.update);
+    } else if (a.kind === 'json') {
+      const raw = await (await fetch('./image-json.json')).text();
+      const parts = salvageParts(raw);
+      const { buildParts } = await import('../parts.js');
+      const data = { id:'ab-image-json', title:'Image JSON (salvaged)', game:'Super Mario Bros.', sky:'#87b5dd', fog:'#87b5dd', ground:'#59624e', parts };
+      const built = buildParts(THREE, data);
+      scene.background = new THREE.Color('#87b5dd'); scene.fog = null;
+      show(built.group, (t) => built.tickers.forEach(f => f(t)));
+    }
+  } catch (e) {
+    document.getElementById('note').innerHTML = '<div class="card">' + a.note + '<br><br>Could not render this attempt: ' + e.message + '</div>';
+  }
+}
+
+const tabs = document.getElementById('tabs');
+for (const a of ATTEMPTS) {
+  const b = document.createElement('button');
+  b.textContent = a.label; b.dataset.key = a.key;
+  if (a.kind === 'pending') b.disabled = true;
+  b.onclick = () => loadAttempt(a);
+  tabs.appendChild(b);
+}
+
+// Orbit: pointer drag + wheel + pinch, with the iOS gesture guard.
+const wrap = document.getElementById('wrap');
+let dragging = false, lx = 0, ly = 0, pinchD = 0;
+canvas.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  theta -= (e.clientX - lx) * 0.008; phi = Math.min(1.45, Math.max(0.15, phi - (e.clientY - ly) * 0.006));
+  lx = e.clientX; ly = e.clientY; place();
+});
+canvas.addEventListener('pointerup', () => dragging = false);
+canvas.addEventListener('wheel', e => { e.preventDefault(); dist = Math.min(140, Math.max(6, dist * (1 + Math.sign(e.deltaY) * 0.09))); place(); }, { passive:false });
+canvas.addEventListener('touchstart', e => { if (e.touches.length === 2) pinchD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }, { passive:false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    if (pinchD) { dist = Math.min(140, Math.max(6, dist * pinchD / d)); place(); }
+    pinchD = d;
+  }
+}, { passive:false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+
+function resize() {
+  const w = wrap.clientWidth, h = Math.min(window.innerHeight * 0.62, 560);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const t = clock.getElapsedTime();
+  for (const f of tickers) { try { f(t); } catch (e) {} }
+  renderer.render(scene, camera);
+});
+
+loadAttempt(ATTEMPTS[2]); // start with the cleanest build
+</script>
+</body>
+</html>
