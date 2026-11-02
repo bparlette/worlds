@@ -502,5 +502,13 @@
     "status": "pass",
     "filename": "1063-sonic_the_hedgehog_green_hill_zone_diorama.html",
     "updated_at": "2026-11-02 05:42 EST"
+  },
+  "64": {
+    "rank": 64,
+    "game": "Sonic Adventure 2",
+    "name": "City Escape",
+    "status": "pass",
+    "filename": "1064-sonic_adventure_2_city_escape.html",
+    "updated_at": "2026-11-02 05:46 EST"
   }
 }
